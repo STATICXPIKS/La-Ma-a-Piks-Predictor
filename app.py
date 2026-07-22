@@ -5,62 +5,84 @@ from scipy.stats import poisson
 import plotly.graph_objects as go
 
 # Configuración de página
-st.set_page_config(page_title="Liga MX xG Analytics", layout="wide", page_icon="⚽")
+st.set_page_config(page_title="Liga MX Predictor Pro", layout="centered", page_icon="⚽")
 
-# BASE DE DATOS DE EQUIPOS CON LOGOS OFICIALES Y ALTITUDES REALES
-EQUIPOS = {
-    "América": {"logo": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Club_America_logo.png", "altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2, "forma": ["G", "G", "E", "G", "P"]},
-    "Atlante": {"logo": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Atlante_FC_logo.png", "altitud": 2240, "att": 1.35, "def": 1.20, "corners": 5.0, "forma": ["G", "E", "G", "P", "G"]},
-    "Atlas": {"logo": "https://upload.wikimedia.org/wikipedia/commons/7/77/Atlas_FC_logo.png", "altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5, "forma": ["E", "P", "P", "G", "P"]},
-    "Chivas": {"logo": "https://upload.wikimedia.org/wikipedia/commons/4/41/Club_Guadalajara_logo.png", "altitud": 1560, "att": 1.60, "def": 1.05, "corners": 5.5, "forma": ["G", "G", "P", "E", "G"]},
-    "Cruz Azul": {"logo": "https://upload.wikimedia.org/wikipedia/commons/d/d6/Cruz_Azul_Logo.png", "altitud": 2240, "att": 1.85, "def": 0.95, "corners": 6.0, "forma": ["G", "E", "G", "G", "P"]},
-    "Juárez": {"logo": "https://upload.wikimedia.org/wikipedia/commons/0/03/FC_Juarez_logo.png", "altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4, "forma": ["P", "G", "P", "E", "P"]},
-    "León": {"logo": "https://upload.wikimedia.org/wikipedia/commons/3/30/Club_Leon_logo.png", "altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1, "forma": ["G", "E", "P", "G", "E"]},
-    "Monterrey": {"logo": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_de_Club_de_F%C3%Batbol_Monterrey.png", "altitud": 500, "att": 1.90, "def": 0.90, "corners": 6.1, "forma": ["G", "P", "G", "E", "G"]},
-    "Necaxa": {"logo": "https://upload.wikimedia.org/wikipedia/commons/0/03/Club_Necaxa_logo.png", "altitud": 1800, "att": 1.40, "def": 1.25, "corners": 4.7, "forma": ["G", "E", "P", "P", "E"]},
-    "Pachuca": {"logo": "https://upload.wikimedia.org/wikipedia/commons/b/b2/CF_Pachuca_logo.png", "altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4, "forma": ["P", "G", "G", "E", "P"]},
-    "Puebla": {"logo": "https://upload.wikimedia.org/wikipedia/commons/2/29/Puebla_FC_logo.png", "altitud": 2230, "att": 1.15, "def": 1.50, "corners": 4.2, "forma": ["P", "P", "P", "E", "P"]},
-    "Pumas": {"logo": "https://upload.wikimedia.org/wikipedia/commons/8/80/Pumas_UNAM.png", "altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2, "forma": ["P", "G", "E", "P", "G"]},
-    "Querétaro": {"logo": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Gallos_Blancos_Quer%C3%A9taro_logo.png", "altitud": 1820, "att": 1.10, "def": 1.35, "corners": 4.0, "forma": ["P", "E", "P", "P", "G"]},
-    "San Luis": {"logo": "https://upload.wikimedia.org/wikipedia/commons/a/ac/Atletico_san_luis.png", "altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1, "forma": ["P", "P", "G", "P", "E"]},
-    "Santos": {"logo": "https://upload.wikimedia.org/wikipedia/commons/0/07/Club_Santos_Laguna_logo.png", "altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9, "forma": ["P", "P", "E", "P", "G"]},
-    "Tigres": {"logo": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e5/Tigres_UANL_logo.svg/1200px-Tigres_UANL_logo.svg.png", "altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8, "forma": ["P", "P", "P", "G", "G"]},
-    "Tijuana": {"logo": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Club_Tijuana_logo.png", "altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8, "forma": ["E", "P", "G", "P", "P"]},
-    "Toluca": {"logo": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Deportivo_Toluca_FC_logo.png", "altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9, "forma": ["G", "G", "G", "P", "E"]}
+# LOGOS OFICIALES WIKIMEDIA (PROBADOS Y ESTABLES)
+LOGOS = {
+    "América": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Club_America_logo.png/800px-Club_America_logo.png",
+    "Atlante": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Atlante_FC_logo.png/800px-Atlante_FC_logo.png",
+    "Atlas": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Atlas_FC_logo.png/800px-Atlas_FC_logo.png",
+    "Chivas": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Club_Guadalajara_logo.png/800px-Club_Guadalajara_logo.png",
+    "Cruz Azul": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Cruz_Azul_Logo.png/800px-Cruz_Azul_Logo.png",
+    "Juárez": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/FC_Juarez_logo.png/800px-FC_Juarez_logo.png",
+    "León": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Club_Leon_logo.png/800px-Club_Leon_logo.png",
+    "Monterrey": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Logo_de_Club_de_F%C3%Batbol_Monterrey.png/800px-Logo_de_Club_de_F%C3%Batbol_Monterrey.png",
+    "Necaxa": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Club_Necaxa_logo.png/800px-Club_Necaxa_logo.png",
+    "Pachuca": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/CF_Pachuca_logo.png/800px-CF_Pachuca_logo.png",
+    "Puebla": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Puebla_FC_logo.png/800px-Puebla_FC_logo.png",
+    "Pumas": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Pumas_UNAM.png/800px-Pumas_UNAM.png",
+    "Querétaro": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Gallos_Blancos_Quer%C3%A9taro_logo.png/800px-Gallos_Blancos_Quer%C3%A9taro_logo.png",
+    "San Luis": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Atletico_san_luis.png/800px-Atletico_san_luis.png",
+    "Santos": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Club_Santos_Laguna_logo.png/800px-Club_Santos_Laguna_logo.png",
+    "Tigres": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e5/Tigres_UANL_logo.svg/800px-Tigres_UANL_logo.svg.png",
+    "Tijuana": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Club_Tijuana_logo.png/800px-Club_Tijuana_logo.png",
+    "Toluca": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Deportivo_Toluca_FC_logo.png/800px-Deportivo_Toluca_FC_logo.png"
 }
 
-# ESTILOS CSS - DARK NEON MODE
+EQUIPOS = {
+    "América": {"altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2},
+    "Atlante": {"altitud": 2240, "att": 1.35, "def": 1.20, "corners": 5.0},
+    "Atlas": {"altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5},
+    "Chivas": {"altitud": 1560, "att": 1.60, "def": 1.05, "corners": 5.5},
+    "Cruz Azul": {"altitud": 2240, "att": 1.85, "def": 0.95, "corners": 6.0},
+    "Juárez": {"altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4},
+    "León": {"altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1},
+    "Monterrey": {"altitud": 500, "att": 1.90, "def": 0.90, "corners": 6.1},
+    "Necaxa": {"altitud": 1800, "att": 1.40, "def": 1.25, "corners": 4.7},
+    "Pachuca": {"altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4},
+    "Puebla": {"altitud": 2230, "att": 1.15, "def": 1.50, "corners": 4.2},
+    "Pumas": {"altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2},
+    "Querétaro": {"altitud": 1820, "att": 1.10, "def": 1.35, "corners": 4.0},
+    "San Luis": {"altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1},
+    "Santos": {"altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9},
+    "Tigres": {"altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8},
+    "Tijuana": {"altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8},
+    "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
+}
+
+# ESTILOS CSS DARK PROFESSIONAL
 st.markdown("""
 <style>
-    .stApp { background-color: #0b0f19; color: #f3f4f6; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
     
-    .neon-card {
-        background: rgba(17, 24, 39, 0.7);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
-        border-radius: 16px;
-        padding: 18px;
-        margin-bottom: 12px;
-        backdrop-filter: blur(10px);
-    }
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    .stApp { background-color: #0d1117; color: #ffffff; }
     
-    .neon-card-blue {
-        background: rgba(17, 24, 39, 0.7);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
-        border-radius: 16px;
-        padding: 18px;
+    /* Contenedores Profesionales */
+    .card-pro {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 16px;
         margin-bottom: 12px;
     }
     
-    .team-title { font-size: 24px; font-weight: 900; color: #ffffff; }
-    .xg-badge { font-size: 22px; font-weight: 800; color: #10b981; }
-    .xg-badge-blue { font-size: 22px; font-weight: 800; color: #3b82f6; }
+    .team-name-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #ffffff !important;
+        letter-spacing: -0.5px;
+    }
     
-    .badge-bet { background: #064e3b; color: #34d399; font-weight: bold; padding: 6px 16px; border-radius: 8px; border: 1px solid #059669; float: right; }
-    .badge-skip { background: #451a1a; color: #f87171; font-weight: bold; padding: 6px 16px; border-radius: 8px; border: 1px solid #dc2626; float: right; }
+    .xg-value { font-size: 20px; font-weight: 800; color: #238636; }
+    .xg-value-blue { font-size: 20px; font-weight: 800; color: #2f81f7; }
     
-    .market-header { font-size: 16px; font-weight: bold; color: #38bdf8; margin-top: 18px; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
+    /* Badges BET/SKIP */
+    .badge-bet { background: #238636; color: #ffffff; font-weight: 700; padding: 4px 12px; border-radius: 6px; float: right; font-size: 13px; }
+    .badge-skip { background: #da3633; color: #ffffff; font-weight: 700; padding: 4px 12px; border-radius: 6px; float: right; font-size: 13px; }
+    
+    .market-title { font-size: 15px; font-weight: 700; color: #58a6ff; margin-top: 16px; border-bottom: 1px solid #21262d; padding-bottom: 4px; }
+    .subtext { color: #8b949e; font-size: 13px; margin: 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -68,8 +90,8 @@ def to_decimal(momio, tipo):
     if tipo == "Decimal": return float(momio)
     return (momio / 100) + 1 if momio > 0 else (100 / abs(momio)) + 1
 
-# --- HEADER & SELECTOR ---
-st.markdown("<h1 style='text-align: center; color: #10b981; font-weight: 900;'>⚡ LIGA MX xG ACCUMULATED ANALYTICS</h1>", unsafe_allow_html=True)
+# --- HEADER DE LA APP ---
+st.markdown("<h2 style='text-align: center; color: #ffffff; font-weight: 900; margin-bottom: 20px;'>⚽ LIGA MX ANALYTICS PRO</h2>", unsafe_allow_html=True)
 
 col_sel1, col_sel2 = st.columns(2)
 lista_equipos = sorted(list(EQUIPOS.keys()))
@@ -80,14 +102,14 @@ visita_nombre = col_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=vi
 
 eq_local, eq_visita = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
-# --- VARIABLES EN SIDEBAR ---
-st.sidebar.header("⚙️ Variables Avanzadas del Partido")
+# --- AJUSTES EN SIDEBAR ---
+st.sidebar.header("🧠 Ajustes del Partido")
 bajas_l = st.sidebar.slider(f"Bajas {local_nombre} (%)", 0, 30, 0) / 100.0
 bajas_v = st.sidebar.slider(f"Bajas {visita_nombre} (%)", 0, 30, 0) / 100.0
 fatiga_v = st.sidebar.slider(f"Fatiga {visita_nombre} (%)", 0, 20, 0) / 100.0
 tendencia_arbitro = st.sidebar.slider("Rigurosidad Árbitro (Tarjetas)", 2.0, 7.0, 4.5, step=0.5)
 
-# --- CÁLCULOS MATEMÁTICOS ---
+# --- MATEMÁTICAS DEL MODELO ---
 diff_altitud = max(0, eq_local["altitud"] - eq_visita["altitud"])
 penal_altitud = diff_altitud * 0.00015
 
@@ -101,7 +123,7 @@ for x in range(max_goles):
         matrix[x, y] = poisson.pmf(x, xg_local) * poisson.pmf(y, xg_visita)
 matrix /= np.sum(matrix)
 
-# 1HT xG
+# 1HT
 xg_local_1ht = xg_local * 0.45
 xg_visita_1ht = xg_visita * 0.45
 matrix_1ht = np.zeros((max_goles, max_goles))
@@ -110,78 +132,78 @@ for x in range(max_goles):
         matrix_1ht[x, y] = poisson.pmf(x, xg_local_1ht) * poisson.pmf(y, xg_visita_1ht)
 matrix_1ht /= np.sum(matrix_1ht)
 
-# --- TARJETAS ENCABEZADO ---
+# --- TARJETAS ENCABEZADO CON ESCUDOS CORREGIDOS ---
+st.markdown("---")
 c_head1, c_head2 = st.columns(2)
+
 with c_head1:
-    st.markdown(f"""
-    <div class="neon-card">
-        <img src="{eq_local['logo']}" width="48" style="float:left; margin-right:15px;">
-        <div class="team-title">{local_nombre}</div>
-        <div class="xg-badge">{xg_local:.2f} xG Esperado</div>
-        <p style="margin-top:5px; color:#9ca3af;">Altitud Estadio: {eq_local['altitud']}m</p>
-    </div>
-    """, unsafe_allow_html=True)
+    c_img, c_txt = st.columns([1, 3])
+    with c_img: st.image(LOGOS[local_nombre], use_container_width=True)
+    with c_txt:
+        st.markdown(f"<div class='team-name-title'>{local_nombre}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='xg-value'>{xg_local:.2f} <span style='font-size:12px; color:#8b949e;'>xG Esperado</span></div>", unsafe_allow_html=True)
 
 with c_head2:
-    st.markdown(f"""
-    <div class="neon-card-blue">
-        <img src="{eq_visita['logo']}" width="48" style="float:left; margin-right:15px;">
-        <div class="team-title">{visita_nombre}</div>
-        <div class="xg-badge-blue">{xg_visita:.2f} xG Esperado</div>
-        <p style="margin-top:5px; color:#9ca3af;">Castigo Altitud: -{penal_altitud*100:.1f}%</p>
-    </div>
-    """, unsafe_allow_html=True)
+    c_img, c_txt = st.columns([1, 3])
+    with c_img: st.image(LOGOS[visita_nombre], use_container_width=True)
+    with c_txt:
+        st.markdown(f"<div class='team-name-title'>{visita_nombre}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='xg-value-blue'>{xg_visita:.2f} <span style='font-size:12px; color:#8b949e;'>xG Esperado</span></div>", unsafe_allow_html=True)
 
-# --- GRÁFICAS ANALÍTICAS ---
+# --- GRÁFICAS COMPACTAS (MÁS PEQUEÑAS) ---
 st.markdown("---")
-st.subheader("📈 Visual Analytics & xG Progresión")
+c_graf1, c_graf2 = st.columns(2)
 
-c_graf1, c_graf2 = st.columns([3, 2])
-
+# Gráfica 1: xG Timeline Compacto
 minutos = [0, 15, 30, 45, 60, 75, 90]
 xg_acc_local = np.cumsum([0] + list(np.random.dirichlet(np.ones(6)) * xg_local))
 xg_acc_visita = np.cumsum([0] + list(np.random.dirichlet(np.ones(6)) * xg_visita))
 
 fig_xg = go.Figure()
-fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_local, mode='lines+markers', name=local_nombre, line=dict(color='#10b981', width=4, shape='spline'), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.1)'))
-fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_visita, mode='lines+markers', name=visita_nombre, line=dict(color='#3b82f6', width=4, shape='spline'), fill='tozeroy', fillcolor='rgba(59, 130, 246, 0.1)'))
+fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_local, mode='lines', name=local_nombre, line=dict(color='#238636', width=3)))
+fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_visita, mode='lines', name=visita_nombre, line=dict(color='#2f81f7', width=3)))
 
 fig_xg.update_layout(
-    title="Timeline xG Acumulado",
-    paper_bgcolor='rgba(17, 24, 39, 0.8)',
-    plot_bgcolor='rgba(17, 24, 39, 0.8)',
-    font=dict(color='#ffffff'),
-    xaxis=dict(gridcolor='#1f2937', title="Minutos"),
-    yaxis=dict(gridcolor='#1f2937', title="xG Acumulado"),
-    margin=dict(l=20, r=20, t=40, b=20)
+    title=dict(text="xG Progresión por Minuto", font=dict(size=13, color="#ffffff")),
+    height=240,
+    paper_bgcolor='#161b22',
+    plot_bgcolor='#161b22',
+    font=dict(color='#ffffff', size=10),
+    xaxis=dict(gridcolor='#21262d', showgrid=True),
+    yaxis=dict(gridcolor='#21262d', showgrid=True),
+    margin=dict(l=30, r=20, t=35, b=25),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 
 with c_graf1: st.plotly_chart(fig_xg, use_container_width=True)
 
+# Gráfica 2: Dona 1X2 Compacta
 prob_1 = np.sum(np.tril(matrix, -1))
 prob_x = np.sum(np.diag(matrix))
 prob_2 = np.sum(np.triu(matrix, 1))
 
 fig_pie = go.Figure(data=[go.Pie(
-    labels=[f'Gana {local_nombre}', 'Empate', f'Gana {visita_nombre}'],
+    labels=[local_nombre, 'Empate', visita_nombre],
     values=[prob_1, prob_x, prob_2],
     hole=.6,
-    marker=dict(colors=['#10b981', '#f59e0b', '#3b82f6'])
+    marker=dict(colors=['#238636', '#d29922', '#2f81f7'])
 )])
+
 fig_pie.update_layout(
-    title="Probabilidad 1X2",
-    paper_bgcolor='rgba(17, 24, 39, 0.8)',
-    font=dict(color='#ffffff'),
-    margin=dict(l=10, r=10, t=40, b=10),
+    title=dict(text="Distribución 1X2", font=dict(size=13, color="#ffffff")),
+    height=240,
+    paper_bgcolor='#161b22',
+    font=dict(color='#ffffff', size=10),
+    margin=dict(l=20, r=20, t=35, b=20),
     showlegend=False
 )
 
 with c_graf2: st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- CÁLCULO Y DESPLIEGUE DE LOS 7 MERCADOS ---
+# --- MÓDULO DE MOMIOS Y CALCULADORA DE VALOR ---
 st.markdown("---")
-with st.expander("⚙️ METER MOMIOS DE CASA DE APUESTAS (CALCULADORA DE VALOR)", expanded=True):
-    formato_m = st.radio("Formato de Momios:", ["Americano (+150 / -200)", "Decimal (2.50 / 1.50)"], horizontal=True)
+with st.expander("⚙️ MOMIOS DE TU CASA DE APUESTAS (CALCULADORA EV)", expanded=True):
+    formato_m = st.radio("Formato:", ["Americano (+150 / -200)", "Decimal (2.50 / 1.50)"], horizontal=True)
     es_dec = "Decimal" in formato_m
     tipo_str = "Decimal" if es_dec else "Americano"
     
@@ -191,37 +213,34 @@ with st.expander("⚙️ METER MOMIOS DE CASA DE APUESTAS (CALCULADORA DE VALOR)
     m_2_in = c3.number_input(f"GANA {visita_nombre.upper()}", value=2.62 if es_dec else 162)
     
     c4, c5, c6 = st.columns(3)
-    linea_goles = c4.selectbox("LÍNEA DE GOLES (90 Min)", ["O/U 2.5", "O/U 1.5", "O/U 3.5"])
-    m_over_in = c5.number_input("MÁS (OVER 2.5)", value=1.83 if es_dec else -120)
-    m_under_in = c6.number_input("MENOS (UNDER 2.5)", value=1.95 if es_dec else -105)
+    linea_goles = c4.selectbox("GOLES (90 Min)", ["O/U 2.5", "O/U 1.5", "O/U 3.5"])
+    m_over_in = c5.number_input("OVER 2.5", value=1.83 if es_dec else -120)
+    m_under_in = c6.number_input("UNDER 2.5", value=1.95 if es_dec else -105)
 
     c7, c8, c9 = st.columns(3)
-    linea_goles_1ht = c7.selectbox("LÍNEA GOLES (1ra Mitad)", ["1HT O/U 0.5", "1HT O/U 1.5", "1HT O/U 2.5"])
-    m_over_1ht_in = c8.number_input("1HT MÁS (OVER 0.5)", value=1.40 if es_dec else -250)
-    m_under_1ht_in = c9.number_input("1HT MENOS (OVER 0.5)", value=2.75 if es_dec else 175)
+    linea_goles_1ht = c7.selectbox("GOLES (1ra Mitad)", ["1HT O/U 0.5", "1HT O/U 1.5"])
+    m_over_1ht_in = c8.number_input("1HT OVER 0.5", value=1.40 if es_dec else -250)
+    m_under_1ht_in = c9.number_input("1HT UNDER 0.5", value=2.75 if es_dec else 175)
     
     c10, c11, _ = st.columns(3)
-    m_btts_s_in = c10.number_input("AMBOS ANOTAN: SÍ", value=1.61 if es_dec else -164)
-    m_btts_n_in = c11.number_input("AMBOS ANOTAN: NO", value=2.15 if es_dec else 115)
+    m_btts_s_in = c10.number_input("BTTS SÍ", value=1.61 if es_dec else -164)
+    m_btts_n_in = c11.number_input("BTTS NO", value=2.15 if es_dec else 115)
 
     m_1 = to_decimal(m_1_in, tipo_str)
     m_over25 = to_decimal(m_over_in, tipo_str)
     m_over_1ht = to_decimal(m_over_1ht_in, tipo_str)
     m_btts_s = to_decimal(m_btts_s_in, tipo_str)
 
-# MATH 7 MERCADOS
+# --- DESPLIEGUE DE LOS 7 MERCADOS ---
 prob_1x = prob_1 + prob_x
 prob_over25 = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 2.5])
 prob_btts_si = np.sum(matrix[1:, 1:])
-
 prob_over05_1ht = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 0.5])
 prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
 
 lambda_corners = eq_local["corners"] + eq_visita["corners"]
 prob_over_corners_85 = 1.0 - poisson.cdf(8, lambda_corners)
-
-lambda_tarjetas = tendencia_arbitro
-prob_over_tarjetas_45 = 1.0 - poisson.cdf(4, lambda_tarjetas)
+prob_over_tarjetas_45 = 1.0 - poisson.cdf(4, tendencia_arbitro)
 
 ev_1 = (prob_1 * m_1) - 1
 ev_1x = (prob_1x * 1.35) - 1
@@ -229,36 +248,36 @@ ev_over25 = (prob_over25 * m_over25) - 1
 ev_over05_1ht = (prob_over05_1ht * m_over_1ht) - 1
 ev_btts_si = (prob_btts_si * m_btts_s) - 1
 
-st.markdown("### 🎯 Análisis Matemático de los 7 Mercados Clave")
+st.markdown("### 🎯 Veredictos del Modelo")
 
-def render_card(titulo, subtitulo, ev, badge):
+def render_card_pro(titulo, subtitulo, ev, badge):
     badge_html = f"<span class='badge-bet'>BET</span>" if badge == "BET" else f"<span class='badge-skip'>SKIP</span>"
     st.markdown(f"""
-    <div class="neon-card">
+    <div class="card-pro">
         {badge_html}
-        <h4 style="margin: 0; color: #ffffff; font-size:16px;">{titulo}</h4>
-        <p style="margin: 4px 0 0 0; color: #9ca3af; font-size: 13px;">{subtitulo} · EV {ev*100:+.1f}%</p>
+        <div style="font-weight: 800; font-size: 15px; color: #ffffff;">{titulo}</div>
+        <p class="subtext">{subtitulo} · <b>EV {ev*100:+.1f}%</b></p>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<div class='market-header'>1. Resultado Final (1X2)</div>", unsafe_allow_html=True)
-render_card(f"Gana {local_nombre} (1)", f"Probabilidad Real: {prob_1*100:.1f}%", ev_1, "BET" if ev_1 > 0.03 else "SKIP")
+st.markdown("<div class='market-title'>1. Resultado Final (1X2)</div>", unsafe_allow_html=True)
+render_card_pro(f"Gana {local_nombre} (1)", f"Probabilidad Real: {prob_1*100:.1f}%", ev_1, "BET" if ev_1 > 0.03 else "SKIP")
 
-st.markdown("<div class='market-header'>2. Doble Oportunidad</div>", unsafe_allow_html=True)
-render_card(f"{local_nombre} o Empate (1X)", f"Probabilidad Real: {prob_1x*100:.1f}%", ev_1x, "BET" if ev_1x > 0.02 else "SKIP")
+st.markdown("<div class='market-title'>2. Doble Oportunidad</div>", unsafe_allow_html=True)
+render_card_pro(f"{local_nombre} o Empate (1X)", f"Probabilidad Real: {prob_1x*100:.1f}%", ev_1x, "BET" if ev_1x > 0.02 else "SKIP")
 
-st.markdown("<div class='market-header'>3. Total de Goles (Partido Completo)</div>", unsafe_allow_html=True)
-render_card("Más de 2.5 Goles", f"Probabilidad Real: {prob_over25*100:.1f}% (xG Total: {xg_local+xg_visita:.2f})", ev_over25, "BET" if ev_over25 > 0.03 else "SKIP")
+st.markdown("<div class='market-title'>3. Total de Goles (Partido Completo)</div>", unsafe_allow_html=True)
+render_card_pro("Más de 2.5 Goles", f"Probabilidad Real: {prob_over25*100:.1f}% (xG Total: {xg_local+xg_visita:.2f})", ev_over25, "BET" if ev_over25 > 0.03 else "SKIP")
 
-st.markdown("<div class='market-header'>4. Total de Goles 1ra Mitad (1HT)</div>", unsafe_allow_html=True)
-render_card("1ra Mitad: Más de 0.5 Goles", f"Probabilidad Real: {prob_over05_1ht*100:.1f}% (xG 1HT: {xg_local_1ht+xg_visita_1ht:.2f})", ev_over05_1ht, "BET" if ev_over05_1ht > 0.03 else "SKIP")
+st.markdown("<div class='market-title'>4. Total de Goles 1ra Mitad (1HT)</div>", unsafe_allow_html=True)
+render_card_pro("1ra Mitad: Más de 0.5 Goles", f"Probabilidad Real: {prob_over05_1ht*100:.1f}%", ev_over05_1ht, "BET" if ev_over05_1ht > 0.03 else "SKIP")
 
-st.markdown("<div class='market-header'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
-render_card("Ambos Anotan: SÍ", f"Probabilidad Real: {prob_btts_si*100:.1f}%", ev_btts_si, "BET" if ev_btts_si > 0.03 else "SKIP")
+st.markdown("<div class='market-title'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
+render_card_pro("Ambos Anotan: SÍ", f"Probabilidad Real: {prob_btts_si*100:.1f}%", ev_btts_si, "BET" if ev_btts_si > 0.03 else "SKIP")
 
-st.markdown("<div class='market-header'>6. Hándicap Asiático</div>", unsafe_allow_html=True)
-render_card(f"{local_nombre} Hándicap -1.0", f"Prob. de ganar por 2 o más goles: {prob_ha_local*100:.1f}%", (prob_ha_local*1.85)-1, "BET" if (prob_ha_local*1.85)-1 > 0.03 else "SKIP")
+st.markdown("<div class='market-title'>6. Hándicap Asiático</div>", unsafe_allow_html=True)
+render_card_pro(f"{local_nombre} Hándicap -1.0", f"Probabilidad de cubrir: {prob_ha_local*100:.1f}%", (prob_ha_local*1.85)-1, "BET" if (prob_ha_local*1.85)-1 > 0.03 else "SKIP")
 
-st.markdown("<div class='market-header'>7. Córners & Tarjetas</div>", unsafe_allow_html=True)
-render_card("Más de 8.5 Córners", f"Prob. Real: {prob_over_corners_85*100:.1f}% (Línea esperada: {lambda_corners:.1f})", (prob_over_corners_85*1.75)-1, "BET" if (prob_over_corners_85*1.75)-1 > 0.03 else "SKIP")
-render_card("Más de 4.5 Tarjetas", f"Prob. Real: {prob_over_tarjetas_45*100:.1f}% (Prom. Árbitro: {tendencia_arbitro:.1f})", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
+st.markdown("<div class='market-title'>7. Córners & Tarjetas</div>", unsafe_allow_html=True)
+render_card_pro("Más de 8.5 Córners", f"Probabilidad Real: {prob_over_corners_85*100:.1f}%", (prob_over_corners_85*1.75)-1, "BET" if (prob_over_corners_85*1.75)-1 > 0.03 else "SKIP")
+render_card_pro("Más de 4.5 Tarjetas", f"Probabilidad Real: {prob_over_tarjetas_45*100:.1f}%", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
