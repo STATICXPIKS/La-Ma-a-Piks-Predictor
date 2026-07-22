@@ -7,50 +7,6 @@ import plotly.graph_objects as go
 # Configuración de página
 st.set_page_config(page_title="ANÁLISIS PRO-LIGA MX", layout="wide", page_icon="🏆")
 
-# VECTORES SVG INTEGRADOS (100% INMUNES A ERRORES DE IMAGEN ROTA)
-SVG_TROFEO_LIGA_MX = """
-<svg width="38" height="38" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Copa Trofeo Liga MX -->
-    <path d="M35 20 L65 20 L60 55 C60 65 52 70 50 70 C48 70 40 65 40 55 Z" fill="url(#metalGrad)" stroke="#ffffff" stroke-width="2"/>
-    <path d="M45 70 L55 70 L55 82 L45 82 Z" fill="#d1d5db"/>
-    <path d="M30 82 L70 82 L75 90 L25 90 Z" fill="#1f2937" stroke="#4b5563" stroke-width="2"/>
-    <!-- Asas de la Copa -->
-    <path d="M35 25 C20 25 20 45 38 48" stroke="#f59e0b" stroke-width="4" fill="none"/>
-    <path d="M65 25 C80 25 80 45 62 48" stroke="#f59e0b" stroke-width="4" fill="none"/>
-    <!-- Balón dorado arriba -->
-    <circle cx="50" cy="18" r="8" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5"/>
-    <defs>
-        <linearGradient id="metalGrad" x1="35" y1="20" x2="65" y2="70" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#f3f4f6"/>
-            <stop offset="50%" stop-color="#9ca3af"/>
-            <stop offset="100%" stop-color="#4b5563"/>
-        </linearGradient>
-    </defs>
-</svg>
-"""
-
-SVG_CORONA_MAÑA_PIKS = """
-<svg width="38" height="38" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Corona de Rey Dorado -->
-    <path d="M20 75 L15 30 L35 50 L50 20 L65 50 L85 30 L80 75 Z" fill="url(#goldGrad)" stroke="#ffffff" stroke-width="2"/>
-    <path d="M20 75 L80 75 L80 83 L20 83 Z" fill="#b45309" stroke="#fef08a" stroke-width="1.5"/>
-    <!-- Joyas de la Corona -->
-    <circle cx="15" cy="27" r="4" fill="#ef4444"/>
-    <circle cx="50" cy="17" r="5" fill="#3b82f6"/>
-    <circle cx="85" cy="27" r="4" fill="#ef4444"/>
-    <circle cx="35" cy="79" r="3" fill="#10b981"/>
-    <circle cx="50" cy="79" r="3" fill="#ffffff"/>
-    <circle cx="65" cy="79" r="3" fill="#10b981"/>
-    <defs>
-        <linearGradient id="goldGrad" x1="15" y1="20" x2="85" y2="83" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#fef08a"/>
-            <stop offset="50%" stop-color="#f59e0b"/>
-            <stop offset="100%" stop-color="#b45309"/>
-        </linearGradient>
-    </defs>
-</svg>
-"""
-
 # PALETA DE COLORES OFICIALES PARA JERSEYS (SVG)
 JERSEYS_COLORES = {
     "América": {"c1": "#FDE100", "c2": "#001A49"},
@@ -116,16 +72,13 @@ st.markdown("""
     .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 12px; margin-bottom: 6px; }
     .subtext { color: #94a3b8; font-size: 12px; margin-top: 3px; }
     
-    .header-box {
-        display: flex;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    .header-title {
+    .title-banner {
         font-size: 24px;
         font-weight: 900;
-        color: #ffffff;
-        margin-left: 10px;
+        color: #ffffff !important;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
         letter-spacing: -0.5px;
     }
     .team-badge-box {
@@ -165,12 +118,7 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
-    st.markdown(f"""
-    <div class="header-box">
-        {SVG_TROFEO_LIGA_MX}
-        <span class="header-title">ANALISIS PRO-LIGA MX</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="title-banner">🏆 ANALISIS PRO-LIGA MX</div>', unsafe_allow_html=True)
     
     c_sel1, c_sel2 = st.columns(2)
     lista_equipos = sorted(list(EQUIPOS.keys()))
@@ -294,12 +242,7 @@ with col_izq:
 # COLUMNA DERECHA
 # ==========================================
 with col_der:
-    st.markdown(f"""
-    <div class="header-box">
-        {SVG_CORONA_MAÑA_PIKS}
-        <span class="header-title">VEREDICTO MAÑA PIKS</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="title-banner">👑 VEREDICTO MAÑA PIKS</div>', unsafe_allow_html=True)
     
     # CÁLCULOS 7 MERCADOS
     prob_1x = prob_1 + prob_x
