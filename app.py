@@ -224,6 +224,19 @@ def generar_jersey_svg(equipo_nombre, diccionario_jerseys):
     """
     return svg
 
+def generar_logo_mlb_html(equipo_nombre, diccionario_equipos, diccionario_jerseys):
+    team_id = diccionario_equipos.get(equipo_nombre, {}).get("id")
+    if team_id:
+        logo_url = f"https://www.mlbstatic.com/team-logos/{team_id}.svg"
+        fallback_jersey = generar_jersey_svg(equipo_nombre, diccionario_jerseys).replace('"', '&quot;').replace('\n', '')
+        html = f"""
+        <div style="width:44px; height:44px; margin-right:12px; display:flex; align-items:center; justify-content:center;">
+            <img src="{logo_url}" width="42" height="42" style="object-fit:contain;" onerror="this.onerror=null; this.parentNode.innerHTML='{fallback_jersey}';">
+        </div>
+        """
+        return html
+    return generar_jersey_svg(equipo_nombre, diccionario_jerseys)
+
 def to_decimal(momio, tipo):
     if tipo == "Decimal": return float(momio)
     return (momio / 100) + 1 if momio > 0 else (100 / abs(momio)) + 1
@@ -467,7 +480,7 @@ if not es_mlb:
         render_card_pro("Más de 4.5 Tarjetas", f"Probabilidad Real: {prob_over_tarjetas_45*100:.1f}%", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
 
 # ==========================================
-# SECCIÓN MLB SABERMETRÍA AVANZADA + AUTO API
+# SECCIÓN MLB SABERMETRÍA AVANZADA + LOGOS OFICIALES MLB
 # ==========================================
 else:
     EQUIPOS = EQUIPOS_MLB
@@ -544,11 +557,12 @@ else:
                 matrix_f5[x, y] = poisson.pmf(x, xr_loc_f5) * poisson.pmf(y, xr_vis_f5)
         matrix_f5 /= np.sum(matrix_f5)
 
+        # RENDERIZADO CON ESCUDOS VECTORIALES OFICIALES DE LA MLB
         c_esc1, c_esc2 = st.columns(2)
         with c_esc1:
             st.markdown(f"""
             <div class="team-badge-card">
-                <div style="margin-right: 12px;">{generar_jersey_svg(local_nombre, JERSEYS)}</div>
+                {generar_logo_mlb_html(local_nombre, EQUIPOS, JERSEYS)}
                 <div>
                     <div style="font-weight: 800; color: #fff; font-size: 15px;">{local_nombre} (HOME)</div>
                     <div style="color: #10b981; font-weight: 800; font-size: 14px;">{xr_local:.2f} <span style="font-size: 11px; color: #38bdf8;">xR Carreras</span></div>
@@ -559,7 +573,7 @@ else:
         with c_esc2:
             st.markdown(f"""
             <div class="team-badge-card">
-                <div style="margin-right: 12px;">{generar_jersey_svg(visita_nombre, JERSEYS)}</div>
+                {generar_logo_mlb_html(visita_nombre, EQUIPOS, JERSEYS)}
                 <div>
                     <div style="font-weight: 800; color: #fff; font-size: 15px;">{visita_nombre} (AWAY)</div>
                     <div style="color: #38bdf8; font-weight: 800; font-size: 14px;">{xr_visita:.2f} <span style="font-size: 11px; color: #38bdf8;">xR Carreras</span></div>
@@ -626,7 +640,7 @@ else:
             m_f5_vis_in = f4_2.number_input(f"F5 ML {visita_nombre[:3]}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             m_f5_over_in = f4_3.number_input("F5 OVER 4.5", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
 
-            # 5. PONCHES (K'S) ABRIDORES LOCAL Y VISITA (LÍNEA Y MOMIO)
+            # 5. PONCHES (K'S) ABRIDORES LOCAL Y VISITA
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE PONCHES (K'S)</p>", unsafe_allow_html=True)
             fk_1, fk_2, fk_3, fk_4 = st.columns(4)
             linea_k_loc = fk_1.selectbox(f"Línea K's ({local_nombre[:3]})", ["Over 3.5", "Over 4.5", "Over 5.5", "Over 6.5", "Over 7.5"], index=2)
@@ -635,7 +649,7 @@ else:
             linea_k_vis = fk_3.selectbox(f"Línea K's ({visita_nombre[:3]})", ["Over 3.5", "Over 4.5", "Over 5.5", "Over 6.5", "Over 7.5"], index=2)
             m_k_vis_in = fk_4.number_input(f"Momio K's ({visita_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
-            # 6. OUTS ABRIDORES LOCAL Y VISITA (LÍNEA Y MOMIO)
+            # 6. OUTS ABRIDORES LOCAL Y VISITA
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE OUTS REGISTRADOS</p>", unsafe_allow_html=True)
             fo_1, fo_2, fo_3, fo_4 = st.columns(4)
             linea_outs_loc = fo_1.selectbox(f"Línea Outs ({local_nombre[:3]})", ["Over 13.5 (4.2 Innings)", "Over 14.5 (4.2 Innings)", "Over 15.5 (5.1 Innings)", "Over 17.5 (5.2 Innings)", "Over 18.5 (6.0 Innings)"], index=2)
@@ -678,7 +692,7 @@ else:
         prob_rl_loc = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
         prob_rl_vis = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        # EVALUACIÓN DINÁMICA DE K'S SEGÚN LA LÍNEA SELECCIONADA
+        # EVALUACIÓN DINÁMICA DE K'S
         k_target_loc = float(linea_k_loc.split(" ")[1])
         lambda_k_loc = (K_pct_loc / 100.0) * (outs_exp_loc * 1.45)
         prob_k_loc = 1.0 - poisson.cdf(int(k_target_loc), lambda_k_loc)
@@ -687,7 +701,7 @@ else:
         lambda_k_vis = (K_pct_vis / 100.0) * (outs_exp_vis * 1.45)
         prob_k_vis = 1.0 - poisson.cdf(int(k_target_vis), lambda_k_vis)
 
-        # EVALUACIÓN DINÁMICA DE OUTS SEGÚN LA LÍNEA SELECCIONADA
+        # EVALUACIÓN DINÁMICA DE OUTS
         outs_target_loc = float(linea_outs_loc.split(" ")[1])
         prob_outs_loc = 1.0 - poisson.cdf(int(outs_target_loc), outs_exp_loc)
 
