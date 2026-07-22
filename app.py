@@ -3,13 +3,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
-import os
 
 # Configuración de página
 st.set_page_config(page_title="ANALISIS PRO-LIGA MX", layout="wide", page_icon="⚽")
 
-# ESCUDOS REALES Y OFICIALES DE CADA CLUB (ESPN CDN HIGH RES)
-ESCUDOS_REALES = {
+# ESCUDOS OFICIALES HD LIGA MX (URLS DIRECTAS CON CDN ANTI-BLOQUEO)
+ESCUDOS_OFICIALES = {
     "América": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
     "Atlante": "https://a.espncdn.com/i/teamlogos/soccer/500/221.png",
     "Atlas": "https://a.espncdn.com/i/teamlogos/soccer/500/216.png",
@@ -51,7 +50,7 @@ EQUIPOS = {
     "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
 }
 
-# ESTILOS CSS GENERALES
+# ESTILOS CSS GENERALES Y HEADER CON LOGOS RENDERIZADOS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -73,14 +72,22 @@ st.markdown("""
     .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 12px; margin-bottom: 6px; }
     .subtext { color: #94a3b8; font-size: 12px; margin-top: 3px; }
     
-    .team-badge-box {
+    .title-banner {
+        font-size: 24px;
+        font-weight: 900;
+        color: #ffffff !important;
+        margin-bottom: 15px;
         display: flex;
         align-items: center;
+        letter-spacing: -0.5px;
+    }
+    .team-badge-card {
         background: #121721;
         border: 1px solid #1e2638;
         border-radius: 10px;
-        padding: 10px;
-        margin-bottom: 10px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -96,16 +103,12 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
-    head_col1, head_col2 = st.columns([1, 6])
-    with head_col1:
-        if os.path.exists("liga_mx.png"):
-            st.image("liga_mx.png", width=45)
-        else:
-            st.write("⚽")
-    with head_col2:
-        st.markdown("<h2 style='color:#fff; font-weight:900; margin:0;'>ANALISIS PRO-LIGA MX</h2>", unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="title-banner">
+        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" width="40" height="40" style="margin-right: 12px; object-fit: contain;">
+        <span>ANALISIS PRO-LIGA MX</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     c_sel1, c_sel2 = st.columns(2)
     lista_equipos = sorted(list(EQUIPOS.keys()))
@@ -138,21 +141,29 @@ with col_izq:
             matrix_1ht[x, y] = poisson.pmf(x, xg_local_1ht) * poisson.pmf(y, xg_visita_1ht)
     matrix_1ht /= np.sum(matrix_1ht)
 
-    # TARJETAS DE EQUIPOS CON ESCUDOS REALES
+    # DIBUJO DE ESCUDOS USANDO RENDER DE NAVEGADOR
     c_esc1, c_esc2 = st.columns(2)
     with c_esc1:
-        c_i1, c_t1 = st.columns([1, 3])
-        with c_i1: st.image(ESCUDOS_REALES[local_nombre], width=42)
-        with c_t1:
-            st.markdown(f"<div style='font-weight:800; color:#fff; font-size:16px;'>{local_nombre}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:#10b981; font-weight:800; font-size:14px;'>{xg_local:.2f} <span style='font-size:10px; color:#64748b;'>xG Esperado</span></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="team-badge-card">
+            <img src="{ESCUDOS_OFICIALES[local_nombre]}" width="44" height="44" style="object-fit:contain; margin-right:12px;">
+            <div>
+                <div style="font-weight:800; color:#fff; font-size:16px;">{local_nombre}</div>
+                <div style="color:#10b981; font-weight:800; font-size:14px;">{xg_local:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with c_esc2:
-        c_i2, c_t2 = st.columns([1, 3])
-        with c_i2: st.image(ESCUDOS_REALES[visita_nombre], width=42)
-        with c_t2:
-            st.markdown(f"<div style='font-weight:800; color:#fff; font-size:16px;'>{visita_nombre}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:#38bdf8; font-weight:800; font-size:14px;'>{xg_visita:.2f} <span style='font-size:10px; color:#64748b;'>xG Esperado</span></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="team-badge-card">
+            <img src="{ESCUDOS_OFICIALES[visita_nombre]}" width="44" height="44" style="object-fit:contain; margin-right:12px;">
+            <div>
+                <div style="font-weight:800; color:#fff; font-size:16px;">{visita_nombre}</div>
+                <div style="color:#38bdf8; font-weight:800; font-size:14px;">{xg_visita:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # GRÁFICAS COMPACTAS
     cg1, cg2 = st.columns(2)
@@ -221,16 +232,12 @@ with col_izq:
 # COLUMNA DERECHA
 # ==========================================
 with col_der:
-    head2_col1, head2_col2 = st.columns([1, 6])
-    with head2_col1:
-        if os.path.exists("logo_mana.png"):
-            st.image("logo_mana.png", width=45)
-        else:
-            st.write("👑")
-    with head2_col2:
-        st.markdown("<h2 style='color:#fff; font-weight:900; margin:0;'>VEREDICTO MAÑA PIKS</h2>", unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="title-banner">
+        <span style="font-size:28px; margin-right:10px;">👑</span>
+        <span>VEREDICTO MAÑA PIKS</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     # CÁLCULOS 7 MERCADOS
     prob_1x = prob_1 + prob_x
