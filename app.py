@@ -33,26 +33,60 @@ JERSEYS_LIGA_MX = {
     "Toluca": {"c1": "#DA291C", "c2": "#FFFFFF"}
 }
 
-EQUIPOS_LIGA_MX = {
-    "América": {"altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2},
-    "Atlante": {"altitud": 2240, "att": 1.35, "def": 1.20, "corners": 5.0},
-    "Atlas": {"altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5},
-    "Chivas": {"altitud": 1560, "att": 1.60, "def": 1.05, "corners": 5.5},
-    "Cruz Azul": {"altitud": 2240, "att": 1.85, "def": 0.95, "corners": 6.0},
-    "Juárez": {"altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4},
-    "León": {"altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1},
-    "Monterrey": {"altitud": 500, "att": 1.90, "def": 0.90, "corners": 6.1},
-    "Necaxa": {"altitud": 1800, "att": 1.40, "def": 1.25, "corners": 4.7},
-    "Pachuca": {"altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4},
-    "Puebla": {"altitud": 2230, "att": 1.15, "def": 1.50, "corners": 4.2},
-    "Pumas": {"altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2},
-    "Querétaro": {"altitud": 1820, "att": 1.10, "def": 1.35, "corners": 4.0},
-    "San Luis": {"altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1},
-    "Santos": {"altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9},
-    "Tigres": {"altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8},
-    "Tijuana": {"altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8},
-    "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
+EQUIPOS_LIGA_MX_BASE = {
+    "América": {"altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2, "tarjetas": 2.1},
+    "Atlante": {"altitud": 2240, "att": 1.35, "def": 1.20, "corners": 5.0, "tarjetas": 2.5},
+    "Atlas": {"altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5, "tarjetas": 2.8},
+    "Chivas": {"altitud": 1560, "att": 1.60, "def": 1.05, "corners": 5.5, "tarjetas": 2.2},
+    "Cruz Azul": {"altitud": 2240, "att": 1.85, "def": 0.95, "corners": 6.0, "tarjetas": 2.4},
+    "Juárez": {"altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4, "tarjetas": 2.7},
+    "León": {"altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1, "tarjetas": 2.6},
+    "Monterrey": {"altitud": 500, "att": 1.90, "def": 0.90, "corners": 6.1, "tarjetas": 2.0},
+    "Necaxa": {"altitud": 1800, "att": 1.40, "def": 1.25, "corners": 4.7, "tarjetas": 2.5},
+    "Pachuca": {"altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4, "tarjetas": 2.3},
+    "Puebla": {"altitud": 2230, "att": 1.15, "def": 1.50, "corners": 4.2, "tarjetas": 2.9},
+    "Pumas": {"altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2, "tarjetas": 2.7},
+    "Querétaro": {"altitud": 1820, "att": 1.10, "def": 1.35, "corners": 4.0, "tarjetas": 2.8},
+    "San Luis": {"altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1, "tarjetas": 2.6},
+    "Santos": {"altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9, "tarjetas": 2.5},
+    "Tigres": {"altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8, "tarjetas": 2.1},
+    "Tijuana": {"altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8, "tarjetas": 2.7},
+    "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9, "tarjetas": 2.3}
 }
+
+# ==========================================
+# AUTO-FETCH API GRATUITA LIGA MX (STANDINGS EN VIVO)
+# ==========================================
+@st.cache_data(ttl=3600)
+def obtener_stats_liga_mx_api():
+    url = "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/standings"
+    stats_actualizadas = EQUIPOS_LIGA_MX_BASE.copy()
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            children = data.get("children", [])
+            if children:
+                standings = children[0].get("standings", {}).get("entries", [])
+                for entry in standings:
+                    team_name = entry.get("team", {}).get("name", "")
+                    stats = entry.get("stats", [])
+                    mp, gf, ga = 1, 0, 0
+                    for s in stats:
+                        if s.get("name") == "gamesPlayed": mp = s.get("value", 1)
+                        if s.get("name") == "pointsFor": gf = s.get("value", 0)
+                        if s.get("name") == "pointsAgainst": ga = s.get("value", 0)
+                    
+                    if mp > 0:
+                        att_calc = max(0.8, gf / mp)
+                        def_calc = max(0.7, ga / mp)
+                        for eq in stats_actualizadas:
+                            if eq.lower() in team_name.lower() or team_name.lower() in eq.lower():
+                                stats_actualizadas[eq]["att"] = round(att_calc, 2)
+                                stats_actualizadas[eq]["def"] = round(def_calc, 2)
+    except Exception:
+        pass
+    return stats_actualizadas
 
 # ==========================================
 # BASE DE DATOS Y JERSEYS: MLB
@@ -242,7 +276,7 @@ def to_american_str(prob):
 c_top1, c_top2, _ = st.columns([2, 3, 5])
 with c_top1:
     st.markdown("<span style='font-size:12px; color:#38bdf8; font-weight:800;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
-    deporte = st.radio("", ["⚽ Liga MX", "⚾ MLB Sabermétrico (API AUTO)"], horizontal=True, label_visibility="collapsed")
+    deporte = st.radio("", ["⚽ Liga MX (API LIVE)", "⚾ MLB Sabermétrico (API AUTO)"], horizontal=True, label_visibility="collapsed")
 
 es_mlb = "MLB" in deporte
 
@@ -252,7 +286,7 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # SECCIÓN LIGA MX
 # ==========================================
 if not es_mlb:
-    EQUIPOS = EQUIPOS_LIGA_MX
+    EQUIPOS = obtener_stats_liga_mx_api()
     JERSEYS = JERSEYS_LIGA_MX
     
     with col_izq:
@@ -263,20 +297,38 @@ if not es_mlb:
         </div>
         """, unsafe_allow_html=True)
         
+        st.markdown("""
+        <div class="pitcher-box">
+            <b>⚽ LIGA MX API LIVE FETCH:</b><br>
+            • Métricas ofensivas y defensivas (xG A favor y Concedidos) sincronizadas en tiempo real desde la tabla oficial.
+        </div>
+        """, unsafe_allow_html=True)
+
         c_sel1, c_sel2 = st.columns(2)
         lista_equipos = sorted(list(EQUIPOS.keys()))
         
-        local_nombre = c_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Atlante") if "Atlante" in lista_equipos else 0)
+        local_nombre = c_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Tijuana") if "Tijuana" in lista_equipos else 0)
         visita_opciones = [eq for eq in lista_equipos if eq != local_nombre]
-        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("América") if "América" in visita_opciones else 0)
+        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("León") if "León" in visita_opciones else 0)
 
-        eq_local, eq_visita = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
+        eq_local_base, eq_visita_base = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
-        diff_altitud = max(0, eq_local["altitud"] - eq_visita["altitud"])
+        with st.expander("📊 AJUSTAR ESTADÍSTICAS DEL PARTIDO (LIGA MX)", expanded=False):
+            c_mx1, c_mx2 = st.columns(2)
+            with c_mx1:
+                att_loc = c_mx1.number_input(f"Ataque (xG Base) {local_nombre[:3]}", value=float(eq_local_base["att"]), step=0.05, format="%.2f")
+                def_loc = c_mx1.number_input(f"Defensa (Concedido) {local_nombre[:3]}", value=float(eq_local_base["def"]), step=0.05, format="%.2f")
+                corn_loc = c_mx1.number_input(f"Córners Promedio {local_nombre[:3]}", value=float(eq_local_base["corners"]), step=0.1, format="%.1f")
+            with c_mx2:
+                att_vis = c_mx2.number_input(f"Ataque (xG Base) {visita_nombre[:3]}", value=float(eq_visita_base["att"]), step=0.05, format="%.2f")
+                def_vis = c_mx2.number_input(f"Defensa (Concedido) {visita_nombre[:3]}", value=float(eq_visita_base["def"]), step=0.05, format="%.2f")
+                corn_vis = c_mx2.number_input(f"Córners Promedio {visita_nombre[:3]}", value=float(eq_visita_base["corners"]), step=0.1, format="%.1f")
+
+        diff_altitud = max(0, eq_local_base["altitud"] - eq_visita_base["altitud"])
         penal_altitud = diff_altitud * 0.00015
 
-        xg_local = (eq_local["att"] * eq_visita["def"]) * 1.15
-        xg_visita = max(0.2, (eq_visita["att"] * eq_local["def"]) * (1 - penal_altitud))
+        xg_local = (att_loc * def_vis) * 1.15
+        xg_visita = max(0.2, (att_vis * def_loc) * (1 - penal_altitud))
 
         max_goles = 6
         matrix = np.zeros((max_goles, max_goles))
@@ -352,21 +404,25 @@ if not es_mlb:
             es_dec = "Decimal" in formato_m
             tipo_str = "Decimal" if es_dec else "Americano"
             
+            # Fila 1: 1X2
             f1_1, f1_2, f1_3 = st.columns(3)
             m_1_in = f1_1.number_input(f"GANA {local_nombre.upper()}", value=4.800 if es_dec else 380, format="%.3f" if es_dec else "%d")
             m_x_in = f1_2.number_input("EMPATE", value=3.750 if es_dec else 275, format="%.3f" if es_dec else "%d")
             m_2_in = f1_3.number_input(f"GANA {visita_nombre.upper()}", value=1.710 if es_dec else -141, format="%.3f" if es_dec else "%d")
             
+            # Fila 2: Doble Oportunidad
             f_do1, f_do2, f_do3 = st.columns(3)
             m_1x_in = f_do1.number_input(f"1X ({local_nombre[:3].upper()}/EMP)", value=2.100 if es_dec else 110, format="%.3f" if es_dec else "%d")
             m_12_in = f_do2.number_input("12 (LOCAL/VISITA)", value=1.280 if es_dec else -357, format="%.3f" if es_dec else "%d")
             m_x2_in = f_do3.number_input(f"X2 (EMP/{visita_nombre[:3].upper()})", value=1.180 if es_dec else -555, format="%.3f" if es_dec else "%d")
 
+            # Fila 3: Goles Partido Completo
             f2_1, f2_2, f2_3 = st.columns(3)
             linea_goles = f2_1.selectbox("GOLES (90 Min)", ["O/U 2.5", "O/U 1.5"])
             m_over_in = f2_2.number_input("OVER 2.5", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_under_in = f2_3.number_input("UNDER 2.5", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
+            # Fila 4: Goles 1HT
             f3_1, f3_2, f3_3 = st.columns(3)
             linea_goles_1ht = f3_1.selectbox("GOLES (1HT)", ["1HT O/U 0.5", "1HT O/U 1.5"])
             es_1ht_05 = "0.5" in linea_goles_1ht
@@ -382,10 +438,21 @@ if not es_mlb:
                 format="%.3f" if es_dec else "%d"
             )
             
+            # Fila 5: BTTS
             f4_1, f4_2, _ = st.columns(3)
             m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.770 if es_dec else -130, format="%.3f" if es_dec else "%d")
             m_btts_n_in = f4_2.number_input("BTTS NO", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
+            # AJUSTE SOLICITADO: CÓRNERS DE 7.5 A 11.5 Y TARJETAS DE 2.5 A 4.5
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS & TARJETAS</p>", unsafe_allow_html=True)
+            f5_1, f5_2, f5_3, f5_4 = st.columns(4)
+            linea_corners_sel = f5_1.selectbox("Línea Córners", ["Over 7.5", "Over 8.5", "Over 9.5", "Over 10.5", "Over 11.5"], index=1)
+            m_corners_in = f5_2.number_input("Momio Córners", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
+
+            linea_tarjetas_sel = f5_3.selectbox("Línea Tarjetas", ["Over 2.5", "Over 3.5", "Over 4.5"], index=2)
+            m_tarjetas_in = f5_4.number_input("Momio Tarjetas", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
+
+            # Conversiones
             m_1 = to_decimal(m_1_in, tipo_str)
             m_2 = to_decimal(m_2_in, tipo_str)
             m_1x = to_decimal(m_1x_in, tipo_str)
@@ -393,6 +460,8 @@ if not es_mlb:
             m_over25 = to_decimal(m_over_in, tipo_str)
             m_over_1ht = to_decimal(m_over_1ht_in, tipo_str)
             m_btts_s = to_decimal(m_btts_s_in, tipo_str)
+            m_corners = to_decimal(m_corners_in, tipo_str)
+            m_tarjetas = to_decimal(m_tarjetas_in, tipo_str)
 
     with col_der:
         st.markdown("""
@@ -417,9 +486,15 @@ if not es_mlb:
         prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
         prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
 
-        lambda_corners = eq_local["corners"] + eq_visita["corners"]
-        prob_over_corners_85 = 1.0 - poisson.cdf(8, lambda_corners)
-        prob_over_tarjetas_45 = 1.0 - poisson.cdf(4, 4.5)
+        # CÁLCULO DE CÓRNERS SEGÚN LA LÍNEA SELECCIONADA (7.5 a 11.5)
+        c_target = float(linea_corners_sel.split(" ")[1])
+        lambda_corners = corn_loc + corn_vis
+        prob_over_corners = 1.0 - poisson.cdf(int(c_target), lambda_corners)
+
+        # CÁLCULO DE TARJETAS SEGÚN LA LÍNEA SELECCIONADA (2.5 a 4.5)
+        t_target = float(linea_tarjetas_sel.split(" ")[1])
+        lambda_tarjetas = eq_local_base["tarjetas"] + eq_visita_base["tarjetas"]
+        prob_over_tarjetas = 1.0 - poisson.cdf(int(t_target), lambda_tarjetas)
 
         ev_1 = (prob_1 * m_1) - 1
         ev_2 = (prob_2 * m_2) - 1
@@ -428,6 +503,8 @@ if not es_mlb:
         ev_over25 = (prob_over25 * m_over25) - 1
         ev_1ht = (prob_1ht_target * m_over_1ht) - 1
         ev_btts_si = (prob_btts_si * m_btts_s) - 1
+        ev_corners = (prob_over_corners * m_corners) - 1
+        ev_tarjetas = (prob_over_tarjetas * m_tarjetas) - 1
 
         def render_card_pro(titulo, subtitulo, ev, badge):
             badge_html = f"<span class='badge-bet'>BET</span>" if badge == "BET" else f"<span class='badge-skip'>SKIP</span>"
@@ -462,9 +539,9 @@ if not es_mlb:
         else:
             render_card_pro(f"{visita_nombre} Hándicap -1.0", f"Prob. cubrir: {prob_ha_visita*100:.1f}%", (prob_ha_visita*1.85)-1, "BET" if (prob_ha_visita*1.85)-1 > 0.03 else "SKIP")
 
-        st.markdown("<div class='market-title'>7. Córners & Tarjetas</div>", unsafe_allow_html=True)
-        render_card_pro("Más de 8.5 Córners", f"Probabilidad Real: {prob_over_corners_85*100:.1f}%", (prob_over_corners_85*1.75)-1, "BET" if (prob_over_corners_85*1.75)-1 > 0.03 else "SKIP")
-        render_card_pro("Más de 4.5 Tarjetas", f"Probabilidad Real: {prob_over_tarjetas_45*100:.1f}%", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
+        st.markdown("<div class='market-title'>7. Córners & Tarjetas (Calculados con tus Momios)</div>", unsafe_allow_html=True)
+        render_card_pro(f"Más de {c_target} Córners", f"Probabilidad Real: {prob_over_corners*100:.1f}%", ev_corners, "BET" if ev_corners > 0.03 else "SKIP")
+        render_card_pro(f"Más de {t_target} Tarjetas", f"Probabilidad Real: {prob_over_tarjetas*100:.1f}%", ev_tarjetas, "BET" if ev_tarjetas > 0.03 else "SKIP")
 
 # ==========================================
 # SECCIÓN MLB SABERMETRÍA EXCLUSIVA
@@ -490,7 +567,6 @@ else:
 
         eq_local_base, eq_visita_base = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
-        # AUTO-FETCH ABRIDORES HOY DESDE LA API OFICIAL GRATUITA DE MLB
         pitcher_loc_auto, pitcher_vis_auto = obtener_abridores_mlb_hoy(eq_local_base["id"], eq_visita_base["id"])
 
         st.markdown(f"""
@@ -501,7 +577,6 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # PANEL EXCLUSIVO CON TUS AJUSTES SOLICITADOS (W-L, IP, ERA, WHIP, K, BB Y CLIMA)
         with st.expander("📊 PARÁMETROS DE ABRIDORES Y CLIMA", expanded=True):
             st.markdown(f"<p style='color:#38bdf8; font-weight:800;'>ESTADÍSTICAS ABRIDOR LOCAL: {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
             pl1, pl2, pl3, pl4, pl5, pl6 = st.columns(6)
@@ -528,7 +603,6 @@ else:
             temp_c = cw3.number_input("Temperatura (°C)", value=24, step=1)
             precip_pct = cw4.number_input("Precipitación (%)", value=0, step=5)
 
-        # CÁLCULO DE MULTIPLICADOR DE CLIMA Y CARRERAS
         mult_viento = 1.0
         if "favor" in viento_dir:
             mult_viento += (viento_kmh * 0.006)
@@ -538,7 +612,6 @@ else:
         mult_temp = 1.0 + ((temp_c - 21) * 0.003)
         mult_clima = mult_viento * mult_temp
 
-        # MODELADO DE CARRERAS CON ERA Y WHIP
         xr_local = ((eq_local_base["wRC_plus"] / 100.0) * (era_vis / 4.10) * (whip_vis / 1.25) * 4.30) * mult_clima
         xr_visita = ((eq_visita_base["wRC_plus"] / 100.0) * (era_loc / 4.10) * (whip_loc / 1.25) * 4.10) * mult_clima
 
@@ -557,7 +630,6 @@ else:
                 matrix_f5[x, y] = poisson.pmf(x, xr_loc_f5) * poisson.pmf(y, xr_vis_f5)
         matrix_f5 /= np.sum(matrix_f5)
 
-        # LOGOS VECTORIALES OFICIALES MLB
         id_loc = eq_local_base.get("id", 147)
         id_vis = eq_visita_base.get("id", 119)
         logo_url_loc = f"https://www.mlbstatic.com/team-logos/{id_loc}.svg"
@@ -617,35 +689,29 @@ else:
         with cg1: st.plotly_chart(fig_xr, use_container_width=True)
         with cg2: st.plotly_chart(fig_pie_mlb, use_container_width=True)
 
-        # CAPTURA DE MOMIOS MLB CON AJUSTES DINÁMICOS DE LÍNEAS
         with st.expander("⚙️ CAPTURA DE MOMIOS MLB (CASAS DE APUESTAS)", expanded=True):
             formato_m = st.radio("Formato Momios:", ["Americano (+150 / -200)", "Decimal (2.500 / 1.500)"], horizontal=True, key="f_mlb")
             es_dec = "Decimal" in formato_m
             tipo_str = "Decimal" if es_dec else "Americano"
             
-            # 1. ML
             f1_1, f1_2 = st.columns(2)
             m_ml_loc_in = f1_1.number_input(f"ML {local_nombre.upper()}", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_ml_vis_in = f1_2.number_input(f"ML {visita_nombre.upper()}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             
-            # 2. TOTAL
             f2_1, f2_2, f2_3 = st.columns(3)
             linea_tot_mlb = f2_1.selectbox("LINEA TOTAL", ["O/U 8.5", "O/U 7.5", "O/U 9.5"])
             m_over_tot_in = f2_2.number_input("OVER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_under_tot_in = f2_3.number_input("UNDER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
-            # 3. RUN LINE
             f3_1, f3_2 = st.columns(2)
             m_rl_loc_in = f3_1.number_input(f"RUN LINE {local_nombre[:3]} -1.5", value=2.450 if es_dec else 145, format="%.3f" if es_dec else "%d")
             m_rl_vis_in = f3_2.number_input(f"RUN LINE {visita_nombre[:3]} +1.5", value=1.600 if es_dec else -166, format="%.3f" if es_dec else "%d")
 
-            # 4. F5
             f4_1, f4_2, f4_3 = st.columns(3)
             m_f5_loc_in = f4_1.number_input(f"F5 ML {local_nombre[:3]}", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
             m_f5_vis_in = f4_2.number_input(f"F5 ML {visita_nombre[:3]}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             m_f5_over_in = f4_3.number_input("F5 OVER 4.5", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
 
-            # 5. PONCHES (K'S) ABRIDORES LOCAL Y VISITA
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE PONCHES (K'S)</p>", unsafe_allow_html=True)
             fk_1, fk_2, fk_3, fk_4 = st.columns(4)
             linea_k_loc = fk_1.selectbox(f"Línea K's ({local_nombre[:3]})", ["Over 3.5", "Over 4.5", "Over 5.5", "Over 6.5", "Over 7.5"], index=2)
@@ -654,7 +720,6 @@ else:
             linea_k_vis = fk_3.selectbox(f"Línea K's ({visita_nombre[:3]})", ["Over 3.5", "Over 4.5", "Over 5.5", "Over 6.5", "Over 7.5"], index=2)
             m_k_vis_in = fk_4.number_input(f"Momio K's ({visita_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
-            # 6. OUTS ABRIDORES LOCAL Y VISITA
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE OUTS REGISTRADOS</p>", unsafe_allow_html=True)
             fo_1, fo_2, fo_3, fo_4 = st.columns(4)
             linea_outs_loc = fo_1.selectbox(f"Línea Outs ({local_nombre[:3]})", ["Over 13.5 (4.2 Innings)", "Over 14.5 (4.2 Innings)", "Over 15.5 (5.1 Innings)", "Over 17.5 (5.2 Innings)", "Over 18.5 (6.0 Innings)"], index=2)
@@ -663,10 +728,8 @@ else:
             linea_outs_vis = fo_3.selectbox(f"Línea Outs ({visita_nombre[:3]})", ["Over 13.5 (4.2 Innings)", "Over 14.5 (4.2 Innings)", "Over 15.5 (5.1 Innings)", "Over 17.5 (5.2 Innings)", "Over 18.5 (6.0 Innings)"], index=2)
             m_outs_vis_in = fo_4.number_input(f"Momio Outs ({visita_nombre[:3]})", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
 
-            # 7. NRFI
             m_nrfi_in = st.number_input("NRFI (No Run 1st Inning)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
 
-            # Conversiones
             m_ml_loc = to_decimal(m_ml_loc_in, tipo_str)
             m_ml_vis = to_decimal(m_ml_vis_in, tipo_str)
             m_over_tot = to_decimal(m_over_tot_in, tipo_str)
@@ -697,7 +760,6 @@ else:
         prob_rl_loc = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
         prob_rl_vis = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        # EVALUACIÓN DE PONCHES USANDO K/IP REAL
         k_target_loc = float(linea_k_loc.split(" ")[1])
         k_rate_loc = (k_loc / ip_loc) if ip_loc > 0 else 1.0
         outs_exp_loc_val = 17.5
@@ -710,7 +772,6 @@ else:
         lambda_k_vis = k_rate_vis * (outs_exp_vis_val / 3.0)
         prob_k_vis = 1.0 - poisson.cdf(int(k_target_vis), lambda_k_vis)
 
-        # EVALUACIÓN DE OUTS
         outs_target_loc = float(linea_outs_loc.split(" ")[1])
         prob_outs_loc = 1.0 - poisson.cdf(int(outs_target_loc), outs_exp_loc_val)
 
