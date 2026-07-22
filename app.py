@@ -7,26 +7,26 @@ import plotly.graph_objects as go
 # Configuración de página
 st.set_page_config(page_title="ANALISIS PRO-LIGA MX", layout="wide", page_icon="⚽")
 
-# ESCUDOS REALES Y OFICIALES HD (ESPN CDN CDN DIRECTO)
-ESCUDOS_OFICIALES = {
-    "América": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
-    "Atlante": "https://a.espncdn.com/i/teamlogos/soccer/500/221.png",
-    "Atlas": "https://a.espncdn.com/i/teamlogos/soccer/500/216.png",
-    "Chivas": "https://a.espncdn.com/i/teamlogos/soccer/500/219.png",
-    "Cruz Azul": "https://a.espncdn.com/i/teamlogos/soccer/500/217.png",
-    "Juárez": "https://a.espncdn.com/i/teamlogos/soccer/500/17882.png",
-    "León": "https://a.espncdn.com/i/teamlogos/soccer/500/225.png",
-    "Monterrey": "https://a.espncdn.com/i/teamlogos/soccer/500/223.png",
-    "Necaxa": "https://a.espncdn.com/i/teamlogos/soccer/500/224.png",
-    "Pachuca": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
-    "Puebla": "https://a.espncdn.com/i/teamlogos/soccer/500/226.png",
-    "Pumas": "https://a.espncdn.com/i/teamlogos/soccer/500/229.png",
-    "Querétaro": "https://a.espncdn.com/i/teamlogos/soccer/500/222.png",
-    "San Luis": "https://a.espncdn.com/i/teamlogos/soccer/500/17702.png",
-    "Santos": "https://a.espncdn.com/i/teamlogos/soccer/500/230.png",
-    "Tigres": "https://a.espncdn.com/i/teamlogos/soccer/500/218.png",
-    "Tijuana": "https://a.espncdn.com/i/teamlogos/soccer/500/220.png",
-    "Toluca": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png"
+# PALETA DE COLORES OFICIALES PARA JERSEYS (SVG)
+JERSEYS_COLORES = {
+    "América": {"c1": "#FDE100", "c2": "#001A49"},
+    "Atlante": {"c1": "#002B49", "c2": "#C8102E"},
+    "Atlas": {"c1": "#000000", "c2": "#DA291C"},
+    "Chivas": {"c1": "#DA291C", "c2": "#FFFFFF"},
+    "Cruz Azul": {"c1": "#00519E", "c2": "#FFFFFF"},
+    "Juárez": {"c1": "#78BE20", "c2": "#000000"},
+    "León": {"c1": "#007A33", "c2": "#FDE100"},
+    "Monterrey": {"c1": "#002452", "c2": "#FFFFFF"},
+    "Necaxa": {"c1": "#DA291C", "c2": "#FFFFFF"},
+    "Pachuca": {"c1": "#002B49", "c2": "#FFFFFF"},
+    "Puebla": {"c1": "#003366", "c2": "#FFFFFF"},
+    "Pumas": {"c1": "#002B49", "c2": "#C8A062"},
+    "Querétaro": {"c1": "#00519E", "c2": "#000000"},
+    "San Luis": {"c1": "#DA291C", "c2": "#002B49"},
+    "Santos": {"c1": "#007A33", "c2": "#FFFFFF"},
+    "Tigres": {"c1": "#FDE100", "c2": "#00519E"},
+    "Tijuana": {"c1": "#DA291C", "c2": "#000000"},
+    "Toluca": {"c1": "#DA291C", "c2": "#FFFFFF"}
 }
 
 EQUIPOS = {
@@ -77,10 +77,26 @@ st.markdown("""
         border: 1px solid #1e2638;
         border-radius: 10px;
         padding: 10px 14px;
+        display: flex;
+        align-items: center;
         margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
+
+# GENERADOR DE JERSEY VECTORIAL (SVG 100% LIMPIO E INMUNE A ERRORES)
+def generar_jersey_svg(equipo_nombre):
+    col = JERSEYS_COLORES.get(equipo_nombre, {"c1": "#333333", "c2": "#666666"})
+    c1, c2 = col["c1"], col["c2"]
+    
+    svg = f"""
+    <svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 20 L40 10 L60 10 L70 20 L85 30 L75 45 L68 40 L68 85 L32 85 L32 40 L25 45 L15 30 Z" fill="{c1}" stroke="#ffffff" stroke-width="3"/>
+        <path d="M50 10 L50 85" stroke="{c2}" stroke-width="12"/>
+        <path d="M30 20 L40 10 L60 10 L70 20" fill="none" stroke="#ffffff" stroke-width="3"/>
+    </svg>
+    """
+    return svg
 
 def to_decimal(momio, tipo):
     if tipo == "Decimal": return float(momio)
@@ -93,10 +109,10 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
-    # ENCABEZADO CON LOGO LIGA MX MÁS GRANDE (65px)
+    # ENCABEZADO CON LOGO DE LIGA MX A 68PX EXACTOS
     st.markdown("""
     <div style="display: flex; align-items: center; margin-bottom: 15px;">
-        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 65px; margin-right: 15px; object-fit: contain;">
+        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 68px; margin-right: 15px; object-fit: contain;">
         <span style="font-size: 26px; font-weight: 900; color: #ffffff;">ANALISIS PRO-LIGA MX</span>
     </div>
     """, unsafe_allow_html=True)
@@ -104,9 +120,9 @@ with col_izq:
     c_sel1, c_sel2 = st.columns(2)
     lista_equipos = sorted(list(EQUIPOS.keys()))
     
-    local_nombre = c_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Santos") if "Santos" in lista_equipos else 0)
+    local_nombre = c_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Tijuana") if "Tijuana" in lista_equipos else 0)
     visita_opciones = [eq for eq in lista_equipos if eq != local_nombre]
-    visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("Atlas") if "Atlas" in visita_opciones else 0)
+    visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("Cruz Azul") if "Cruz Azul" in visita_opciones else 0)
 
     eq_local, eq_visita = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
@@ -132,27 +148,29 @@ with col_izq:
             matrix_1ht[x, y] = poisson.pmf(x, xg_local_1ht) * poisson.pmf(y, xg_visita_1ht)
     matrix_1ht /= np.sum(matrix_1ht)
 
-    # NATIVO DE STREAMLIT PARA RENDERIZAR ESCUDOS OFICIALES REALES
+    # REEMPLAZO 100% SEGURO CON JERSEYS SVG CON COLORES DEL CLUB
     c_esc1, c_esc2 = st.columns(2)
     with c_esc1:
-        st.markdown('<div class="team-badge-card">', unsafe_allow_html=True)
-        col_img1, col_txt1 = st.columns([1, 3])
-        with col_img1:
-            st.image(ESCUDOS_OFICIALES[local_nombre], width=48)
-        with col_txt1:
-            st.markdown(f"<div style='font-weight:800; color:#fff; font-size:16px;'>{local_nombre}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:#10b981; font-weight:800; font-size:14px;'>{xg_local:.2f} <span style='font-size:10px; color:#64748b;'>xG Esperado</span></div>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="team-badge-card">
+            <div style="margin-right: 12px;">{generar_jersey_svg(local_nombre)}</div>
+            <div>
+                <div style="font-weight: 800; color: #fff; font-size: 16px;">{local_nombre}</div>
+                <div style="color: #10b981; font-weight: 800; font-size: 14px;">{xg_local:.2f} <span style="font-size: 10px; color: #64748b;">xG Esperado</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with c_esc2:
-        st.markdown('<div class="team-badge-card">', unsafe_allow_html=True)
-        col_img2, col_txt2 = st.columns([1, 3])
-        with col_img2:
-            st.image(ESCUDOS_OFICIALES[visita_nombre], width=48)
-        with col_txt2:
-            st.markdown(f"<div style='font-weight:800; color:#fff; font-size:16px;'>{visita_nombre}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:#38bdf8; font-weight:800; font-size:14px;'>{xg_visita:.2f} <span style='font-size:10px; color:#64748b;'>xG Esperado</span></div>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="team-badge-card">
+            <div style="margin-right: 12px;">{generar_jersey_svg(visita_nombre)}</div>
+            <div>
+                <div style="font-weight: 800; color: #fff; font-size: 16px;">{visita_nombre}</div>
+                <div style="color: #38bdf8; font-weight: 800; font-size: 14px;">{xg_visita:.2f} <span style="font-size: 10px; color: #64748b;">xG Esperado</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # GRÁFICAS COMPACTAS
     cg1, cg2 = st.columns(2)
