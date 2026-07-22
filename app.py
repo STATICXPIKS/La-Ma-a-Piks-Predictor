@@ -5,28 +5,32 @@ from scipy.stats import poisson
 import plotly.graph_objects as go
 
 # Configuración de página
-st.set_page_config(page_title="Liga MX Analytics Pro", layout="wide", page_icon="⚽")
+st.set_page_config(page_title="ANÁLISIS PRO-LIGA MX", layout="wide", page_icon="🇲🇽")
 
-# LOGOS ESTABLES Y PROBADOS (URLs DIRECTAS HD)
-LOGOS = {
-    "América": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
-    "Atlante": "https://a.espncdn.com/i/teamlogos/soccer/500/221.png",
-    "Atlas": "https://a.espncdn.com/i/teamlogos/soccer/500/216.png",
-    "Chivas": "https://a.espncdn.com/i/teamlogos/soccer/500/219.png",
-    "Cruz Azul": "https://a.espncdn.com/i/teamlogos/soccer/500/217.png",
-    "Juárez": "https://a.espncdn.com/i/teamlogos/soccer/500/17882.png",
-    "León": "https://a.espncdn.com/i/teamlogos/soccer/500/225.png",
-    "Monterrey": "https://a.espncdn.com/i/teamlogos/soccer/500/223.png",
-    "Necaxa": "https://a.espncdn.com/i/teamlogos/soccer/500/224.png",
-    "Pachuca": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
-    "Puebla": "https://a.espncdn.com/i/teamlogos/soccer/500/226.png",
-    "Pumas": "https://a.espncdn.com/i/teamlogos/soccer/500/229.png",
-    "Querétaro": "https://a.espncdn.com/i/teamlogos/soccer/500/222.png",
-    "San Luis": "https://a.espncdn.com/i/teamlogos/soccer/500/17702.png",
-    "Santos": "https://a.espncdn.com/i/teamlogos/soccer/500/230.png",
-    "Tigres": "https://a.espncdn.com/i/teamlogos/soccer/500/218.png",
-    "Tijuana": "https://a.espncdn.com/i/teamlogos/soccer/500/220.png",
-    "Toluca": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png"
+# LOGO OFICIAL DE LA LIGA MX Y LOGO DE TU CANAL
+LOGO_LIGA_MX = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Liga_MX_logo.svg/800px-Liga_MX_logo.svg.png"
+LOGO_CANAL = "https://github.com/STATICXPIKS.png"  # Tu foto de perfil oficial de GitHub/Canal
+
+# PALETA DE COLORES OFICIALES PARA JERSEYS (SVG)
+JERSEYS_COLORES = {
+    "América": {"c1": "#FDE100", "c2": "#001A49"},     # Amarillo / Azul
+    "Atlante": {"c1": "#002B49", "c2": "#C8102E"},     # Azul / Rojo
+    "Atlas": {"c1": "#000000", "c2": "#DA291C"},       # Negro / Rojo
+    "Chivas": {"c1": "#DA291C", "c2": "#FFFFFF"},      # Rojo / Blanco
+    "Cruz Azul": {"c1": "#00519E", "c2": "#FFFFFF"},   # Azul / Blanco
+    "Juárez": {"c1": "#78BE20", "c2": "#000000"},      # Verde Limón / Negro
+    "León": {"c1": "#007A33", "c2": "#FDE100"},        # Verde / Amarillo
+    "Monterrey": {"c1": "#002452", "c2": "#FFFFFF"},   # Azul Marino / Blanco
+    "Necaxa": {"c1": "#DA291C", "c2": "#FFFFFF"},      # Rojo / Blanco
+    "Pachuca": {"c1": "#002B49", "c2": "#FFFFFF"},     # Azul / Blanco
+    "Puebla": {"c1": "#003366", "c2": "#FFFFFF"},      # Azul Franja / Blanco
+    "Pumas": {"c1": "#002B49", "c2": "#C8A062"},       # Azul / Dorado
+    "Querétaro": {"c1": "#00519E", "c2": "#000000"},   # Azul / Negro
+    "San Luis": {"c1": "#DA291C", "c2": "#002B49"},    # Rojo / Azul
+    "Santos": {"c1": "#007A33", "c2": "#FFFFFF"},      # Verde / Blanco
+    "Tigres": {"c1": "#FDE100", "c2": "#00519E"},      # Amarillo / Azul
+    "Tijuana": {"c1": "#DA291C", "c2": "#000000"},     # Rojo / Negro
+    "Toluca": {"c1": "#DA291C", "c2": "#FFFFFF"}       # Rojo / Blanco
 }
 
 EQUIPOS = {
@@ -50,7 +54,7 @@ EQUIPOS = {
     "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
 }
 
-# ESTILOS CSS ESTRECHO DARK MODE DUAL-PANEL
+# ESTILOS CSS GENERALES
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -72,6 +76,18 @@ st.markdown("""
     .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 12px; margin-bottom: 6px; }
     .subtext { color: #94a3b8; font-size: 12px; margin-top: 3px; }
     
+    .header-box {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .header-title {
+        font-size: 24px;
+        font-weight: 900;
+        color: #ffffff;
+        margin-left: 12px;
+        letter-spacing: -0.5px;
+    }
     .team-badge-box {
         display: flex;
         align-items: center;
@@ -84,18 +100,37 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# GENERADOR DE JERSEY VECTORIAL (SVG) POR COLORES DE EQUIPO
+def generar_jersey_svg(equipo_nombre):
+    col = JERSEYS_COLORES.get(equipo_nombre, {"c1": "#333333", "c2": "#666666"})
+    c1, c2 = col["c1"], col["c2"]
+    
+    svg = f"""
+    <svg width="38" height="38" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 20 L40 10 L60 10 L70 20 L85 30 L75 45 L68 40 L68 85 L32 85 L32 40 L25 45 L15 30 Z" fill="{c1}" stroke="#ffffff" stroke-width="3"/>
+        <path d="M50 10 L50 85" stroke="{c2}" stroke-width="12"/>
+        <path d="M30 20 L40 10 L60 10 L70 20" fill="none" stroke="#ffffff" stroke-width="3"/>
+    </svg>
+    """
+    return svg
+
 def to_decimal(momio, tipo):
     if tipo == "Decimal": return float(momio)
     return (momio / 100) + 1 if momio > 0 else (100 / abs(momio)) + 1
 
-# --- ESTRUCTURA EN 2 COLUMNAS PRINCIPALES (DASHBOARD) ---
+# --- DASHBOARD A 2 COLUMNAS ---
 col_izq, col_der = st.columns([1, 1], gap="large")
 
 # ==========================================
-# COLUMNA IZQUIERDA: CONTROLES & GRÁFICAS
+# COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
-    st.markdown("<h2 style='color: #ffffff; font-weight: 900; margin-bottom: 15px;'>⚽ LIGA MX ANALYTICS PRO</h2>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="header-box">
+        <img src="{LOGO_LIGA_MX}" width="42" height="42" style="object-fit:contain;">
+        <span class="header-title">ANALISIS PRO-LIGA MX</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     c_sel1, c_sel2 = st.columns(2)
     lista_equipos = sorted(list(EQUIPOS.keys()))
@@ -106,7 +141,7 @@ with col_izq:
 
     eq_local, eq_visita = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
-    # MATEMÁTICAS
+    # MATEMÁTICAS DEL MODELO
     diff_altitud = max(0, eq_local["altitud"] - eq_visita["altitud"])
     penal_altitud = diff_altitud * 0.00015
 
@@ -128,12 +163,12 @@ with col_izq:
             matrix_1ht[x, y] = poisson.pmf(x, xg_local_1ht) * poisson.pmf(y, xg_visita_1ht)
     matrix_1ht /= np.sum(matrix_1ht)
 
-    # DIBUJO DE ESCUDOS CON HTML LIMPIO
+    # REEMPLAZO DE ESCUDOS POR JERSEYS EN SVG
     c_esc1, c_esc2 = st.columns(2)
     with c_esc1:
         st.markdown(f"""
         <div class="team-badge-box">
-            <img src="{LOGOS[local_nombre]}" width="40" height="40" style="object-fit:contain; margin-right:12px;">
+            <div style="margin-right:12px;">{generar_jersey_svg(local_nombre)}</div>
             <div>
                 <div style="font-weight:800; color:#fff; font-size:16px;">{local_nombre}</div>
                 <div style="color:#10b981; font-weight:800; font-size:14px;">{xg_local:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
@@ -144,7 +179,7 @@ with col_izq:
     with c_esc2:
         st.markdown(f"""
         <div class="team-badge-box">
-            <img src="{LOGOS[visita_nombre]}" width="40" height="40" style="object-fit:contain; margin-right:12px;">
+            <div style="margin-right:12px;">{generar_jersey_svg(visita_nombre)}</div>
             <div>
                 <div style="font-weight:800; color:#fff; font-size:16px;">{visita_nombre}</div>
                 <div style="color:#38bdf8; font-weight:800; font-size:14px;">{xg_visita:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
@@ -185,7 +220,7 @@ with col_izq:
     with cg1: st.plotly_chart(fig_xg, use_container_width=True)
     with cg2: st.plotly_chart(fig_pie, use_container_width=True)
 
-    # MOMIOS DE CASA DE APUESTAS
+    # MOMIOS DE TU CASA
     with st.expander("⚙️ MOMIOS DE TU CASA DE APUESTAS (CALCULADORA EV)", expanded=True):
         formato_m = st.radio("Formato:", ["Americano (+150 / -200)", "Decimal (2.50 / 1.50)"], horizontal=True)
         es_dec = "Decimal" in formato_m
@@ -216,12 +251,17 @@ with col_izq:
         m_btts_s = to_decimal(m_btts_s_in, tipo_str)
 
 # ==========================================
-# COLUMNA DERECHA: VEREDICTOS DE MERCADOS
+# COLUMNA DERECHA
 # ==========================================
 with col_der:
-    st.markdown("<h2 style='color: #ffffff; font-weight: 900; margin-bottom: 15px;'>🎯 Veredictos del Modelo</h2>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="header-box">
+        <img src="{LOGO_CANAL}" width="38" height="38" style="border-radius:50%; object-fit:cover;">
+        <span class="header-title">VEREDICTO MAÑA PIKS</span>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # CÁLCULOS DE VALOR ESPERADO (EV)
+    # CÁLCULOS 7 MERCADOS
     prob_1x = prob_1 + prob_x
     prob_over25 = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 2.5])
     prob_btts_si = np.sum(matrix[1:, 1:])
