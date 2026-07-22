@@ -81,10 +81,37 @@ st.markdown("""
         align-items: center;
         margin-bottom: 10px;
     }
+
+    /* ENCABEZADOS GIGANTES */
+    .header-big-left {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .header-text-left {
+        font-size: 36px !important;
+        font-weight: 900 !important;
+        color: #ffffff !important;
+        letter-spacing: -1px;
+        line-height: 1;
+    }
+
+    .header-big-right {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .header-text-right {
+        font-size: 36px !important;
+        font-weight: 900 !important;
+        color: #ffffff !important;
+        letter-spacing: -1px;
+        line-height: 1;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# GENERADOR DE JERSEY VECTORIAL (SVG 100% LIMPIO E INMUNE A ERRORES)
+# GENERADOR DE JERSEY VECTORIAL (SVG 100% LIMPIO)
 def generar_jersey_svg(equipo_nombre):
     col = JERSEYS_COLORES.get(equipo_nombre, {"c1": "#333333", "c2": "#666666"})
     c1, c2 = col["c1"], col["c2"]
@@ -109,20 +136,20 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
-    # ENCABEZADO CON LOGO DE LIGA MX A 68PX EXACTOS
+    # LOGO LIGA MX A 95PX Y TEXTO GIGANTE DE 36PX
     st.markdown("""
-    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 68px; margin-right: 15px; object-fit: contain;">
-        <span style="font-size: 26px; font-weight: 900; color: #ffffff;">ANALISIS PRO-LIGA MX</span>
+    <div class="header-big-left">
+        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 95px; margin-right: 18px; object-fit: contain;">
+        <span class="header-text-left">ANALISIS PRO-LIGA MX</span>
     </div>
     """, unsafe_allow_html=True)
     
     c_sel1, c_sel2 = st.columns(2)
     lista_equipos = sorted(list(EQUIPOS.keys()))
     
-    local_nombre = c_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Tijuana") if "Tijuana" in lista_equipos else 0)
+    local_nombre = c_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Atlante") if "Atlante" in lista_equipos else 0)
     visita_opciones = [eq for eq in lista_equipos if eq != local_nombre]
-    visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("Cruz Azul") if "Cruz Azul" in visita_opciones else 0)
+    visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("América") if "América" in visita_opciones else 0)
 
     eq_local, eq_visita = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
@@ -148,7 +175,7 @@ with col_izq:
             matrix_1ht[x, y] = poisson.pmf(x, xg_local_1ht) * poisson.pmf(y, xg_visita_1ht)
     matrix_1ht /= np.sum(matrix_1ht)
 
-    # REEMPLAZO 100% SEGURO CON JERSEYS SVG CON COLORES DEL CLUB
+    # JERSEYS SVG CON COLORES DEL CLUB
     c_esc1, c_esc2 = st.columns(2)
     with c_esc1:
         st.markdown(f"""
@@ -205,7 +232,7 @@ with col_izq:
     with cg1: st.plotly_chart(fig_xg, use_container_width=True)
     with cg2: st.plotly_chart(fig_pie, use_container_width=True)
 
-    # MOMIOS DE TU CASA
+    # MOMIOS DE TU CASA DE APUESTAS
     with st.expander("⚙️ MOMIOS DE TU CASA DE APUESTAS (CALCULADORA EV)", expanded=True):
         formato_m = st.radio("Formato:", ["Americano (+150 / -200)", "Decimal (2.50 / 1.50)"], horizontal=True)
         es_dec = "Decimal" in formato_m
@@ -239,10 +266,11 @@ with col_izq:
 # COLUMNA DERECHA
 # ==========================================
 with col_der:
+    # CORONA GRANDE DE 45PX Y TEXTO GIGANTE DE 36PX
     st.markdown("""
-    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-        <span style="font-size: 32px; margin-right: 12px;">👑</span>
-        <span style="font-size: 26px; font-weight: 900; color: #ffffff;">VEREDICTO MAÑA PIKS</span>
+    <div class="header-big-right">
+        <span style="font-size: 45px; margin-right: 15px; line-height:1;">👑</span>
+        <span class="header-text-right">VEREDICTO MAÑA PIKS</span>
     </div>
     """, unsafe_allow_html=True)
     
