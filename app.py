@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 # Configuración de página
 st.set_page_config(page_title="ANALISIS PRO-LIGA MX", layout="wide", page_icon="⚽")
 
-# ESCUDOS OFICIALES HD LIGA MX (URLS DIRECTAS CON CDN ANTI-BLOQUEO)
+# ESCUDOS REALES Y OFICIALES HD (ESPN CDN CDN DIRECTO)
 ESCUDOS_OFICIALES = {
     "América": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
     "Atlante": "https://a.espncdn.com/i/teamlogos/soccer/500/221.png",
@@ -50,7 +50,7 @@ EQUIPOS = {
     "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
 }
 
-# ESTILOS CSS GENERALES Y HEADER CON LOGOS RENDERIZADOS
+# ESTILOS CSS GENERALES
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -72,22 +72,12 @@ st.markdown("""
     .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 12px; margin-bottom: 6px; }
     .subtext { color: #94a3b8; font-size: 12px; margin-top: 3px; }
     
-    .title-banner {
-        font-size: 24px;
-        font-weight: 900;
-        color: #ffffff !important;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        letter-spacing: -0.5px;
-    }
     .team-badge-card {
         background: #121721;
         border: 1px solid #1e2638;
         border-radius: 10px;
-        padding: 12px;
-        display: flex;
-        align-items: center;
+        padding: 10px 14px;
+        margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -103,10 +93,11 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
+    # ENCABEZADO CON LOGO LIGA MX MÁS GRANDE (65px)
     st.markdown("""
-    <div class="title-banner">
-        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" width="40" height="40" style="margin-right: 12px; object-fit: contain;">
-        <span>ANALISIS PRO-LIGA MX</span>
+    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 65px; margin-right: 15px; object-fit: contain;">
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff;">ANALISIS PRO-LIGA MX</span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -141,29 +132,27 @@ with col_izq:
             matrix_1ht[x, y] = poisson.pmf(x, xg_local_1ht) * poisson.pmf(y, xg_visita_1ht)
     matrix_1ht /= np.sum(matrix_1ht)
 
-    # DIBUJO DE ESCUDOS USANDO RENDER DE NAVEGADOR
+    # NATIVO DE STREAMLIT PARA RENDERIZAR ESCUDOS OFICIALES REALES
     c_esc1, c_esc2 = st.columns(2)
     with c_esc1:
-        st.markdown(f"""
-        <div class="team-badge-card">
-            <img src="{ESCUDOS_OFICIALES[local_nombre]}" width="44" height="44" style="object-fit:contain; margin-right:12px;">
-            <div>
-                <div style="font-weight:800; color:#fff; font-size:16px;">{local_nombre}</div>
-                <div style="color:#10b981; font-weight:800; font-size:14px;">{xg_local:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="team-badge-card">', unsafe_allow_html=True)
+        col_img1, col_txt1 = st.columns([1, 3])
+        with col_img1:
+            st.image(ESCUDOS_OFICIALES[local_nombre], width=48)
+        with col_txt1:
+            st.markdown(f"<div style='font-weight:800; color:#fff; font-size:16px;'>{local_nombre}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#10b981; font-weight:800; font-size:14px;'>{xg_local:.2f} <span style='font-size:10px; color:#64748b;'>xG Esperado</span></div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with c_esc2:
-        st.markdown(f"""
-        <div class="team-badge-card">
-            <img src="{ESCUDOS_OFICIALES[visita_nombre]}" width="44" height="44" style="object-fit:contain; margin-right:12px;">
-            <div>
-                <div style="font-weight:800; color:#fff; font-size:16px;">{visita_nombre}</div>
-                <div style="color:#38bdf8; font-weight:800; font-size:14px;">{xg_visita:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="team-badge-card">', unsafe_allow_html=True)
+        col_img2, col_txt2 = st.columns([1, 3])
+        with col_img2:
+            st.image(ESCUDOS_OFICIALES[visita_nombre], width=48)
+        with col_txt2:
+            st.markdown(f"<div style='font-weight:800; color:#fff; font-size:16px;'>{visita_nombre}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#38bdf8; font-weight:800; font-size:14px;'>{xg_visita:.2f} <span style='font-size:10px; color:#64748b;'>xG Esperado</span></div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # GRÁFICAS COMPACTAS
     cg1, cg2 = st.columns(2)
@@ -233,9 +222,9 @@ with col_izq:
 # ==========================================
 with col_der:
     st.markdown("""
-    <div class="title-banner">
-        <span style="font-size:28px; margin-right:10px;">👑</span>
-        <span>VEREDICTO MAÑA PIKS</span>
+    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+        <span style="font-size: 32px; margin-right: 12px;">👑</span>
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff;">VEREDICTO MAÑA PIKS</span>
     </div>
     """, unsafe_allow_html=True)
     
