@@ -50,7 +50,7 @@ EQUIPOS = {
     "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
 }
 
-# ESTILOS CSS CON TEXTOS BLANCOS Y AZULES EN LUGAR DE GRISES
+# ESTILOS CSS - FORZAR TEXTO NEGRO DENTRO DE LOS CUADROS DE INPUTS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -58,10 +58,16 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #0b0e14; color: #ffffff; }
     
-    /* Forzar color blanco/azul en etiquetas e inputs */
+    /* ETIQUETAS EXTERNAS EN AZUL CELESTE */
     label { color: #38bdf8 !important; font-weight: 700 !important; font-size: 13px !important; }
     .stSelectbox label, .stNumberInput label, .stRadio label { color: #38bdf8 !important; }
-    p, span, div { color: #ffffff; }
+    
+    /* FORZAR TEXTO NEGRO Y VISIBLE DENTRO DE LAS CAJAS DE INPUT Y SELECTBOX */
+    input, div[data-baseweb="select"] span, div[data-baseweb="select"] input {
+        color: #000000 !important;
+        font-weight: 800 !important;
+    }
+    .stNumberInput input { color: #000000 !important; font-weight: 800 !important; }
     
     .card-pro {
         background: #121721;
@@ -74,7 +80,7 @@ st.markdown("""
     .badge-bet { background: #10b981; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 6px; float: right; font-size: 12px; }
     .badge-skip { background: #ef4444; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 6px; float: right; font-size: 12px; }
     
-    .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 12px; margin-bottom: 6px; }
+    .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 14px; margin-bottom: 6px; }
     .subtext { color: #cbd5e1; font-size: 12px; margin-top: 3px; }
     
     .team-badge-card {
@@ -87,7 +93,6 @@ st.markdown("""
         margin-bottom: 10px;
     }
 
-    /* ENCABEZADOS GIGANTES */
     .header-big-left, .header-big-right {
         display: flex;
         align-items: center;
@@ -223,7 +228,7 @@ with col_izq:
     with cg1: st.plotly_chart(fig_xg, use_container_width=True)
     with cg2: st.plotly_chart(fig_pie, use_container_width=True)
 
-    # MOMIOS DE TU CASA DE APUESTAS (CON DOBLE OPORTUNIDAD Y 3 DECIMALES)
+    # MOMIOS DE TU CASA DE APUESTAS
     with st.expander("⚙️ MOMIOS DE TU CASA DE APUESTAS (CALCULADORA EV)", expanded=True):
         formato_m = st.radio("Formato:", ["Americano (+150 / -200)", "Decimal (2.500 / 1.500)"], horizontal=True)
         es_dec = "Decimal" in formato_m
@@ -235,7 +240,7 @@ with col_izq:
         m_x_in = f1_2.number_input("EMPATE", value=3.750 if es_dec else 275, format="%.3f" if es_dec else "%d")
         m_2_in = f1_3.number_input(f"GANA {visita_nombre.upper()}", value=1.710 if es_dec else -141, format="%.3f" if es_dec else "%d")
         
-        # Fila 2: Doble Oportunidad (1X / 12 / X2)
+        # Fila 2: Doble Oportunidad
         f_do1, f_do2, f_do3 = st.columns(3)
         m_1x_in = f_do1.number_input(f"1X ({local_nombre[:3].upper()}/EMP)", value=2.100 if es_dec else 110, format="%.3f" if es_dec else "%d")
         m_12_in = f_do2.number_input("12 (LOCAL/VISITA)", value=1.280 if es_dec else -357, format="%.3f" if es_dec else "%d")
@@ -260,13 +265,15 @@ with col_izq:
 
         # Conversiones
         m_1 = to_decimal(m_1_in, tipo_str)
+        m_2 = to_decimal(m_2_in, tipo_str)
         m_1x = to_decimal(m_1x_in, tipo_str)
+        m_x2 = to_decimal(m_x2_in, tipo_str)
         m_over25 = to_decimal(m_over_in, tipo_str)
         m_over_1ht = to_decimal(m_over_1ht_in, tipo_str)
         m_btts_s = to_decimal(m_btts_s_in, tipo_str)
 
 # ==========================================
-# COLUMNA DERECHA
+# COLUMNA DERECHA: VEREDICTOS CON AMBOS EQUIPOS
 # ==========================================
 with col_der:
     st.markdown("""
@@ -276,19 +283,23 @@ with col_der:
     </div>
     """, unsafe_allow_html=True)
     
-    # CÁLCULOS 7 MERCADOS
+    # CÁLCULOS DUALES (LOCAL Y VISITANTE)
     prob_1x = prob_1 + prob_x
+    prob_x2 = prob_2 + prob_x
     prob_over25 = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 2.5])
     prob_btts_si = np.sum(matrix[1:, 1:])
     prob_over05_1ht = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 0.5])
     prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
+    prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
 
     lambda_corners = eq_local["corners"] + eq_visita["corners"]
     prob_over_corners_85 = 1.0 - poisson.cdf(8, lambda_corners)
     prob_over_tarjetas_45 = 1.0 - poisson.cdf(4, 4.5)
 
     ev_1 = (prob_1 * m_1) - 1
+    ev_2 = (prob_2 * m_2) - 1
     ev_1x = (prob_1x * m_1x) - 1
+    ev_x2 = (prob_x2 * m_x2) - 1
     ev_over25 = (prob_over25 * m_over25) - 1
     ev_over05_1ht = (prob_over05_1ht * m_over_1ht) - 1
     ev_btts_si = (prob_btts_si * m_btts_s) - 1
@@ -303,24 +314,36 @@ with col_der:
         </div>
         """, unsafe_allow_html=True)
 
+    # 1. RESULTADO FINAL
     st.markdown("<div class='market-title'>1. Resultado Final (1X2)</div>", unsafe_allow_html=True)
     render_card_pro(f"Gana {local_nombre} (1)", f"Probabilidad Real: {prob_1*100:.1f}%", ev_1, "BET" if ev_1 > 0.03 else "SKIP")
+    render_card_pro(f"Gana {visita_nombre} (2)", f"Probabilidad Real: {prob_2*100:.1f}%", ev_2, "BET" if ev_2 > 0.03 else "SKIP")
 
+    # 2. DOBLE OPORTUNIDAD
     st.markdown("<div class='market-title'>2. Doble Oportunidad</div>", unsafe_allow_html=True)
     render_card_pro(f"{local_nombre} o Empate (1X)", f"Probabilidad Real: {prob_1x*100:.1f}%", ev_1x, "BET" if ev_1x > 0.02 else "SKIP")
+    render_card_pro(f"Empate o {visita_nombre} (X2)", f"Probabilidad Real: {prob_x2*100:.1f}%", ev_x2, "BET" if ev_x2 > 0.02 else "SKIP")
 
+    # 3. TOTAL GOLES 90 MIN
     st.markdown("<div class='market-title'>3. Total de Goles (Partido Completo)</div>", unsafe_allow_html=True)
     render_card_pro("Más de 2.5 Goles", f"Probabilidad Real: {prob_over25*100:.1f}% (xG Total: {xg_local+xg_visita:.2f})", ev_over25, "BET" if ev_over25 > 0.03 else "SKIP")
 
+    # 4. TOTAL GOLES 1HT
     st.markdown("<div class='market-title'>4. Total de Goles 1ra Mitad (1HT)</div>", unsafe_allow_html=True)
     render_card_pro("1ra Mitad: Más de 0.5 Goles", f"Probabilidad Real: {prob_over05_1ht*100:.1f}%", ev_over05_1ht, "BET" if ev_over05_1ht > 0.03 else "SKIP")
 
+    # 5. BTTS
     st.markdown("<div class='market-title'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
     render_card_pro("Ambos Anotan: SÍ", f"Probabilidad Real: {prob_btts_si*100:.1f}%", ev_btts_si, "BET" if ev_btts_si > 0.03 else "SKIP")
 
+    # 6. HÁNDICAP ASIÁTICO
     st.markdown("<div class='market-title'>6. Hándicap Asiático</div>", unsafe_allow_html=True)
-    render_card_pro(f"{local_nombre} Hándicap -1.0", f"Probabilidad de cubrir: {prob_ha_local*100:.1f}%", (prob_ha_local*1.85)-1, "BET" if (prob_ha_local*1.85)-1 > 0.03 else "SKIP")
+    if xg_local >= xg_visita:
+        render_card_pro(f"{local_nombre} Hándicap -1.0", f"Prob. cubrir: {prob_ha_local*100:.1f}%", (prob_ha_local*1.85)-1, "BET" if (prob_ha_local*1.85)-1 > 0.03 else "SKIP")
+    else:
+        render_card_pro(f"{visita_nombre} Hándicap -1.0", f"Prob. cubrir: {prob_ha_visita*100:.1f}%", (prob_ha_visita*1.85)-1, "BET" if (prob_ha_visita*1.85)-1 > 0.03 else "SKIP")
 
+    # 7. CÓRNERS & TARJETAS
     st.markdown("<div class='market-title'>7. Córners & Tarjetas</div>", unsafe_allow_html=True)
     render_card_pro("Más de 8.5 Córners", f"Probabilidad Real: {prob_over_corners_85*100:.1f}%", (prob_over_corners_85*1.75)-1, "BET" if (prob_over_corners_85*1.75)-1 > 0.03 else "SKIP")
     render_card_pro("Más de 4.5 Tarjetas", f"Probabilidad Real: {prob_over_tarjetas_45*100:.1f}%", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
