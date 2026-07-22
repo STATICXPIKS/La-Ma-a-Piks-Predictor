@@ -91,36 +91,36 @@ JERSEYS_MLB = {
 }
 
 EQUIPOS_MLB = {
-    "NY Yankees": {"id": 147, "wRC_plus": 115, "xERA_p": 3.65, "K_pct_p": 25.2, "bullpen_era": 3.40, "park_factor": 1.02},
-    "LA Dodgers": {"id": 119, "wRC_plus": 120, "xERA_p": 3.45, "K_pct_p": 26.5, "bullpen_era": 3.30, "park_factor": 1.00},
-    "Boston Red Sox": {"id": 111, "wRC_plus": 105, "xERA_p": 4.10, "K_pct_p": 22.0, "bullpen_era": 4.15, "park_factor": 1.06},
-    "Houston Astros": {"id": 117, "wRC_plus": 110, "xERA_p": 3.75, "K_pct_p": 24.0, "bullpen_era": 3.60, "park_factor": 0.98},
-    "Atlanta Braves": {"id": 144, "wRC_plus": 114, "xERA_p": 3.80, "K_pct_p": 24.8, "bullpen_era": 3.70, "park_factor": 1.01},
-    "SD Padres": {"id": 135, "wRC_plus": 106, "xERA_p": 3.70, "K_pct_p": 23.5, "bullpen_era": 3.50, "park_factor": 0.95},
-    "Chicago Cubs": {"id": 112, "wRC_plus": 102, "xERA_p": 3.95, "K_pct_p": 22.5, "bullpen_era": 3.90, "park_factor": 1.03},
-    "SF Giants": {"id": 137, "wRC_plus": 96, "xERA_p": 3.85, "K_pct_p": 22.0, "bullpen_era": 3.80, "park_factor": 0.93},
-    "NY Mets": {"id": 121, "wRC_plus": 108, "xERA_p": 3.80, "K_pct_p": 24.1, "bullpen_era": 3.65, "park_factor": 0.96},
-    "Philadelphia Phillies": {"id": 143, "wRC_plus": 111, "xERA_p": 3.65, "K_pct_p": 25.0, "bullpen_era": 3.55, "park_factor": 1.02},
-    "Texas Rangers": {"id": 140, "wRC_plus": 104, "xERA_p": 4.20, "K_pct_p": 21.8, "bullpen_era": 4.30, "park_factor": 1.04},
-    "Toronto Blue Jays": {"id": 141, "wRC_plus": 101, "xERA_p": 3.90, "K_pct_p": 22.2, "bullpen_era": 3.85, "park_factor": 0.99},
-    "Seattle Mariners": {"id": 136, "wRC_plus": 95, "xERA_p": 3.40, "K_pct_p": 27.0, "bullpen_era": 3.20, "park_factor": 0.91},
-    "Baltimore Orioles": {"id": 110, "wRC_plus": 112, "xERA_p": 3.85, "K_pct_p": 23.8, "bullpen_era": 3.75, "park_factor": 0.98},
-    "Tampa Bay Rays": {"id": 139, "wRC_plus": 98, "xERA_p": 3.60, "K_pct_p": 24.5, "bullpen_era": 3.45, "park_factor": 0.94},
-    "Arizona Diamondbacks": {"id": 109, "wRC_plus": 105, "xERA_p": 4.25, "K_pct_p": 21.0, "bullpen_era": 4.20, "park_factor": 1.03},
-    "Milwaukee Brewers": {"id": 158, "wRC_plus": 100, "xERA_p": 3.60, "K_pct_p": 23.2, "bullpen_era": 3.35, "park_factor": 1.00},
-    "St. Louis Cardinals": {"id": 138, "wRC_plus": 97, "xERA_p": 4.10, "K_pct_p": 21.5, "bullpen_era": 4.00, "park_factor": 0.97},
-    "Cleveland Guardians": {"id": 114, "wRC_plus": 99, "xERA_p": 3.50, "K_pct_p": 23.0, "bullpen_era": 3.10, "park_factor": 0.96},
-    "Minnesota Twins": {"id": 142, "wRC_plus": 104, "xERA_p": 3.90, "K_pct_p": 24.0, "bullpen_era": 3.80, "park_factor": 1.00},
-    "Detroit Tigers": {"id": 116, "wRC_plus": 96, "xERA_p": 3.80, "K_pct_p": 23.0, "bullpen_era": 3.65, "park_factor": 0.97},
-    "Chicago White Sox": {"id": 145, "wRC_plus": 82, "xERA_p": 4.90, "K_pct_p": 19.5, "bullpen_era": 4.80, "park_factor": 1.02},
-    "KC Royals": {"id": 118, "wRC_plus": 102, "xERA_p": 3.90, "K_pct_p": 22.5, "bullpen_era": 3.85, "park_factor": 1.02},
-    "LA Angels": {"id": 108, "wRC_plus": 94, "xERA_p": 4.50, "K_pct_p": 21.0, "bullpen_era": 4.50, "park_factor": 0.99},
-    "Cincinnati Reds": {"id": 113, "wRC_plus": 98, "xERA_p": 4.40, "K_pct_p": 22.5, "bullpen_era": 4.25, "park_factor": 1.12},
-    "Colorado Rockies": {"id": 115, "wRC_plus": 90, "xERA_p": 5.40, "K_pct_p": 18.5, "bullpen_era": 5.20, "park_factor": 1.25},
-    "Miami Marlins": {"id": 146, "wRC_plus": 88, "xERA_p": 4.30, "K_pct_p": 20.5, "bullpen_era": 4.35, "park_factor": 0.94},
-    "Pittsburgh Pirates": {"id": 134, "wRC_plus": 92, "xERA_p": 4.00, "K_pct_p": 22.0, "bullpen_era": 3.95, "park_factor": 0.96},
-    "Washington Nationals": {"id": 120, "wRC_plus": 93, "xERA_p": 4.60, "K_pct_p": 20.0, "bullpen_era": 4.60, "park_factor": 1.01},
-    "Oakland Athletics": {"id": 133, "wRC_plus": 95, "xERA_p": 4.50, "K_pct_p": 21.5, "bullpen_era": 4.40, "park_factor": 0.95}
+    "NY Yankees": {"id": 147, "wRC_plus": 115, "era_base": 3.65, "w": 12, "l": 6, "ip": 110.0, "whip": 1.18, "k": 125, "bb": 35},
+    "LA Dodgers": {"id": 119, "wRC_plus": 120, "era_base": 3.45, "w": 14, "l": 5, "ip": 125.0, "whip": 1.12, "k": 140, "bb": 30},
+    "Boston Red Sox": {"id": 111, "wRC_plus": 105, "era_base": 4.10, "w": 8, "l": 8, "ip": 98.0, "whip": 1.28, "k": 102, "bb": 40},
+    "Houston Astros": {"id": 117, "wRC_plus": 110, "era_base": 3.75, "w": 10, "l": 7, "ip": 105.0, "whip": 1.20, "k": 115, "bb": 36},
+    "Atlanta Braves": {"id": 144, "wRC_plus": 114, "era_base": 3.80, "w": 11, "l": 6, "ip": 108.0, "whip": 1.22, "k": 118, "bb": 38},
+    "SD Padres": {"id": 135, "wRC_plus": 106, "era_base": 3.70, "w": 9, "l": 8, "ip": 102.0, "whip": 1.19, "k": 110, "bb": 34},
+    "Chicago Cubs": {"id": 112, "wRC_plus": 102, "era_base": 3.95, "w": 8, "l": 9, "ip": 95.0, "whip": 1.25, "k": 98, "bb": 42},
+    "SF Giants": {"id": 137, "wRC_plus": 96, "era_base": 3.85, "w": 7, "l": 9, "ip": 92.0, "whip": 1.21, "k": 90, "bb": 35},
+    "NY Mets": {"id": 121, "wRC_plus": 108, "era_base": 3.80, "w": 10, "l": 7, "ip": 104.0, "whip": 1.22, "k": 112, "bb": 37},
+    "Philadelphia Phillies": {"id": 143, "wRC_plus": 111, "era_base": 3.65, "w": 12, "l": 5, "ip": 115.0, "whip": 1.17, "k": 130, "bb": 32},
+    "Texas Rangers": {"id": 140, "wRC_plus": 104, "era_base": 4.20, "w": 7, "l": 10, "ip": 90.0, "whip": 1.30, "k": 88, "bb": 44},
+    "Toronto Blue Jays": {"id": 141, "wRC_plus": 101, "era_base": 3.90, "w": 8, "l": 8, "ip": 96.0, "whip": 1.24, "k": 95, "bb": 39},
+    "Seattle Mariners": {"id": 136, "wRC_plus": 95, "era_base": 3.40, "w": 11, "l": 6, "ip": 120.0, "whip": 1.10, "k": 135, "bb": 28},
+    "Baltimore Orioles": {"id": 110, "wRC_plus": 112, "era_base": 3.85, "w": 11, "l": 6, "ip": 106.0, "whip": 1.21, "k": 114, "bb": 36},
+    "Tampa Bay Rays": {"id": 139, "wRC_plus": 98, "era_base": 3.60, "w": 9, "l": 8, "ip": 100.0, "whip": 1.16, "k": 108, "bb": 31},
+    "Arizona Diamondbacks": {"id": 109, "wRC_plus": 105, "era_base": 4.25, "w": 8, "l": 9, "ip": 94.0, "whip": 1.31, "k": 92, "bb": 45},
+    "Milwaukee Brewers": {"id": 158, "wRC_plus": 100, "era_base": 3.60, "w": 10, "l": 6, "ip": 103.0, "whip": 1.18, "k": 109, "bb": 33},
+    "St. Louis Cardinals": {"id": 138, "wRC_plus": 97, "era_base": 4.10, "w": 7, "l": 9, "ip": 91.0, "whip": 1.27, "k": 85, "bb": 40},
+    "Cleveland Guardians": {"id": 114, "wRC_plus": 99, "era_base": 3.50, "w": 12, "l": 5, "ip": 112.0, "whip": 1.15, "k": 122, "bb": 30},
+    "Minnesota Twins": {"id": 142, "wRC_plus": 104, "era_base": 3.90, "w": 9, "l": 8, "ip": 99.0, "whip": 1.23, "k": 105, "bb": 38},
+    "Detroit Tigers": {"id": 116, "wRC_plus": 96, "era_base": 3.80, "w": 8, "l": 8, "ip": 95.0, "whip": 1.20, "k": 96, "bb": 35},
+    "Chicago White Sox": {"id": 145, "wRC_plus": 82, "era_base": 4.90, "w": 4, "l": 14, "ip": 80.0, "whip": 1.42, "k": 72, "bb": 50},
+    "KC Royals": {"id": 118, "wRC_plus": 102, "era_base": 3.90, "w": 9, "l": 7, "ip": 101.0, "whip": 1.24, "k": 100, "bb": 37},
+    "LA Angels": {"id": 108, "wRC_plus": 94, "era_base": 4.50, "w": 6, "l": 11, "ip": 88.0, "whip": 1.35, "k": 82, "bb": 46},
+    "Cincinnati Reds": {"id": 113, "wRC_plus": 98, "era_base": 4.40, "w": 7, "l": 10, "ip": 89.0, "whip": 1.33, "k": 86, "bb": 43},
+    "Colorado Rockies": {"id": 115, "wRC_plus": 90, "era_base": 5.40, "w": 4, "l": 13, "ip": 78.0, "whip": 1.50, "k": 68, "bb": 52},
+    "Miami Marlins": {"id": 146, "wRC_plus": 88, "era_base": 4.30, "w": 5, "l": 12, "ip": 85.0, "whip": 1.32, "k": 80, "bb": 44},
+    "Pittsburgh Pirates": {"id": 134, "wRC_plus": 92, "era_base": 4.00, "w": 8, "l": 9, "ip": 93.0, "whip": 1.26, "k": 91, "bb": 41},
+    "Washington Nationals": {"id": 120, "wRC_plus": 93, "era_base": 4.60, "w": 6, "l": 11, "ip": 86.0, "whip": 1.36, "k": 78, "bb": 47},
+    "Oakland Athletics": {"id": 133, "wRC_plus": 95, "era_base": 4.50, "w": 6, "l": 11, "ip": 87.0, "whip": 1.34, "k": 81, "bb": 45}
 }
 
 @st.cache_data(ttl=1800)
@@ -467,7 +467,7 @@ if not es_mlb:
         render_card_pro("Más de 4.5 Tarjetas", f"Probabilidad Real: {prob_over_tarjetas_45*100:.1f}%", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
 
 # ==========================================
-# SECCIÓN MLB SABERMETRÍA AVANZADA + LOGOS
+# SECCIÓN MLB SABERMETRÍA EXCLUSIVA
 # ==========================================
 else:
     EQUIPOS = EQUIPOS_MLB
@@ -501,50 +501,46 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # PANEL DE AJUSTES SABERMÉTRICOS EXPANDIDO POR DEFECTO (EXPANDED = TRUE)
-        with st.expander("📊 PARÁMETROS SABERMÉTRICOS DEL PARTIDO (PITCHERS & CLIMA)", expanded=True):
-            st.markdown("<p style='color:#38bdf8; font-weight:800;'>PITCHERS ABRIDORES & BULLPEN</p>", unsafe_allow_html=True)
-            cp1, cp2 = st.columns(2)
-            with cp1:
-                xERA_p_loc = st.number_input(f"xERA / ERA Abridor {local_nombre[:3]}", value=float(eq_local_base["xERA_p"]), step=0.1, format="%.2f")
-                K_pct_loc = st.number_input(f"K% Abridor {local_nombre[:3]}", value=float(eq_local_base["K_pct_p"]), step=0.5, format="%.1f")
-                outs_exp_loc = st.number_input(f"Outs Proyectados {local_nombre[:3]}", value=17.5, step=0.5, format="%.1f")
-                bp_loc = st.number_input(f"ERA Bullpen {local_nombre[:3]}", value=float(eq_local_base["bullpen_era"]), step=0.1, format="%.2f")
-            with cp2:
-                xERA_p_vis = st.number_input(f"xERA / ERA Abridor {visita_nombre[:3]}", value=float(eq_visita_base["xERA_p"]), step=0.1, format="%.2f")
-                K_pct_vis = st.number_input(f"K% Abridor {visita_nombre[:3]}", value=float(eq_visita_base["K_pct_p"]), step=0.5, format="%.1f")
-                outs_exp_vis = st.number_input(f"Outs Proyectados {visita_nombre[:3]}", value=16.5, step=0.5, format="%.1f")
-                bp_vis = st.number_input(f"ERA Bullpen {visita_nombre[:3]}", value=float(eq_visita_base["bullpen_era"]), step=0.1, format="%.2f")
+        # PANEL EXCLUSIVO CON TUS AJUSTES SOLICITADOS (W-L, IP, ERA, WHIP, K, BB Y CLIMA)
+        with st.expander("📊 PARÁMETROS DE ABRIDORES Y CLIMA", expanded=True):
+            st.markdown(f"<p style='color:#38bdf8; font-weight:800;'>ESTADÍSTICAS ABRIDOR LOCAL: {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            pl1, pl2, pl3, pl4, pl5, pl6 = st.columns(6)
+            w_loc = pl1.number_input("W", value=int(eq_local_base["w"]), step=1, key="w_loc")
+            l_loc = pl2.number_input("L", value=int(eq_local_base["l"]), step=1, key="l_loc")
+            ip_loc = pl3.number_input("IP", value=float(eq_local_base["ip"]), step=0.1, key="ip_loc")
+            era_loc = pl4.number_input("ERA", value=float(eq_local_base["era_base"]), step=0.01, format="%.2f", key="era_loc")
+            whip_loc = pl5.number_input("WHIP", value=float(eq_local_base["whip"]), step=0.01, format="%.2f", key="whip_loc")
+            k_loc = pl6.number_input("K Total", value=int(eq_local_base["k"]), step=1, key="k_loc")
 
-            st.markdown("<p style='color:#38bdf8; font-weight:800;'>CLIMA Y PARK FACTOR</p>", unsafe_allow_html=True)
-            cc1, cc2 = st.columns(2)
-            viento_opcion = cc1.selectbox("Efecto del Viento / Clima", [
-                "Neutral / Domo (0%)", 
-                "Viento leve a favor bateo (+5%)", 
-                "Viento fuerte a favor bateo (+10%)", 
-                "Viento extremo a favor bateo (+20%)", 
-                "Viento leve en contra bateo (-5%)", 
-                "Viento fuerte en contra bateo (-10%)"
-            ], index=0)
+            st.markdown(f"<p style='color:#38bdf8; font-weight:800; margin-top:10px;'>ESTADÍSTICAS ABRIDOR VISITANTE: {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            pv1, pv2, pv3, pv4, pv5, pv6 = st.columns(6)
+            w_vis = pv1.number_input("W", value=int(eq_visita_base["w"]), step=1, key="w_vis")
+            l_vis = pv2.number_input("L", value=int(eq_visita_base["l"]), step=1, key="l_vis")
+            ip_vis = pv3.number_input("IP", value=float(eq_visita_base["ip"]), step=0.1, key="ip_vis")
+            era_vis = pv4.number_input("ERA", value=float(eq_visita_base["era_base"]), step=0.01, format="%.2f", key="era_vis")
+            whip_vis = pv5.number_input("WHIP", value=float(eq_visita_base["whip"]), step=0.01, format="%.2f", key="whip_vis")
+            k_vis = pv6.number_input("K Total", value=int(eq_visita_base["k"]), step=1, key="k_vis")
+
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:10px;'>CONDICIONES DEL CLIMA</p>", unsafe_allow_html=True)
+            cw1, cw2, cw3, cw4 = st.columns(4)
+            viento_kmh = cw1.number_input("Viento (km/h)", value=16, step=1)
+            viento_dir = cw2.selectbox("Dirección Viento", ["A favor (Out)", "En contra (In)", "Cruzado (Cross)"])
+            temp_c = cw3.number_input("Temperatura (°C)", value=24, step=1)
+            precip_pct = cw4.number_input("Precipitación (%)", value=0, step=5)
+
+        # CÁLCULO DE MULTIPLICADOR DE CLIMA Y CARRERAS
+        mult_viento = 1.0
+        if "favor" in viento_dir:
+            mult_viento += (viento_kmh * 0.006)
+        elif "contra" in viento_dir:
+            mult_viento -= (viento_kmh * 0.006)
             
-            viento_map = {
-                "Neutral / Domo (0%)": 0.0,
-                "Viento leve a favor bateo (+5%)": 0.05,
-                "Viento fuerte a favor bateo (+10%)": 0.10,
-                "Viento extremo a favor bateo (+20%)": 0.20,
-                "Viento leve en contra bateo (-5%)": -0.05,
-                "Viento fuerte en contra bateo (-10%)": -0.10
-            }
-            viento_m = viento_map[viento_opcion]
-            park_f = cc2.number_input("Factor de Parque (1.00 = Neutral)", value=float(eq_local_base["park_factor"]), step=0.01, format="%.2f")
+        mult_temp = 1.0 + ((temp_c - 21) * 0.003)
+        mult_clima = mult_viento * mult_temp
 
-        mult_clima = (1.0 + viento_m) * park_f
-        
-        era_efectiva_loc = (xERA_p_loc * 0.58) + (bp_loc * 0.42)
-        era_efectiva_vis = (xERA_p_vis * 0.58) + (bp_vis * 0.42)
-
-        xr_local = ((eq_local_base["wRC_plus"] / 100.0) * (era_efectiva_vis / 4.10) * 4.30) * mult_clima
-        xr_visita = ((eq_visita_base["wRC_plus"] / 100.0) * (era_efectiva_loc / 4.10) * 4.10) * mult_clima
+        # MODELADO DE CARRERAS CON ERA Y WHIP
+        xr_local = ((eq_local_base["wRC_plus"] / 100.0) * (era_vis / 4.10) * (whip_vis / 1.25) * 4.30) * mult_clima
+        xr_visita = ((eq_visita_base["wRC_plus"] / 100.0) * (era_loc / 4.10) * (whip_loc / 1.25) * 4.10) * mult_clima
 
         max_c = 16
         matrix_mlb = np.zeros((max_c, max_c))
@@ -553,8 +549,8 @@ else:
                 matrix_mlb[x, y] = poisson.pmf(x, xr_local) * poisson.pmf(y, xr_visita)
         matrix_mlb /= np.sum(matrix_mlb)
 
-        xr_loc_f5 = (eq_local_base["wRC_plus"] / 100.0) * (xERA_p_vis / 4.10) * 2.35 * mult_clima
-        xr_vis_f5 = (eq_visita_base["wRC_plus"] / 100.0) * (xERA_p_loc / 4.10) * 2.20 * mult_clima
+        xr_loc_f5 = (eq_local_base["wRC_plus"] / 100.0) * (era_vis / 4.10) * 2.35 * mult_clima
+        xr_vis_f5 = (eq_visita_base["wRC_plus"] / 100.0) * (era_loc / 4.10) * 2.20 * mult_clima
         matrix_f5 = np.zeros((max_c, max_c))
         for x in range(max_c):
             for y in range(max_c):
@@ -701,21 +697,25 @@ else:
         prob_rl_loc = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
         prob_rl_vis = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        # EVALUACIÓN DINÁMICA DE K'S
+        # EVALUACIÓN DE PONCHES USANDO K/IP REAL
         k_target_loc = float(linea_k_loc.split(" ")[1])
-        lambda_k_loc = (K_pct_loc / 100.0) * (outs_exp_loc * 1.45)
+        k_rate_loc = (k_loc / ip_loc) if ip_loc > 0 else 1.0
+        outs_exp_loc_val = 17.5
+        lambda_k_loc = k_rate_loc * (outs_exp_loc_val / 3.0)
         prob_k_loc = 1.0 - poisson.cdf(int(k_target_loc), lambda_k_loc)
 
         k_target_vis = float(linea_k_vis.split(" ")[1])
-        lambda_k_vis = (K_pct_vis / 100.0) * (outs_exp_vis * 1.45)
+        k_rate_vis = (k_vis / ip_vis) if ip_vis > 0 else 1.0
+        outs_exp_vis_val = 16.5
+        lambda_k_vis = k_rate_vis * (outs_exp_vis_val / 3.0)
         prob_k_vis = 1.0 - poisson.cdf(int(k_target_vis), lambda_k_vis)
 
-        # EVALUACIÓN DINÁMICA DE OUTS
+        # EVALUACIÓN DE OUTS
         outs_target_loc = float(linea_outs_loc.split(" ")[1])
-        prob_outs_loc = 1.0 - poisson.cdf(int(outs_target_loc), outs_exp_loc)
+        prob_outs_loc = 1.0 - poisson.cdf(int(outs_target_loc), outs_exp_loc_val)
 
         outs_target_vis = float(linea_outs_vis.split(" ")[1])
-        prob_outs_vis = 1.0 - poisson.cdf(int(outs_target_vis), outs_exp_vis)
+        prob_outs_vis = 1.0 - poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
 
         prob_f5_loc = np.sum(np.tril(matrix_f5, -1))
         prob_f5_vis = np.sum(np.triu(matrix_f5, 1))
