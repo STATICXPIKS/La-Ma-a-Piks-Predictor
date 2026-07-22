@@ -5,16 +5,16 @@ from scipy.stats import poisson
 # Configuración de página
 st.set_page_config(page_title="Liga MX Predictor", layout="centered", page_icon="⚽")
 
-# DICCIONARIO DE LOGOS DE LA LIGA MX
+# DICCIONARIO DE LOGOS CON ENLACES DIRECTOS
 LOGOS = {
-    "Tigres": "https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Club_Tigres_UANL.png",
-    "San Luis": "https://upload.wikimedia.org/wikipedia/commons/a/ac/Atletico_san_luis.png",
-    "América": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Club_America_logo.png",
-    "Chivas": "https://upload.wikimedia.org/wikipedia/commons/4/41/Club_Guadalajara_logo.png",
-    "Cruz Azul": "https://upload.wikimedia.org/wikipedia/commons/d/d6/Cruz_Azul_Logo.png",
-    "Pumas": "https://upload.wikimedia.org/wikipedia/commons/8/80/Pumas_UNAM.png",
-    "Toluca": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Deportivo_Toluca_FC_logo.png",
-    "Monterrey": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_de_Club_de_F%C3%Batbol_Monterrey.png"
+    "Tigres": "https://a.espncdn.com/i/teamlogos/soccer/500/218.png",
+    "San Luis": "https://a.espncdn.com/i/teamlogos/soccer/500/17702.png",
+    "América": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
+    "Chivas": "https://a.espncdn.com/i/teamlogos/soccer/500/219.png",
+    "Cruz Azul": "https://a.espncdn.com/i/teamlogos/soccer/500/217.png",
+    "Pumas": "https://a.espncdn.com/i/teamlogos/soccer/500/229.png",
+    "Toluca": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png",
+    "Monterrey": "https://a.espncdn.com/i/teamlogos/soccer/500/223.png"
 }
 
 # ESTILOS CSS PERSONALIZADOS
@@ -22,19 +22,8 @@ st.markdown("""
 <style>
     .stApp { background-color: #f4f6f9; }
     
-    .team-container {
-        display: flex;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-    .team-logo {
-        width: 42px;
-        height: 42px;
-        object-fit: contain;
-        margin-right: 12px;
-    }
     .team-name {
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 800;
         margin-right: 10px;
         color: #111827;
@@ -87,22 +76,20 @@ def to_decimal(momio, tipo):
 # ENCABEZADO
 st.caption("9:00 P.M. · ESTADIO UNIVERSITARIO")
 
-# RENDER DE LOGOS Y FORMA
-st.markdown(f"""
-<div class="team-container">
-    <img src="{LOGOS['Tigres']}" class="team-logo"/>
-    <span class="team-name">Tigres</span>
-    <span class="form-pill bg-p">P</span><span class="form-pill bg-p">P</span><span class="form-pill bg-p">P</span><span class="form-pill bg-g">G</span><span class="form-pill bg-g">G</span>
-</div>
-<p style="margin:-10px 0 15px 54px; color:#6b7280; font-size:12px;">0-0-1 (G-E-P)</p>
+# RENDER DE EQUIPOS Y ESCUDOS CON STREAMLIT
+c_logo1, c_info1 = st.columns([1, 6])
+with c_logo1:
+    st.image(LOGOS["Tigres"], width=42)
+with c_info1:
+    st.markdown("<span class='team-name'>Tigres</span> <span class='form-pill bg-p'>P</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-g'>G</span><span class='form-pill bg-g'>G</span>", unsafe_allow_html=True)
+    st.caption("0-0-1 (G-E-P)")
 
-<div class="team-container">
-    <img src="{LOGOS['San Luis']}" class="team-logo"/>
-    <span class="team-name">San Luis</span>
-    <span class="form-pill bg-p">P</span><span class="form-pill bg-p">P</span><span class="form-pill bg-g">G</span><span class="form-pill bg-p">P</span><span class="form-pill bg-e">E</span>
-</div>
-<p style="margin:-10px 0 20px 54px; color:#6b7280; font-size:12px;">0-0-1 (G-E-P)</p>
-""", unsafe_allow_html=True)
+c_logo2, c_info2 = st.columns([1, 6])
+with c_logo2:
+    st.image(LOGOS["San Luis"], width=42)
+with c_info2:
+    st.markdown("<span class='team-name'>San Luis</span> <span class='form-pill bg-p'>P</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-g'>G</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-e'>E</span>", unsafe_allow_html=True)
+    st.caption("0-0-1 (G-E-P)")
 
 st.markdown("---")
 
@@ -133,7 +120,7 @@ with st.expander("⚙️ METER LOS MOMIOS DE MI CASA (OPCIONAL — ANÁLISIS MÁ
     m_btts_s_in = col_btts_s.number_input("AMBOS ANOTAN: SÍ", value=1.91 if es_decimal else -110)
     m_btts_n_in = col_btts_n.number_input("AMBOS ANOTAN: NO", value=1.91 if es_decimal else -110)
 
-    # Conversión Unificada a Decimal para las Matemáticas
+    # Conversión Unificada a Decimal
     tipo_str = "Decimal" if es_decimal else "Americano"
     m_local = to_decimal(m_local_in, tipo_str)
     m_over = to_decimal(m_over_in, tipo_str)
