@@ -5,27 +5,19 @@ from scipy.stats import poisson
 # Configuración de página
 st.set_page_config(page_title="Liga MX Predictor", layout="centered", page_icon="⚽")
 
-# BASE DE DATOS DE EQUIPOS, LOGOS, ALTITUDES Y STATS BASE (xG Ataque / Defensa)
+# BASE DE DATOS DE EQUIPOS, LOGOS, ALTITUDES Y STATS BASE
 EQUIPOS = {
     "América": {
         "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
         "altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2, "forma": ["G", "G", "E", "G", "P"]
     },
-    "Tigres": {
-        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e5/Tigres_UANL_logo.svg/1200px-Tigres_UANL_logo.svg.png",
-        "altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8, "forma": ["P", "P", "P", "G", "G"]
+    "Atlante": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/221.png",
+        "altitud": 2240, "att": 1.35, "def": 1.20, "corners": 5.0, "forma": ["G", "E", "G", "P", "G"]
     },
-    "San Luis": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Atletico_san_luis.png/800px-Atletico_san_luis.png",
-        "altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1, "forma": ["P", "P", "G", "P", "E"]
-    },
-    "Tijuana": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/220.png",
-        "altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8, "forma": ["E", "P", "G", "P", "P"]
-    },
-    "León": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/225.png",
-        "altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1, "forma": ["G", "E", "P", "G", "E"]
+    "Atlas": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/216.png",
+        "altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5, "forma": ["E", "P", "P", "G", "P"]
     },
     "Chivas": {
         "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/219.png",
@@ -35,49 +27,57 @@ EQUIPOS = {
         "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/217.png",
         "altitud": 2240, "att": 1.85, "def": 0.95, "corners": 6.0, "forma": ["G", "E", "G", "G", "P"]
     },
-    "Pumas": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/229.png",
-        "altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2, "forma": ["P", "G", "E", "P", "G"]
+    "Juárez": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/17882.png",
+        "altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4, "forma": ["P", "G", "P", "E", "P"]
     },
-    "Toluca": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png",
-        "altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9, "forma": ["G", "G", "G", "P", "E"]
+    "León": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/225.png",
+        "altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1, "forma": ["G", "E", "P", "G", "E"]
     },
     "Monterrey": {
         "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/223.png",
         "altitud": 500, "att": 1.90, "def": 0.90, "corners": 6.1, "forma": ["G", "P", "G", "E", "G"]
     },
-    "Pachuca": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
-        "altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4, "forma": ["P", "G", "G", "E", "P"]
-    },
-    "Atlas": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/216.png",
-        "altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5, "forma": ["E", "P", "P", "G", "P"]
-    },
-    "Santos": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/230.png",
-        "altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9, "forma": ["P", "P", "E", "P", "G"]
-    },
     "Necaxa": {
         "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/224.png",
         "altitud": 1800, "att": 1.40, "def": 1.25, "corners": 4.7, "forma": ["G", "E", "P", "P", "E"]
+    },
+    "Pachuca": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+        "altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4, "forma": ["P", "G", "G", "E", "P"]
     },
     "Puebla": {
         "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/226.png",
         "altitud": 2230, "att": 1.15, "def": 1.50, "corners": 4.2, "forma": ["P", "P", "P", "E", "P"]
     },
-    "Mazatlán": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/20851.png",
-        "altitud": 10, "att": 1.20, "def": 1.40, "corners": 4.3, "forma": ["E", "P", "G", "P", "P"]
+    "Pumas": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/229.png",
+        "altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2, "forma": ["P", "G", "E", "P", "G"]
     },
     "Querétaro": {
         "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/222.png",
         "altitud": 1820, "att": 1.10, "def": 1.35, "corners": 4.0, "forma": ["P", "E", "P", "P", "G"]
     },
-    "Juárez": {
-        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/17882.png",
-        "altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4, "forma": ["P", "G", "P", "E", "P"]
+    "San Luis": {
+        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Atletico_san_luis.png/800px-Atletico_san_luis.png",
+        "altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1, "forma": ["P", "P", "G", "P", "E"]
+    },
+    "Santos": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/230.png",
+        "altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9, "forma": ["P", "P", "E", "P", "G"]
+    },
+    "Tigres": {
+        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e5/Tigres_UANL_logo.svg/1200px-Tigres_UANL_logo.svg.png",
+        "altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8, "forma": ["P", "P", "P", "G", "G"]
+    },
+    "Tijuana": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/220.png",
+        "altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8, "forma": ["E", "P", "G", "P", "P"]
+    },
+    "Toluca": {
+        "logo": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png",
+        "altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9, "forma": ["G", "G", "G", "P", "E"]
     }
 }
 
@@ -106,36 +106,34 @@ def render_forma(lista_forma):
         html += f"<span class='form-pill {cls}'>{r}</span>"
     return html
 
-# --- 1. SELECTOR DE PARTIDO EN LA PÁGINA PRINCIPAL ---
+# --- SELECTOR DE PARTIDO ---
 st.title("⚽ Liga MX - Predictor Pro")
 st.subheader("🏟️ Selecciona el Partido a Analizar")
 
 col_sel1, col_sel2 = st.columns(2)
 lista_equipos = sorted(list(EQUIPOS.keys()))
 
-local_nombre = col_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Tigres"))
-# Filtrar para no elegir el mismo equipo como visitante
+local_nombre = col_sel1.selectbox("EQUIPO LOCAL", lista_equipos, index=lista_equipos.index("Atlante") if "Atlante" in lista_equipos else 0)
 visita_opciones = [eq for eq in lista_equipos if eq != local_nombre]
-visita_nombre = col_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("San Luis") if "San Luis" in visita_opciones else 0)
+visita_nombre = col_sel2.selectbox("EQUIPO VISITANTE", visita_opciones, index=visita_opciones.index("América") if "América" in visita_opciones else 0)
 
 eq_local = EQUIPOS[local_nombre]
 eq_visita = EQUIPOS[visita_nombre]
 
-# --- 2. BARRA LATERAL: VARIABLE DE AJUSTES ---
+# --- BARRA LATERAL ---
 st.sidebar.header("🧠 Variables Avanzadas")
 bajas_local = st.sidebar.slider(f"Bajas {local_nombre} (%)", 0, 30, 0) / 100.0
 bajas_visita = st.sidebar.slider(f"Bajas {visita_nombre} (%)", 0, 30, 0) / 100.0
 fatiga_visita = st.sidebar.slider(f"Fatiga {visita_nombre} (%)", 0, 20, 0) / 100.0
 tendencia_arbitro = st.sidebar.slider("Rigurosidad Árbitro (Tarjetas)", 2.0, 7.0, 4.5, step=0.5)
 
-# --- 3. CÁLCULOS MATEMÁTICOS DE ALTITUD Y xG ---
+# --- CÁLCULO DE ALTITUD Y xG ---
 diff_altitud = max(0, eq_local["altitud"] - eq_visita["altitud"])
-penalizacion_altitud = diff_altitud * 0.00015  # Coeficiente fisiológico
+penalizacion_altitud = diff_altitud * 0.00015
 
-xg_local = (eq_local["att"] * eq_visita["def"]) * (1 - bajas_local) * 1.15 # +15% Ventaja Local
+xg_local = (eq_local["att"] * eq_visita["def"]) * (1 - bajas_local) * 1.15
 xg_visita = max(0.2, (eq_visita["att"] * eq_local["def"]) * (1 - bajas_visita) * (1 - penalizacion_altitud - fatiga_visita))
 
-# Matriz de Poisson
 max_goles = 6
 matrix = np.zeros((max_goles, max_goles))
 for x in range(max_goles):
@@ -145,12 +143,12 @@ matrix /= np.sum(matrix)
 
 st.markdown("---")
 
-# --- 4. ENCABEZADO DINÁMICO DE LOS EQUIPOS SELECCIONADOS ---
+# --- ENCABEZADO EQUIPOS ---
 c_logo1, c_info1 = st.columns([1, 6])
 with c_logo1: st.image(eq_local["logo"], width=42)
 with c_info1:
     st.markdown(f"<span class='team-name'>{local_nombre}</span> {render_forma(eq_local['forma'])}", unsafe_allow_html=True)
-    st.caption(f"xG Calculado: {xg_local:.2f} | Altitud Estadio: {eq_local['altitud']}m")
+    st.caption(f"xG Calculado: {xg_local:.2f} | Altitud Estadio: {eq_local['altitud']}m (CDMX)")
 
 c_logo2, c_info2 = st.columns([1, 6])
 with c_logo2: st.image(eq_visita["logo"], width=42)
@@ -160,35 +158,31 @@ with c_info2:
 
 st.markdown("---")
 
-# --- 5. MÓDULO DE MOMIOS DE LA CASA DE APUESTAS ---
+# --- MÓDULO DE MOMIOS ---
 with st.expander("⚙️ METER LOS MOMIOS DE MI CASA DE APUESTAS", expanded=True):
     formato_momios = st.radio("Formato de Momios:", ["Americano (+150 / -200)", "Decimal (2.50 / 1.50)"], horizontal=True)
     es_dec = "Decimal" in formato_momios
     tipo_str = "Decimal" if es_dec else "Americano"
     
-    # Fila 1: 1X2
     c1, c2, c3 = st.columns(3)
-    m_1_in = c1.number_input(f"GANA {local_nombre.upper()}", value=1.41 if es_dec else -245)
-    m_x_in = c2.number_input("EMPATE", value=4.65 if es_dec else 365)
-    m_2_in = c3.number_input(f"GANA {visita_nombre.upper()}", value=7.50 if es_dec else 650)
+    m_1_in = c1.number_input(f"GANA {local_nombre.upper()}", value=2.80 if es_dec else 180)
+    m_x_in = c2.number_input("EMPATE", value=3.20 if es_dec else 220)
+    m_2_in = c3.number_input(f"GANA {visita_nombre.upper()}", value=2.30 if es_dec else 130)
     
-    # Fila 2: Goles
     c4, c5, c6 = st.columns(3)
     linea_goles = c4.selectbox("LÍNEA DE GOLES", ["O/U 2.5", "O/U 1.5", "O/U 3.5"])
-    m_over_in = c5.number_input("MÁS (OVER)", value=1.61 if es_dec else -163)
-    m_under_in = c6.number_input("MENOS (UNDER)", value=2.25 if es_dec else 125)
+    m_over_in = c5.number_input("MÁS (OVER)", value=1.80 if es_dec else -125)
+    m_under_in = c6.number_input("MENOS (UNDER)", value=2.00 if es_dec else 100)
     
-    # Fila 3: BTTS
     c7, c8, _ = st.columns(3)
-    m_btts_s_in = c7.number_input("AMBOS ANOTAN: SÍ", value=1.77 if es_dec else -130)
-    m_btts_n_in = c8.number_input("AMBOS ANOTAN: NO", value=1.93 if es_dec else -108)
+    m_btts_s_in = c7.number_input("AMBOS ANOTAN: SÍ", value=1.75 if es_dec else -133)
+    m_btts_n_in = c8.number_input("AMBOS ANOTAN: NO", value=2.05 if es_dec else 105)
 
-    # Conversión
     m_1 = to_decimal(m_1_in, tipo_str)
     m_over25 = to_decimal(m_over_in, tipo_str)
     m_btts_s = to_decimal(m_btts_s_in, tipo_str)
 
-# --- 6. CÁLCULO DE LOS 7 MERCADOS ---
+# --- CÁLCULO DE LOS 7 MERCADOS ---
 prob_1 = np.sum(np.tril(matrix, -1))
 prob_x = np.sum(np.diag(matrix))
 prob_2 = np.sum(np.triu(matrix, 1))
@@ -205,11 +199,11 @@ lambda_tarjetas = tendencia_arbitro
 prob_over_tarjetas_45 = 1.0 - poisson.cdf(4, lambda_tarjetas)
 
 ev_1 = (prob_1 * m_1) - 1
-ev_1x = (prob_1x * 1.15) - 1
+ev_1x = (prob_1x * 1.35) - 1
 ev_over25 = (prob_over25 * m_over25) - 1
 ev_btts_si = (prob_btts_si * m_btts_s) - 1
 
-# --- 7. DESPLIEGUE VISUAL DE RECOMENDACIONES ---
+# --- DESPLIEGUE VISUAL ---
 st.markdown("### 🎯 Análisis Matemático de los 7 Mercados")
 
 def render_card(titulo, subtitulo, ev, badge):
