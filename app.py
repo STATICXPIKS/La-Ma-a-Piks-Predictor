@@ -34,29 +34,27 @@ JERSEYS_LIGA_MX = {
 }
 
 EQUIPOS_LIGA_MX_BASE = {
-    "América": {"altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2, "tarjetas": 2.1},
-    "Atlante": {"altitud": 2240, "att": 1.35, "def": 1.20, "corners": 5.0, "tarjetas": 2.5},
-    "Atlas": {"altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5, "tarjetas": 2.8},
-    "Chivas": {"altitud": 1560, "att": 1.60, "def": 1.05, "corners": 5.5, "tarjetas": 2.2},
-    "Cruz Azul": {"altitud": 2240, "att": 1.85, "def": 0.95, "corners": 6.0, "tarjetas": 2.4},
-    "Juárez": {"altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4, "tarjetas": 2.7},
-    "León": {"altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1, "tarjetas": 2.6},
-    "Monterrey": {"altitud": 500, "att": 1.90, "def": 0.90, "corners": 6.1, "tarjetas": 2.0},
-    "Necaxa": {"altitud": 1800, "att": 1.40, "def": 1.25, "corners": 4.7, "tarjetas": 2.5},
-    "Pachuca": {"altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4, "tarjetas": 2.3},
-    "Puebla": {"altitud": 2230, "att": 1.15, "def": 1.50, "corners": 4.2, "tarjetas": 2.9},
-    "Pumas": {"altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2, "tarjetas": 2.7},
-    "Querétaro": {"altitud": 1820, "att": 1.10, "def": 1.35, "corners": 4.0, "tarjetas": 2.8},
-    "San Luis": {"altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1, "tarjetas": 2.6},
-    "Santos": {"altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9, "tarjetas": 2.5},
-    "Tigres": {"altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8, "tarjetas": 2.1},
-    "Tijuana": {"altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8, "tarjetas": 2.7},
-    "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9, "tarjetas": 2.3}
+    "América": {"altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2},
+    "Atlante": {"altitud": 2240, "att": 1.35, "def": 1.20, "corners": 5.0},
+    "Atlas": {"altitud": 1560, "att": 1.25, "def": 1.30, "corners": 4.5},
+    "Chivas": {"altitud": 1560, "att": 1.60, "def": 1.05, "corners": 5.5},
+    "Cruz Azul": {"altitud": 2240, "att": 1.85, "def": 0.95, "corners": 6.0},
+    "Juárez": {"altitud": 1130, "att": 1.25, "def": 1.40, "corners": 4.4},
+    "León": {"altitud": 1815, "att": 1.45, "def": 1.25, "corners": 5.1},
+    "Monterrey": {"altitud": 500, "att": 1.90, "def": 0.90, "corners": 6.1},
+    "Necaxa": {"altitud": 1800, "att": 1.40, "def": 1.25, "corners": 4.7},
+    "Pachuca": {"altitud": 2400, "att": 1.70, "def": 1.20, "corners": 5.4},
+    "Puebla": {"altitud": 2230, "att": 1.15, "def": 1.50, "corners": 4.2},
+    "Pumas": {"altitud": 2240, "att": 1.50, "def": 1.15, "corners": 5.2},
+    "Querétaro": {"altitud": 1820, "att": 1.10, "def": 1.35, "corners": 4.0},
+    "San Luis": {"altitud": 1850, "att": 1.20, "def": 1.40, "corners": 4.1},
+    "Santos": {"altitud": 1120, "att": 1.35, "def": 1.45, "corners": 4.9},
+    "Tigres": {"altitud": 500, "att": 1.95, "def": 0.90, "corners": 5.8},
+    "Tijuana": {"altitud": 60, "att": 1.30, "def": 1.35, "corners": 4.8},
+    "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
 }
 
-# ==========================================
-# AUTO-FETCH API GRATUITA LIGA MX (STANDINGS EN VIVO)
-# ==========================================
+# AUTO-FETCH API GRATUITA LIGA MX
 @st.cache_data(ttl=3600)
 def obtener_stats_liga_mx_api():
     url = "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/standings"
@@ -242,6 +240,21 @@ st.markdown("""
         margin-bottom: 12px;
         font-size: 13px;
     }
+
+    div.stButton > button {
+        background-color: #10b981 !important;
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        font-size: 16px !important;
+        border-radius: 8px !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        margin-top: 10px !important;
+    }
+    div.stButton > button:hover {
+        background-color: #059669 !important;
+        color: #ffffff !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -300,7 +313,7 @@ if not es_mlb:
         st.markdown("""
         <div class="pitcher-box">
             <b>⚽ LIGA MX API LIVE FETCH:</b><br>
-            • Métricas ofensivas y defensivas (xG A favor y Concedidos) sincronizadas en tiempo real desde la tabla oficial.
+            • Métricas ofensivas y defensivas sincronizadas en tiempo real.
         </div>
         """, unsafe_allow_html=True)
 
@@ -443,14 +456,14 @@ if not es_mlb:
             m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.770 if es_dec else -130, format="%.3f" if es_dec else "%d")
             m_btts_n_in = f4_2.number_input("BTTS NO", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # AJUSTE SOLICITADO: CÓRNERS DE 7.5 A 11.5 Y TARJETAS DE 2.5 A 4.5
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS & TARJETAS</p>", unsafe_allow_html=True)
-            f5_1, f5_2, f5_3, f5_4 = st.columns(4)
+            # FILA 6: CÓRNERS DE 7.5 A 11.5 (SIN TARJETAS)
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS</p>", unsafe_allow_html=True)
+            f5_1, f5_2, _ = st.columns(3)
             linea_corners_sel = f5_1.selectbox("Línea Córners", ["Over 7.5", "Over 8.5", "Over 9.5", "Over 10.5", "Over 11.5"], index=1)
             m_corners_in = f5_2.number_input("Momio Córners", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
 
-            linea_tarjetas_sel = f5_3.selectbox("Línea Tarjetas", ["Over 2.5", "Over 3.5", "Over 4.5"], index=2)
-            m_tarjetas_in = f5_4.number_input("Momio Tarjetas", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
+            # BOTÓN DE RECÁLCULO EXPLICITO
+            btn_recalcular_mx = st.button("🔄 RECALCULAR VEREDICTOS LIGA MX", use_container_width=True)
 
             # Conversiones
             m_1 = to_decimal(m_1_in, tipo_str)
@@ -461,7 +474,6 @@ if not es_mlb:
             m_over_1ht = to_decimal(m_over_1ht_in, tipo_str)
             m_btts_s = to_decimal(m_btts_s_in, tipo_str)
             m_corners = to_decimal(m_corners_in, tipo_str)
-            m_tarjetas = to_decimal(m_tarjetas_in, tipo_str)
 
     with col_der:
         st.markdown("""
@@ -486,15 +498,10 @@ if not es_mlb:
         prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
         prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
 
-        # CÁLCULO DE CÓRNERS SEGÚN LA LÍNEA SELECCIONADA (7.5 a 11.5)
+        # CÁLCULO DE CÓRNERS (7.5 a 11.5)
         c_target = float(linea_corners_sel.split(" ")[1])
         lambda_corners = corn_loc + corn_vis
         prob_over_corners = 1.0 - poisson.cdf(int(c_target), lambda_corners)
-
-        # CÁLCULO DE TARJETAS SEGÚN LA LÍNEA SELECCIONADA (2.5 a 4.5)
-        t_target = float(linea_tarjetas_sel.split(" ")[1])
-        lambda_tarjetas = eq_local_base["tarjetas"] + eq_visita_base["tarjetas"]
-        prob_over_tarjetas = 1.0 - poisson.cdf(int(t_target), lambda_tarjetas)
 
         ev_1 = (prob_1 * m_1) - 1
         ev_2 = (prob_2 * m_2) - 1
@@ -504,7 +511,6 @@ if not es_mlb:
         ev_1ht = (prob_1ht_target * m_over_1ht) - 1
         ev_btts_si = (prob_btts_si * m_btts_s) - 1
         ev_corners = (prob_over_corners * m_corners) - 1
-        ev_tarjetas = (prob_over_tarjetas * m_tarjetas) - 1
 
         def render_card_pro(titulo, subtitulo, ev, badge):
             badge_html = f"<span class='badge-bet'>BET</span>" if badge == "BET" else f"<span class='badge-skip'>SKIP</span>"
@@ -539,9 +545,8 @@ if not es_mlb:
         else:
             render_card_pro(f"{visita_nombre} Hándicap -1.0", f"Prob. cubrir: {prob_ha_visita*100:.1f}%", (prob_ha_visita*1.85)-1, "BET" if (prob_ha_visita*1.85)-1 > 0.03 else "SKIP")
 
-        st.markdown("<div class='market-title'>7. Córners & Tarjetas (Calculados con tus Momios)</div>", unsafe_allow_html=True)
+        st.markdown("<div class='market-title'>7. Córners (Calculado con Momio Real)</div>", unsafe_allow_html=True)
         render_card_pro(f"Más de {c_target} Córners", f"Probabilidad Real: {prob_over_corners*100:.1f}%", ev_corners, "BET" if ev_corners > 0.03 else "SKIP")
-        render_card_pro(f"Más de {t_target} Tarjetas", f"Probabilidad Real: {prob_over_tarjetas*100:.1f}%", ev_tarjetas, "BET" if ev_tarjetas > 0.03 else "SKIP")
 
 # ==========================================
 # SECCIÓN MLB SABERMETRÍA EXCLUSIVA
@@ -729,6 +734,9 @@ else:
             m_outs_vis_in = fo_4.number_input(f"Momio Outs ({visita_nombre[:3]})", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
 
             m_nrfi_in = st.number_input("NRFI (No Run 1st Inning)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
+
+            # BOTÓN DE RECÁLCULO EXPLICITO MLB
+            btn_recalcular_mlb = st.button("🔄 RECALCULAR VEREDICTOS MLB", use_container_width=True)
 
             m_ml_loc = to_decimal(m_ml_loc_in, tipo_str)
             m_ml_vis = to_decimal(m_ml_vis_in, tipo_str)
