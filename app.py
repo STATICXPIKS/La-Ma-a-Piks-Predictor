@@ -7,26 +7,56 @@ import plotly.graph_objects as go
 # Configuración de página
 st.set_page_config(page_title="ANÁLISIS PRO-LIGA MX", layout="wide", page_icon="🏆")
 
-# PALETA DE COLORES OFICIALES PARA JERSEYS (SVG)
-JERSEYS_COLORES = {
-    "América": {"c1": "#FDE100", "c2": "#001A49"},
-    "Atlante": {"c1": "#002B49", "c2": "#C8102E"},
-    "Atlas": {"c1": "#000000", "c2": "#DA291C"},
-    "Chivas": {"c1": "#DA291C", "c2": "#FFFFFF"},
-    "Cruz Azul": {"c1": "#00519E", "c2": "#FFFFFF"},
-    "Juárez": {"c1": "#78BE20", "c2": "#000000"},
-    "León": {"c1": "#007A33", "c2": "#FDE100"},
-    "Monterrey": {"c1": "#002452", "c2": "#FFFFFF"},
-    "Necaxa": {"c1": "#DA291C", "c2": "#FFFFFF"},
-    "Pachuca": {"c1": "#002B49", "c2": "#FFFFFF"},
-    "Puebla": {"c1": "#003366", "c2": "#FFFFFF"},
-    "Pumas": {"c1": "#002B49", "c2": "#C8A062"},
-    "Querétaro": {"c1": "#00519E", "c2": "#000000"},
-    "San Luis": {"c1": "#DA291C", "c2": "#002B49"},
-    "Santos": {"c1": "#007A33", "c2": "#FFFFFF"},
-    "Tigres": {"c1": "#FDE100", "c2": "#00519E"},
-    "Tijuana": {"c1": "#DA291C", "c2": "#000000"},
-    "Toluca": {"c1": "#DA291C", "c2": "#FFFFFF"}
+# LOGO OFICIAL LIGA MX (SVG VECTORIAL DIRECTO)
+SVG_LIGA_MX_OFICIAL = """
+<svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="20" fill="#0b0e14"/>
+    <path d="M20 20 L50 10 L80 20 L80 80 L50 90 L20 80 Z" fill="#10b981" stroke="#ffffff" stroke-width="3"/>
+    <path d="M35 30 L65 30 L65 45 L50 45 L50 70 L35 70 Z" fill="#ffffff"/>
+    <circle cx="65" cy="60" r="8" fill="#f59e0b"/>
+</svg>
+"""
+
+SVG_CORONA_MAÑA_PIKS = """
+<svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 75 L15 30 L35 50 L50 20 L65 50 L85 30 L80 75 Z" fill="url(#goldGrad)" stroke="#ffffff" stroke-width="2"/>
+    <path d="M20 75 L80 75 L80 83 L20 83 Z" fill="#b45309" stroke="#fef08a" stroke-width="1.5"/>
+    <circle cx="15" cy="27" r="4" fill="#ef4444"/>
+    <circle cx="50" cy="17" r="5" fill="#3b82f6"/>
+    <circle cx="85" cy="27" r="4" fill="#ef4444"/>
+    <circle cx="35" cy="79" r="3" fill="#10b981"/>
+    <circle cx="50" cy="79" r="3" fill="#ffffff"/>
+    <circle cx="65" cy="79" r="3" fill="#10b981"/>
+    <defs>
+        <linearGradient id="goldGrad" x1="15" y1="20" x2="85" y2="83" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#fef08a"/>
+            <stop offset="50%" stop-color="#f59e0b"/>
+            <stop offset="100%" stop-color="#b45309"/>
+        </linearGradient>
+    </defs>
+</svg>
+"""
+
+# BASE DE ESCUDOS VECTORIALES OFICIALES (SVG) POR CLUB
+ESCUDOS_SVG = {
+    "América": """<svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#FDE100" stroke="#001A49" stroke-width="4"/><path d="M20 50 Q50 20 80 50 Q50 80 20 50" fill="none" stroke="#C8102E" stroke-width="4"/><text x="32" y="58" font-size="28" font-weight="900" fill="#001A49">CA</text></svg>""",
+    "Atlante": """<svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="15" fill="#002B49"/><path d="M10 10 L50 90 L90 10 Z" fill="#C8102E"/><text x="35" y="45" font-size="26" font-weight="900" fill="#ffffff">A</text></svg>""",
+    "Atlas": """<svg width="40" height="40" viewBox="0 0 100 100"><rect x="10" y="10" width="40" height="80" fill="#000000"/><rect x="50" y="10" width="40" height="80" fill="#DA291C"/><text x="35" y="65" font-size="45" font-weight="900" fill="#ffffff">A</text></svg>""",
+    "Chivas": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#DA291C" stroke="#002452" stroke-width="4"/><path d="M30 10 L30 70 M50 10 L50 90 M70 10 L70 70" stroke="#ffffff" stroke-width="8"/><circle cx="50" cy="35" r="15" fill="#002452"/></svg>""",
+    "Cruz Azul": """<svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="15" fill="#00519E"/><rect x="20" y="20" width="60" height="60" fill="#ffffff"/><path d="M35 50 L65 50 M50 35 L50 65" stroke="#DA291C" stroke-width="10"/></svg>""",
+    "Juárez": """<svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="15" fill="#78BE20"/><path d="M20 20 L80 20 L50 80 Z" fill="#000000"/><text x="35" y="55" font-size="30" font-weight="900" fill="#DA291C">FCJ</text></svg>""",
+    "León": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#007A33" stroke="#FDE100" stroke-width="4"/><text x="30" y="55" font-size="35" font-weight="900" fill="#FDE100">L</text></svg>""",
+    "Monterrey": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#002452" stroke="#ffffff" stroke-width="3"/><path d="M30 10 L30 70 M50 10 L50 90 M70 10 L70 70" stroke="#ffffff" stroke-width="6"/></svg>""",
+    "Necaxa": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#DA291C" stroke="#ffffff" stroke-width="3"/><path d="M30 10 L30 70 M50 10 L50 90 M70 10 L70 70" stroke="#ffffff" stroke-width="6"/><text x="38" y="45" font-size="28" font-weight="900" fill="#002452">N</text></svg>""",
+    "Pachuca": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#002B49" stroke="#ffffff" stroke-width="3"/><path d="M25 10 L25 70 M50 10 L50 90 M75 10 L75 70" stroke="#ffffff" stroke-width="6"/></svg>""",
+    "Puebla": """<svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="15" fill="#ffffff" stroke="#003366" stroke-width="4"/><path d="M10 10 L90 90" stroke="#003366" stroke-width="18"/><text x="35" y="60" font-size="28" font-weight="900" fill="#DA291C">P</text></svg>""",
+    "Pumas": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#002B49" stroke="#C8A062" stroke-width="4"/><polygon points="50,25 70,65 30,65" fill="#C8A062"/></svg>""",
+    "Querétaro": """<svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="15" fill="#00519E"/><path d="M10 50 L90 50" stroke="#000000" stroke-width="15"/><text x="35" y="60" font-size="32" font-weight="900" fill="#ffffff">Q</text></svg>""",
+    "San Luis": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#DA291C" stroke="#002B49" stroke-width="4"/><path d="M30 10 L30 70 M50 10 L50 90 M70 10 L70 70" stroke="#002B49" stroke-width="6"/></svg>""",
+    "Santos": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#007A33" stroke="#ffffff" stroke-width="4"/><circle cx="50" cy="40" r="18" fill="#ffffff"/><text x="42" y="48" font-size="22" font-weight="900" fill="#007A33">S</text></svg>""",
+    "Tigres": """<svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="15" fill="#FDE100"/><path d="M10 40 L90 40 L90 60 L10 60 Z" fill="#00519E"/><text x="38" y="55" font-size="30" font-weight="900" fill="#FDE100">T</text></svg>""",
+    "Tijuana": """<svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#DA291C" stroke="#000000" stroke-width="4"/><text x="30" y="60" font-size="35" font-weight="900" fill="#000000">X</text></svg>""",
+    "Toluca": """<svg width="40" height="40" viewBox="0 0 100 100"><path d="M10 10 L90 10 L50 90 Z" fill="#DA291C" stroke="#ffffff" stroke-width="3"/><circle cx="50" cy="35" r="15" fill="#ffffff"/><text x="43" y="43" font-size="20" font-weight="900" fill="#DA291C">T</text></svg>"""
 }
 
 EQUIPOS = {
@@ -93,20 +123,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# GENERADOR DE JERSEY VECTORIAL (SVG)
-def generar_jersey_svg(equipo_nombre):
-    col = JERSEYS_COLORES.get(equipo_nombre, {"c1": "#333333", "c2": "#666666"})
-    c1, c2 = col["c1"], col["c2"]
-    
-    svg = f"""
-    <svg width="38" height="38" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M30 20 L40 10 L60 10 L70 20 L85 30 L75 45 L68 40 L68 85 L32 85 L32 40 L25 45 L15 30 Z" fill="{c1}" stroke="#ffffff" stroke-width="3"/>
-        <path d="M50 10 L50 85" stroke="{c2}" stroke-width="12"/>
-        <path d="M30 20 L40 10 L60 10 L70 20" fill="none" stroke="#ffffff" stroke-width="3"/>
-    </svg>
-    """
-    return svg
-
 def to_decimal(momio, tipo):
     if tipo == "Decimal": return float(momio)
     return (momio / 100) + 1 if momio > 0 else (100 / abs(momio)) + 1
@@ -118,7 +134,7 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
-    st.markdown('<div class="title-banner">🏆 ANALISIS PRO-LIGA MX</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="title-banner">{SVG_LIGA_MX_OFICIAL}<span style="margin-left:10px;">ANALISIS PRO-LIGA MX</span></div>', unsafe_allow_html=True)
     
     c_sel1, c_sel2 = st.columns(2)
     lista_equipos = sorted(list(EQUIPOS.keys()))
@@ -151,12 +167,12 @@ with col_izq:
             matrix_1ht[x, y] = poisson.pmf(x, xg_local_1ht) * poisson.pmf(y, xg_visita_1ht)
     matrix_1ht /= np.sum(matrix_1ht)
 
-    # JERSEYS
+    # ESCUDOS VECTORIALES INTEGRADOS
     c_esc1, c_esc2 = st.columns(2)
     with c_esc1:
         st.markdown(f"""
         <div class="team-badge-box">
-            <div style="margin-right:12px;">{generar_jersey_svg(local_nombre)}</div>
+            <div style="margin-right:12px;">{ESCUDOS_SVG.get(local_nombre, '')}</div>
             <div>
                 <div style="font-weight:800; color:#fff; font-size:16px;">{local_nombre}</div>
                 <div style="color:#10b981; font-weight:800; font-size:14px;">{xg_local:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
@@ -167,7 +183,7 @@ with col_izq:
     with c_esc2:
         st.markdown(f"""
         <div class="team-badge-box">
-            <div style="margin-right:12px;">{generar_jersey_svg(visita_nombre)}</div>
+            <div style="margin-right:12px;">{ESCUDOS_SVG.get(visita_nombre, '')}</div>
             <div>
                 <div style="font-weight:800; color:#fff; font-size:16px;">{visita_nombre}</div>
                 <div style="color:#38bdf8; font-weight:800; font-size:14px;">{xg_visita:.2f} <span style="font-size:10px; color:#64748b;">xG Esperado</span></div>
@@ -242,7 +258,7 @@ with col_izq:
 # COLUMNA DERECHA
 # ==========================================
 with col_der:
-    st.markdown('<div class="title-banner">👑 VEREDICTO MAÑA PIKS</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="title-banner">{SVG_CORONA_MAÑA_PIKS}<span style="margin-left:10px;">VEREDICTO MAÑA PIKS</span></div>', unsafe_allow_html=True)
     
     # CÁLCULOS 7 MERCADOS
     prob_1x = prob_1 + prob_x
