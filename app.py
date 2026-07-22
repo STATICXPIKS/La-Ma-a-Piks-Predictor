@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
+import requests
+from datetime import datetime
 
 # Configuración de página
 st.set_page_config(page_title="MAÑA PIKS ANALYTICS PRO", layout="wide", page_icon="👑")
@@ -53,7 +55,7 @@ EQUIPOS_LIGA_MX = {
 }
 
 # ==========================================
-# BASE DE DATOS Y SABERMETRÍA BASE: MLB
+# BASE DE DATOS Y JERSEYS: MLB
 # ==========================================
 JERSEYS_MLB = {
     "NY Yankees": {"c1": "#001C43", "c2": "#FFFFFF"},
@@ -89,37 +91,63 @@ JERSEYS_MLB = {
 }
 
 EQUIPOS_MLB = {
-    "NY Yankees": {"wRC_plus": 115, "ISO": 0.185, "OPS": 0.760, "xERA_p": 3.65, "WHIP_p": 1.18, "K_pct_p": 25.2, "BB_pct_p": 7.5, "bullpen_era": 3.40, "park_factor": 1.02},
-    "LA Dodgers": {"wRC_plus": 120, "ISO": 0.195, "OPS": 0.785, "xERA_p": 3.45, "WHIP_p": 1.12, "K_pct_p": 26.5, "BB_pct_p": 7.0, "bullpen_era": 3.30, "park_factor": 1.00},
-    "Boston Red Sox": {"wRC_plus": 105, "ISO": 0.170, "OPS": 0.740, "xERA_p": 4.10, "WHIP_p": 1.28, "K_pct_p": 22.0, "BB_pct_p": 8.2, "bullpen_era": 4.15, "park_factor": 1.06},
-    "Houston Astros": {"wRC_plus": 110, "ISO": 0.175, "OPS": 0.750, "xERA_p": 3.75, "WHIP_p": 1.20, "K_pct_p": 24.0, "BB_pct_p": 7.8, "bullpen_era": 3.60, "park_factor": 0.98},
-    "Atlanta Braves": {"wRC_plus": 114, "ISO": 0.190, "OPS": 0.770, "xERA_p": 3.80, "WHIP_p": 1.22, "K_pct_p": 24.8, "BB_pct_p": 8.0, "bullpen_era": 3.70, "park_factor": 1.01},
-    "SD Padres": {"wRC_plus": 106, "ISO": 0.165, "OPS": 0.735, "xERA_p": 3.70, "WHIP_p": 1.19, "K_pct_p": 23.5, "BB_pct_p": 7.6, "bullpen_era": 3.50, "park_factor": 0.95},
-    "Chicago Cubs": {"wRC_plus": 102, "ISO": 0.160, "OPS": 0.725, "xERA_p": 3.95, "WHIP_p": 1.25, "K_pct_p": 22.5, "BB_pct_p": 8.5, "bullpen_era": 3.90, "park_factor": 1.03},
-    "SF Giants": {"wRC_plus": 96, "ISO": 0.145, "OPS": 0.700, "xERA_p": 3.85, "WHIP_p": 1.21, "K_pct_p": 22.0, "BB_pct_p": 8.0, "bullpen_era": 3.80, "park_factor": 0.93},
-    "NY Mets": {"wRC_plus": 108, "ISO": 0.170, "OPS": 0.745, "xERA_p": 3.80, "WHIP_p": 1.22, "K_pct_p": 24.1, "BB_pct_p": 8.2, "bullpen_era": 3.65, "park_factor": 0.96},
-    "Philadelphia Phillies": {"wRC_plus": 111, "ISO": 0.180, "OPS": 0.755, "xERA_p": 3.65, "WHIP_p": 1.17, "K_pct_p": 25.0, "BB_pct_p": 7.4, "bullpen_era": 3.55, "park_factor": 1.02},
-    "Texas Rangers": {"wRC_plus": 104, "ISO": 0.168, "OPS": 0.730, "xERA_p": 4.20, "WHIP_p": 1.30, "K_pct_p": 21.8, "BB_pct_p": 8.6, "bullpen_era": 4.30, "park_factor": 1.04},
-    "Toronto Blue Jays": {"wRC_plus": 101, "ISO": 0.155, "OPS": 0.720, "xERA_p": 3.90, "WHIP_p": 1.24, "K_pct_p": 22.2, "BB_pct_p": 8.1, "bullpen_era": 3.85, "park_factor": 0.99},
-    "Seattle Mariners": {"wRC_plus": 95, "ISO": 0.150, "OPS": 0.690, "xERA_p": 3.40, "WHIP_p": 1.10, "K_pct_p": 27.0, "BB_pct_p": 6.8, "bullpen_era": 3.20, "park_factor": 0.91},
-    "Baltimore Orioles": {"wRC_plus": 112, "ISO": 0.185, "OPS": 0.760, "xERA_p": 3.85, "WHIP_p": 1.21, "K_pct_p": 23.8, "BB_pct_p": 7.9, "bullpen_era": 3.75, "park_factor": 0.98},
-    "Tampa Bay Rays": {"wRC_plus": 98, "ISO": 0.148, "OPS": 0.705, "xERA_p": 3.60, "WHIP_p": 1.16, "K_pct_p": 24.5, "BB_pct_p": 7.2, "bullpen_era": 3.45, "park_factor": 0.94},
-    "Arizona Diamondbacks": {"wRC_plus": 105, "ISO": 0.165, "OPS": 0.735, "xERA_p": 4.25, "WHIP_p": 1.31, "K_pct_p": 21.0, "BB_pct_p": 8.8, "bullpen_era": 4.20, "park_factor": 1.03},
-    "Milwaukee Brewers": {"wRC_plus": 100, "ISO": 0.152, "OPS": 0.715, "xERA_p": 3.60, "WHIP_p": 1.18, "K_pct_p": 23.2, "BB_pct_p": 8.0, "bullpen_era": 3.35, "park_factor": 1.00},
-    "St. Louis Cardinals": {"wRC_plus": 97, "ISO": 0.148, "OPS": 0.700, "xERA_p": 4.10, "WHIP_p": 1.27, "K_pct_p": 21.5, "BB_pct_p": 8.2, "bullpen_era": 4.00, "park_factor": 0.97},
-    "Cleveland Guardians": {"wRC_plus": 99, "ISO": 0.142, "OPS": 0.708, "xERA_p": 3.50, "WHIP_p": 1.15, "K_pct_p": 23.0, "BB_pct_p": 7.3, "bullpen_era": 3.10, "park_factor": 0.96},
-    "Minnesota Twins": {"wRC_plus": 104, "ISO": 0.168, "OPS": 0.732, "xERA_p": 3.90, "WHIP_p": 1.23, "K_pct_p": 24.0, "BB_pct_p": 7.8, "bullpen_era": 3.80, "park_factor": 1.00},
-    "Detroit Tigers": {"wRC_plus": 96, "ISO": 0.145, "OPS": 0.695, "xERA_p": 3.80, "WHIP_p": 1.20, "K_pct_p": 23.0, "BB_pct_p": 7.9, "bullpen_era": 3.65, "park_factor": 0.97},
-    "Chicago White Sox": {"wRC_plus": 82, "ISO": 0.125, "OPS": 0.630, "xERA_p": 4.90, "WHIP_p": 1.42, "K_pct_p": 19.5, "BB_pct_p": 9.5, "bullpen_era": 4.80, "park_factor": 1.02},
-    "KC Royals": {"wRC_plus": 102, "ISO": 0.160, "OPS": 0.725, "xERA_p": 3.90, "WHIP_p": 1.24, "K_pct_p": 22.5, "BB_pct_p": 8.0, "bullpen_era": 3.85, "park_factor": 1.02},
-    "LA Angels": {"wRC_plus": 94, "ISO": 0.148, "OPS": 0.690, "xERA_p": 4.50, "WHIP_p": 1.35, "K_pct_p": 21.0, "BB_pct_p": 9.0, "bullpen_era": 4.50, "park_factor": 0.99},
-    "Cincinnati Reds": {"wRC_plus": 98, "ISO": 0.155, "OPS": 0.710, "xERA_p": 4.40, "WHIP_p": 1.33, "K_pct_p": 22.5, "BB_pct_p": 8.7, "bullpen_era": 4.25, "park_factor": 1.12},
-    "Colorado Rockies": {"wRC_plus": 90, "ISO": 0.150, "OPS": 0.710, "xERA_p": 5.40, "WHIP_p": 1.50, "K_pct_p": 18.5, "BB_pct_p": 9.8, "bullpen_era": 5.20, "park_factor": 1.25},
-    "Miami Marlins": {"wRC_plus": 88, "ISO": 0.130, "OPS": 0.660, "xERA_p": 4.30, "WHIP_p": 1.32, "K_pct_p": 20.5, "BB_pct_p": 8.9, "bullpen_era": 4.35, "park_factor": 0.94},
-    "Pittsburgh Pirates": {"wRC_plus": 92, "ISO": 0.140, "OPS": 0.680, "xERA_p": 4.00, "WHIP_p": 1.26, "K_pct_p": 22.0, "BB_pct_p": 8.4, "bullpen_era": 3.95, "park_factor": 0.96},
-    "Washington Nationals": {"wRC_plus": 93, "ISO": 0.138, "OPS": 0.685, "xERA_p": 4.60, "WHIP_p": 1.36, "K_pct_p": 20.0, "BB_pct_p": 8.8, "bullpen_era": 4.60, "park_factor": 1.01},
-    "Oakland Athletics": {"wRC_plus": 95, "ISO": 0.152, "OPS": 0.695, "xERA_p": 4.50, "WHIP_p": 1.34, "K_pct_p": 21.5, "BB_pct_p": 9.1, "bullpen_era": 4.40, "park_factor": 0.95}
+    "NY Yankees": {"id": 147, "wRC_plus": 115, "xERA_p": 3.65, "K_pct_p": 25.2, "bullpen_era": 3.40, "park_factor": 1.02},
+    "LA Dodgers": {"id": 119, "wRC_plus": 120, "xERA_p": 3.45, "K_pct_p": 26.5, "bullpen_era": 3.30, "park_factor": 1.00},
+    "Boston Red Sox": {"id": 111, "wRC_plus": 105, "xERA_p": 4.10, "K_pct_p": 22.0, "bullpen_era": 4.15, "park_factor": 1.06},
+    "Houston Astros": {"id": 117, "wRC_plus": 110, "xERA_p": 3.75, "K_pct_p": 24.0, "bullpen_era": 3.60, "park_factor": 0.98},
+    "Atlanta Braves": {"id": 144, "wRC_plus": 114, "xERA_p": 3.80, "K_pct_p": 24.8, "bullpen_era": 3.70, "park_factor": 1.01},
+    "SD Padres": {"id": 135, "wRC_plus": 106, "xERA_p": 3.70, "K_pct_p": 23.5, "bullpen_era": 3.50, "park_factor": 0.95},
+    "Chicago Cubs": {"id": 112, "wRC_plus": 102, "xERA_p": 3.95, "K_pct_p": 22.5, "bullpen_era": 3.90, "park_factor": 1.03},
+    "SF Giants": {"id": 137, "wRC_plus": 96, "xERA_p": 3.85, "K_pct_p": 22.0, "bullpen_era": 3.80, "park_factor": 0.93},
+    "NY Mets": {"id": 121, "wRC_plus": 108, "xERA_p": 3.80, "K_pct_p": 24.1, "bullpen_era": 3.65, "park_factor": 0.96},
+    "Philadelphia Phillies": {"id": 143, "wRC_plus": 111, "xERA_p": 3.65, "K_pct_p": 25.0, "bullpen_era": 3.55, "park_factor": 1.02},
+    "Texas Rangers": {"id": 140, "wRC_plus": 104, "xERA_p": 4.20, "K_pct_p": 21.8, "bullpen_era": 4.30, "park_factor": 1.04},
+    "Toronto Blue Jays": {"id": 141, "wRC_plus": 101, "xERA_p": 3.90, "K_pct_p": 22.2, "bullpen_era": 3.85, "park_factor": 0.99},
+    "Seattle Mariners": {"id": 136, "wRC_plus": 95, "xERA_p": 3.40, "K_pct_p": 27.0, "bullpen_era": 3.20, "park_factor": 0.91},
+    "Baltimore Orioles": {"id": 110, "wRC_plus": 112, "xERA_p": 3.85, "K_pct_p": 23.8, "bullpen_era": 3.75, "park_factor": 0.98},
+    "Tampa Bay Rays": {"id": 139, "wRC_plus": 98, "xERA_p": 3.60, "K_pct_p": 24.5, "bullpen_era": 3.45, "park_factor": 0.94},
+    "Arizona Diamondbacks": {"id": 109, "wRC_plus": 105, "xERA_p": 4.25, "K_pct_p": 21.0, "bullpen_era": 4.20, "park_factor": 1.03},
+    "Milwaukee Brewers": {"id": 158, "wRC_plus": 100, "xERA_p": 3.60, "K_pct_p": 23.2, "bullpen_era": 3.35, "park_factor": 1.00},
+    "St. Louis Cardinals": {"id": 138, "wRC_plus": 97, "xERA_p": 4.10, "K_pct_p": 21.5, "bullpen_era": 4.00, "park_factor": 0.97},
+    "Cleveland Guardians": {"id": 114, "wRC_plus": 99, "xERA_p": 3.50, "K_pct_p": 23.0, "bullpen_era": 3.10, "park_factor": 0.96},
+    "Minnesota Twins": {"id": 142, "wRC_plus": 104, "xERA_p": 3.90, "K_pct_p": 24.0, "bullpen_era": 3.80, "park_factor": 1.00},
+    "Detroit Tigers": {"id": 116, "wRC_plus": 96, "xERA_p": 3.80, "K_pct_p": 23.0, "bullpen_era": 3.65, "park_factor": 0.97},
+    "Chicago White Sox": {"id": 145, "wRC_plus": 82, "xERA_p": 4.90, "K_pct_p": 19.5, "bullpen_era": 4.80, "park_factor": 1.02},
+    "KC Royals": {"id": 118, "wRC_plus": 102, "xERA_p": 3.90, "K_pct_p": 22.5, "bullpen_era": 3.85, "park_factor": 1.02},
+    "LA Angels": {"id": 108, "wRC_plus": 94, "xERA_p": 4.50, "K_pct_p": 21.0, "bullpen_era": 4.50, "park_factor": 0.99},
+    "Cincinnati Reds": {"id": 113, "wRC_plus": 98, "xERA_p": 4.40, "K_pct_p": 22.5, "bullpen_era": 4.25, "park_factor": 1.12},
+    "Colorado Rockies": {"id": 115, "wRC_plus": 90, "xERA_p": 5.40, "K_pct_p": 18.5, "bullpen_era": 5.20, "park_factor": 1.25},
+    "Miami Marlins": {"id": 146, "wRC_plus": 88, "xERA_p": 4.30, "K_pct_p": 20.5, "bullpen_era": 4.35, "park_factor": 0.94},
+    "Pittsburgh Pirates": {"id": 134, "wRC_plus": 92, "xERA_p": 4.00, "K_pct_p": 22.0, "bullpen_era": 3.95, "park_factor": 0.96},
+    "Washington Nationals": {"id": 120, "wRC_plus": 93, "xERA_p": 4.60, "K_pct_p": 20.0, "bullpen_era": 4.60, "park_factor": 1.01},
+    "Oakland Athletics": {"id": 133, "wRC_plus": 95, "xERA_p": 4.50, "K_pct_p": 21.5, "bullpen_era": 4.40, "park_factor": 0.95}
 }
+
+# ==========================================
+# FUNCIÓN DE CONSULTA GRATUITA MLB STATS API
+# ==========================================
+@st.cache_data(ttl=1800)
+def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={hoy}&endDate={hoy}&hydrate=probablePitcher"
+    p_loc, p_vis = "Por Confirmar", "Por Confirmar"
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            dates = data.get("dates", [])
+            if dates:
+                games = dates[0].get("games", [])
+                for g in games:
+                    home_id = g.get("teams", {}).get("home", {}).get("team", {}).get("id")
+                    away_id = g.get("teams", {}).get("away", {}).get("team", {}).get("id")
+                    if home_id == team_id_local or away_id == team_id_local:
+                        p_loc = g.get("teams", {}).get("home", {}).get("probablePitcher", {}).get("fullName", "Por Confirmar")
+                        p_vis = g.get("teams", {}).get("away", {}).get("probablePitcher", {}).get("fullName", "Por Confirmar")
+                        break
+    except Exception:
+        pass
+    return p_loc, p_vis
 
 # ESTILOS CSS
 st.markdown("""
@@ -174,6 +202,15 @@ st.markdown("""
         letter-spacing: -1px;
         line-height: 1;
     }
+    
+    .pitcher-box {
+        background: #1e293b;
+        border-left: 4px solid #38bdf8;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        font-size: 13px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -210,7 +247,7 @@ def to_american_str(prob):
 c_top1, c_top2, _ = st.columns([2, 3, 5])
 with c_top1:
     st.markdown("<span style='font-size:12px; color:#38bdf8; font-weight:800;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
-    deporte = st.radio("", ["⚽ Liga MX", "⚾ MLB Sabermétrico"], horizontal=True, label_visibility="collapsed")
+    deporte = st.radio("", ["⚽ Liga MX", "⚾ MLB Sabermétrico (API AUTO)"], horizontal=True, label_visibility="collapsed")
 
 es_mlb = "MLB" in deporte
 
@@ -435,7 +472,7 @@ if not es_mlb:
         render_card_pro("Más de 4.5 Tarjetas", f"Probabilidad Real: {prob_over_tarjetas_45*100:.1f}%", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
 
 # ==========================================
-# SECCIÓN MLB SABERMETRÍA AVANZADA
+# SECCIÓN MLB SABERMETRÍA AVANZADA + AUTO API
 # ==========================================
 else:
     EQUIPOS = EQUIPOS_MLB
@@ -458,6 +495,17 @@ else:
 
         eq_local_base, eq_visita_base = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
+        # AUTO-FETCH ABRIDORES HOY DESDE LA API OFICIAL GRATUITA DE MLB
+        pitcher_loc_auto, pitcher_vis_auto = obtener_abridores_mlb_hoy(eq_local_base["id"], eq_visita_base["id"])
+
+        st.markdown(f"""
+        <div class="pitcher-box">
+            <b>⚾ ABRIDORES HOY (MLB API AUTO-FETCH):</b><br>
+            • {local_nombre}: <b>{pitcher_loc_auto}</b><br>
+            • {visita_nombre}: <b>{pitcher_vis_auto}</b>
+        </div>
+        """, unsafe_allow_html=True)
+
         # PANEL DE AJUSTES SABERMÉTRICOS EN TIEMPO REAL
         with st.expander("📊 PARÁMETROS SABERMÉTRICOS DEL PARTIDO (PITCHERS & CLIMA)", expanded=False):
             st.markdown("<p style='color:#38bdf8; font-weight:800;'>PITCHERS ABRIDORES & BULLPEN</p>", unsafe_allow_html=True)
@@ -465,12 +513,12 @@ else:
             with cp1:
                 xERA_p_loc = st.number_input(f"xERA Abridor {local_nombre}", value=float(eq_local_base["xERA_p"]), step=0.1)
                 K_pct_loc = st.number_input(f"K% Abridor {local_nombre}", value=float(eq_local_base["K_pct_p"]), step=0.5)
-                outs_exp_loc = st.number_input(f"Outs Proyectados Abridor {local_nombre}", value=17.5, step=0.5)
+                outs_exp_loc = st.number_input(f"Outs Proyectados {local_nombre}", value=17.5, step=0.5)
                 bp_loc = st.number_input(f"ERA Bullpen {local_nombre}", value=float(eq_local_base["bullpen_era"]), step=0.1)
             with cp2:
                 xERA_p_vis = st.number_input(f"xERA Abridor {visita_nombre}", value=float(eq_visita_base["xERA_p"]), step=0.1)
                 K_pct_vis = st.number_input(f"K% Abridor {visita_nombre}", value=float(eq_visita_base["K_pct_p"]), step=0.5)
-                outs_exp_vis = st.number_input(f"Outs Proyectados Abridor {visita_nombre}", value=16.5, step=0.5)
+                outs_exp_vis = st.number_input(f"Outs Proyectados {visita_nombre}", value=16.5, step=0.5)
                 bp_vis = st.number_input(f"ERA Bullpen {visita_nombre}", value=float(eq_visita_base["bullpen_era"]), step=0.1)
 
             st.markdown("<p style='color:#38bdf8; font-weight:800;'>CLIMA Y PARK FACTOR</p>", unsafe_allow_html=True)
@@ -478,17 +526,14 @@ else:
             viento_m = cc1.slider("Efecto Viento / Temperatura (%)", -15, 20, 0) / 100.0
             park_f = cc2.number_input("Factor de Parque (1.00 = Neutral)", value=float(eq_local_base["park_factor"]), step=0.01)
 
-        # CÁLCULOS DE CARRERAS ESPERADAS (xR) Y MATRICES POISSON/MONTECARLO
         mult_clima = (1.0 + viento_m) * park_f
         
-        # Ponderación Abridor (5.2 Innings / 58%) + Bullpen (3.1 Innings / 42%)
         era_efectiva_loc = (xERA_p_loc * 0.58) + (bp_loc * 0.42)
         era_efectiva_vis = (xERA_p_vis * 0.58) + (bp_vis * 0.42)
 
         xr_local = ((eq_local_base["wRC_plus"] / 100.0) * (era_efectiva_vis / 4.10) * 4.30) * mult_clima
         xr_visita = ((eq_visita_base["wRC_plus"] / 100.0) * (era_efectiva_loc / 4.10) * 4.10) * mult_clima
 
-        # Matriz 9 Innings
         max_c = 16
         matrix_mlb = np.zeros((max_c, max_c))
         for x in range(max_c):
@@ -496,7 +541,6 @@ else:
                 matrix_mlb[x, y] = poisson.pmf(x, xr_local) * poisson.pmf(y, xr_visita)
         matrix_mlb /= np.sum(matrix_mlb)
 
-        # Matriz F5 (Primeras 5 Entradas)
         xr_loc_f5 = (eq_local_base["wRC_plus"] / 100.0) * (xERA_p_vis / 4.10) * 2.35 * mult_clima
         xr_vis_f5 = (eq_visita_base["wRC_plus"] / 100.0) * (xERA_p_loc / 4.10) * 2.20 * mult_clima
         matrix_f5 = np.zeros((max_c, max_c))
@@ -505,7 +549,6 @@ else:
                 matrix_f5[x, y] = poisson.pmf(x, xr_loc_f5) * poisson.pmf(y, xr_vis_f5)
         matrix_f5 /= np.sum(matrix_f5)
 
-        # Banderas e Indicadores Visuales
         c_esc1, c_esc2 = st.columns(2)
         with c_esc1:
             st.markdown(f"""
@@ -560,41 +603,34 @@ else:
         with cg1: st.plotly_chart(fig_xr, use_container_width=True)
         with cg2: st.plotly_chart(fig_pie_mlb, use_container_width=True)
 
-        # PANEL DE CAPTURA DE MOMIOS DE LA CASA DE APUESTAS
         with st.expander("⚙️ CAPTURA DE MOMIOS MLB (CASAS DE APUESTAS)", expanded=True):
             formato_m = st.radio("Formato Momios:", ["Americano (+150 / -200)", "Decimal (2.500 / 1.500)"], horizontal=True, key="f_mlb")
             es_dec = "Decimal" in formato_m
             tipo_str = "Decimal" if es_dec else "Americano"
             
-            # Fila 1: Moneyline
             f1_1, f1_2 = st.columns(2)
             m_ml_loc_in = f1_1.number_input(f"ML {local_nombre.upper()}", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_ml_vis_in = f1_2.number_input(f"ML {visita_nombre.upper()}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             
-            # Fila 2: Total Carreras
             f2_1, f2_2, f2_3 = st.columns(3)
             linea_tot_mlb = f2_1.selectbox("LINEA TOTAL", ["O/U 8.5", "O/U 7.5", "O/U 9.5"])
             m_over_tot_in = f2_2.number_input("OVER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_under_tot_in = f2_3.number_input("UNDER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
-            # Fila 3: Run Line
             f3_1, f3_2 = st.columns(2)
             m_rl_loc_in = f3_1.number_input(f"RUN LINE {local_nombre[:3]} -1.5", value=2.450 if es_dec else 145, format="%.3f" if es_dec else "%d")
             m_rl_vis_in = f3_2.number_input(f"RUN LINE {visita_nombre[:3]} +1.5", value=1.600 if es_dec else -166, format="%.3f" if es_dec else "%d")
 
-            # Fila 4: F5 (Primeras 5 Entradas)
             f4_1, f4_2, f4_3 = st.columns(3)
             m_f5_loc_in = f4_1.number_input(f"F5 ML {local_nombre[:3]}", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
             m_f5_vis_in = f4_2.number_input(f"F5 ML {visita_nombre[:3]}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             m_f5_over_in = f4_3.number_input("F5 OVER 4.5", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
 
-            # Fila 5: Props Pitchers (Ponches / Outs / NRFI)
             f5_1, f5_2, f5_3 = st.columns(3)
-            m_k_over_in = f5_1.number_input(f"OVER 5.5 K's Abridor", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
+            m_k_over_in = f5_1.number_input("OVER 5.5 K's Abridor", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
             m_outs_over_in = f5_2.number_input("OVER 15.5 Outs Abridor", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
             m_nrfi_in = f5_3.number_input("NRFI (No Run 1st Inning)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
 
-            # Conversiones
             m_ml_loc = to_decimal(m_ml_loc_in, tipo_str)
             m_ml_vis = to_decimal(m_ml_vis_in, tipo_str)
             m_over_tot = to_decimal(m_over_tot_in, tipo_str)
@@ -607,9 +643,6 @@ else:
             m_outs_over = to_decimal(m_outs_over_in, tipo_str)
             m_nrfi = to_decimal(m_nrfi_in, tipo_str)
 
-    # ==========================================
-    # COLUMNA DERECHA: CÁLCULOS DE LOS 10 MERCADOS SABERMÉTRICOS
-    # ==========================================
     with col_der:
         st.markdown("""
         <div class="header-big-right">
@@ -618,35 +651,26 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # 1. MONEYLINE
         prob_ml_loc = np.sum(np.tril(matrix_mlb, -1))
         prob_ml_vis = np.sum(np.triu(matrix_mlb, 1))
 
-        # 2. TOTAL CARRERAS (OVER 8.5)
         prob_tot_over85 = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y > 8.5])
 
-        # 3. RUN LINE (-1.5 / +1.5)
         prob_rl_loc = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
         prob_rl_vis = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        # 4. PONCHES ABRIDOR (K's OVER 5.5)
         lambda_k = (K_pct_loc / 100.0) * (outs_exp_loc * 1.45)
         prob_k_over55 = 1.0 - poisson.cdf(5, lambda_k)
 
-        # 5. OUTS TOTALES ABRIDOR (OVER 15.5 OUTS = 5.1 INNINGS)
         prob_outs_over155 = 1.0 - poisson.cdf(15, outs_exp_loc)
 
-        # 6. PRIMERAS 5 ENTRADAS (F5 ML & OVER 4.5)
         prob_f5_loc = np.sum(np.tril(matrix_f5, -1))
         prob_f5_vis = np.sum(np.triu(matrix_f5, 1))
         prob_f5_over45 = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y > 4.5])
 
-        # 7. NRFI / YRFI (NO RUN FIRST INNING)
         xr_1st_inn = (xr_local + xr_visita) * 0.13
         prob_nrfi = poisson.pmf(0, xr_1st_inn)
-        prob_yrfi = 1.0 - prob_nrfi
 
-        # EV CÁLCULOS
         ev_ml_loc = (prob_ml_loc * m_ml_loc) - 1
         ev_ml_vis = (prob_ml_vis * m_ml_vis) - 1
         ev_tot_over = (prob_tot_over85 * m_over_tot) - 1
@@ -659,7 +683,7 @@ else:
         ev_outs_over = (prob_outs_over155 * m_outs_over) - 1
         ev_nrfi = (prob_nrfi * m_nrfi) - 1
 
-        def render_card_sabermetrica(titulo, prob_real, ev, badge, mercado_nombre=""):
+        def render_card_sabermetrica(titulo, prob_real, ev, badge):
             momio_justo = 1.0 / prob_real if prob_real > 0 else 99.0
             momio_am = to_american_str(prob_real)
             badge_html = f"<span class='badge-bet'>BET</span>" if badge == "BET" else f"<span class='badge-skip'>SKIP</span>"
@@ -673,7 +697,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-        # RENDERIZADO DE LOS 10 MERCADOS CLAVE
         st.markdown("<div class='market-title'>1. Moneyline (Ganador Directo - 9 Innings)</div>", unsafe_allow_html=True)
         render_card_sabermetrica(f"Gana {local_nombre} (ML)", prob_ml_loc, ev_ml_loc, "BET" if ev_ml_loc > 0.03 else "SKIP")
         render_card_sabermetrica(f"Gana {visita_nombre} (ML)", prob_ml_vis, ev_ml_vis, "BET" if ev_ml_vis > 0.03 else "SKIP")
@@ -686,10 +709,10 @@ else:
         render_card_sabermetrica(f"{visita_nombre} Run Line +1.5", prob_rl_vis, ev_rl_vis, "BET" if ev_rl_vis > 0.03 else "SKIP")
 
         st.markdown("<div class='market-title'>4. Props de Pitcheo: Ponches (Strikeouts)</div>", unsafe_allow_html=True)
-        render_card_sabermetrica(f"Abridor {local_nombre}: Más de 5.5 K's", prob_k_over55, ev_k_over, "BET" if ev_k_over > 0.03 else "SKIP")
+        render_card_sabermetrica(f"Abridor ({pitcher_loc_auto}): Más de 5.5 K's", prob_k_over55, ev_k_over, "BET" if ev_k_over > 0.03 else "SKIP")
 
         st.markdown("<div class='market-title'>5. Props de Pitcheo: Outs Registrados</div>", unsafe_allow_html=True)
-        render_card_sabermetrica(f"Abridor {local_nombre}: Más de 15.5 Outs (5.1+ Innings)", prob_outs_over155, ev_outs_over, "BET" if ev_outs_over > 0.03 else "SKIP")
+        render_card_sabermetrica(f"Abridor ({pitcher_loc_auto}): Más de 15.5 Outs (5.1+ Innings)", prob_outs_over155, ev_outs_over, "BET" if ev_outs_over > 0.03 else "SKIP")
 
         st.markdown("<div class='market-title'>6. Primeras 5 Entradas (F5 Moneyline & Over)</div>", unsafe_allow_html=True)
         render_card_sabermetrica(f"F5 Ganador {local_nombre}", prob_f5_loc, ev_f5_loc, "BET" if ev_f5_loc > 0.03 else "SKIP")
