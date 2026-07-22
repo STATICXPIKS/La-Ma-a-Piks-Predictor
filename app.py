@@ -50,7 +50,7 @@ EQUIPOS = {
     "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
 }
 
-# ESTILOS CSS - FORZAR TEXTO NEGRO DENTRO DE LOS CUADROS DE INPUTS
+# ESTILOS CSS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -58,11 +58,9 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #0b0e14; color: #ffffff; }
     
-    /* ETIQUETAS EXTERNAS EN AZUL CELESTE */
     label { color: #38bdf8 !important; font-weight: 700 !important; font-size: 13px !important; }
     .stSelectbox label, .stNumberInput label, .stRadio label { color: #38bdf8 !important; }
     
-    /* FORZAR TEXTO NEGRO Y VISIBLE DENTRO DE LAS CAJAS DE INPUT Y SELECTBOX */
     input, div[data-baseweb="select"] span, div[data-baseweb="select"] input {
         color: #000000 !important;
         font-weight: 800 !important;
@@ -108,7 +106,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# GENERADOR DE JERSEY VECTORIAL (SVG)
 def generar_jersey_svg(equipo_nombre):
     col = JERSEYS_COLORES.get(equipo_nombre, {"c1": "#333333", "c2": "#666666"})
     c1, c2 = col["c1"], col["c2"]
@@ -163,7 +160,7 @@ with col_izq:
             matrix[x, y] = poisson.pmf(x, xg_local) * poisson.pmf(y, xg_visita)
     matrix /= np.sum(matrix)
 
-    # 1HT
+    # 1HT MATRIZ
     xg_local_1ht, xg_visita_1ht = xg_local * 0.45, xg_visita * 0.45
     matrix_1ht = np.zeros((max_goles, max_goles))
     for x in range(max_goles):
@@ -252,11 +249,21 @@ with col_izq:
         m_over_in = f2_2.number_input("OVER 2.5", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
         m_under_in = f2_3.number_input("UNDER 2.5", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-        # Fila 4: Goles 1HT
+        # Fila 4: Goles 1HT (CON OPCIONES 0.5 Y 1.5)
         f3_1, f3_2, f3_3 = st.columns(3)
-        linea_goles_1ht = f3_1.selectbox("GOLES (1HT)", ["1HT O/U 0.5"])
-        m_over_1ht_in = f3_2.number_input("1HT OVER 0.5", value=1.360 if es_dec else -278, format="%.3f" if es_dec else "%d")
-        m_under_1ht_in = f3_3.number_input("1HT UNDER 0.5", value=2.880 if es_dec else 188, format="%.3f" if es_dec else "%d")
+        linea_goles_1ht = f3_1.selectbox("GOLES (1HT)", ["1HT O/U 0.5", "1HT O/U 1.5"])
+        es_1ht_05 = "0.5" in linea_goles_1ht
+        
+        m_over_1ht_in = f3_2.number_input(
+            "1HT OVER 0.5" if es_1ht_05 else "1HT OVER 1.5", 
+            value=(1.360 if es_1ht_05 else 2.650) if es_dec else (-278 if es_1ht_05 else 165), 
+            format="%.3f" if es_dec else "%d"
+        )
+        m_under_1ht_in = f3_3.number_input(
+            "1HT UNDER 0.5" if es_1ht_05 else "1HT UNDER 1.5", 
+            value=(2.880 if es_1ht_05 else 1.450) if es_dec else (188 if es_1ht_05 else -222), 
+            format="%.3f" if es_dec else "%d"
+        )
         
         # Fila 5: BTTS
         f4_1, f4_2, _ = st.columns(3)
@@ -273,7 +280,7 @@ with col_izq:
         m_btts_s = to_decimal(m_btts_s_in, tipo_str)
 
 # ==========================================
-# COLUMNA DERECHA: VEREDICTOS CON AMBOS EQUIPOS
+# COLUMNA DERECHA: VEREDICTOS
 # ==========================================
 with col_der:
     st.markdown("""
@@ -283,12 +290,20 @@ with col_der:
     </div>
     """, unsafe_allow_html=True)
     
-    # CÁLCULOS DUALES (LOCAL Y VISITANTE)
+    # CÁLCULOS DUALES Y MÚLTIPLES
     prob_1x = prob_1 + prob_x
     prob_x2 = prob_2 + prob_x
     prob_over25 = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 2.5])
     prob_btts_si = np.sum(matrix[1:, 1:])
-    prob_over05_1ht = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 0.5])
+    
+    # CÁLCULO DINÁMICO DE GOLES 1HT (0.5 O 1.5)
+    if es_1ht_05:
+        prob_1ht_target = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 0.5])
+        texto_1ht_target = "1ra Mitad: Más de 0.5 Goles"
+    else:
+        prob_1ht_target = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 1.5])
+        texto_1ht_target = "1ra Mitad: Más de 1.5 Goles"
+
     prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
     prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
 
@@ -301,7 +316,7 @@ with col_der:
     ev_1x = (prob_1x * m_1x) - 1
     ev_x2 = (prob_x2 * m_x2) - 1
     ev_over25 = (prob_over25 * m_over25) - 1
-    ev_over05_1ht = (prob_over05_1ht * m_over_1ht) - 1
+    ev_1ht = (prob_1ht_target * m_over_1ht) - 1
     ev_btts_si = (prob_btts_si * m_btts_s) - 1
 
     def render_card_pro(titulo, subtitulo, ev, badge):
@@ -328,9 +343,9 @@ with col_der:
     st.markdown("<div class='market-title'>3. Total de Goles (Partido Completo)</div>", unsafe_allow_html=True)
     render_card_pro("Más de 2.5 Goles", f"Probabilidad Real: {prob_over25*100:.1f}% (xG Total: {xg_local+xg_visita:.2f})", ev_over25, "BET" if ev_over25 > 0.03 else "SKIP")
 
-    # 4. TOTAL GOLES 1HT
+    # 4. TOTAL GOLES 1HT (DINÁMICO 0.5 / 1.5)
     st.markdown("<div class='market-title'>4. Total de Goles 1ra Mitad (1HT)</div>", unsafe_allow_html=True)
-    render_card_pro("1ra Mitad: Más de 0.5 Goles", f"Probabilidad Real: {prob_over05_1ht*100:.1f}%", ev_over05_1ht, "BET" if ev_over05_1ht > 0.03 else "SKIP")
+    render_card_pro(texto_1ht_target, f"Probabilidad Real: {prob_1ht_target*100:.1f}%", ev_1ht, "BET" if ev_1ht > 0.03 else "SKIP")
 
     # 5. BTTS
     st.markdown("<div class='market-title'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
