@@ -545,10 +545,11 @@ if not es_mlb:
             m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.770 if es_dec else -130, format="%.3f" if es_dec else "%d")
             m_btts_n_in = f4_2.number_input("BTTS NO", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
+            # PROPS DE CÓRNERS O/U DE 7 A 11
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS</p>", unsafe_allow_html=True)
             f5_1, f5_2, _ = st.columns(3)
-            linea_corners_sel = f5_1.selectbox("Línea Córners", ["Over 7.5", "Over 8.5", "Over 9.5", "Over 10.5", "Over 11.5"], index=1)
-            m_corners_in = f5_2.number_input("Momio Córners", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
+            linea_corners_sel = f5_1.selectbox("Línea Córners", ["O/U 7.5", "O/U 8.5", "O/U 9.5", "O/U 10.5", "O/U 11.5"], index=1)
+            m_corners_in = f5_2.number_input("Momio Córners (Over)", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
 
             st.button("🔄 RECALCULAR VEREDICTOS LIGA MX", use_container_width=True)
 
