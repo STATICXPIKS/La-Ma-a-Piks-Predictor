@@ -54,7 +54,7 @@ def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, 
     historial.append(nueva_apuesta)
     guardar_base_datos(historial)
     st.session_state.historial_apuestas = historial
-    st.toast(f"✅ Pick guardado: {mercado}", icon="📌")
+    st.toast(f"✅ Pick guardado en {deporte}: {mercado}", icon="📌")
 
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -390,9 +390,10 @@ def to_american_str(prob):
 c_top1, c_top2, _ = st.columns([2, 3, 5])
 with c_top1:
     st.markdown("<span style='font-size:12px; color:#38bdf8; font-weight:800;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
-    deporte = st.radio("", ["⚽ Liga MX (API LIVE)", "⚾ MLB Sabermétrico (API AUTO)"], horizontal=True, label_visibility="collapsed")
+    deporte = st.radio("", ["⚽ Liga MX", "⚾ MLB Sabermétrico"], horizontal=True, label_visibility="collapsed")
 
 es_mlb = "MLB" in deporte
+deporte_actual_key = "MLB" if es_mlb else "Liga MX"
 
 col_izq, col_der = st.columns([1, 1], gap="large")
 
@@ -545,7 +546,6 @@ if not es_mlb:
             m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.770 if es_dec else -130, format="%.3f" if es_dec else "%d")
             m_btts_n_in = f4_2.number_input("BTTS NO", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # SECCIÓN DE CÓRNERS: LÍNEAS ENTERAS EXACTAS (7 A 11) + OVER / UNDER
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS (7 A 11 ENTEROS EXACTOS)</p>", unsafe_allow_html=True)
             f5_1, f5_2, f5_3 = st.columns(3)
             linea_corners_sel = f5_1.selectbox("Línea Córners", ["7", "8", "9", "10", "11"], index=1)
@@ -587,7 +587,6 @@ if not es_mlb:
         prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
         prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
 
-        # CÁLCULO PARA LÍNEA ENTERA EXACTA (7, 8, 9, 10, 11)
         c_target = int(linea_corners_sel)
         lambda_corners = corn_loc + corn_vis
         prob_over_corners = 1.0 - poisson.cdf(c_target, lambda_corners)
@@ -947,11 +946,12 @@ else:
         render_card_mlb_con_tracker("NRFI: 0 Carreras en la 1ra Entrada", prob_nrfi, ev_nrfi, "BET" if ev_nrfi > 0.03 else "SKIP", "NRFI 1st Inning", m_nrfi, "NRFI")
 
 # ==========================================
-# PANEL INFERIOR: AUTO-TRACKING Y EFECTIVIDAD
+# PANEL INFERIOR: AUTO-TRACKING SEPARADO POR DEPORTE
 # ==========================================
 st.markdown("<br><hr style='border:1px solid #1e2638;'><br>", unsafe_allow_html=True)
 c_head1, c_head2 = st.columns([3, 1])
-with c_head1: st.markdown("### 📈 PANEL DE AUTO-TRACKING DE APUESTAS EN VIVO")
+with c_head1: 
+    st.markdown(f"### 📈 TRACKER DE APUESTAS: **{deporte_actual_key.upper()}**")
 with c_head2:
     if st.button("🔍 VERIFICAR RESULTADOS EN VIVO", use_container_width=True):
         num_act = auto_verificar_apuestas()
@@ -959,10 +959,22 @@ with c_head2:
 
 historial = cargar_base_datos()
 
-if len(historial) == 0:
-    st.info("💡 Aún no has registrado ningún pick. Selecciona un partido y presiona `➕ APUESTA` en cualquier mercado para comenzar el seguimiento automático.")
+# FILTRADO SEPARADO POR DEPORTE
+filtro_dep = st.radio("Filtrar Tracker Por:", ["Pestaña Actual (" + deporte_actual_key + ")", "Sólo Liga MX", "Sólo MLB", "Ver Todo (Global)"], horizontal=True)
+
+if "Pestaña Actual" in filtro_dep:
+    historial_filtrado = [x for x in historial if x.get("deporte") == deporte_actual_key]
+elif "Liga MX" in filtro_dep:
+    historial_filtrado = [x for x in historial if x.get("deporte") == "Liga MX"]
+elif "MLB" in filtro_dep:
+    historial_filtrado = [x for x in historial if x.get("deporte") == "MLB"]
 else:
-    df = pd.DataFrame(historial)
+    historial_filtrado = historial
+
+if len(historial_filtrado) == 0:
+    st.info(f"💡 No hay apuestas registradas para {filtro_dep}. Selecciona un partido arriba y presiona `➕ APUESTA` para comenzar la contabilización.")
+else:
+    df = pd.DataFrame(historial_filtrado)
     wins = len(df[df["estado"] == "WIN"])
     losses = len(df[df["estado"] == "LOSS"])
     pending = len(df[df["estado"] == "PENDING"])
@@ -970,10 +982,10 @@ else:
     win_rate = (wins / totales_resueltas * 100) if totales_resueltas > 0 else 0.0
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Picks Totales", len(df))
+    m1.metric("Picks Guardados", len(df))
     m2.metric("Efectividad (Win Rate)", f"{win_rate:.1f}%", f"{wins} Ganadas - {losses} Perdidas")
     m3.metric("En Espera (Pendientes)", pending)
-    m4.metric("Estatus Sistema", "🟢 Auto-Grading API Activo")
+    m4.metric("Estatus Deporte", f"🟢 Filtrado: {filtro_dep}")
 
     col_g1, col_g2 = st.columns([1, 1])
     with col_g1:
@@ -983,9 +995,14 @@ else:
             hole=.5,
             marker=dict(colors=['#10b981', '#ef4444', '#64748b'])
         )])
-        fig_pie.update_layout(title="Gráfica de Efectividad Real", height=250, paper_bgcolor='#121721', font=dict(color='#ffffff'))
+        fig_pie.update_layout(
+            title=f"Gráfica de Aciertos ({filtro_dep})", 
+            height=250, 
+            paper_bgcolor='#121721', 
+            font=dict(color='#ffffff')
+        )
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_g2:
-        st.markdown("**Historial Registrado de Apuestas:**")
+        st.markdown(f"**Historial Registrado ({filtro_dep}):**")
         st.dataframe(df[["fecha", "deporte", "partido", "mercado", "momio", "resultado_real", "estado"]], use_container_width=True)
