@@ -146,7 +146,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
         pass
     return p_loc, p_vis
 
-# ESTILOS CSS
+# ESTILOS CSS GENERALES
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -223,19 +223,6 @@ def generar_jersey_svg(equipo_nombre, diccionario_jerseys):
     </svg>
     """
     return svg
-
-def generar_logo_mlb_html(equipo_nombre, diccionario_equipos, diccionario_jerseys):
-    team_id = diccionario_equipos.get(equipo_nombre, {}).get("id")
-    if team_id:
-        logo_url = f"https://www.mlbstatic.com/team-logos/{team_id}.svg"
-        fallback_jersey = generar_jersey_svg(equipo_nombre, diccionario_jerseys).replace('"', '&quot;').replace('\n', '')
-        html = f"""
-        <div style="width:44px; height:44px; margin-right:12px; display:flex; align-items:center; justify-content:center;">
-            <img src="{logo_url}" width="42" height="42" style="object-fit:contain;" onerror="this.onerror=null; this.parentNode.innerHTML='{fallback_jersey}';">
-        </div>
-        """
-        return html
-    return generar_jersey_svg(equipo_nombre, diccionario_jerseys)
 
 def to_decimal(momio, tipo):
     if tipo == "Decimal": return float(momio)
@@ -480,7 +467,7 @@ if not es_mlb:
         render_card_pro("Más de 4.5 Tarjetas", f"Probabilidad Real: {prob_over_tarjetas_45*100:.1f}%", (prob_over_tarjetas_45*1.80)-1, "BET" if (prob_over_tarjetas_45*1.80)-1 > 0.03 else "SKIP")
 
 # ==========================================
-# SECCIÓN MLB SABERMETRÍA AVANZADA + LOGOS OFICIALES MLB
+# SECCIÓN MLB SABERMETRÍA AVANZADA + LOGOS
 # ==========================================
 else:
     EQUIPOS = EQUIPOS_MLB
@@ -557,14 +544,19 @@ else:
                 matrix_f5[x, y] = poisson.pmf(x, xr_loc_f5) * poisson.pmf(y, xr_vis_f5)
         matrix_f5 /= np.sum(matrix_f5)
 
-        # RENDERIZADO CON ESCUDOS VECTORIALES OFICIALES DE LA MLB
+        # LOGOS VECTORIALES OFICIALES MLB (SIN JAVASCRIPT BLOQUEABLE)
+        id_loc = eq_local_base.get("id", 147)
+        id_vis = eq_visita_base.get("id", 119)
+        logo_url_loc = f"https://www.mlbstatic.com/team-logos/{id_loc}.svg"
+        logo_url_vis = f"https://www.mlbstatic.com/team-logos/{id_vis}.svg"
+
         c_esc1, c_esc2 = st.columns(2)
         with c_esc1:
             st.markdown(f"""
             <div class="team-badge-card">
-                {generar_logo_mlb_html(local_nombre, EQUIPOS, JERSEYS)}
+                <img src="{logo_url_loc}" width="42" height="42" style="margin-right:12px; object-fit:contain;">
                 <div>
-                    <div style="font-weight: 800; color: #fff; font-size: 15px;">{local_nombre} (HOME)</div>
+                    <div style="font-weight: 800; color: #ffffff; font-size: 15px;">{local_nombre} (HOME)</div>
                     <div style="color: #10b981; font-weight: 800; font-size: 14px;">{xr_local:.2f} <span style="font-size: 11px; color: #38bdf8;">xR Carreras</span></div>
                 </div>
             </div>
@@ -573,9 +565,9 @@ else:
         with c_esc2:
             st.markdown(f"""
             <div class="team-badge-card">
-                {generar_logo_mlb_html(visita_nombre, EQUIPOS, JERSEYS)}
+                <img src="{logo_url_vis}" width="42" height="42" style="margin-right:12px; object-fit:contain;">
                 <div>
-                    <div style="font-weight: 800; color: #fff; font-size: 15px;">{visita_nombre} (AWAY)</div>
+                    <div style="font-weight: 800; color: #ffffff; font-size: 15px;">{visita_nombre} (AWAY)</div>
                     <div style="color: #38bdf8; font-weight: 800; font-size: 14px;">{xr_visita:.2f} <span style="font-size: 11px; color: #38bdf8;">xR Carreras</span></div>
                 </div>
             </div>
@@ -612,7 +604,7 @@ else:
         with cg1: st.plotly_chart(fig_xr, use_container_width=True)
         with cg2: st.plotly_chart(fig_pie_mlb, use_container_width=True)
 
-        # CAPTURA DE MOMIOS MLB CON AJUSTES DINÁMICOS DE LÍNEAS PARA K'S Y OUTS
+        # CAPTURA DE MOMIOS MLB CON AJUSTES DINÁMICOS DE LÍNEAS
         with st.expander("⚙️ CAPTURA DE MOMIOS MLB (CASAS DE APUESTAS)", expanded=True):
             formato_m = st.radio("Formato Momios:", ["Americano (+150 / -200)", "Decimal (2.500 / 1.500)"], horizontal=True, key="f_mlb")
             es_dec = "Decimal" in formato_m
