@@ -501,25 +501,42 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # PANEL DE AJUSTES SABERMÉTRICOS EN TIEMPO REAL
-        with st.expander("📊 PARÁMETROS SABERMÉTRICOS DEL PARTIDO (PITCHERS & CLIMA)", expanded=False):
+        # PANEL DE AJUSTES SABERMÉTRICOS EXPANDIDO POR DEFECTO (EXPANDED = TRUE)
+        with st.expander("📊 PARÁMETROS SABERMÉTRICOS DEL PARTIDO (PITCHERS & CLIMA)", expanded=True):
             st.markdown("<p style='color:#38bdf8; font-weight:800;'>PITCHERS ABRIDORES & BULLPEN</p>", unsafe_allow_html=True)
             cp1, cp2 = st.columns(2)
             with cp1:
-                xERA_p_loc = st.number_input(f"xERA Abridor {local_nombre}", value=float(eq_local_base["xERA_p"]), step=0.1)
-                K_pct_loc = st.number_input(f"K% Abridor {local_nombre}", value=float(eq_local_base["K_pct_p"]), step=0.5)
-                outs_exp_loc = st.number_input(f"Outs Proyectados {local_nombre}", value=17.5, step=0.5)
-                bp_loc = st.number_input(f"ERA Bullpen {local_nombre}", value=float(eq_local_base["bullpen_era"]), step=0.1)
+                xERA_p_loc = st.number_input(f"xERA / ERA Abridor {local_nombre[:3]}", value=float(eq_local_base["xERA_p"]), step=0.1, format="%.2f")
+                K_pct_loc = st.number_input(f"K% Abridor {local_nombre[:3]}", value=float(eq_local_base["K_pct_p"]), step=0.5, format="%.1f")
+                outs_exp_loc = st.number_input(f"Outs Proyectados {local_nombre[:3]}", value=17.5, step=0.5, format="%.1f")
+                bp_loc = st.number_input(f"ERA Bullpen {local_nombre[:3]}", value=float(eq_local_base["bullpen_era"]), step=0.1, format="%.2f")
             with cp2:
-                xERA_p_vis = st.number_input(f"xERA Abridor {visita_nombre}", value=float(eq_visita_base["xERA_p"]), step=0.1)
-                K_pct_vis = st.number_input(f"K% Abridor {visita_nombre}", value=float(eq_visita_base["K_pct_p"]), step=0.5)
-                outs_exp_vis = st.number_input(f"Outs Proyectados {visita_nombre}", value=16.5, step=0.5)
-                bp_vis = st.number_input(f"ERA Bullpen {visita_nombre}", value=float(eq_visita_base["bullpen_era"]), step=0.1)
+                xERA_p_vis = st.number_input(f"xERA / ERA Abridor {visita_nombre[:3]}", value=float(eq_visita_base["xERA_p"]), step=0.1, format="%.2f")
+                K_pct_vis = st.number_input(f"K% Abridor {visita_nombre[:3]}", value=float(eq_visita_base["K_pct_p"]), step=0.5, format="%.1f")
+                outs_exp_vis = st.number_input(f"Outs Proyectados {visita_nombre[:3]}", value=16.5, step=0.5, format="%.1f")
+                bp_vis = st.number_input(f"ERA Bullpen {visita_nombre[:3]}", value=float(eq_visita_base["bullpen_era"]), step=0.1, format="%.2f")
 
             st.markdown("<p style='color:#38bdf8; font-weight:800;'>CLIMA Y PARK FACTOR</p>", unsafe_allow_html=True)
             cc1, cc2 = st.columns(2)
-            viento_m = cc1.slider("Efecto Viento / Temperatura (%)", -15, 20, 0) / 100.0
-            park_f = cc2.number_input("Factor de Parque (1.00 = Neutral)", value=float(eq_local_base["park_factor"]), step=0.01)
+            viento_opcion = cc1.selectbox("Efecto del Viento / Clima", [
+                "Neutral / Domo (0%)", 
+                "Viento leve a favor bateo (+5%)", 
+                "Viento fuerte a favor bateo (+10%)", 
+                "Viento extremo a favor bateo (+20%)", 
+                "Viento leve en contra bateo (-5%)", 
+                "Viento fuerte en contra bateo (-10%)"
+            ], index=0)
+            
+            viento_map = {
+                "Neutral / Domo (0%)": 0.0,
+                "Viento leve a favor bateo (+5%)": 0.05,
+                "Viento fuerte a favor bateo (+10%)": 0.10,
+                "Viento extremo a favor bateo (+20%)": 0.20,
+                "Viento leve en contra bateo (-5%)": -0.05,
+                "Viento fuerte en contra bateo (-10%)": -0.10
+            }
+            viento_m = viento_map[viento_opcion]
+            park_f = cc2.number_input("Factor de Parque (1.00 = Neutral)", value=float(eq_local_base["park_factor"]), step=0.01, format="%.2f")
 
         mult_clima = (1.0 + viento_m) * park_f
         
@@ -544,7 +561,7 @@ else:
                 matrix_f5[x, y] = poisson.pmf(x, xr_loc_f5) * poisson.pmf(y, xr_vis_f5)
         matrix_f5 /= np.sum(matrix_f5)
 
-        # LOGOS VECTORIALES OFICIALES MLB (SIN JAVASCRIPT BLOQUEABLE)
+        # LOGOS VECTORIALES OFICIALES MLB
         id_loc = eq_local_base.get("id", 147)
         id_vis = eq_visita_base.get("id", 119)
         logo_url_loc = f"https://www.mlbstatic.com/team-logos/{id_loc}.svg"
