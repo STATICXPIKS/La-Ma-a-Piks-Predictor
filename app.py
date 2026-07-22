@@ -50,13 +50,18 @@ EQUIPOS = {
     "Toluca": {"altitud": 2680, "att": 2.00, "def": 1.10, "corners": 5.9}
 }
 
-# ESTILOS CSS GENERALES
+# ESTILOS CSS CON TEXTOS BLANCOS Y AZULES EN LUGAR DE GRISES
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #0b0e14; color: #ffffff; }
+    
+    /* Forzar color blanco/azul en etiquetas e inputs */
+    label { color: #38bdf8 !important; font-weight: 700 !important; font-size: 13px !important; }
+    .stSelectbox label, .stNumberInput label, .stRadio label { color: #38bdf8 !important; }
+    p, span, div { color: #ffffff; }
     
     .card-pro {
         background: #121721;
@@ -70,7 +75,7 @@ st.markdown("""
     .badge-skip { background: #ef4444; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 6px; float: right; font-size: 12px; }
     
     .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 12px; margin-bottom: 6px; }
-    .subtext { color: #94a3b8; font-size: 12px; margin-top: 3px; }
+    .subtext { color: #cbd5e1; font-size: 12px; margin-top: 3px; }
     
     .team-badge-card {
         background: #121721;
@@ -83,26 +88,13 @@ st.markdown("""
     }
 
     /* ENCABEZADOS GIGANTES */
-    .header-big-left {
+    .header-big-left, .header-big-right {
         display: flex;
         align-items: center;
         margin-bottom: 20px;
     }
-    .header-text-left {
-        font-size: 36px !important;
-        font-weight: 900 !important;
-        color: #ffffff !important;
-        letter-spacing: -1px;
-        line-height: 1;
-    }
-
-    .header-big-right {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-    .header-text-right {
-        font-size: 36px !important;
+    .header-text-left, .header-text-right {
+        font-size: 34px !important;
         font-weight: 900 !important;
         color: #ffffff !important;
         letter-spacing: -1px;
@@ -111,7 +103,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# GENERADOR DE JERSEY VECTORIAL (SVG 100% LIMPIO)
+# GENERADOR DE JERSEY VECTORIAL (SVG)
 def generar_jersey_svg(equipo_nombre):
     col = JERSEYS_COLORES.get(equipo_nombre, {"c1": "#333333", "c2": "#666666"})
     c1, c2 = col["c1"], col["c2"]
@@ -136,10 +128,9 @@ col_izq, col_der = st.columns([1, 1], gap="large")
 # COLUMNA IZQUIERDA
 # ==========================================
 with col_izq:
-    # LOGO LIGA MX A 95PX Y TEXTO GIGANTE DE 36PX
     st.markdown("""
     <div class="header-big-left">
-        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 95px; margin-right: 18px; object-fit: contain;">
+        <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 85px; margin-right: 18px; object-fit: contain;">
         <span class="header-text-left">ANALISIS PRO-LIGA MX</span>
     </div>
     """, unsafe_allow_html=True)
@@ -183,7 +174,7 @@ with col_izq:
             <div style="margin-right: 12px;">{generar_jersey_svg(local_nombre)}</div>
             <div>
                 <div style="font-weight: 800; color: #fff; font-size: 16px;">{local_nombre}</div>
-                <div style="color: #10b981; font-weight: 800; font-size: 14px;">{xg_local:.2f} <span style="font-size: 10px; color: #64748b;">xG Esperado</span></div>
+                <div style="color: #10b981; font-weight: 800; font-size: 14px;">{xg_local:.2f} <span style="font-size: 11px; color: #38bdf8;">xG Esperado</span></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -194,7 +185,7 @@ with col_izq:
             <div style="margin-right: 12px;">{generar_jersey_svg(visita_nombre)}</div>
             <div>
                 <div style="font-weight: 800; color: #fff; font-size: 16px;">{visita_nombre}</div>
-                <div style="color: #38bdf8; font-weight: 800; font-size: 14px;">{xg_visita:.2f} <span style="font-size: 10px; color: #64748b;">xG Esperado</span></div>
+                <div style="color: #38bdf8; font-weight: 800; font-size: 14px;">{xg_visita:.2f} <span style="font-size: 11px; color: #38bdf8;">xG Esperado</span></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -232,32 +223,44 @@ with col_izq:
     with cg1: st.plotly_chart(fig_xg, use_container_width=True)
     with cg2: st.plotly_chart(fig_pie, use_container_width=True)
 
-    # MOMIOS DE TU CASA DE APUESTAS
+    # MOMIOS DE TU CASA DE APUESTAS (CON DOBLE OPORTUNIDAD Y 3 DECIMALES)
     with st.expander("⚙️ MOMIOS DE TU CASA DE APUESTAS (CALCULADORA EV)", expanded=True):
-        formato_m = st.radio("Formato:", ["Americano (+150 / -200)", "Decimal (2.50 / 1.50)"], horizontal=True)
+        formato_m = st.radio("Formato:", ["Americano (+150 / -200)", "Decimal (2.500 / 1.500)"], horizontal=True)
         es_dec = "Decimal" in formato_m
         tipo_str = "Decimal" if es_dec else "Americano"
         
+        # Fila 1: 1X2
         f1_1, f1_2, f1_3 = st.columns(3)
-        m_1_in = f1_1.number_input(f"GANA {local_nombre.upper()}", value=2.62 if es_dec else 162)
-        m_x_in = f1_2.number_input("EMPATE", value=3.40 if es_dec else 240)
-        m_2_in = f1_3.number_input(f"GANA {visita_nombre.upper()}", value=2.62 if es_dec else 162)
+        m_1_in = f1_1.number_input(f"GANA {local_nombre.upper()}", value=4.800 if es_dec else 380, format="%.3f" if es_dec else "%d")
+        m_x_in = f1_2.number_input("EMPATE", value=3.750 if es_dec else 275, format="%.3f" if es_dec else "%d")
+        m_2_in = f1_3.number_input(f"GANA {visita_nombre.upper()}", value=1.710 if es_dec else -141, format="%.3f" if es_dec else "%d")
         
+        # Fila 2: Doble Oportunidad (1X / 12 / X2)
+        f_do1, f_do2, f_do3 = st.columns(3)
+        m_1x_in = f_do1.number_input(f"1X ({local_nombre[:3].upper()}/EMP)", value=2.100 if es_dec else 110, format="%.3f" if es_dec else "%d")
+        m_12_in = f_do2.number_input("12 (LOCAL/VISITA)", value=1.280 if es_dec else -357, format="%.3f" if es_dec else "%d")
+        m_x2_in = f_do3.number_input(f"X2 (EMP/{visita_nombre[:3].upper()})", value=1.180 if es_dec else -555, format="%.3f" if es_dec else "%d")
+
+        # Fila 3: Goles Partido Completo
         f2_1, f2_2, f2_3 = st.columns(3)
         linea_goles = f2_1.selectbox("GOLES (90 Min)", ["O/U 2.5", "O/U 1.5"])
-        m_over_in = f2_2.number_input("OVER 2.5", value=1.83 if es_dec else -120)
-        m_under_in = f2_3.number_input("UNDER 2.5", value=1.95 if es_dec else -105)
+        m_over_in = f2_2.number_input("OVER 2.5", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
+        m_under_in = f2_3.number_input("UNDER 2.5", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
+        # Fila 4: Goles 1HT
         f3_1, f3_2, f3_3 = st.columns(3)
         linea_goles_1ht = f3_1.selectbox("GOLES (1HT)", ["1HT O/U 0.5"])
-        m_over_1ht_in = f3_2.number_input("1HT OVER 0.5", value=1.40 if es_dec else -250)
-        m_under_1ht_in = f3_3.number_input("1HT UNDER 0.5", value=2.75 if es_dec else 175)
+        m_over_1ht_in = f3_2.number_input("1HT OVER 0.5", value=1.360 if es_dec else -278, format="%.3f" if es_dec else "%d")
+        m_under_1ht_in = f3_3.number_input("1HT UNDER 0.5", value=2.880 if es_dec else 188, format="%.3f" if es_dec else "%d")
         
+        # Fila 5: BTTS
         f4_1, f4_2, _ = st.columns(3)
-        m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.61 if es_dec else -164)
-        m_btts_n_in = f4_2.number_input("BTTS NO", value=2.15 if es_dec else 115)
+        m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.770 if es_dec else -130, format="%.3f" if es_dec else "%d")
+        m_btts_n_in = f4_2.number_input("BTTS NO", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
+        # Conversiones
         m_1 = to_decimal(m_1_in, tipo_str)
+        m_1x = to_decimal(m_1x_in, tipo_str)
         m_over25 = to_decimal(m_over_in, tipo_str)
         m_over_1ht = to_decimal(m_over_1ht_in, tipo_str)
         m_btts_s = to_decimal(m_btts_s_in, tipo_str)
@@ -266,10 +269,9 @@ with col_izq:
 # COLUMNA DERECHA
 # ==========================================
 with col_der:
-    # CORONA GRANDE DE 45PX Y TEXTO GIGANTE DE 36PX
     st.markdown("""
     <div class="header-big-right">
-        <span style="font-size: 45px; margin-right: 15px; line-height:1;">👑</span>
+        <span style="font-size: 40px; margin-right: 15px; line-height:1;">👑</span>
         <span class="header-text-right">VEREDICTO MAÑA PIKS</span>
     </div>
     """, unsafe_allow_html=True)
@@ -286,7 +288,7 @@ with col_der:
     prob_over_tarjetas_45 = 1.0 - poisson.cdf(4, 4.5)
 
     ev_1 = (prob_1 * m_1) - 1
-    ev_1x = (prob_1x * 1.35) - 1
+    ev_1x = (prob_1x * m_1x) - 1
     ev_over25 = (prob_over25 * m_over25) - 1
     ev_over05_1ht = (prob_over05_1ht * m_over_1ht) - 1
     ev_btts_si = (prob_btts_si * m_btts_s) - 1
