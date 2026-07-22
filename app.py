@@ -545,11 +545,12 @@ if not es_mlb:
             m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.770 if es_dec else -130, format="%.3f" if es_dec else "%d")
             m_btts_n_in = f4_2.number_input("BTTS NO", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # PROPS DE CÓRNERS O/U DE 7 A 11
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS</p>", unsafe_allow_html=True)
-            f5_1, f5_2, _ = st.columns(3)
-            linea_corners_sel = f5_1.selectbox("Línea Córners", ["O/U 7.5", "O/U 8.5", "O/U 9.5", "O/U 10.5", "O/U 11.5"], index=1)
-            m_corners_in = f5_2.number_input("Momio Córners (Over)", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
+            # SECCIÓN DE CÓRNERS: LÍNEAS ENTERAS EXACTAS (7 A 11) + OVER / UNDER
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS (7 A 11 ENTEROS EXACTOS)</p>", unsafe_allow_html=True)
+            f5_1, f5_2, f5_3 = st.columns(3)
+            linea_corners_sel = f5_1.selectbox("Línea Córners", ["7", "8", "9", "10", "11"], index=1)
+            m_corners_over_in = f5_2.number_input(f"Momio OVER ({linea_corners_sel})", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
+            m_corners_under_in = f5_3.number_input(f"Momio UNDER ({linea_corners_sel})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
             st.button("🔄 RECALCULAR VEREDICTOS LIGA MX", use_container_width=True)
 
@@ -560,7 +561,8 @@ if not es_mlb:
             m_over25 = to_decimal(m_over_in, tipo_str)
             m_over_1ht = to_decimal(m_over_1ht_in, tipo_str)
             m_btts_s = to_decimal(m_btts_s_in, tipo_str)
-            m_corners = to_decimal(m_corners_in, tipo_str)
+            m_corners_over = to_decimal(m_corners_over_in, tipo_str)
+            m_corners_under = to_decimal(m_corners_under_in, tipo_str)
 
     with col_der:
         st.markdown("""
@@ -585,9 +587,11 @@ if not es_mlb:
         prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
         prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
 
-        c_target = float(linea_corners_sel.split(" ")[1])
+        # CÁLCULO PARA LÍNEA ENTERA EXACTA (7, 8, 9, 10, 11)
+        c_target = int(linea_corners_sel)
         lambda_corners = corn_loc + corn_vis
-        prob_over_corners = 1.0 - poisson.cdf(int(c_target), lambda_corners)
+        prob_over_corners = 1.0 - poisson.cdf(c_target, lambda_corners)
+        prob_under_corners = poisson.cdf(c_target - 1, lambda_corners)
 
         ev_1 = (prob_1 * m_1) - 1
         ev_2 = (prob_2 * m_2) - 1
@@ -596,7 +600,8 @@ if not es_mlb:
         ev_over25 = (prob_over25 * m_over25) - 1
         ev_1ht = (prob_1ht_target * m_over_1ht) - 1
         ev_btts_si = (prob_btts_si * m_btts_s) - 1
-        ev_corners = (prob_over_corners * m_corners) - 1
+        ev_corners_over = (prob_over_corners * m_corners_over) - 1
+        ev_corners_under = (prob_under_corners * m_corners_under) - 1
 
         partido_nombre_mx = f"{local_nombre} vs {visita_nombre}"
 
@@ -632,8 +637,9 @@ if not es_mlb:
         st.markdown("<div class='market-title'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
         render_card_pro_con_tracker("Ambos Anotan: SÍ", f"Prob. Real: {prob_btts_si*100:.1f}%", ev_btts_si, "BET" if ev_btts_si > 0.03 else "SKIP", "BTTS SÍ", m_btts_s, "BTTS")
 
-        st.markdown("<div class='market-title'>6. Córners (Calculado con Momio Real)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker(f"Más de {c_target} Córners", f"Prob. Real: {prob_over_corners*100:.1f}%", ev_corners, "BET" if ev_corners > 0.03 else "SKIP", f"Córners Over {c_target}", m_corners, str(c_target))
+        st.markdown("<div class='market-title'>6. Córners (Over / Under)</div>", unsafe_allow_html=True)
+        render_card_pro_con_tracker(f"Más de {c_target} Córners (OVER)", f"Prob. Real: {prob_over_corners*100:.1f}%", ev_corners_over, "BET" if ev_corners_over > 0.03 else "SKIP", f"Córners Over {c_target}", m_corners_over, str(c_target))
+        render_card_pro_con_tracker(f"Menos de {c_target} Córners (UNDER)", f"Prob. Real: {prob_under_corners*100:.1f}%", ev_corners_under, "BET" if ev_corners_under > 0.03 else "SKIP", f"Córners Under {c_target}", m_corners_under, str(c_target))
 
 # ==========================================
 # SECCIÓN MLB SABERMETRÍA EXCLUSIVA
