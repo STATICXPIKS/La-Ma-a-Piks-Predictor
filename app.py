@@ -123,9 +123,6 @@ EQUIPOS_MLB = {
     "Oakland Athletics": {"id": 133, "wRC_plus": 95, "xERA_p": 4.50, "K_pct_p": 21.5, "bullpen_era": 4.40, "park_factor": 0.95}
 }
 
-# ==========================================
-# FUNCIÓN DE CONSULTA GRATUITA MLB STATS API
-# ==========================================
 @st.cache_data(ttl=1800)
 def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     hoy = datetime.now().strftime("%Y-%m-%d")
@@ -241,9 +238,7 @@ def to_american_str(prob):
         am = int(round(-100 / (dec - 1)))
         return f"{am}"
 
-# ==========================================
 # BARRA SUPERIOR DE NAVEGACIÓN
-# ==========================================
 c_top1, c_top2, _ = st.columns([2, 3, 5])
 with c_top1:
     st.markdown("<span style='font-size:12px; color:#38bdf8; font-weight:800;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
@@ -489,9 +484,9 @@ else:
         c_sel1, c_sel2 = st.columns(2)
         lista_equipos = sorted(list(EQUIPOS.keys()))
         
-        local_nombre = c_sel1.selectbox("EQUIPO LOCAL (HOME)", lista_equipos, index=lista_equipos.index("NY Yankees") if "NY Yankees" in lista_equipos else 0)
+        local_nombre = c_sel1.selectbox("EQUIPO LOCAL (HOME)", lista_equipos, index=lista_equipos.index("Philadelphia Phillies") if "Philadelphia Phillies" in lista_equipos else 0)
         visita_opciones = [eq for eq in lista_equipos if eq != local_nombre]
-        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE (AWAY)", visita_opciones, index=visita_opciones.index("Boston Red Sox") if "Boston Red Sox" in visita_opciones else 0)
+        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE (AWAY)", visita_opciones, index=visita_opciones.index("LA Dodgers") if "LA Dodgers" in visita_opciones else 0)
 
         eq_local_base, eq_visita_base = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
@@ -603,34 +598,48 @@ else:
         with cg1: st.plotly_chart(fig_xr, use_container_width=True)
         with cg2: st.plotly_chart(fig_pie_mlb, use_container_width=True)
 
+        # COMPLETA CAPTURA DE MOMIOS MLB CON AMBOS ABRIDORES
         with st.expander("⚙️ CAPTURA DE MOMIOS MLB (CASAS DE APUESTAS)", expanded=True):
             formato_m = st.radio("Formato Momios:", ["Americano (+150 / -200)", "Decimal (2.500 / 1.500)"], horizontal=True, key="f_mlb")
             es_dec = "Decimal" in formato_m
             tipo_str = "Decimal" if es_dec else "Americano"
             
+            # 1. ML
             f1_1, f1_2 = st.columns(2)
             m_ml_loc_in = f1_1.number_input(f"ML {local_nombre.upper()}", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_ml_vis_in = f1_2.number_input(f"ML {visita_nombre.upper()}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             
+            # 2. TOTAL
             f2_1, f2_2, f2_3 = st.columns(3)
             linea_tot_mlb = f2_1.selectbox("LINEA TOTAL", ["O/U 8.5", "O/U 7.5", "O/U 9.5"])
             m_over_tot_in = f2_2.number_input("OVER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_under_tot_in = f2_3.number_input("UNDER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
+            # 3. RUN LINE
             f3_1, f3_2 = st.columns(2)
             m_rl_loc_in = f3_1.number_input(f"RUN LINE {local_nombre[:3]} -1.5", value=2.450 if es_dec else 145, format="%.3f" if es_dec else "%d")
             m_rl_vis_in = f3_2.number_input(f"RUN LINE {visita_nombre[:3]} +1.5", value=1.600 if es_dec else -166, format="%.3f" if es_dec else "%d")
 
+            # 4. F5
             f4_1, f4_2, f4_3 = st.columns(3)
             m_f5_loc_in = f4_1.number_input(f"F5 ML {local_nombre[:3]}", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
             m_f5_vis_in = f4_2.number_input(f"F5 ML {visita_nombre[:3]}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             m_f5_over_in = f4_3.number_input("F5 OVER 4.5", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
 
-            f5_1, f5_2, f5_3 = st.columns(3)
-            m_k_over_in = f5_1.number_input("OVER 5.5 K's Abridor", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
-            m_outs_over_in = f5_2.number_input("OVER 15.5 Outs Abridor", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
-            m_nrfi_in = f5_3.number_input("NRFI (No Run 1st Inning)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
+            # 5. K'S ABRIDORES (LOCAL Y VISITA)
+            f5_1, f5_2 = st.columns(2)
+            m_k_loc_in = f5_1.number_input(f"OVER 5.5 K's Abridor {local_nombre[:3]}", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
+            m_k_vis_in = f5_2.number_input(f"OVER 5.5 K's Abridor {visita_nombre[:3]}", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
+            # 6. OUTS ABRIDORES (LOCAL Y VISITA)
+            f6_1, f6_2 = st.columns(2)
+            m_outs_loc_in = f6_1.number_input(f"OVER 15.5 Outs {local_nombre[:3]}", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
+            m_outs_vis_in = f6_2.number_input(f"OVER 15.5 Outs {visita_nombre[:3]}", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
+
+            # 7. NRFI
+            m_nrfi_in = st.number_input("NRFI (No Run 1st Inning)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
+
+            # Conversiones
             m_ml_loc = to_decimal(m_ml_loc_in, tipo_str)
             m_ml_vis = to_decimal(m_ml_vis_in, tipo_str)
             m_over_tot = to_decimal(m_over_tot_in, tipo_str)
@@ -639,8 +648,10 @@ else:
             m_f5_loc = to_decimal(m_f5_loc_in, tipo_str)
             m_f5_vis = to_decimal(m_f5_vis_in, tipo_str)
             m_f5_over = to_decimal(m_f5_over_in, tipo_str)
-            m_k_over = to_decimal(m_k_over_in, tipo_str)
-            m_outs_over = to_decimal(m_outs_over_in, tipo_str)
+            m_k_loc = to_decimal(m_k_loc_in, tipo_str)
+            m_k_vis = to_decimal(m_k_vis_in, tipo_str)
+            m_outs_loc = to_decimal(m_outs_loc_in, tipo_str)
+            m_outs_vis = to_decimal(m_outs_vis_in, tipo_str)
             m_nrfi = to_decimal(m_nrfi_in, tipo_str)
 
     with col_der:
@@ -659,10 +670,16 @@ else:
         prob_rl_loc = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
         prob_rl_vis = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        lambda_k = (K_pct_loc / 100.0) * (outs_exp_loc * 1.45)
-        prob_k_over55 = 1.0 - poisson.cdf(5, lambda_k)
+        # K's
+        lambda_k_loc = (K_pct_loc / 100.0) * (outs_exp_loc * 1.45)
+        prob_k_loc = 1.0 - poisson.cdf(5, lambda_k_loc)
 
-        prob_outs_over155 = 1.0 - poisson.cdf(15, outs_exp_loc)
+        lambda_k_vis = (K_pct_vis / 100.0) * (outs_exp_vis * 1.45)
+        prob_k_vis = 1.0 - poisson.cdf(5, lambda_k_vis)
+
+        # Outs
+        prob_outs_loc = 1.0 - poisson.cdf(15, outs_exp_loc)
+        prob_outs_vis = 1.0 - poisson.cdf(15, outs_exp_vis)
 
         prob_f5_loc = np.sum(np.tril(matrix_f5, -1))
         prob_f5_vis = np.sum(np.triu(matrix_f5, 1))
@@ -679,8 +696,10 @@ else:
         ev_f5_loc = (prob_f5_loc * m_f5_loc) - 1
         ev_f5_vis = (prob_f5_vis * m_f5_vis) - 1
         ev_f5_over = (prob_f5_over45 * m_f5_over) - 1
-        ev_k_over = (prob_k_over55 * m_k_over) - 1
-        ev_outs_over = (prob_outs_over155 * m_outs_over) - 1
+        ev_k_loc = (prob_k_loc * m_k_loc) - 1
+        ev_k_vis = (prob_k_vis * m_k_vis) - 1
+        ev_outs_loc = (prob_outs_loc * m_outs_loc) - 1
+        ev_outs_vis = (prob_outs_vis * m_outs_vis) - 1
         ev_nrfi = (prob_nrfi * m_nrfi) - 1
 
         def render_card_sabermetrica(titulo, prob_real, ev, badge):
@@ -709,10 +728,12 @@ else:
         render_card_sabermetrica(f"{visita_nombre} Run Line +1.5", prob_rl_vis, ev_rl_vis, "BET" if ev_rl_vis > 0.03 else "SKIP")
 
         st.markdown("<div class='market-title'>4. Props de Pitcheo: Ponches (Strikeouts)</div>", unsafe_allow_html=True)
-        render_card_sabermetrica(f"Abridor ({pitcher_loc_auto}): Más de 5.5 K's", prob_k_over55, ev_k_over, "BET" if ev_k_over > 0.03 else "SKIP")
+        render_card_sabermetrica(f"Abridor {local_nombre} ({pitcher_loc_auto}): Más de 5.5 K's", prob_k_loc, ev_k_loc, "BET" if ev_k_loc > 0.03 else "SKIP")
+        render_card_sabermetrica(f"Abridor {visita_nombre} ({pitcher_vis_auto}): Más de 5.5 K's", prob_k_vis, ev_k_vis, "BET" if ev_k_vis > 0.03 else "SKIP")
 
         st.markdown("<div class='market-title'>5. Props de Pitcheo: Outs Registrados</div>", unsafe_allow_html=True)
-        render_card_sabermetrica(f"Abridor ({pitcher_loc_auto}): Más de 15.5 Outs (5.1+ Innings)", prob_outs_over155, ev_outs_over, "BET" if ev_outs_over > 0.03 else "SKIP")
+        render_card_sabermetrica(f"Abridor {local_nombre} ({pitcher_loc_auto}): Más de 15.5 Outs (5.1+ Innings)", prob_outs_loc, ev_outs_loc, "BET" if ev_outs_loc > 0.03 else "SKIP")
+        render_card_sabermetrica(f"Abridor {visita_nombre} ({pitcher_vis_auto}): Más de 15.5 Outs (5.1+ Innings)", prob_outs_vis, ev_outs_vis, "BET" if ev_outs_vis > 0.03 else "SKIP")
 
         st.markdown("<div class='market-title'>6. Primeras 5 Entradas (F5 Moneyline & Over)</div>", unsafe_allow_html=True)
         render_card_sabermetrica(f"F5 Ganador {local_nombre}", prob_f5_loc, ev_f5_loc, "BET" if ev_f5_loc > 0.03 else "SKIP")
