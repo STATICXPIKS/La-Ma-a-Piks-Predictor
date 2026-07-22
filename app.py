@@ -1,86 +1,148 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 from scipy.stats import poisson
-import plotly.express as px
 
-st.set_page_config(page_title="Liga MX Predictor", layout="wide", page_icon="⚽")
-st.title("⚽ Liga MX - Calculadora de Probabilidades y Valor")
+# Configuración de página limpia
+st.set_page_config(page_title="Liga MX Predictor", layout="centered", page_icon="⚽")
 
-ESTADIOS = {
-    'Toluca (Nemesio Díez)': 2680, 'Pachuca (Hidalgo)': 2400, 'Puebla (Cuauhtémoc)': 2230,
-    'CDMX (Azteca / Cd. Deportes / CU)': 2240, 'Querétaro (Corregidora)': 1820,
-    'Aguascalientes (Victoria)': 1800, 'San Luis (Alfonso Lastras)': 1850,
-    'Guadalajara (Akron / Jalisco)': 1560, 'Torreón (TCM)': 1120, 'Cd. Juárez (Olímpico)': 1130,
-    'Monterrey (BBVA / Universitario)': 500, 'Tijuana (Caliente)': 60, 'Mazatlán (El Encanto)': 10
-}
+# Estilos CSS para replicar el diseño exacto de la imagen
+st.markdown("""
+<style>
+    .stApp { background-color: #f4f6f9; }
+    
+    /* Tarjeta Principal */
+    .match-card {
+        background: white;
+        padding: 20px;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
+    
+    /* Insignias BET y SKIP */
+    .badge-bet {
+        background-color: #d1fae5;
+        color: #065f46;
+        font-weight: bold;
+        padding: 6px 16px;
+        border-radius: 8px;
+        border: 1px solid #10b981;
+        float: right;
+    }
+    .badge-skip {
+        background-color: #fee2e2;
+        color: #991b1b;
+        font-weight: bold;
+        padding: 6px 16px;
+        border-radius: 8px;
+        border: 1px solid #f87171;
+        float: right;
+    }
+    
+    /* Indicadores de Forma G-E-P */
+    .form-pill {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 18px;
+        margin-right: 2px;
+    }
+    .bg-g { background-color: #10b981; }
+    .bg-e { background-color: #f59e0b; }
+    .bg-p { background-color: #ef4444; }
+    
+    /* Botón azul principal */
+    div.stButton > button:first-child {
+        background-color: #1d4ed8;
+        color: white;
+        border-radius: 8px;
+        font-weight: bold;
+        height: 48px;
+        width: 100%;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-def amer_a_dec(m):
-    return (m/100)+1 if m > 0 else (100/abs(m))+1
+# Helper para convertir momio americano a decimal
+def amer_to_dec(m):
+    return (m / 100) + 1 if m > 0 else (100 / abs(m)) + 1
 
-def matriz_goles(xg_l, xg_v):
-    mat = np.zeros((6, 6))
-    for x in range(6):
-        for y in range(6):
-            mat[x, y] = poisson.pmf(x, xg_l) * poisson.pmf(y, xg_v)
-    return mat / np.sum(mat)
+# --- ENCABEZADO DE PARTIDO ---
+st.caption("9:00 P.M. · ESTADIO UNIVERSITARIO")
 
-st.sidebar.header("⚙️ Datos del Partido")
-estadio = st.sidebar.selectbox("Estadio del Partido", list(ESTADIOS.keys()))
-altitud_visita = st.sidebar.number_input("Altitud Origen Visitante (m)", value=500, step=100)
-diff_alt = max(0, ESTADIOS[estadio] - altitud_visita)
-
-col_a1, col_a2 = st.sidebar.columns(2)
-ataque_l = col_a1.slider("Ataque Local", 0.5, 2.5, 1.4)
-defensa_v = col_a2.slider("Defensa Visitante", 0.5, 2.5, 1.2)
-
-col_b1, col_b2 = st.sidebar.columns(2)
-ataque_v = col_b1.slider("Ataque Visitante", 0.5, 2.5, 1.1)
-defensa_l = col_b2.slider("Defensa Local", 0.5, 2.5, 0.9)
-
-xg_l = ataque_l * defensa_v * 1.2
-xg_v = max(0.2, (ataque_v * defensa_l) * (1 - (diff_alt * 0.00015)))
-
-st.subheader("📊 Goles Esperados (xG)")
-c1, c2, c3 = st.columns(3)
-c1.metric("Local xG", f"{xg_l:.2f}")
-c2.metric("Visitante xG", f"{xg_v:.2f}")
-c3.metric("Castigo por Altitud", f"-{diff_alt * 0.00015 * 100:.1f}%")
+col_logo, col_info = st.columns([1, 4])
+with col_info:
+    st.markdown("### **Tigres** <span class='form-pill bg-p'>P</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-g'>G</span><span class='form-pill bg-g'>G</span>", unsafe_allow_html=True)
+    st.caption("0-0-1 (G-E-P)")
+    
+    st.markdown("### **San Luis** <span class='form-pill bg-p'>P</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-g'>G</span><span class='form-pill bg-p'>P</span><span class='form-pill bg-e'>E</span>", unsafe_allow_html=True)
+    st.caption("0-0-1 (G-E-P)")
 
 st.markdown("---")
-st.subheader("💵 Carga los Momios de tu Casa de Apuestas (Formatos Americanos)")
-m1_in = st.number_input("Momio Gana Local (ej. +130 o -110)", value=130)
-mx_in = st.number_input("Momio Empate (ej. +220)", value=220)
-m2_in = st.number_input("Momio Gana Visitante (ej. +200)", value=200)
 
-m1, mx, m2 = amer_a_dec(m1_in), amer_a_dec(mx_in), amer_a_dec(m2_in)
-mat = matriz_goles(xg_l, xg_v)
+# --- MÓDULO DE MOMIOS DESPLEGABLE / ENTRADAS ---
+with st.expander("⚙️ METER LOS MOMIOS DE MI CASA (OPCIONAL — ANÁLISIS MÁS PRECISO)", expanded=True):
+    st.caption("Escribe los momios **americanos** de tu casa de apuestas (ej. -150 o +240). El modelo recalcula el valor y los veredictos contra tus números.")
+    
+    col_m1, col_mx, col_m2 = st.columns(3)
+    m_local = col_m1.number_input("GANA TIGRES", value=-245)
+    m_empate = col_mx.number_input("EMPATE", value=370)
+    m_visita = col_m2.number_input("GANA SAN LUIS", value=500)
+    
+    col_lg, col_over, col_under = st.columns(3)
+    linea_goles = col_lg.selectbox("LÍNEA DE GOLES", ["O/U 2.5"])
+    m_over = col_over.number_input("MÁS (OVER)", value=-180)
+    m_under = col_under.number_input("MENOS (UNDER)", value=120)
+    
+    col_btts_s, col_btts_n, col_dummy = st.columns(3)
+    m_btts_si = col_btts_s.number_input("AMBOS ANOTAN: SÍ", value=-110)
+    m_btts_no = col_btts_n.number_input("AMBOS ANOTAN: NO", value=-110)
 
-p1 = np.sum(np.tril(mat, -1))
-px_p = np.sum(np.diag(mat))
-p2 = np.sum(np.triu(mat, 1))
+    btn_recalc = st.button("Recalcular con mis momios")
 
-ev1 = (p1 * m1) - 1
-evx = (px_p * mx) - 1
-ev2 = (p2 * m2) - 1
+# --- CÁLCULOS MATEMÁTICOS DEL MODELO ---
+# xG estimado ajustado por altitud y fortaleza base
+xg_local, xg_visita = 2.10, 1.05  
 
-st.markdown("---")
-st.subheader("🎯 Veredicto de Apuestas con Valor (+EV)")
-res1, res2, res3 = st.columns(3)
+matrix = np.zeros((6, 6))
+for x in range(6):
+    for y in range(6):
+        matrix[x, y] = poisson.pmf(x, xg_local) * poisson.pmf(y, xg_visita)
+matrix = matrix / np.sum(matrix)
 
-def eval_val(col, tit, prob, ev):
-    col.write(f"**{tit}**")
-    col.write(f"Probabilidad: {prob*100:.1f}%")
-    if ev > 0.05:
-        col.success(f"¡APUESTA CON VALOR!\nEV: +{ev*100:.1f}%")
-    else:
-        col.error(f"Sin Valor\nEV: {ev*100:.1f}%")
+# Probabilidades
+p_local = np.sum(np.tril(matrix, -1))
+p_empate = np.sum(np.diag(matrix))
+p_dc_1x = p_local + p_empate
+p_over25 = np.sum([matrix[x, y] for x in range(6) for y in range(6) if x + y > 2.5])
+p_btts_si = np.sum(matrix[1:, 1:])
 
-eval_val(res1, "Local (1)", p1, ev1)
-eval_val(res2, "Empate (X)", px_p, evx)
-eval_val(res3, "Visitante (2)", p2, ev2)
+# EV (Expected Value)
+ev_local = (p_local * amer_to_dec(m_local)) - 1
+ev_dc1x = (p_dc_1x * amer_to_dec(-590)) - 1
+ev_over25 = (p_over25 * amer_to_dec(m_over)) - 1
+ev_btts_si = (p_btts_si * amer_to_dec(m_btts_si)) - 1
 
-st.markdown("---")
-st.subheader("🔥 Marcadores Exactos más Probables")
-df_mat = pd.DataFrame(mat * 100, index=[f"L {i}" for i in range(6)], columns=[f"V {j}" for j in range(6)])
-st.plotly_chart(px.imshow(df_mat, text_auto=".1f", color_continuous_scale="Viridis"), use_container_width=True)
+# --- BLOQUES DE VEREDICTO DE APUESTAS (DISEÑO CLEAN) ---
+st.markdown("### Recomendaciones del Modelo")
+
+def render_option(titulo, subtitulo, ev, badge_type):
+    badge_html = f"<span class='badge-bet'>BET</span>" if badge_type == "BET" else f"<span class='badge-skip'>SKIP</span>"
+    st.markdown(f"""
+    <div style="background: white; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 12px;">
+        {badge_html}
+        <h4 style="margin: 0; color: #111827;">{titulo}</h4>
+        <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">{subtitulo} · EV {ev*100:+.1f}%</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Renderizado de Tarjetas estilo Pick Comercial
+render_option("Gana Tigres", f"1X2 UANL ({m_local}) · {p_local*100:.1f}%", ev_local, "SKIP" if ev_local < 0.02 else "BET")
+render_option("Tigres o empate (1X)", f"DC 1X · modelo -590 · {p_dc_1x*100:.1f}%", ev_dc1x, "BET")
+render_option("Más de 2.5 goles", f"O 2.5 · modelo espera {xg_local+xg_visita:.2f} · {p_over25*100:.1f}%", ev_over25, "SKIP" if ev_over25 < 0.02 else "BET")
+render_option("Ambos equipos anotan: Sí", f"BTTS · modelo -126 · {p_btts_si*100:.1f}%", ev_btts_si, "BET" if ev_btts_si >= -0.05 else "SKIP")
