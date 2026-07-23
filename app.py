@@ -282,7 +282,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     return p_loc, p_vis
 
 # ==========================================
-# ESTILOS CSS FUTURISTAS: VERDE FLUORESCENTE NEÓN & AMARILLO ORO
+# ESTILOS CSS ESTILO CYBERPUNK INTEGRADO
 # ==========================================
 st.markdown("""
 <style>
@@ -408,6 +408,28 @@ st.markdown("""
         background: #00cc55 !important;
         color: #000000 !important;
         box-shadow: 0 0 18px rgba(0, 255, 102, 0.9) !important;
+    }
+
+    /* ESTILO INTEGRADO DE TABLAS (HISTORIAL REGISTRADO) */
+    div[data-testid="stDataFrame"] {
+        background-color: #111a17 !important;
+        border: 1px solid #1a3328 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 0 10px rgba(0, 255, 102, 0.1) !important;
+    }
+    
+    /* Celdas y filas de la tabla */
+    div[data-testid="stDataFrame"] div[role="grid"] {
+        background-color: #111a17 !important;
+        color: #e2e8f0 !important;
+    }
+    
+    /* Encabezados de la tabla */
+    div[data-testid="stDataFrame"] div[role="columnheader"] {
+        background-color: #0b1210 !important;
+        color: #00ff66 !important;
+        font-weight: 900 !important;
+        border-bottom: 2px solid #1a3328 !important;
     }
 </style>
 """, unsafe_allow_html=True)
