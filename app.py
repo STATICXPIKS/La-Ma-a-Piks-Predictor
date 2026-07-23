@@ -660,7 +660,7 @@ else:
         
         local_nombre = c_sel1.selectbox("EQUIPO LOCAL (HOME)", lista_equipos, index=lista_equipos.index("Philadelphia Phillies") if "Philadelphia Phillies" in lista_equipos else 0)
         visita_opciones = [eq for eq in lista_equipos if eq != local_nombre]
-        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE (AWAY)", visita_opciones, index=visita_opciones.index("LA Dodgers") if "LA Dodgers" in lista_equipos else 0)
+        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE (AWAY)", visita_opciones, index=visita_opciones.index("LA Dodgers") if "LA Dodgers" in visita_opciones else 0)
 
         eq_local_base, eq_visita_base = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
@@ -821,14 +821,15 @@ else:
             m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
             m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # 5. PONCHES (K'S) ABRIDORES CON OVER Y UNDER
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S - OVER Y UNDER)</p>", unsafe_allow_html=True)
+            # 5. PONCHES (K'S) ABRIDORES DESDE 0.5 A 8.5 CON OVER Y UNDER
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S - LÍNEA 0.5 A 8.5 OVER/UNDER)</p>", unsafe_allow_html=True)
+            opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
             fk_1, fk_2, fk_3, fk_4, fk_5, fk_6 = st.columns(6)
-            linea_k_loc = fk_1.selectbox(f"K's ({local_nombre[:3]})", ["3.5", "4.5", "5.5", "6.5", "7.5"], index=2)
+            linea_k_loc = fk_1.selectbox(f"K's ({local_nombre[:3]})", opciones_ks, index=5) # 5.5 por defecto
             m_k_loc_over_in = fk_2.number_input(f"Over {linea_k_loc} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
             m_k_loc_under_in = fk_3.number_input(f"Under {linea_k_loc} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             
-            linea_k_vis = fk_4.selectbox(f"K's ({visita_nombre[:3]})", ["3.5", "4.5", "5.5", "6.5", "7.5"], index=2)
+            linea_k_vis = fk_4.selectbox(f"K's ({visita_nombre[:3]})", opciones_ks, index=5) # 5.5 por defecto
             m_k_vis_over_in = fk_5.number_input(f"Over {linea_k_vis} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_k_vis_under_in = fk_6.number_input(f"Under {linea_k_vis} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
 
@@ -891,7 +892,7 @@ else:
         prob_rl_vis_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= 2])
         prob_rl_vis_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        # K'S OVER Y UNDER
+        # K'S OVER Y UNDER (LÍNEA DINÁMICA 0.5 A 8.5)
         k_target_loc = float(linea_k_loc)
         k_rate_loc = (k_loc / ip_loc) if ip_loc > 0 else 1.0
         outs_exp_loc_val = 17.5
