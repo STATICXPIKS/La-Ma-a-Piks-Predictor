@@ -54,7 +54,7 @@ def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, 
     historial.append(nueva_apuesta)
     guardar_base_datos(historial)
     st.session_state.historial_apuestas = historial
-    st.toast(f"✅ Pick guardado en {deporte}: {mercado}", icon="📌")
+    st.toast(f"✅ Pick guardado: {mercado}", icon="📌")
 
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -390,7 +390,7 @@ def to_american_str(prob):
 c_top1, c_top2, _ = st.columns([2, 3, 5])
 with c_top1:
     st.markdown("<span style='font-size:12px; color:#38bdf8; font-weight:800;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
-    deporte = st.radio("", ["⚽ Liga MX", "⚾ MLB Sabermétrico"], horizontal=True, label_visibility="collapsed")
+    deporte = st.radio("", ["⚽ Liga MX (API LIVE)", "⚾ MLB Sabermétrico (API AUTO)"], horizontal=True, label_visibility="collapsed")
 
 es_mlb = "MLB" in deporte
 deporte_actual_key = "MLB" if es_mlb else "Liga MX"
@@ -660,7 +660,7 @@ else:
         
         local_nombre = c_sel1.selectbox("EQUIPO LOCAL (HOME)", lista_equipos, index=lista_equipos.index("Philadelphia Phillies") if "Philadelphia Phillies" in lista_equipos else 0)
         visita_opciones = [eq for eq in lista_equipos if eq != local_nombre]
-        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE (AWAY)", visita_opciones, index=visita_opciones.index("LA Dodgers") if "LA Dodgers" in visita_opciones else 0)
+        visita_nombre = c_sel2.selectbox("EQUIPO VISITANTE (AWAY)", visita_opciones, index=visita_opciones.index("LA Dodgers") if "LA Dodgers" in lista_equipos else 0)
 
         eq_local_base, eq_visita_base = EQUIPOS[local_nombre], EQUIPOS[visita_nombre]
 
@@ -791,39 +791,57 @@ else:
             es_dec = "Decimal" in formato_m
             tipo_str = "Decimal" if es_dec else "Americano"
             
+            # 1. MONEYLINE
+            st.markdown("<p style='color:#38bdf8; font-weight:800;'>1. MONEYLINE (GANADOR DIRECTO)</p>", unsafe_allow_html=True)
             f1_1, f1_2 = st.columns(2)
             m_ml_loc_in = f1_1.number_input(f"ML {local_nombre.upper()}", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_ml_vis_in = f1_2.number_input(f"ML {visita_nombre.upper()}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             
+            # 2. TOTAL DE CARRERAS
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>2. TOTAL DE CARRERAS (O/U)</p>", unsafe_allow_html=True)
             f2_1, f2_2, f2_3 = st.columns(3)
-            linea_tot_mlb = f2_1.selectbox("LINEA TOTAL", ["O/U 8.5", "O/U 7.5", "O/U 9.5"])
+            linea_tot_mlb = f2_1.selectbox("LINEA TOTAL", ["8.5", "7.5", "9.5"])
             m_over_tot_in = f2_2.number_input("OVER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_under_tot_in = f2_3.number_input("UNDER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
-            f3_1, f3_2 = st.columns(2)
-            m_rl_loc_in = f3_1.number_input(f"RUN LINE {local_nombre[:3]} -1.5", value=2.450 if es_dec else 145, format="%.3f" if es_dec else "%d")
-            m_rl_vis_in = f3_2.number_input(f"RUN LINE {visita_nombre[:3]} +1.5", value=1.600 if es_dec else -166, format="%.3f" if es_dec else "%d")
+            # 3. RUN LINE (+1.5 Y -1.5 PARA AMBOS)
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>3. RUN LINE (+1.5 Y -1.5 AMBOS EQUIPOS)</p>", unsafe_allow_html=True)
+            f3_1, f3_2, f3_3, f3_4 = st.columns(4)
+            m_rl_loc_minus_in = f3_1.number_input(f"RL {local_nombre[:3]} -1.5", value=2.450 if es_dec else 145, format="%.3f" if es_dec else "%d")
+            m_rl_loc_plus_in = f3_2.number_input(f"RL {local_nombre[:3]} +1.5", value=1.500 if es_dec else -200, format="%.3f" if es_dec else "%d")
+            m_rl_vis_minus_in = f3_3.number_input(f"RL {visita_nombre[:3]} -1.5", value=2.600 if es_dec else 160, format="%.3f" if es_dec else "%d")
+            m_rl_vis_plus_in = f3_4.number_input(f"RL {visita_nombre[:3]} +1.5", value=1.600 if es_dec else -166, format="%.3f" if es_dec else "%d")
 
-            f4_1, f4_2, f4_3 = st.columns(3)
+            # 4. F5 ML Y F5 OVER/UNDER (3.5 A 5.5)
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>4. PRIMERAS 5 ENTRADAS (F5 ML Y OVER/UNDER 3.5 A 5.5)</p>", unsafe_allow_html=True)
+            f4_1, f4_2, f4_3, f4_4, f4_5 = st.columns(5)
             m_f5_loc_in = f4_1.number_input(f"F5 ML {local_nombre[:3]}", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
             m_f5_vis_in = f4_2.number_input(f"F5 ML {visita_nombre[:3]}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
-            m_f5_over_in = f4_3.number_input("F5 OVER 4.5", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
+            linea_f5_sel = f4_3.selectbox("Línea F5 O/U", ["3.5", "4.5", "5.5"], index=1)
+            m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
+            m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE PONCHES (K'S)</p>", unsafe_allow_html=True)
-            fk_1, fk_2, fk_3, fk_4 = st.columns(4)
-            linea_k_loc = fk_1.selectbox(f"Línea K's ({local_nombre[:3]})", ["Over 3.5", "Over 4.5", "Over 5.5", "Over 6.5", "Over 7.5"], index=2)
-            m_k_loc_in = fk_2.number_input(f"Momio K's ({local_nombre[:3]})", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
+            # 5. PONCHES (K'S) ABRIDORES CON OVER Y UNDER
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S - OVER Y UNDER)</p>", unsafe_allow_html=True)
+            fk_1, fk_2, fk_3, fk_4, fk_5, fk_6 = st.columns(6)
+            linea_k_loc = fk_1.selectbox(f"K's ({local_nombre[:3]})", ["3.5", "4.5", "5.5", "6.5", "7.5"], index=2)
+            m_k_loc_over_in = fk_2.number_input(f"Over {linea_k_loc} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
+            m_k_loc_under_in = fk_3.number_input(f"Under {linea_k_loc} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             
-            linea_k_vis = fk_3.selectbox(f"Línea K's ({visita_nombre[:3]})", ["Over 3.5", "Over 4.5", "Over 5.5", "Over 6.5", "Over 7.5"], index=2)
-            m_k_vis_in = fk_4.number_input(f"Momio K's ({visita_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
+            linea_k_vis = fk_4.selectbox(f"K's ({visita_nombre[:3]})", ["3.5", "4.5", "5.5", "6.5", "7.5"], index=2)
+            m_k_vis_over_in = fk_5.number_input(f"Over {linea_k_vis} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
+            m_k_vis_under_in = fk_6.number_input(f"Under {linea_k_vis} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
 
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE OUTS REGISTRADOS</p>", unsafe_allow_html=True)
-            fo_1, fo_2, fo_3, fo_4 = st.columns(4)
-            linea_outs_loc = fo_1.selectbox(f"Línea Outs ({local_nombre[:3]})", ["Over 13.5 (4.2 Innings)", "Over 14.5 (4.2 Innings)", "Over 15.5 (5.1 Innings)", "Over 17.5 (5.2 Innings)", "Over 18.5 (6.0 Innings)"], index=2)
-            m_outs_loc_in = fo_2.number_input(f"Momio Outs ({local_nombre[:3]})", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
+            # 6. OUTS ABRIDORES CON OVER Y UNDER
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS (OVER Y UNDER)</p>", unsafe_allow_html=True)
+            fo_1, fo_2, fo_3, fo_4, fo_5, fo_6 = st.columns(6)
+            linea_outs_loc = fo_1.selectbox(f"Outs ({local_nombre[:3]})", ["13.5", "14.5", "15.5", "17.5", "18.5"], index=2)
+            m_outs_loc_over_in = fo_2.number_input(f"Over {linea_outs_loc} Outs", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
+            m_outs_loc_under_in = fo_3.number_input(f"Under {linea_outs_loc} Outs", value=2.000 if es_dec else 100, format="%.3f" if es_dec else "%d")
             
-            linea_outs_vis = fo_3.selectbox(f"Línea Outs ({visita_nombre[:3]})", ["Over 13.5 (4.2 Innings)", "Over 14.5 (4.2 Innings)", "Over 15.5 (5.1 Innings)", "Over 17.5 (5.2 Innings)", "Over 18.5 (6.0 Innings)"], index=2)
-            m_outs_vis_in = fo_4.number_input(f"Momio Outs ({visita_nombre[:3]})", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
+            linea_outs_vis = fo_4.selectbox(f"Outs ({visita_nombre[:3]})", ["13.5", "14.5", "15.5", "17.5", "18.5"], index=2)
+            m_outs_vis_over_in = fo_5.number_input(f"Over {linea_outs_vis} Outs", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
+            m_outs_vis_under_in = fo_6.number_input(f"Under {linea_outs_vis} Outs", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
             m_nrfi_in = st.number_input("NRFI (No Run 1st Inning)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
 
@@ -832,15 +850,23 @@ else:
             m_ml_loc = to_decimal(m_ml_loc_in, tipo_str)
             m_ml_vis = to_decimal(m_ml_vis_in, tipo_str)
             m_over_tot = to_decimal(m_over_tot_in, tipo_str)
-            m_rl_loc = to_decimal(m_rl_loc_in, tipo_str)
-            m_rl_vis = to_decimal(m_rl_vis_in, tipo_str)
+            m_under_tot = to_decimal(m_under_tot_in, tipo_str)
+            m_rl_loc_minus = to_decimal(m_rl_loc_minus_in, tipo_str)
+            m_rl_loc_plus = to_decimal(m_rl_loc_plus_in, tipo_str)
+            m_rl_vis_minus = to_decimal(m_rl_vis_minus_in, tipo_str)
+            m_rl_vis_plus = to_decimal(m_rl_vis_plus_in, tipo_str)
             m_f5_loc = to_decimal(m_f5_loc_in, tipo_str)
             m_f5_vis = to_decimal(m_f5_vis_in, tipo_str)
             m_f5_over = to_decimal(m_f5_over_in, tipo_str)
-            m_k_loc = to_decimal(m_k_loc_in, tipo_str)
-            m_k_vis = to_decimal(m_k_vis_in, tipo_str)
-            m_outs_loc = to_decimal(m_outs_loc_in, tipo_str)
-            m_outs_vis = to_decimal(m_outs_vis_in, tipo_str)
+            m_f5_under = to_decimal(m_f5_under_in, tipo_str)
+            m_k_loc_over = to_decimal(m_k_loc_over_in, tipo_str)
+            m_k_loc_under = to_decimal(m_k_loc_under_in, tipo_str)
+            m_k_vis_over = to_decimal(m_k_vis_over_in, tipo_str)
+            m_k_vis_under = to_decimal(m_k_vis_under_in, tipo_str)
+            m_outs_loc_over = to_decimal(m_outs_loc_over_in, tipo_str)
+            m_outs_loc_under = to_decimal(m_outs_loc_under_in, tipo_str)
+            m_outs_vis_over = to_decimal(m_outs_vis_over_in, tipo_str)
+            m_outs_vis_under = to_decimal(m_outs_vis_under_in, tipo_str)
             m_nrfi = to_decimal(m_nrfi_in, tipo_str)
 
     with col_der:
@@ -854,48 +880,72 @@ else:
         prob_ml_loc = np.sum(np.tril(matrix_mlb, -1))
         prob_ml_vis = np.sum(np.triu(matrix_mlb, 1))
 
-        prob_tot_over85 = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y > 8.5])
+        # TOTALES
+        tot_target = float(linea_tot_mlb)
+        prob_tot_over = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y > tot_target])
+        prob_tot_under = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y < tot_target])
 
-        prob_rl_loc = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
-        prob_rl_vis = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
+        # RUN LINE (+1.5 Y -1.5)
+        prob_rl_loc_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
+        prob_rl_loc_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= -1])
+        prob_rl_vis_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= 2])
+        prob_rl_vis_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        k_target_loc = float(linea_k_loc.split(" ")[1])
+        # K'S OVER Y UNDER
+        k_target_loc = float(linea_k_loc)
         k_rate_loc = (k_loc / ip_loc) if ip_loc > 0 else 1.0
         outs_exp_loc_val = 17.5
         lambda_k_loc = k_rate_loc * (outs_exp_loc_val / 3.0)
-        prob_k_loc = 1.0 - poisson.cdf(int(k_target_loc), lambda_k_loc)
+        prob_k_loc_over = 1.0 - poisson.cdf(int(k_target_loc), lambda_k_loc)
+        prob_k_loc_under = poisson.cdf(int(k_target_loc), lambda_k_loc)
 
-        k_target_vis = float(linea_k_vis.split(" ")[1])
+        k_target_vis = float(linea_k_vis)
         k_rate_vis = (k_vis / ip_vis) if ip_vis > 0 else 1.0
         outs_exp_vis_val = 16.5
         lambda_k_vis = k_rate_vis * (outs_exp_vis_val / 3.0)
-        prob_k_vis = 1.0 - poisson.cdf(int(k_target_vis), lambda_k_vis)
+        prob_k_vis_over = 1.0 - poisson.cdf(int(k_target_vis), lambda_k_vis)
+        prob_k_vis_under = poisson.cdf(int(k_target_vis), lambda_k_vis)
 
-        outs_target_loc = float(linea_outs_loc.split(" ")[1])
-        prob_outs_loc = 1.0 - poisson.cdf(int(outs_target_loc), outs_exp_loc_val)
+        # OUTS OVER Y UNDER
+        outs_target_loc = float(linea_outs_loc)
+        prob_outs_loc_over = 1.0 - poisson.cdf(int(outs_target_loc), outs_exp_loc_val)
+        prob_outs_loc_under = poisson.cdf(int(outs_target_loc), outs_exp_loc_val)
 
-        outs_target_vis = float(linea_outs_vis.split(" ")[1])
-        prob_outs_vis = 1.0 - poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
+        outs_target_vis = float(linea_outs_vis)
+        prob_outs_vis_over = 1.0 - poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
+        prob_outs_vis_under = poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
 
+        # F5
         prob_f5_loc = np.sum(np.tril(matrix_f5, -1))
         prob_f5_vis = np.sum(np.triu(matrix_f5, 1))
-        prob_f5_over45 = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y > 4.5])
+        f5_target = float(linea_f5_sel)
+        prob_f5_over = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y > f5_target])
+        prob_f5_under = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y < f5_target])
 
         xr_1st_inn = (xr_local + xr_visita) * 0.13
         prob_nrfi = poisson.pmf(0, xr_1st_inn)
 
+        # CÁLCULO DE VALOR ESPERADO (+EV%)
         ev_ml_loc = (prob_ml_loc * m_ml_loc) - 1
         ev_ml_vis = (prob_ml_vis * m_ml_vis) - 1
-        ev_tot_over = (prob_tot_over85 * m_over_tot) - 1
-        ev_rl_loc = (prob_rl_loc * m_rl_loc) - 1
-        ev_rl_vis = (prob_rl_vis * m_rl_vis) - 1
+        ev_tot_over = (prob_tot_over * m_over_tot) - 1
+        ev_tot_under = (prob_tot_under * m_under_tot) - 1
+        ev_rl_loc_minus = (prob_rl_loc_minus * m_rl_loc_minus) - 1
+        ev_rl_loc_plus = (prob_rl_loc_plus * m_rl_loc_plus) - 1
+        ev_rl_vis_minus = (prob_rl_vis_minus * m_rl_vis_minus) - 1
+        ev_rl_vis_plus = (prob_rl_vis_plus * m_rl_vis_plus) - 1
         ev_f5_loc = (prob_f5_loc * m_f5_loc) - 1
         ev_f5_vis = (prob_f5_vis * m_f5_vis) - 1
-        ev_f5_over = (prob_f5_over45 * m_f5_over) - 1
-        ev_k_loc = (prob_k_loc * m_k_loc) - 1
-        ev_k_vis = (prob_k_vis * m_k_vis) - 1
-        ev_outs_loc = (prob_outs_loc * m_outs_loc) - 1
-        ev_outs_vis = (prob_outs_vis * m_outs_vis) - 1
+        ev_f5_over = (prob_f5_over * m_f5_over) - 1
+        ev_f5_under = (prob_f5_under * m_f5_under) - 1
+        ev_k_loc_over = (prob_k_loc_over * m_k_loc_over) - 1
+        ev_k_loc_under = (prob_k_loc_under * m_k_loc_under) - 1
+        ev_k_vis_over = (prob_k_vis_over * m_k_vis_over) - 1
+        ev_k_vis_under = (prob_k_vis_under * m_k_vis_under) - 1
+        ev_outs_loc_over = (prob_outs_loc_over * m_outs_loc_over) - 1
+        ev_outs_loc_under = (prob_outs_loc_under * m_outs_loc_under) - 1
+        ev_outs_vis_over = (prob_outs_vis_over * m_outs_vis_over) - 1
+        ev_outs_vis_under = (prob_outs_vis_under * m_outs_vis_under) - 1
         ev_nrfi = (prob_nrfi * m_nrfi) - 1
 
         partido_nombre_mlb = f"{local_nombre} vs {visita_nombre}"
@@ -923,24 +973,33 @@ else:
         render_card_mlb_con_tracker(f"Gana {local_nombre} (ML)", prob_ml_loc, ev_ml_loc, "BET" if ev_ml_loc > 0.03 else "SKIP", f"Gana {local_nombre} ML", m_ml_loc, "ML")
         render_card_mlb_con_tracker(f"Gana {visita_nombre} (ML)", prob_ml_vis, ev_ml_vis, "BET" if ev_ml_vis > 0.03 else "SKIP", f"Gana {visita_nombre} ML", m_ml_vis, "ML")
 
-        st.markdown("<div class='market-title'>2. Total de Carreras (Partido Completo)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker("Más de 8.5 Carreras", prob_tot_over85, ev_tot_over, "BET" if ev_tot_over > 0.03 else "SKIP", "Over 8.5 Carreras", m_over_tot, "8.5")
+        st.markdown("<div class='market-title'>2. Total de Carreras (Over / Under)</div>", unsafe_allow_html=True)
+        render_card_mlb_con_tracker(f"Más de {tot_target} Carreras (OVER)", prob_tot_over, ev_tot_over, "BET" if ev_tot_over > 0.03 else "SKIP", f"Over {tot_target} Carreras", m_over_tot, str(tot_target))
+        render_card_mlb_con_tracker(f"Menos de {tot_target} Carreras (UNDER)", prob_tot_under, ev_tot_under, "BET" if ev_tot_under > 0.03 else "SKIP", f"Under {tot_target} Carreras", m_under_tot, str(tot_target))
 
-        st.markdown("<div class='market-title'>3. Run Line / Hándicap (-1.5 / +1.5)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"{local_nombre} Run Line -1.5", prob_rl_loc, ev_rl_loc, "BET" if ev_rl_loc > 0.03 else "SKIP", f"{local_nombre} RL -1.5", m_rl_loc, "-1.5")
-        render_card_mlb_con_tracker(f"{visita_nombre} Run Line +1.5", prob_rl_vis, ev_rl_vis, "BET" if ev_rl_vis > 0.03 else "SKIP", f"{visita_nombre} RL +1.5", m_rl_vis, "+1.5")
+        st.markdown("<div class='market-title'>3. Run Line / Hándicap (+1.5 y -1.5)</div>", unsafe_allow_html=True)
+        render_card_mlb_con_tracker(f"{local_nombre} Run Line -1.5", prob_rl_loc_minus, ev_rl_loc_minus, "BET" if ev_rl_loc_minus > 0.03 else "SKIP", f"{local_nombre} RL -1.5", m_rl_loc_minus, "-1.5")
+        render_card_mlb_con_tracker(f"{local_nombre} Run Line +1.5", prob_rl_loc_plus, ev_rl_loc_plus, "BET" if ev_rl_loc_plus > 0.03 else "SKIP", f"{local_nombre} RL +1.5", m_rl_loc_plus, "+1.5")
+        render_card_mlb_con_tracker(f"{visita_nombre} Run Line -1.5", prob_rl_vis_minus, ev_rl_vis_minus, "BET" if ev_rl_vis_minus > 0.03 else "SKIP", f"{visita_nombre} RL -1.5", m_rl_vis_minus, "-1.5")
+        render_card_mlb_con_tracker(f"{visita_nombre} Run Line +1.5", prob_rl_vis_plus, ev_rl_vis_plus, "BET" if ev_rl_vis_plus > 0.03 else "SKIP", f"{visita_nombre} RL +1.5", m_rl_vis_plus, "+1.5")
 
-        st.markdown("<div class='market-title'>4. Props de Pitcheo: Ponches (Strikeouts)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: {linea_k_loc} K's", prob_k_loc, ev_k_loc, "BET" if ev_k_loc > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} K's", m_k_loc, linea_k_loc)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: {linea_k_vis} K's", prob_k_vis, ev_k_vis, "BET" if ev_k_vis > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} K's", m_k_vis, linea_k_vis)
+        st.markdown("<div class='market-title'>4. Props de Pitcheo: Ponches (K's)</div>", unsafe_allow_html=True)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_k_loc} K's", prob_k_loc_over, ev_k_loc_over, "BET" if ev_k_loc_over > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Over {linea_k_loc} K's", m_k_loc_over, linea_k_loc)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_k_loc} K's", prob_k_loc_under, ev_k_loc_under, "BET" if ev_k_loc_under > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Under {linea_k_loc} K's", m_k_loc_under, linea_k_loc)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_k_vis} K's", prob_k_vis_over, ev_k_vis_over, "BET" if ev_k_vis_over > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Over {linea_k_vis} K's", m_k_vis_over, linea_k_vis)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_k_vis} K's", prob_k_vis_under, ev_k_vis_under, "BET" if ev_k_vis_under > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Under {linea_k_vis} K's", m_k_vis_under, linea_k_vis)
 
         st.markdown("<div class='market-title'>5. Props de Pitcheo: Outs Registrados</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: {linea_outs_loc}", prob_outs_loc, ev_outs_loc, "BET" if ev_outs_loc > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Outs", m_outs_loc, linea_outs_loc)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: {linea_outs_vis}", prob_outs_vis, ev_outs_vis, "BET" if ev_outs_vis > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Outs", m_outs_vis, linea_outs_vis)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_outs_loc} Outs", prob_outs_loc_over, ev_outs_loc_over, "BET" if ev_outs_loc_over > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Over {linea_outs_loc} Outs", m_outs_loc_over, linea_outs_loc)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_outs_loc} Outs", prob_outs_loc_under, ev_outs_loc_under, "BET" if ev_outs_loc_under > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Under {linea_outs_loc} Outs", m_outs_loc_under, linea_outs_loc)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_outs_vis} Outs", prob_outs_vis_over, ev_outs_vis_over, "BET" if ev_outs_vis_over > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Over {linea_outs_vis} Outs", m_outs_vis_over, linea_outs_vis)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_outs_vis} Outs", prob_outs_vis_under, ev_outs_vis_under, "BET" if ev_outs_vis_under > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Under {linea_outs_vis} Outs", m_outs_vis_under, linea_outs_vis)
 
-        st.markdown("<div class='market-title'>6. Primeras 5 Entradas (F5 Moneyline & Over)</div>", unsafe_allow_html=True)
+        st.markdown("<div class='market-title'>6. Primeras 5 Entradas (F5 ML y Over/Under)</div>", unsafe_allow_html=True)
         render_card_mlb_con_tracker(f"F5 Ganador {local_nombre}", prob_f5_loc, ev_f5_loc, "BET" if ev_f5_loc > 0.03 else "SKIP", f"F5 ML {local_nombre}", m_f5_loc, "F5 ML")
         render_card_mlb_con_tracker(f"F5 Ganador {visita_nombre}", prob_f5_vis, ev_f5_vis, "BET" if ev_f5_vis > 0.03 else "SKIP", f"F5 ML {visita_nombre}", m_f5_vis, "F5 ML")
+        render_card_mlb_con_tracker(f"F5: OVER {f5_target} Carreras", prob_f5_over, ev_f5_over, "BET" if ev_f5_over > 0.03 else "SKIP", f"F5 Over {f5_target}", m_f5_over, str(f5_target))
+        render_card_mlb_con_tracker(f"F5: UNDER {f5_target} Carreras", prob_f5_under, ev_f5_under, "BET" if ev_f5_under > 0.03 else "SKIP", f"F5 Under {f5_target}", m_f5_under, str(f5_target))
 
         st.markdown("<div class='market-title'>7. Mercado 1er Inning: NRFI / YRFI</div>", unsafe_allow_html=True)
         render_card_mlb_con_tracker("NRFI: 0 Carreras en la 1ra Entrada", prob_nrfi, ev_nrfi, "BET" if ev_nrfi > 0.03 else "SKIP", "NRFI 1st Inning", m_nrfi, "NRFI")
@@ -959,7 +1018,6 @@ with c_head2:
 
 historial = cargar_base_datos()
 
-# FILTRADO SEPARADO POR DEPORTE
 filtro_dep = st.radio("Filtrar Tracker Por:", ["Pestaña Actual (" + deporte_actual_key + ")", "Sólo Liga MX", "Sólo MLB", "Ver Todo (Global)"], horizontal=True)
 
 if "Pestaña Actual" in filtro_dep:
