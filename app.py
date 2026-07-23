@@ -54,7 +54,7 @@ def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, 
     historial.append(nueva_apuesta)
     guardar_base_datos(historial)
     st.session_state.historial_apuestas = historial
-    st.toast(f"✅ Pick guardado: {mercado}", icon="📌")
+    st.toast(f"💰 Pick guardado: {mercado}", icon="👑")
 
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -281,40 +281,87 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
         pass
     return p_loc, p_vis
 
-# ESTILOS CSS GENERALES
+# ==========================================
+# ESTILOS CSS CYBERPUNK: VERDE NEÓN & ORO
+# ==========================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Orbitron:wght@700;900&display=swap');
     
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    .stApp { background-color: #0b0e14; color: #ffffff; }
+    html, body, [class*="css"] { 
+        font-family: 'Inter', sans-serif; 
+    }
+    .stApp { 
+        background-color: #06090e; 
+        color: #e2e8f0; 
+    }
     
-    label { color: #38bdf8 !important; font-weight: 700 !important; font-size: 13px !important; }
-    .stSelectbox label, .stNumberInput label, .stRadio label, .stSlider label { color: #38bdf8 !important; }
+    /* TÍTULOS Y ETIQUETAS */
+    label { 
+        color: #ffd700 !important; 
+        font-weight: 800 !important; 
+        font-size: 13px !important; 
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
     
     input, div[data-baseweb="select"] span, div[data-baseweb="select"] input {
         color: #000000 !important;
-        font-weight: 800 !important;
+        font-weight: 900 !important;
     }
-    .stNumberInput input { color: #000000 !important; font-weight: 800 !important; }
     
+    /* CARD PRO VERDE NEÓN & ORO */
     .card-pro {
-        background: #121721;
-        border: 1px solid #1e2638;
+        background: #0d131d;
+        border: 1px solid #ffd700;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.15);
         border-radius: 10px;
         padding: 12px 16px;
         margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .card-pro:hover {
+        border-color: #00ff66;
+        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
     }
     
-    .badge-bet { background: #10b981; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 6px; float: right; font-size: 12px; }
-    .badge-skip { background: #ef4444; color: #ffffff; font-weight: 800; padding: 4px 10px; border-radius: 6px; float: right; font-size: 12px; }
+    /* BADGES */
+    .badge-bet { 
+        background: #00ff66; 
+        color: #000000; 
+        font-weight: 900; 
+        padding: 4px 12px; 
+        border-radius: 6px; 
+        float: right; 
+        font-size: 12px; 
+        box-shadow: 0 0 8px #00ff66;
+    }
+    .badge-skip { 
+        background: #ff0055; 
+        color: #ffffff; 
+        font-weight: 900; 
+        padding: 4px 12px; 
+        border-radius: 6px; 
+        float: right; 
+        font-size: 12px; 
+        box-shadow: 0 0 8px #ff0055;
+    }
     
-    .market-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 14px; margin-bottom: 6px; }
+    .market-title { 
+        font-size: 15px; 
+        font-weight: 900; 
+        color: #00ff66; 
+        text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+        margin-top: 16px; 
+        margin-bottom: 6px; 
+        text-transform: uppercase;
+    }
     .subtext { color: #cbd5e1; font-size: 12px; margin-top: 3px; }
     
     .team-badge-card {
-        background: #121721;
-        border: 1px solid #1e2638;
+        background: #0d131d;
+        border: 1px solid #00ff66;
+        box-shadow: 0 0 8px rgba(0, 255, 102, 0.2);
         border-radius: 10px;
         padding: 10px 14px;
         display: flex;
@@ -322,39 +369,41 @@ st.markdown("""
         margin-bottom: 10px;
     }
 
-    .header-big-left, .header-big-right {
-        display: flex;
-        align-items: center;
-        margin-bottom: 15px;
-    }
     .header-text-left, .header-text-right {
-        font-size: 32px !important;
+        font-family: 'Orbitron', sans-serif !important;
+        font-size: 28px !important;
         font-weight: 900 !important;
-        color: #ffffff !important;
-        letter-spacing: -1px;
-        line-height: 1;
+        color: #ffd700 !important;
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+        letter-spacing: 1px;
     }
     
     .pitcher-box {
-        background: #1e293b;
-        border-left: 4px solid #38bdf8;
-        padding: 8px 12px;
+        background: #0d131d;
+        border-left: 4px solid #00ff66;
+        box-shadow: 0 0 10px rgba(0, 255, 102, 0.15);
+        padding: 10px 14px;
         border-radius: 6px;
         margin-bottom: 12px;
         font-size: 13px;
+        color: #ffffff;
     }
 
+    /* BOTONES DORADO METÁLICO & NEÓN */
     div.stButton > button {
-        background-color: #38bdf8 !important;
+        background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%) !important;
         color: #000000 !important;
         font-weight: 900 !important;
         font-size: 13px !important;
         border-radius: 6px !important;
         border: none !important;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.4) !important;
+        transition: all 0.3s ease !important;
     }
     div.stButton > button:hover {
-        background-color: #0284c7 !important;
-        color: #ffffff !important;
+        background: linear-gradient(135deg, #00ff66 0%, #00cc55 100%) !important;
+        color: #000000 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 102, 0.8) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -389,7 +438,7 @@ def to_american_str(prob):
 # BARRA SUPERIOR DE NAVEGACIÓN
 c_top1, c_top2, _ = st.columns([2, 3, 5])
 with c_top1:
-    st.markdown("<span style='font-size:12px; color:#38bdf8; font-weight:800;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
+    st.markdown("<span style='font-size:12px; color:#ffd700; font-weight:900;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
     deporte = st.radio("", ["⚽ Liga MX (API LIVE)", "⚾ MLB Sabermétrico (API AUTO)"], horizontal=True, label_visibility="collapsed")
 
 es_mlb = "MLB" in deporte
@@ -407,7 +456,7 @@ if not es_mlb:
     with col_izq:
         st.markdown("""
         <div class="header-big-left">
-            <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 75px; margin-right: 15px; object-fit: contain;">
+            <img src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/22.png" style="height: 65px; margin-right: 15px; filter: drop-shadow(0 0 8px #ffd700);">
             <span class="header-text-left">ANALISIS PRO-LIGA MX</span>
         </div>
         """, unsafe_allow_html=True)
@@ -458,8 +507,8 @@ if not es_mlb:
             <div class="team-badge-card">
                 <div style="margin-right: 12px;">{generar_jersey_svg(local_nombre, JERSEYS)}</div>
                 <div>
-                    <div style="font-weight: 800; color: #fff; font-size: 16px;">{local_nombre}</div>
-                    <div style="color: #10b981; font-weight: 800; font-size: 14px;">{xg_local:.2f} <span style="font-size: 11px; color: #38bdf8;">xG Esperado</span></div>
+                    <div style="font-weight: 900; color: #fff; font-size: 16px;">{local_nombre}</div>
+                    <div style="color: #00ff66; font-weight: 900; font-size: 14px;">{xg_local:.2f} <span style="font-size: 11px; color: #ffd700;">xG Esperado</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -469,8 +518,8 @@ if not es_mlb:
             <div class="team-badge-card">
                 <div style="margin-right: 12px;">{generar_jersey_svg(visita_nombre, JERSEYS)}</div>
                 <div>
-                    <div style="font-weight: 800; color: #fff; font-size: 16px;">{visita_nombre}</div>
-                    <div style="color: #38bdf8; font-weight: 800; font-size: 14px;">{xg_visita:.2f} <span style="font-size: 11px; color: #38bdf8;">xG Esperado</span></div>
+                    <div style="font-weight: 900; color: #fff; font-size: 16px;">{visita_nombre}</div>
+                    <div style="color: #ffd700; font-weight: 900; font-size: 14px;">{xg_visita:.2f} <span style="font-size: 11px; color: #ffd700;">xG Esperado</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -481,11 +530,11 @@ if not es_mlb:
         xg_acc_visita = np.cumsum([0] + list(np.random.dirichlet(np.ones(4)) * xg_visita))
 
         fig_xg = go.Figure()
-        fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_local, mode='lines', name=local_nombre, line=dict(color='#10b981', width=2.5)))
-        fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_visita, mode='lines', name=visita_nombre, line=dict(color='#38bdf8', width=2.5)))
+        fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_local, mode='lines', name=local_nombre, line=dict(color='#00ff66', width=3)))
+        fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_visita, mode='lines', name=visita_nombre, line=dict(color='#ffd700', width=3)))
         fig_xg.update_layout(
-            title=dict(text="xG Progresión por Minuto", font=dict(size=12, color="#ffffff")),
-            height=190, paper_bgcolor='#121721', plot_bgcolor='#121721', font=dict(color='#ffffff', size=9),
+            title=dict(text="xG Progresión por Minuto", font=dict(size=12, color="#ffd700")),
+            height=190, paper_bgcolor='#0d131d', plot_bgcolor='#0d131d', font=dict(color='#ffffff', size=9),
             xaxis=dict(gridcolor='#1e2638'), yaxis=dict(gridcolor='#1e2638'), margin=dict(l=25, r=15, t=30, b=20),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
@@ -496,11 +545,11 @@ if not es_mlb:
 
         fig_pie = go.Figure(data=[go.Pie(
             labels=[local_nombre, 'Empate', visita_nombre], values=[prob_1, prob_x, prob_2], hole=.55,
-            marker=dict(colors=['#10b981', '#f59e0b', '#38bdf8'])
+            marker=dict(colors=['#00ff66', '#ffaa00', '#ffd700'])
         )])
         fig_pie.update_layout(
-            title=dict(text="Distribución 1X2", font=dict(size=12, color="#ffffff")),
-            height=190, paper_bgcolor='#121721', font=dict(color='#ffffff', size=9),
+            title=dict(text="Distribución 1X2", font=dict(size=12, color="#ffd700")),
+            height=190, paper_bgcolor='#0d131d', font=dict(color='#ffffff', size=9),
             margin=dict(l=15, r=15, t=30, b=15), showlegend=False
         )
 
@@ -546,7 +595,7 @@ if not es_mlb:
             m_btts_s_in = f4_1.number_input("BTTS SÍ", value=1.770 if es_dec else -130, format="%.3f" if es_dec else "%d")
             m_btts_n_in = f4_2.number_input("BTTS NO", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS (7 A 11 ENTEROS EXACTOS)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:8px;'>PROPS DE CÓRNERS (7 A 11 ENTEROS EXACTOS)</p>", unsafe_allow_html=True)
             f5_1, f5_2, f5_3 = st.columns(3)
             linea_corners_sel = f5_1.selectbox("Línea Córners", ["7", "8", "9", "10", "11"], index=1)
             m_corners_over_in = f5_2.number_input(f"Momio OVER ({linea_corners_sel})", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
@@ -567,7 +616,7 @@ if not es_mlb:
     with col_der:
         st.markdown("""
         <div class="header-big-right">
-            <span style="font-size: 38px; margin-right: 12px; line-height:1;">👑</span>
+            <span style="font-size: 38px; margin-right: 12px; filter: drop-shadow(0 0 8px #ffd700);">👑</span>
             <span class="header-text-right">VEREDICTO MAÑA PIKS</span>
         </div>
         """, unsafe_allow_html=True)
@@ -612,7 +661,7 @@ if not es_mlb:
                 <div class="card-pro">
                     {badge_html}
                     <div style="font-weight: 800; font-size: 15px; color: #ffffff;">{titulo}</div>
-                    <div class="subtext">{subtitulo} · <b>EV {ev*100:+.1f}%</b></div>
+                    <div class="subtext">{subtitulo} · <b style="color:#00ff66;">EV {ev*100:+.1f}%</b></div>
                 </div>
                 """, unsafe_allow_html=True)
             with c_card2:
@@ -650,7 +699,7 @@ else:
     with col_izq:
         st.markdown("""
         <div class="header-big-left">
-            <span style="font-size:50px; margin-right:15px; line-height:1;">⚾</span>
+            <span style="font-size:45px; margin-right:15px; filter: drop-shadow(0 0 10px #ffd700);">⚾</span>
             <span class="header-text-left">ANALISIS SABERMÉTRICO MLB</span>
         </div>
         """, unsafe_allow_html=True)
@@ -668,14 +717,14 @@ else:
 
         st.markdown(f"""
         <div class="pitcher-box">
-            <b>⚾ ABRIDORES HOY (MLB API AUTO-FETCH):</b><br>
-            • {local_nombre}: <b>{pitcher_loc_auto}</b><br>
-            • {visita_nombre}: <b>{pitcher_vis_auto}</b>
+            <b style="color:#ffd700;">⚾ ABRIDORES HOY (MLB API AUTO-FETCH):</b><br>
+            • {local_nombre}: <b style="color:#00ff66;">{pitcher_loc_auto}</b><br>
+            • {visita_nombre}: <b style="color:#00ff66;">{pitcher_vis_auto}</b>
         </div>
         """, unsafe_allow_html=True)
 
         with st.expander("📊 PARÁMETROS DE ABRIDORES Y CLIMA", expanded=True):
-            st.markdown(f"<p style='color:#38bdf8; font-weight:800;'>ESTADÍSTICAS ABRIDOR LOCAL: {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#ffd700; font-weight:800;'>ESTADÍSTICAS ABRIDOR LOCAL: {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
             pl1, pl2, pl3, pl4, pl5, pl6 = st.columns(6)
             w_loc = pl1.number_input("W", value=int(eq_local_base["w"]), step=1, key="w_loc")
             l_loc = pl2.number_input("L", value=int(eq_local_base["l"]), step=1, key="l_loc")
@@ -684,7 +733,7 @@ else:
             whip_loc = pl5.number_input("WHIP", value=float(eq_local_base["whip"]), step=0.01, format="%.2f", key="whip_loc")
             k_loc = pl6.number_input("K Total", value=int(eq_local_base["k"]), step=1, key="k_loc")
 
-            st.markdown(f"<p style='color:#38bdf8; font-weight:800; margin-top:10px;'>ESTADÍSTICAS ABRIDOR VISITANTE: {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#ffd700; font-weight:800; margin-top:10px;'>ESTADÍSTICAS ABRIDOR VISITANTE: {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
             pv1, pv2, pv3, pv4, pv5, pv6 = st.columns(6)
             w_vis = pv1.number_input("W", value=int(eq_visita_base["w"]), step=1, key="w_vis")
             l_vis = pv2.number_input("L", value=int(eq_visita_base["l"]), step=1, key="l_vis")
@@ -693,7 +742,7 @@ else:
             whip_vis = pv5.number_input("WHIP", value=float(eq_visita_base["whip"]), step=0.01, format="%.2f", key="whip_vis")
             k_vis = pv6.number_input("K Total", value=int(eq_visita_base["k"]), step=1, key="k_vis")
 
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:10px;'>CONDICIONES DEL CLIMA</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:10px;'>CONDICIONES DEL CLIMA</p>", unsafe_allow_html=True)
             cw1, cw2, cw3, cw4 = st.columns(4)
             viento_kmh = cw1.number_input("Viento (km/h)", value=16, step=1)
             viento_dir = cw2.selectbox("Dirección Viento", ["A favor (Out)", "En contra (In)", "Cruzado (Cross)"])
@@ -738,8 +787,8 @@ else:
             <div class="team-badge-card">
                 <img src="{logo_url_loc}" width="42" height="42" style="margin-right:12px; object-fit:contain;">
                 <div>
-                    <div style="font-weight: 800; color: #ffffff; font-size: 15px;">{local_nombre} (HOME)</div>
-                    <div style="color: #10b981; font-weight: 800; font-size: 14px;">{xr_local:.2f} <span style="font-size: 11px; color: #38bdf8;">xR Carreras</span></div>
+                    <div style="font-weight: 900; color: #ffffff; font-size: 15px;">{local_nombre} (HOME)</div>
+                    <div style="color: #00ff66; font-weight: 900; font-size: 14px;">{xr_local:.2f} <span style="font-size: 11px; color: #ffd700;">xR Carreras</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -749,8 +798,8 @@ else:
             <div class="team-badge-card">
                 <img src="{logo_url_vis}" width="42" height="42" style="margin-right:12px; object-fit:contain;">
                 <div>
-                    <div style="font-weight: 800; color: #ffffff; font-size: 15px;">{visita_nombre} (AWAY)</div>
-                    <div style="color: #38bdf8; font-weight: 800; font-size: 14px;">{xr_visita:.2f} <span style="font-size: 11px; color: #38bdf8;">xR Carreras</span></div>
+                    <div style="font-weight: 900; color: #ffffff; font-size: 15px;">{visita_nombre} (AWAY)</div>
+                    <div style="color: #ffd700; font-weight: 900; font-size: 14px;">{xr_visita:.2f} <span style="font-size: 11px; color: #ffd700;">xR Carreras</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -761,11 +810,11 @@ else:
         xr_acc_visita = np.cumsum([0] + list(np.random.dirichlet(np.ones(4)) * xr_visita))
 
         fig_xr = go.Figure()
-        fig_xr.add_trace(go.Scatter(x=innings, y=xr_acc_local, mode='lines', name=local_nombre, line=dict(color='#10b981', width=2.5)))
-        fig_xr.add_trace(go.Scatter(x=innings, y=xr_acc_visita, mode='lines', name=visita_nombre, line=dict(color='#38bdf8', width=2.5)))
+        fig_xr.add_trace(go.Scatter(x=innings, y=xr_acc_local, mode='lines', name=local_nombre, line=dict(color='#00ff66', width=3)))
+        fig_xr.add_trace(go.Scatter(x=innings, y=xr_acc_visita, mode='lines', name=visita_nombre, line=dict(color='#ffd700', width=3)))
         fig_xr.update_layout(
-            title=dict(text="xR Progresión por Inning", font=dict(size=12, color="#ffffff")),
-            height=190, paper_bgcolor='#121721', plot_bgcolor='#121721', font=dict(color='#ffffff', size=9),
+            title=dict(text="xR Progresión por Inning", font=dict(size=12, color="#ffd700")),
+            height=190, paper_bgcolor='#0d131d', plot_bgcolor='#0d131d', font=dict(color='#ffffff', size=9),
             xaxis=dict(gridcolor='#1e2638'), yaxis=dict(gridcolor='#1e2638'), margin=dict(l=25, r=15, t=30, b=20),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
@@ -775,11 +824,11 @@ else:
 
         fig_pie_mlb = go.Figure(data=[go.Pie(
             labels=[local_nombre, visita_nombre], values=[prob_ml_local, prob_ml_visita], hole=.55,
-            marker=dict(colors=['#10b981', '#38bdf8'])
+            marker=dict(colors=['#00ff66', '#ffd700'])
         )])
         fig_pie_mlb.update_layout(
-            title=dict(text="Moneyline % Probabilidad", font=dict(size=12, color="#ffffff")),
-            height=190, paper_bgcolor='#121721', font=dict(color='#ffffff', size=9),
+            title=dict(text="Moneyline % Probabilidad", font=dict(size=12, color="#ffd700")),
+            height=190, paper_bgcolor='#0d131d', font=dict(color='#ffffff', size=9),
             margin=dict(l=15, r=15, t=30, b=15), showlegend=False
         )
 
@@ -792,28 +841,28 @@ else:
             tipo_str = "Decimal" if es_dec else "Americano"
             
             # 1. MONEYLINE
-            st.markdown("<p style='color:#38bdf8; font-weight:800;'>1. MONEYLINE (GANADOR DIRECTO)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#ffd700; font-weight:800;'>1. MONEYLINE (GANADOR DIRECTO)</p>", unsafe_allow_html=True)
             f1_1, f1_2 = st.columns(2)
             m_ml_loc_in = f1_1.number_input(f"ML {local_nombre.upper()}", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_ml_vis_in = f1_2.number_input(f"ML {visita_nombre.upper()}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             
             # 2. TOTAL DE CARRERAS
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>2. TOTAL DE CARRERAS (O/U)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:8px;'>2. TOTAL DE CARRERAS (O/U)</p>", unsafe_allow_html=True)
             f2_1, f2_2, f2_3 = st.columns(3)
             linea_tot_mlb = f2_1.selectbox("LINEA TOTAL", ["8.5", "7.5", "9.5"])
             m_over_tot_in = f2_2.number_input("OVER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_under_tot_in = f2_3.number_input("UNDER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
-            # 3. RUN LINE (+1.5 Y -1.5 PARA AMBOS)
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>3. RUN LINE (+1.5 Y -1.5 AMBOS EQUIPOS)</p>", unsafe_allow_html=True)
+            # 3. RUN LINE
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:8px;'>3. RUN LINE (+1.5 Y -1.5 AMBOS EQUIPOS)</p>", unsafe_allow_html=True)
             f3_1, f3_2, f3_3, f3_4 = st.columns(4)
             m_rl_loc_minus_in = f3_1.number_input(f"RL {local_nombre[:3]} -1.5", value=2.450 if es_dec else 145, format="%.3f" if es_dec else "%d")
             m_rl_loc_plus_in = f3_2.number_input(f"RL {local_nombre[:3]} +1.5", value=1.500 if es_dec else -200, format="%.3f" if es_dec else "%d")
             m_rl_vis_minus_in = f3_3.number_input(f"RL {visita_nombre[:3]} -1.5", value=2.600 if es_dec else 160, format="%.3f" if es_dec else "%d")
             m_rl_vis_plus_in = f3_4.number_input(f"RL {visita_nombre[:3]} +1.5", value=1.600 if es_dec else -166, format="%.3f" if es_dec else "%d")
 
-            # 4. F5 ML Y F5 OVER/UNDER (3.5 A 5.5)
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>4. PRIMERAS 5 ENTRADAS (F5 ML Y OVER/UNDER 3.5 A 5.5)</p>", unsafe_allow_html=True)
+            # 4. F5
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:8px;'>4. PRIMERAS 5 ENTRADAS (F5 ML Y OVER/UNDER 3.5 A 5.5)</p>", unsafe_allow_html=True)
             f4_1, f4_2, f4_3, f4_4, f4_5 = st.columns(5)
             m_f5_loc_in = f4_1.number_input(f"F5 ML {local_nombre[:3]}", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
             m_f5_vis_in = f4_2.number_input(f"F5 ML {visita_nombre[:3]}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
@@ -821,8 +870,8 @@ else:
             m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
             m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # 5. PONCHES (K'S) ABRIDORES DESDE 0.5 A 8.5 CON OVER Y UNDER
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S - LÍNEA 0.5 A 8.5 OVER/UNDER)</p>", unsafe_allow_html=True)
+            # 5. K'S 0.5 A 8.5
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S - LÍNEA 0.5 A 8.5 OVER/UNDER)</p>", unsafe_allow_html=True)
             opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
             fk_1, fk_2, fk_3, fk_4, fk_5, fk_6 = st.columns(6)
             linea_k_loc = fk_1.selectbox(f"K's ({local_nombre[:3]})", opciones_ks, index=5)
@@ -833,8 +882,8 @@ else:
             m_k_vis_over_in = fk_5.number_input(f"Over {linea_k_vis} K's ({visita_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_k_vis_under_in = fk_6.number_input(f"Under {linea_k_vis} K's ({visita_nombre[:3]})", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
 
-            # 6. OUTS ABRIDORES CON OVER Y UNDER
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS (OVER Y UNDER)</p>", unsafe_allow_html=True)
+            # 6. OUTS
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS (OVER Y UNDER)</p>", unsafe_allow_html=True)
             fo_1, fo_2, fo_3, fo_4, fo_5, fo_6 = st.columns(6)
             linea_outs_loc = fo_1.selectbox(f"Outs ({local_nombre[:3]})", ["13.5", "14.5", "15.5", "17.5", "18.5"], index=2)
             m_outs_loc_over_in = fo_2.number_input(f"Over {linea_outs_loc} Outs ({local_nombre[:3]})", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
@@ -844,8 +893,8 @@ else:
             m_outs_vis_over_in = fo_5.number_input(f"Over {linea_outs_vis} Outs ({visita_nombre[:3]})", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
             m_outs_vis_under_in = fo_6.number_input(f"Under {linea_outs_vis} Outs ({visita_nombre[:3]})", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # 7. MERCADO 1ER INNING: NRFI Y YRFI
-            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>7. MERCADO 1ER INNING (NRFI / YRFI)</p>", unsafe_allow_html=True)
+            # 7. NRFI / YRFI
+            st.markdown("<p style='color:#ffd700; font-weight:800; margin-top:8px;'>7. MERCADO 1ER INNING (NRFI / YRFI)</p>", unsafe_allow_html=True)
             fn1, fn2 = st.columns(2)
             m_nrfi_in = fn1.number_input("NRFI - No Run 1st Inning (Under 0.5)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_yrfi_in = fn2.number_input("YRFI - Yes Run 1st Inning (Over 0.5)", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
@@ -878,7 +927,7 @@ else:
     with col_der:
         st.markdown("""
         <div class="header-big-right">
-            <span style="font-size: 38px; margin-right: 12px; line-height:1;">👑</span>
+            <span style="font-size: 38px; margin-right: 12px; filter: drop-shadow(0 0 8px #ffd700);">👑</span>
             <span class="header-text-right">VEREDICTO MAÑA PIKS MLB</span>
         </div>
         """, unsafe_allow_html=True)
@@ -970,7 +1019,7 @@ else:
                     {badge_html}
                     <div style="font-weight: 800; font-size: 15px; color: #ffffff;">{titulo}</div>
                     <div class="subtext">
-                        Prob. Real: <b>{prob_real*100:.1f}%</b> · Momio Justo: <b>{momio_justo:.3f} ({momio_am})</b> · <b>EV {ev*100:+.1f}%</b>
+                        Prob. Real: <b>{prob_real*100:.1f}%</b> · Momio Justo: <b>{momio_justo:.3f} ({momio_am})</b> · <b style="color:#00ff66;">EV {ev*100:+.1f}%</b>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1017,10 +1066,10 @@ else:
 # ==========================================
 # PANEL INFERIOR: AUTO-TRACKING SEPARADO POR DEPORTE
 # ==========================================
-st.markdown("<br><hr style='border:1px solid #1e2638;'><br>", unsafe_allow_html=True)
+st.markdown("<br><hr style='border:1px solid #ffd700;'><br>", unsafe_allow_html=True)
 c_head1, c_head2 = st.columns([3, 1])
 with c_head1: 
-    st.markdown(f"### 📈 TRACKER DE APUESTAS: **{deporte_actual_key.upper()}**")
+    st.markdown(f"<h3 style='color:#ffd700;'>📈 TRACKER DE APUESTAS: <span style='color:#00ff66;'>{deporte_actual_key.upper()}</span></h3>", unsafe_allow_html=True)
 with c_head2:
     if st.button("🔍 VERIFICAR RESULTADOS EN VIVO", use_container_width=True):
         num_act = auto_verificar_apuestas()
@@ -1051,7 +1100,7 @@ else:
 
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Picks Guardados", len(df))
-    m2.metric("Efectividad (Win Rate)", f"{win_rate:.1f}%", f"{wins} Ganadas - {losses} Perdidas")
+    m2.metric("Efectividad (Win Rate)", f"{win_rate:.1f}%", f"{wins} W - {losses} L")
     m3.metric("En Espera (Pendientes)", pending)
     m4.metric("Estatus Deporte", f"🟢 Filtrado: {filtro_dep}")
 
@@ -1061,12 +1110,12 @@ else:
             labels=['Ganadas (WIN)', 'Perdidas (LOSS)', 'Pendientes (PENDING)'],
             values=[wins, losses, pending],
             hole=.5,
-            marker=dict(colors=['#10b981', '#ef4444', '#64748b'])
+            marker=dict(colors=['#00ff66', '#ff0055', '#64748b'])
         )])
         fig_pie.update_layout(
-            title=f"Gráfica de Aciertos ({filtro_dep})", 
+            title=dict(text=f"Gráfica de Aciertos ({filtro_dep})", font=dict(color='#ffd700')), 
             height=250, 
-            paper_bgcolor='#121721', 
+            paper_bgcolor='#0d131d', 
             font=dict(color='#ffffff')
         )
         st.plotly_chart(fig_pie, use_container_width=True)
