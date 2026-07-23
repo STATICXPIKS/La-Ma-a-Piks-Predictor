@@ -102,7 +102,7 @@ def auto_verificar_apuestas():
                 game_id = ev_item.get("id")
                 comp = ev_item.get("competitions", [])[0]
                 status_completed = comp.get("status", {}).get("type", {}).get("completed", False)
-                status_state = comp.get("status", {}).get("type", {}).get("state", "pre") # pre, in, post
+                status_state = comp.get("status", {}).get("type", {}).get("state", "pre")
                 
                 teams = comp.get("competitors", [])
                 loc_name, vis_name = "", ""
@@ -115,7 +115,6 @@ def auto_verificar_apuestas():
                         vis_name = t.get("team", {}).get("displayName", "")
                         vis_score = int(t.get("score", 0))
 
-                # Extraer Boxscore de Ponches en vivo de los abridores si el juego inició o terminó
                 ks_dict = {}
                 if status_state in ["in", "post"]:
                     try:
@@ -132,7 +131,6 @@ def auto_verificar_apuestas():
                                         for ath in athletes:
                                             p_name = ath.get("athlete", {}).get("displayName", "")
                                             stats_vals = ath.get("stats", [])
-                                            # Indice estándar en ESPN Boxscore Pitching: [IP, H, R, ER, BB, SO/K, HR, ERA]
                                             if len(stats_vals) >= 6:
                                                 so_val = int(stats_vals[5]) if str(stats_vals[5]).isdigit() else 0
                                                 ks_dict[p_name.lower()] = so_val
@@ -181,7 +179,7 @@ def auto_verificar_apuestas():
                                 item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
                             actualizados += 1
 
-            # --- EVALUACIÓN MLB (SOPORTE EN VIVO PARA K'S Y MARCADORES) ---
+            # --- EVALUACIÓN MLB ---
             elif "MLB" in dep:
                 for match_title, score_data in res_mlb.items():
                     eq_loc_match = item["equipo_loc"].lower() in match_title.lower() or score_data["loc_name"].lower() in item["equipo_loc"].lower()
@@ -195,10 +193,8 @@ def auto_verificar_apuestas():
                         linea = item.get("linea", "")
                         ks_dict = score_data["ks_dict"]
 
-                        # EVALUACIÓN EN VIVO DE K'S (PONCHES)
                         if "K's" in mercado or "Ponches" in mercado:
                             val_target = float(linea) if linea.replace('.','',1).isdigit() else 5.5
-                            # Buscar ponches registrados para abridores
                             k_actuales = max(ks_dict.values()) if ks_dict else 0
                             
                             if "Over" in mercado or "Más" in mercado:
@@ -225,7 +221,6 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{k_actuales} K's en Vivo"
 
-                        # EVALUACIÓN DE JUEGO COMPLETO (FINALIZADO)
                         elif score_data["completed"]:
                             item["resultado_real"] = f"{r_loc} - {r_vis}"
                             if "Gana" in mercado or "ML" in mercado:
@@ -426,7 +421,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     return p_loc, p_vis
 
 # ==========================================
-# ESTILOS CSS
+# ESTILOS CSS CON BADGES APUESTA ESTRELLA Y RESPLANDOR DORADO
 # ==========================================
 st.markdown("""
 <style>
@@ -502,6 +497,7 @@ st.markdown("""
         font-weight: 900 !important;
     }
     
+    /* CARD ESTÁNDAR */
     .card-pro {
         background: #242a26;
         border: 1px solid #2d3833;
@@ -515,7 +511,34 @@ st.markdown("""
         border-color: #00ff66;
         box-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
     }
+
+    /* CARD ESTRELLA (DORADA COMBINACIÓN CUMPLIDA) */
+    .card-star {
+        background: #2b2718;
+        border: 1px solid #ffd700;
+        border-left: 5px solid #ffd700;
+        box-shadow: 0 0 14px rgba(255, 215, 0, 0.35);
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .card-star:hover {
+        border-color: #00ff66;
+        box-shadow: 0 0 18px rgba(0, 255, 102, 0.5);
+    }
     
+    /* BADGES */
+    .badge-star {
+        background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+        color: #000000;
+        font-weight: 900;
+        padding: 4px 12px;
+        border-radius: 4px;
+        float: right;
+        font-size: 12px;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+    }
     .badge-bet { 
         background: #00ff66; 
         color: #000000; 
@@ -840,12 +863,25 @@ if not es_mlb:
 
         partido_nombre_mx = f"{local_nombre} vs {visita_nombre}"
 
-        def render_card_pro_con_tracker(titulo, subtitulo, ev, badge, mercado_str, momio_val, linea_val=""):
-            badge_html = f"<span class='badge-bet'>BET</span>" if badge == "BET" else f"<span class='badge-skip'>SKIP</span>"
+        # FUNCIÓN RENDERIZADORA DE TARJETAS CON DISTINTIVO COMBINACIÓN DORADA
+        def render_card_pro_con_tracker(titulo, subtitulo, ev, prob_val, mercado_str, momio_val, linea_val=""):
+            # EVALUAR SI ES APUESTA ESTRELLA (75% A 90% Y CON +EV)
+            es_estrella = (0.75 <= prob_val <= 0.90) and (ev > 0.0)
+            
+            if es_estrella:
+                badge_html = "<span class='badge-star'>💎 APUESTA ESTRELLA (+EV / ERROR DE CUOTA)</span>"
+                card_class = "card-star"
+            elif ev > 0.02:
+                badge_html = "<span class='badge-bet'>BET</span>"
+                card_class = "card-pro"
+            else:
+                badge_html = "<span class='badge-skip'>SKIP</span>"
+                card_class = "card-pro"
+
             c_card1, c_card2 = st.columns([4, 1])
             with c_card1:
                 st.markdown(f"""
-                <div class="card-pro">
+                <div class="{card_class}">
                     {badge_html}
                     <div style="font-weight: 800; font-size: 15px; color: #ffffff;">{titulo}</div>
                     <div class="subtext">{subtitulo} · <b style="color:#00ff66;">EV {ev*100:+.1f}%</b></div>
@@ -856,25 +892,25 @@ if not es_mlb:
                     registrar_apuesta("Liga MX", partido_nombre_mx, local_nombre, visita_nombre, mercado_str, linea_val, momio_val, ev)
 
         st.markdown("<div class='market-title'>1. Resultado Final (1X2)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker(f"Gana {local_nombre} (1)", f"Prob. Real: {prob_1*100:.1f}%", ev_1, "BET" if ev_1 > 0.03 else "SKIP", f"Gana {local_nombre}", m_1, "ML")
-        render_card_pro_con_tracker(f"Gana {visita_nombre} (2)", f"Prob. Real: {prob_2*100:.1f}%", ev_2, "BET" if ev_2 > 0.03 else "SKIP", f"Gana {visita_nombre}", m_2, "ML")
+        render_card_pro_con_tracker(f"Gana {local_nombre} (1)", f"Prob. Real: {prob_1*100:.1f}%", ev_1, prob_1, f"Gana {local_nombre}", m_1, "ML")
+        render_card_pro_con_tracker(f"Gana {visita_nombre} (2)", f"Prob. Real: {prob_2*100:.1f}%", ev_2, prob_2, f"Gana {visita_nombre}", m_2, "ML")
 
         st.markdown("<div class='market-title'>2. Doble Oportunidad</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker(f"{local_nombre} o Empate (1X)", f"Prob. Real: {prob_1x*100:.1f}%", ev_1x, "BET" if ev_1x > 0.02 else "SKIP", f"{local_nombre} 1X", m_1x, "1X")
-        render_card_pro_con_tracker(f"Empate o {visita_nombre} (X2)", f"Prob. Real: {prob_x2*100:.1f}%", ev_x2, "BET" if ev_x2 > 0.02 else "SKIP", f"{visita_nombre} X2", m_x2, "X2")
+        render_card_pro_con_tracker(f"{local_nombre} o Empate (1X)", f"Prob. Real: {prob_1x*100:.1f}%", ev_1x, prob_1x, f"{local_nombre} 1X", m_1x, "1X")
+        render_card_pro_con_tracker(f"Empate o {visita_nombre} (X2)", f"Prob. Real: {prob_x2*100:.1f}%", ev_x2, prob_x2, f"{visita_nombre} X2", m_x2, "X2")
 
         st.markdown("<div class='market-title'>3. Total de Goles (Partido Completo)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker("Más de 2.5 Goles", f"Prob. Real: {prob_over25*100:.1f}%", ev_over25, "BET" if ev_over25 > 0.03 else "SKIP", "Más de 2.5 Goles", m_over25, "2.5")
+        render_card_pro_con_tracker("Más de 2.5 Goles", f"Prob. Real: {prob_over25*100:.1f}%", ev_over25, prob_over25, "Más de 2.5 Goles", m_over25, "2.5")
 
         st.markdown("<div class='market-title'>4. Total de Goles 1ra Mitad (1HT)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker(texto_1ht_target, f"Prob. Real: {prob_1ht_target*100:.1f}%", ev_1ht, "BET" if ev_1ht > 0.03 else "SKIP", texto_1ht_target, m_over_1ht, "1HT")
+        render_card_pro_con_tracker(texto_1ht_target, f"Prob. Real: {prob_1ht_target*100:.1f}%", ev_1ht, prob_1ht_target, texto_1ht_target, m_over_1ht, "1HT")
 
         st.markdown("<div class='market-title'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker("Ambos Anotan: SÍ", f"Prob. Real: {prob_btts_si*100:.1f}%", ev_btts_si, "BET" if ev_btts_si > 0.03 else "SKIP", "BTTS SÍ", m_btts_s, "BTTS")
+        render_card_pro_con_tracker("Ambos Anotan: SÍ", f"Prob. Real: {prob_btts_si*100:.1f}%", ev_btts_si, prob_btts_si, "BTTS SÍ", m_btts_s, "BTTS")
 
         st.markdown("<div class='market-title'>6. Córners (Over / Under)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker(f"Más de {c_target} Córners (OVER)", f"Prob. Real: {prob_over_corners*100:.1f}%", ev_corners_over, "BET" if ev_corners_over > 0.03 else "SKIP", f"Córners Over {c_target}", m_corners_over, str(c_target))
-        render_card_pro_con_tracker(f"Menos de {c_target} Córners (UNDER)", f"Prob. Real: {prob_under_corners*100:.1f}%", ev_corners_under, "BET" if ev_corners_under > 0.03 else "SKIP", f"Córners Under {c_target}", m_corners_under, str(c_target))
+        render_card_pro_con_tracker(f"Más de {c_target} Córners (OVER)", f"Prob. Real: {prob_over_corners*100:.1f}%", ev_corners_over, prob_over_corners, f"Córners Over {c_target}", m_corners_over, str(c_target))
+        render_card_pro_con_tracker(f"Menos de {c_target} Córners (UNDER)", f"Prob. Real: {prob_under_corners*100:.1f}%", ev_corners_under, prob_under_corners, f"Córners Under {c_target}", m_corners_under, str(c_target))
 
 # ==========================================
 # SECCIÓN MLB SABERMETRÍA EXCLUSIVA
@@ -1200,14 +1236,28 @@ else:
 
         partido_nombre_mlb = f"{local_nombre} vs {visita_nombre}"
 
-        def render_card_mlb_con_tracker(titulo, prob_real, ev, badge, mercado_str, momio_val, linea_val=""):
+        # RENDERIZADOR MLB CON COMBINACIÓN DORADA (75% A 90% Y CON +EV)
+        def render_card_mlb_con_tracker(titulo, prob_real, ev, mercado_str, momio_val, linea_val=""):
             momio_justo = 1.0 / prob_real if prob_real > 0 else 99.0
             momio_am = to_american_str(prob_real)
-            badge_html = f"<span class='badge-bet'>BET</span>" if badge == "BET" else f"<span class='badge-skip'>SKIP</span>"
+            
+            # EVALUACIÓN DE COMBINACIÓN DORADA (75% A 90% PROB REAL Y +EV)
+            es_estrella = (0.75 <= prob_real <= 0.90) and (ev > 0.0)
+            
+            if es_estrella:
+                badge_html = "<span class='badge-star'>💎 APUESTA ESTRELLA (+EV / ERROR DE CUOTA)</span>"
+                card_class = "card-star"
+            elif ev > 0.02:
+                badge_html = "<span class='badge-bet'>BET</span>"
+                card_class = "card-pro"
+            else:
+                badge_html = "<span class='badge-skip'>SKIP</span>"
+                card_class = "card-pro"
+
             c_card1, c_card2 = st.columns([4, 1])
             with c_card1:
                 st.markdown(f"""
-                <div class="card-pro">
+                <div class="{card_class}">
                     {badge_html}
                     <div style="font-weight: 800; font-size: 15px; color: #ffffff;">{titulo}</div>
                     <div class="subtext">
@@ -1220,40 +1270,40 @@ else:
                     registrar_apuesta("MLB", partido_nombre_mlb, local_nombre, visita_nombre, mercado_str, linea_val, momio_val, ev)
 
         st.markdown("<div class='market-title'>1. Moneyline (Ganador Directo - 9 Innings)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Gana {local_nombre} (ML)", prob_ml_loc, ev_ml_loc, "BET" if ev_ml_loc > 0.03 else "SKIP", f"Gana {local_nombre} ML", m_ml_loc, "ML")
-        render_card_mlb_con_tracker(f"Gana {visita_nombre} (ML)", prob_ml_vis, ev_ml_vis, "BET" if ev_ml_vis > 0.03 else "SKIP", f"Gana {visita_nombre} ML", m_ml_vis, "ML")
+        render_card_mlb_con_tracker(f"Gana {local_nombre} (ML)", prob_ml_loc, ev_ml_loc, f"Gana {local_nombre} ML", m_ml_loc, "ML")
+        render_card_mlb_con_tracker(f"Gana {visita_nombre} (ML)", prob_ml_vis, ev_ml_vis, f"Gana {visita_nombre} ML", m_ml_vis, "ML")
 
         st.markdown("<div class='market-title'>2. Total de Carreras (Over / Under)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Más de {tot_target} Carreras (OVER)", prob_tot_over, ev_tot_over, "BET" if ev_tot_over > 0.03 else "SKIP", f"Over {tot_target} Carreras", m_over_tot, str(tot_target))
-        render_card_mlb_con_tracker(f"Menos de {tot_target} Carreras (UNDER)", prob_tot_under, ev_tot_under, "BET" if ev_tot_under > 0.03 else "SKIP", f"Under {tot_target} Carreras", m_under_tot, str(tot_target))
+        render_card_mlb_con_tracker(f"Más de {tot_target} Carreras (OVER)", prob_tot_over, ev_tot_over, f"Over {tot_target} Carreras", m_over_tot, str(tot_target))
+        render_card_mlb_con_tracker(f"Menos de {tot_target} Carreras (UNDER)", prob_tot_under, ev_tot_under, f"Under {tot_target} Carreras", m_under_tot, str(tot_target))
 
         st.markdown("<div class='market-title'>3. Run Line / Hándicap (+1.5 y -1.5)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"{local_nombre} Run Line -1.5", prob_rl_loc_minus, ev_rl_loc_minus, "BET" if ev_rl_loc_minus > 0.03 else "SKIP", f"{local_nombre} RL -1.5", m_rl_loc_minus, "-1.5")
-        render_card_mlb_con_tracker(f"{local_nombre} Run Line +1.5", prob_rl_loc_plus, ev_rl_loc_plus, "BET" if ev_rl_loc_plus > 0.03 else "SKIP", f"{local_nombre} RL +1.5", m_rl_loc_plus, "+1.5")
-        render_card_mlb_con_tracker(f"{visita_nombre} Run Line -1.5", prob_rl_vis_minus, ev_rl_vis_minus, "BET" if ev_rl_vis_minus > 0.03 else "SKIP", f"{visita_nombre} RL -1.5", m_rl_vis_minus, "-1.5")
-        render_card_mlb_con_tracker(f"{visita_nombre} Run Line +1.5", prob_rl_vis_plus, ev_rl_vis_plus, "BET" if ev_rl_vis_plus > 0.03 else "SKIP", f"{visita_nombre} RL +1.5", m_rl_vis_plus, "+1.5")
+        render_card_mlb_con_tracker(f"{local_nombre} Run Line -1.5", prob_rl_loc_minus, ev_rl_loc_minus, f"{local_nombre} RL -1.5", m_rl_loc_minus, "-1.5")
+        render_card_mlb_con_tracker(f"{local_nombre} Run Line +1.5", prob_rl_loc_plus, ev_rl_loc_plus, f"{local_nombre} RL +1.5", m_rl_loc_plus, "+1.5")
+        render_card_mlb_con_tracker(f"{visita_nombre} Run Line -1.5", prob_rl_vis_minus, ev_rl_vis_minus, f"{visita_nombre} RL -1.5", m_rl_vis_minus, "-1.5")
+        render_card_mlb_con_tracker(f"{visita_nombre} Run Line +1.5", prob_rl_vis_plus, ev_rl_vis_plus, f"{visita_nombre} RL +1.5", m_rl_vis_plus, "+1.5")
 
         st.markdown("<div class='market-title'>4. Props de Pitcheo: Ponches (K's)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_k_loc} K's", prob_k_loc_over, ev_k_loc_over, "BET" if ev_k_loc_over > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Over {linea_k_loc} K's", m_k_loc_over, linea_k_loc)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_k_loc} K's", prob_k_loc_under, ev_k_loc_under, "BET" if ev_k_loc_under > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Under {linea_k_loc} K's", m_k_loc_under, linea_k_loc)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_k_vis} K's", prob_k_vis_over, ev_k_vis_over, "BET" if ev_k_vis_over > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Over {linea_k_vis} K's", m_k_vis_over, linea_k_vis)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_k_vis} K's", prob_k_vis_under, ev_k_vis_under, "BET" if ev_k_vis_under > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Under {linea_k_vis} K's", m_k_vis_under, linea_k_vis)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_k_loc} K's", prob_k_loc_over, ev_k_loc_over, f"Abridor {local_nombre[:3]} Over {linea_k_loc} K's", m_k_loc_over, linea_k_loc)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_k_loc} K's", prob_k_loc_under, ev_k_loc_under, f"Abridor {local_nombre[:3]} Under {linea_k_loc} K's", m_k_loc_under, linea_k_loc)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_k_vis} K's", prob_k_vis_over, ev_k_vis_over, f"Abridor {visita_nombre[:3]} Over {linea_k_vis} K's", m_k_vis_over, linea_k_vis)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_k_vis} K's", prob_k_vis_under, ev_k_vis_under, f"Abridor {visita_nombre[:3]} Under {linea_k_vis} K's", m_k_vis_under, linea_k_vis)
 
         st.markdown("<div class='market-title'>5. Props de Pitcheo: Outs Registrados</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_outs_loc} Outs", prob_outs_loc_over, ev_outs_loc_over, "BET" if ev_outs_loc_over > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Over {linea_outs_loc} Outs", m_outs_loc_over, linea_outs_loc)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_outs_loc} Outs", prob_outs_loc_under, ev_outs_loc_under, "BET" if ev_outs_loc_under > 0.03 else "SKIP", f"Abridor {local_nombre[:3]} Under {linea_outs_loc} Outs", m_outs_loc_under, linea_outs_loc)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_outs_vis} Outs", prob_outs_vis_over, ev_outs_vis_over, "BET" if ev_outs_vis_over > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Over {linea_outs_vis} Outs", m_outs_vis_over, linea_outs_vis)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_outs_vis} Outs", prob_outs_vis_under, ev_outs_vis_under, "BET" if ev_outs_vis_under > 0.03 else "SKIP", f"Abridor {visita_nombre[:3]} Under {linea_outs_vis} Outs", m_outs_vis_under, linea_outs_vis)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_outs_loc} Outs", prob_outs_loc_over, ev_outs_loc_over, f"Abridor {local_nombre[:3]} Over {linea_outs_loc} Outs", m_outs_loc_over, linea_outs_loc)
+        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_outs_loc} Outs", prob_outs_loc_under, ev_outs_loc_under, f"Abridor {local_nombre[:3]} Under {linea_outs_loc} Outs", m_outs_loc_under, linea_outs_loc)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_outs_vis} Outs", prob_outs_vis_over, ev_outs_vis_over, f"Abridor {visita_nombre[:3]} Over {linea_outs_vis} Outs", m_outs_vis_over, linea_outs_vis)
+        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_outs_vis} Outs", prob_outs_vis_under, ev_outs_vis_under, f"Abridor {visita_nombre[:3]} Under {linea_outs_vis} Outs", m_outs_vis_under, linea_outs_vis)
 
         st.markdown("<div class='market-title'>6. Primeras 5 Entradas (F5 ML y Over/Under)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"F5 Ganador {local_nombre}", prob_f5_loc, ev_f5_loc, "BET" if ev_f5_loc > 0.03 else "SKIP", f"F5 ML {local_nombre}", m_f5_loc, "F5 ML")
-        render_card_mlb_con_tracker(f"F5 Ganador {visita_nombre}", prob_f5_vis, ev_f5_vis, "BET" if ev_f5_vis > 0.03 else "SKIP", f"F5 ML {visita_nombre}", m_f5_vis, "F5 ML")
-        render_card_mlb_con_tracker(f"F5: OVER {f5_target} Carreras", prob_f5_over, ev_f5_over, "BET" if ev_f5_over > 0.03 else "SKIP", f"F5 Over {f5_target}", m_f5_over, str(f5_target))
-        render_card_mlb_con_tracker(f"F5: UNDER {f5_target} Carreras", prob_f5_under, ev_f5_under, "BET" if ev_f5_under > 0.03 else "SKIP", f"F5 Under {f5_target}", m_f5_under, str(f5_target))
+        render_card_mlb_con_tracker(f"F5 Ganador {local_nombre}", prob_f5_loc, ev_f5_loc, f"F5 ML {local_nombre}", m_f5_loc, "F5 ML")
+        render_card_mlb_con_tracker(f"F5 Ganador {visita_nombre}", prob_f5_vis, ev_f5_vis, f"F5 ML {visita_nombre}", m_f5_vis, "F5 ML")
+        render_card_mlb_con_tracker(f"F5: OVER {f5_target} Carreras", prob_f5_over, ev_f5_over, f"F5 Over {f5_target}", m_f5_over, str(f5_target))
+        render_card_mlb_con_tracker(f"F5: UNDER {f5_target} Carreras", prob_f5_under, ev_f5_under, f"F5 Under {f5_target}", m_f5_under, str(f5_target))
 
         st.markdown("<div class='market-title'>7. Mercado 1er Inning: NRFI / YRFI</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker("NRFI: 0 Carreras en la 1ra Entrada (UNDER 0.5)", prob_nrfi, ev_nrfi, "BET" if ev_nrfi > 0.03 else "SKIP", "NRFI 1st Inning", m_nrfi, "NRFI")
-        render_card_mlb_con_tracker("YRFI: 1+ Carreras en la 1ra Entrada (OVER 0.5)", prob_yrfi, ev_yrfi, "BET" if ev_yrfi > 0.03 else "SKIP", "YRFI 1st Inning", m_yrfi, "YRFI")
+        render_card_mlb_con_tracker("NRFI: 0 Carreras en la 1ra Entrada (UNDER 0.5)", prob_nrfi, ev_nrfi, "NRFI 1st Inning", m_nrfi, "NRFI")
+        render_card_mlb_con_tracker("YRFI: 1+ Carreras en la 1ra Entrada (OVER 0.5)", prob_yrfi, ev_yrfi, "YRFI 1st Inning", m_yrfi, "YRFI")
 
 # ==========================================
 # PANEL INFERIOR: AUTO-TRACKING SEPARADO POR DEPORTE
