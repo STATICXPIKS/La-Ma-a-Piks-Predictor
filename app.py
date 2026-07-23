@@ -56,10 +56,14 @@ def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, 
     st.session_state.historial_apuestas = historial
     st.toast(f"✅ Pick guardado: {mercado}", icon="📌")
 
+# ==========================================
+# MOTOR DE AUTO-VERIFICACIÓN (LIGA MX Y MLB)
+# ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
     actualizados = 0
 
+    # 1. API LIGA MX (ESPN)
     url_mx = "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard"
     res_mx = {}
     try:
@@ -84,9 +88,42 @@ def auto_verificar_apuestas():
     except Exception:
         pass
 
+    # 2. API MLB STATS (RESULTADOS COMPLETOS BÉISBOL)
+    url_mlb = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
+    res_mlb = {}
+    try:
+        r_mlb = requests.get(url_mlb, timeout=5)
+        if r_mlb.status_code == 200:
+            events = r_mlb.json().get("events", [])
+            for ev_item in events:
+                comp = ev_item.get("competitions", [])[0]
+                status = comp.get("status", {}).get("type", {}).get("completed", False)
+                if status:
+                    teams = comp.get("competitors", [])
+                    loc_name, vis_name = "", ""
+                    loc_score, vis_score = 0, 0
+                    for t in teams:
+                        if t.get("homeAway") == "home":
+                            loc_name = t.get("team", {}).get("displayName", "")
+                            loc_score = int(t.get("score", 0))
+                        else:
+                            vis_name = t.get("team", {}).get("displayName", "")
+                            vis_score = int(t.get("score", 0))
+                    res_mlb[f"{loc_name} vs {vis_name}"] = {
+                        "loc_name": loc_name, 
+                        "vis_name": vis_name, 
+                        "loc_score": loc_score, 
+                        "vis_score": vis_score
+                    }
+    except Exception:
+        pass
+
+    # CALIFICAR CADA APUESTA PENDIENTE
     for item in historial:
         if item["estado"] == "PENDING":
             dep = item["deporte"]
+            
+            # --- EVALUACIÓN LIGA MX ---
             if "Liga MX" in dep:
                 for match_title, score_data in res_mx.items():
                     if item["equipo_loc"].lower() in match_title.lower() and item["equipo_vis"].lower() in match_title.lower():
@@ -108,6 +145,47 @@ def auto_verificar_apuestas():
                             item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
                         elif "BTTS" in mercado:
                             item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
+                        actualizados += 1
+
+            # --- EVALUACIÓN MLB ---
+            elif "MLB" in dep:
+                for match_title, score_data in res_mlb.items():
+                    eq_loc_match = item["equipo_loc"].lower() in match_title.lower() or score_data["loc_name"].lower() in item["equipo_loc"].lower()
+                    eq_vis_match = item["equipo_vis"].lower() in match_title.lower() or score_data["vis_name"].lower() in item["equipo_vis"].lower()
+                    
+                    if eq_loc_match or eq_vis_match:
+                        r_loc = score_data["loc_score"]
+                        r_vis = score_data["vis_score"]
+                        tot_carreras = r_loc + r_vis
+                        mercado = item["mercado"]
+                        linea = item.get("linea", "")
+                        item["resultado_real"] = f"{r_loc} - {r_vis}"
+
+                        # 1. Moneyline
+                        if "Gana" in mercado or "ML" in mercado:
+                            if item["equipo_loc"] in mercado and r_loc > r_vis: item["estado"] = "WIN"
+                            elif item["equipo_vis"] in mercado and r_vis > r_loc: item["estado"] = "WIN"
+                            else: item["estado"] = "LOSS"
+                        
+                        # 2. Total Carreras Over / Under
+                        elif "Over" in mercado and "Carreras" in mercado:
+                            val_target = float(linea) if linea.replace('.','',1).isdigit() else 8.5
+                            item["estado"] = "WIN" if tot_carreras > val_target else "LOSS"
+                        elif "Under" in mercado and "Carreras" in mercado:
+                            val_target = float(linea) if linea.replace('.','',1).isdigit() else 8.5
+                            item["estado"] = "WIN" if tot_carreras < val_target else "LOSS"
+                        
+                        # 3. Run Line (-1.5 / +1.5)
+                        elif "RL" in mercado or "Run Line" in mercado:
+                            if item["equipo_loc"] in mercado:
+                                diff = r_loc - r_vis
+                                if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
+                                elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
+                            elif item["equipo_vis"] in mercado:
+                                diff = r_vis - r_loc
+                                if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
+                                elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
+                        
                         actualizados += 1
 
     guardar_base_datos(historial)
@@ -282,7 +360,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     return p_loc, p_vis
 
 # ==========================================
-# ESTILOS CSS CORREGIDOS: FONDO GRIS BOTELLA Y TEXTO VERDE NEÓN
+# ESTILOS CSS CORREGIDOS DE ALTO CONTRASTE
 # ==========================================
 st.markdown("""
 <style>
@@ -292,7 +370,6 @@ st.markdown("""
         font-family: 'Inter', sans-serif; 
     }
     
-    /* FONDO DE LA APP TIPO GRIS BOTELLA ELEGANTE (IMAGEN 3) */
     .stApp { 
         background-color: #1d2220 !important; 
         color: #e2e8f0; 
@@ -308,7 +385,7 @@ st.markdown("""
         white-space: nowrap;
     }
     
-    /* FIX 1: TEXTOS DE LOS DEPORTES LIGA MX Y MLB VERDE FLUORESCENTE Y MAS GRANDES */
+    /* TEXTO DE SELECCIÓN DE DEPORTE SÚPER POTENTE Y VISIBLE */
     div[data-testid="stRadioButton"] label,
     div[data-testid="stRadioButton"] label span,
     div[data-testid="stRadioButton"] label p,
@@ -316,10 +393,10 @@ st.markdown("""
         font-size: 18px !important;
         font-weight: 900 !important;
         color: #00ff66 !important;
-        text-shadow: 0 0 8px rgba(0, 255, 102, 0.5) !important;
+        text-shadow: 0 0 8px rgba(0, 255, 102, 0.8) !important;
     }
     
-    /* BARRAS EXPANDIBLES (EXPANDER) GRIS BOTELLA OSCURO */
+    /* BARRAS EXPANDIBLES (EXPANDER) */
     details[data-testid="stExpander"], details[data-testid="stExpander"][open] {
         background-color: #242a26 !important;
         border: 1px solid #2d3833 !important;
@@ -361,7 +438,6 @@ st.markdown("""
         font-weight: 900 !important;
     }
     
-    /* TARJETAS CON BORDE VERDE NEÓN DE CORTE ELEGANTE */
     .card-pro {
         background: #242a26;
         border: 1px solid #2d3833;
@@ -376,7 +452,6 @@ st.markdown("""
         box-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
     }
     
-    /* BADGES BET / SKIP CON NEÓN */
     .badge-bet { 
         background: #00ff66; 
         color: #000000; 
@@ -430,7 +505,7 @@ st.markdown("""
         color: #ffffff;
     }
 
-    /* BOTONES VERDE FLUORESCENTE CON RESPLANDOR NEÓN */
+    /* BOTONES VERDE FLUORESCENTE */
     div.stButton > button {
         background: #00ff66 !important;
         color: #000000 !important;
@@ -920,7 +995,7 @@ else:
             m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
             m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # PROPS DE PITCHERS (ALINEADOS EN FILAS SEPARADAS)
+            # PROPS DE PITCHERS
             opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
             
             st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S): {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
