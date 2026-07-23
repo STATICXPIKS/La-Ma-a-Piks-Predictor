@@ -282,7 +282,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     return p_loc, p_vis
 
 # ==========================================
-# ESTILOS CSS ESTILO CYBERPUNK INTEGRADO
+# ESTILOS CSS CORREGIDOS: EXPANDERS OSCUROS & RESPLANDOR NEÓN
 # ==========================================
 st.markdown("""
 <style>
@@ -295,6 +295,28 @@ st.markdown("""
     .stApp { 
         background-color: #0b1210; 
         color: #e2e8f0; 
+    }
+    
+    /* FIX 1: BARRAS EXPANDIBLES (EXPANDER) 100% OSCURAS */
+    details[data-testid="stExpander"] {
+        background-color: #111a17 !important;
+        border: 1px solid #1a3328 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 0 10px rgba(0, 255, 102, 0.05) !important;
+    }
+    details[data-testid="stExpander"] summary {
+        background-color: #111a17 !important;
+        color: #f5d742 !important;
+        font-weight: 800 !important;
+        border-radius: 8px !important;
+    }
+    details[data-testid="stExpander"] summary:hover {
+        color: #00ff66 !important;
+    }
+    details[data-testid="stExpander"] summary p, details[data-testid="stExpander"] summary span, details[data-testid="stExpander"] summary svg {
+        color: #f5d742 !important;
+        fill: #f5d742 !important;
+        font-weight: 800 !important;
     }
     
     /* ENCABEZADOS FUTURISTAS AMARILLO ORO METÁLICO */
@@ -409,28 +431,6 @@ st.markdown("""
         color: #000000 !important;
         box-shadow: 0 0 18px rgba(0, 255, 102, 0.9) !important;
     }
-
-    /* ESTILO INTEGRADO DE TABLAS (HISTORIAL REGISTRADO) */
-    div[data-testid="stDataFrame"] {
-        background-color: #111a17 !important;
-        border: 1px solid #1a3328 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 0 10px rgba(0, 255, 102, 0.1) !important;
-    }
-    
-    /* Celdas y filas de la tabla */
-    div[data-testid="stDataFrame"] div[role="grid"] {
-        background-color: #111a17 !important;
-        color: #e2e8f0 !important;
-    }
-    
-    /* Encabezados de la tabla */
-    div[data-testid="stDataFrame"] div[role="columnheader"] {
-        background-color: #0b1210 !important;
-        color: #00ff66 !important;
-        font-weight: 900 !important;
-        border-bottom: 2px solid #1a3328 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -460,6 +460,43 @@ def to_american_str(prob):
     else:
         am = int(round(-100 / (dec - 1)))
         return f"{am}"
+
+# FIX 3: FUNCIÓN RENDERIZADORA DE TABLA HISTÓRICA HTML NATIVA (NO MÁS HOJA BLANCA)
+def render_tabla_historial_html(data_list):
+    if not data_list:
+        return
+    html = """
+    <div style="overflow-x:auto; border: 1px solid #1a3328; border-radius: 8px; background-color: #111a17; margin-top: 10px;">
+    <table style="width:100%; border-collapse: collapse; color: #e2e8f0; font-size: 13px;">
+        <thead>
+            <tr style="background-color: #0b1210; border-bottom: 2px solid #1a3328; text-align: left;">
+                <th style="padding: 12px; color: #00ff66; font-weight:800;">FECHA</th>
+                <th style="padding: 12px; color: #00ff66; font-weight:800;">DEPORTE</th>
+                <th style="padding: 12px; color: #00ff66; font-weight:800;">PARTIDO</th>
+                <th style="padding: 12px; color: #00ff66; font-weight:800;">MERCADO</th>
+                <th style="padding: 12px; color: #00ff66; font-weight:800;">MOMIO</th>
+                <th style="padding: 12px; color: #00ff66; font-weight:800;">RESULTADO</th>
+                <th style="padding: 12px; color: #00ff66; font-weight:800;">ESTADO</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+    for row in data_list:
+        badge_color = "#00ff66" if row["estado"] == "WIN" else ("#ff3366" if row["estado"] == "LOSS" else "#f5d742")
+        badge_bg = "rgba(0,255,102,0.15)" if row["estado"] == "WIN" else ("rgba(255,51,102,0.15)" if row["estado"] == "LOSS" else "rgba(245,215,66,0.15)")
+        html += f"""
+        <tr style="border-bottom: 1px solid #1a3328;">
+            <td style="padding: 10px 12px; color:#94a3b8;">{row.get('fecha','')}</td>
+            <td style="padding: 10px 12px; font-weight:700;">{row.get('deporte','')}</td>
+            <td style="padding: 10px 12px; font-weight:800; color:#ffffff;">{row.get('partido','')}</td>
+            <td style="padding: 10px 12px;">{row.get('mercado','')}</td>
+            <td style="padding: 10px 12px; font-weight:900; color:#f5d742;">{row.get('momio','')}</td>
+            <td style="padding: 10px 12px;">{row.get('resultado_real','En Espera')}</td>
+            <td style="padding: 10px 12px;"><span style="color:{badge_color}; background:{badge_bg}; padding: 4px 10px; border-radius:4px; font-weight:900; font-size:11px;">{row.get('estado','')}</span></td>
+        </tr>
+        """
+    html += "</tbody></table></div>"
+    st.markdown(html, unsafe_allow_html=True)
 
 # BARRA SUPERIOR DE NAVEGACIÓN
 c_top1, c_top2, _ = st.columns([2, 3, 5])
@@ -896,28 +933,33 @@ else:
             m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
             m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # 5. K'S 0.5 A 8.5
-            st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S - LÍNEA 0.5 A 8.5 OVER/UNDER)</p>", unsafe_allow_html=True)
+            # FIX 2: ALINEACIÓN LIMPIA EN FILAS DEDICADAS PARA PITCHERS (K'S Y OUTS)
             opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
-            fk_1, fk_2, fk_3, fk_4, fk_5, fk_6 = st.columns(6)
-            linea_k_loc = fk_1.selectbox(f"K's ({local_nombre[:3]})", opciones_ks, index=5)
-            m_k_loc_over_in = fk_2.number_input(f"Over {linea_k_loc} K's ({local_nombre[:3]})", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
-            m_k_loc_under_in = fk_3.number_input(f"Under {linea_k_loc} K's ({local_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             
-            linea_k_vis = fk_4.selectbox(f"K's ({visita_nombre[:3]})", opciones_ks, index=5)
-            m_k_vis_over_in = fk_5.number_input(f"Over {linea_k_vis} K's ({visita_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
-            m_k_vis_under_in = fk_6.number_input(f"Under {linea_k_vis} K's ({visita_nombre[:3]})", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S): {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            fk1, fk2, fk3 = st.columns(3)
+            linea_k_loc = fk1.selectbox(f"Línea K's ({local_nombre[:3]})", opciones_ks, index=5, key="lk_loc")
+            m_k_loc_over_in = fk2.number_input(f"Over {linea_k_loc} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d", key="mk_loc_o")
+            m_k_loc_under_in = fk3.number_input(f"Under {linea_k_loc} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d", key="mk_loc_u")
 
-            # 6. OUTS
-            st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS (OVER Y UNDER)</p>", unsafe_allow_html=True)
-            fo_1, fo_2, fo_3, fo_4, fo_5, fo_6 = st.columns(6)
-            linea_outs_loc = fo_1.selectbox(f"Outs ({local_nombre[:3]})", ["13.5", "14.5", "15.5", "17.5", "18.5"], index=2)
-            m_outs_loc_over_in = fo_2.number_input(f"Over {linea_outs_loc} Outs ({local_nombre[:3]})", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
-            m_outs_loc_under_in = fo_3.number_input(f"Under {linea_outs_loc} Outs ({local_nombre[:3]})", value=2.000 if es_dec else 100, format="%.3f" if es_dec else "%d")
-            
-            linea_outs_vis = fo_4.selectbox(f"Outs ({visita_nombre[:3]})", ["13.5", "14.5", "15.5", "17.5", "18.5"], index=2)
-            m_outs_vis_over_in = fo_5.number_input(f"Over {linea_outs_vis} Outs ({visita_nombre[:3]})", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
-            m_outs_vis_under_in = fo_6.number_input(f"Under {linea_outs_vis} Outs ({visita_nombre[:3]})", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:4px;'>PROPS DE PONCHES (K'S): {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            fk4, fk5, fk6 = st.columns(3)
+            linea_k_vis = fk4.selectbox(f"Línea K's ({visita_nombre[:3]})", opciones_ks, index=5, key="lk_vis")
+            m_k_vis_over_in = fk5.number_input(f"Over {linea_k_vis} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d", key="mk_vis_o")
+            m_k_vis_under_in = fk6.number_input(f"Under {linea_k_vis} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d", key="mk_vis_u")
+
+            opciones_outs = ["13.5", "14.5", "15.5", "17.5", "18.5"]
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS: {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            fo1, fo2, fo3 = st.columns(3)
+            linea_outs_loc = fo1.selectbox(f"Línea Outs ({local_nombre[:3]})", opciones_outs, index=2, key="lo_loc")
+            m_outs_loc_over_in = fo2.number_input(f"Over {linea_outs_loc} Outs", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d", key="mo_loc_o")
+            m_outs_loc_under_in = fo3.number_input(f"Under {linea_outs_loc} Outs", value=2.000 if es_dec else 100, format="%.3f" if es_dec else "%d", key="mo_loc_u")
+
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:4px;'>PROPS DE OUTS REGISTRADOS: {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            fo4, fo5, fo6 = st.columns(3)
+            linea_outs_vis = fo4.selectbox(f"Línea Outs ({visita_nombre[:3]})", opciones_outs, index=2, key="lo_vis")
+            m_outs_vis_over_in = fo5.number_input(f"Over {linea_outs_vis} Outs", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d", key="mo_vis_o")
+            m_outs_vis_under_in = fo6.number_input(f"Under {linea_outs_vis} Outs", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d", key="mo_vis_u")
 
             # 7. NRFI / YRFI
             st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:8px;'>7. MERCADO 1ER INNING (NRFI / YRFI)</p>", unsafe_allow_html=True)
@@ -1148,4 +1190,5 @@ else:
 
     with col_g2:
         st.markdown(f"**Historial Registrado ({filtro_dep}):**")
-        st.dataframe(df[["fecha", "deporte", "partido", "mercado", "momio", "resultado_real", "estado"]], use_container_width=True)
+        # RENDERIZAMOS LA TABLA CON NUESTRA FUNCIÓN HTML NATIVA OSCURA
+        render_tabla_historial_html(historial_filtrado)
