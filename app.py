@@ -825,26 +825,30 @@ else:
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S - LÍNEA 0.5 A 8.5 OVER/UNDER)</p>", unsafe_allow_html=True)
             opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
             fk_1, fk_2, fk_3, fk_4, fk_5, fk_6 = st.columns(6)
-            linea_k_loc = fk_1.selectbox(f"K's ({local_nombre[:3]})", opciones_ks, index=5) # 5.5 por defecto
-            m_k_loc_over_in = fk_2.number_input(f"Over {linea_k_loc} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
-            m_k_loc_under_in = fk_3.number_input(f"Under {linea_k_loc} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
+            linea_k_loc = fk_1.selectbox(f"K's ({local_nombre[:3]})", opciones_ks, index=5)
+            m_k_loc_over_in = fk_2.number_input(f"Over {linea_k_loc} K's ({local_nombre[:3]})", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
+            m_k_loc_under_in = fk_3.number_input(f"Under {linea_k_loc} K's ({local_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             
-            linea_k_vis = fk_4.selectbox(f"K's ({visita_nombre[:3]})", opciones_ks, index=5) # 5.5 por defecto
-            m_k_vis_over_in = fk_5.number_input(f"Over {linea_k_vis} K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
-            m_k_vis_under_in = fk_6.number_input(f"Under {linea_k_vis} K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
+            linea_k_vis = fk_4.selectbox(f"K's ({visita_nombre[:3]})", opciones_ks, index=5)
+            m_k_vis_over_in = fk_5.number_input(f"Over {linea_k_vis} K's ({visita_nombre[:3]})", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
+            m_k_vis_under_in = fk_6.number_input(f"Under {linea_k_vis} K's ({visita_nombre[:3]})", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d")
 
             # 6. OUTS ABRIDORES CON OVER Y UNDER
             st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS (OVER Y UNDER)</p>", unsafe_allow_html=True)
             fo_1, fo_2, fo_3, fo_4, fo_5, fo_6 = st.columns(6)
             linea_outs_loc = fo_1.selectbox(f"Outs ({local_nombre[:3]})", ["13.5", "14.5", "15.5", "17.5", "18.5"], index=2)
-            m_outs_loc_over_in = fo_2.number_input(f"Over {linea_outs_loc} Outs", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
-            m_outs_loc_under_in = fo_3.number_input(f"Under {linea_outs_loc} Outs", value=2.000 if es_dec else 100, format="%.3f" if es_dec else "%d")
+            m_outs_loc_over_in = fo_2.number_input(f"Over {linea_outs_loc} Outs ({local_nombre[:3]})", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d")
+            m_outs_loc_under_in = fo_3.number_input(f"Under {linea_outs_loc} Outs ({local_nombre[:3]})", value=2.000 if es_dec else 100, format="%.3f" if es_dec else "%d")
             
             linea_outs_vis = fo_4.selectbox(f"Outs ({visita_nombre[:3]})", ["13.5", "14.5", "15.5", "17.5", "18.5"], index=2)
-            m_outs_vis_over_in = fo_5.number_input(f"Over {linea_outs_vis} Outs", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
-            m_outs_vis_under_in = fo_6.number_input(f"Under {linea_outs_vis} Outs", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
+            m_outs_vis_over_in = fo_5.number_input(f"Over {linea_outs_vis} Outs ({visita_nombre[:3]})", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
+            m_outs_vis_under_in = fo_6.number_input(f"Under {linea_outs_vis} Outs ({visita_nombre[:3]})", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            m_nrfi_in = st.number_input("NRFI (No Run 1st Inning)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
+            # 7. MERCADO 1ER INNING: NRFI Y YRFI
+            st.markdown("<p style='color:#38bdf8; font-weight:800; margin-top:8px;'>7. MERCADO 1ER INNING (NRFI / YRFI)</p>", unsafe_allow_html=True)
+            fn1, fn2 = st.columns(2)
+            m_nrfi_in = fn1.number_input("NRFI - No Run 1st Inning (Under 0.5)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
+            m_yrfi_in = fn2.number_input("YRFI - Yes Run 1st Inning (Over 0.5)", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
             st.button("🔄 RECALCULAR VEREDICTOS MLB", use_container_width=True)
 
@@ -869,6 +873,7 @@ else:
             m_outs_vis_over = to_decimal(m_outs_vis_over_in, tipo_str)
             m_outs_vis_under = to_decimal(m_outs_vis_under_in, tipo_str)
             m_nrfi = to_decimal(m_nrfi_in, tipo_str)
+            m_yrfi = to_decimal(m_yrfi_in, tipo_str)
 
     with col_der:
         st.markdown("""
@@ -892,7 +897,7 @@ else:
         prob_rl_vis_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= 2])
         prob_rl_vis_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        # K'S OVER Y UNDER (LÍNEA DINÁMICA 0.5 A 8.5)
+        # K'S OVER Y UNDER
         k_target_loc = float(linea_k_loc)
         k_rate_loc = (k_loc / ip_loc) if ip_loc > 0 else 1.0
         outs_exp_loc_val = 17.5
@@ -923,8 +928,10 @@ else:
         prob_f5_over = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y > f5_target])
         prob_f5_under = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y < f5_target])
 
+        # 1ER INNING (NRFI / YRFI)
         xr_1st_inn = (xr_local + xr_visita) * 0.13
         prob_nrfi = poisson.pmf(0, xr_1st_inn)
+        prob_yrfi = 1.0 - prob_nrfi
 
         # CÁLCULO DE VALOR ESPERADO (+EV%)
         ev_ml_loc = (prob_ml_loc * m_ml_loc) - 1
@@ -948,6 +955,7 @@ else:
         ev_outs_vis_over = (prob_outs_vis_over * m_outs_vis_over) - 1
         ev_outs_vis_under = (prob_outs_vis_under * m_outs_vis_under) - 1
         ev_nrfi = (prob_nrfi * m_nrfi) - 1
+        ev_yrfi = (prob_yrfi * m_yrfi) - 1
 
         partido_nombre_mlb = f"{local_nombre} vs {visita_nombre}"
 
@@ -1003,7 +1011,8 @@ else:
         render_card_mlb_con_tracker(f"F5: UNDER {f5_target} Carreras", prob_f5_under, ev_f5_under, "BET" if ev_f5_under > 0.03 else "SKIP", f"F5 Under {f5_target}", m_f5_under, str(f5_target))
 
         st.markdown("<div class='market-title'>7. Mercado 1er Inning: NRFI / YRFI</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker("NRFI: 0 Carreras en la 1ra Entrada", prob_nrfi, ev_nrfi, "BET" if ev_nrfi > 0.03 else "SKIP", "NRFI 1st Inning", m_nrfi, "NRFI")
+        render_card_mlb_con_tracker("NRFI: 0 Carreras en la 1ra Entrada (UNDER 0.5)", prob_nrfi, ev_nrfi, "BET" if ev_nrfi > 0.03 else "SKIP", "NRFI 1st Inning", m_nrfi, "NRFI")
+        render_card_mlb_con_tracker("YRFI: 1+ Carreras en la 1ra Entrada (OVER 0.5)", prob_yrfi, ev_yrfi, "BET" if ev_yrfi > 0.03 else "SKIP", "YRFI 1st Inning", m_yrfi, "YRFI")
 
 # ==========================================
 # PANEL INFERIOR: AUTO-TRACKING SEPARADO POR DEPORTE
