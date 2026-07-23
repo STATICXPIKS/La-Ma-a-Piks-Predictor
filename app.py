@@ -57,7 +57,7 @@ def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, 
     st.toast(f"✅ Pick guardado: {mercado}", icon="📌")
 
 # ==========================================
-# MOTOR DE AUTO-VERIFICACIÓN EN VIVO (LIGA MX Y MLB)
+# MOTOR DE AUTO-VERIFICACIÓN EN VIVO MEJORADO
 # ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -91,7 +91,7 @@ def auto_verificar_apuestas():
     except Exception:
         pass
 
-    # 2. API MLB STATS (RESULTADOS EN VIVO, LINESCORES F5/1ST INNING Y PITCHERS)
+    # 2. API MLB STATS
     url_mlb = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
     res_mlb = {}
     try:
@@ -120,18 +120,15 @@ def auto_verificar_apuestas():
                         vis_score = int(t.get("score", 0))
                         vis_linescore = t.get("linescores", [])
 
-                # Extraer Carreras 1er Inning
                 r1_loc = int(loc_linescore[0].get("value", 0)) if len(loc_linescore) >= 1 else 0
                 r1_vis = int(vis_linescore[0].get("value", 0)) if len(vis_linescore) >= 1 else 0
                 r1_tot = r1_loc + r1_vis
 
-                # Extraer Carreras Primeras 5 Entradas (F5)
                 f5_loc = sum([int(x.get("value", 0)) for x in loc_linescore[:5]])
                 f5_vis = sum([int(x.get("value", 0)) for x in vis_linescore[:5]])
                 f5_tot = f5_loc + f5_vis
                 f5_completo = (period > 5) or status_completed or (len(loc_linescore) >= 5 and len(vis_linescore) >= 5 and period == 5 and status_state == "post")
 
-                # Extraer Ponches (K's) en vivo
                 ks_dict = {}
                 if status_state in ["in", "post"]:
                     try:
@@ -202,7 +199,7 @@ def auto_verificar_apuestas():
                                 item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
                             actualizados += 1
 
-            # --- EVALUACIÓN MLB (CON F5, NRFI/YRFI, K'S Y JUEGO COMPLETO) ---
+            # --- EVALUACIÓN MLB ---
             elif "MLB" in dep:
                 for match_title, score_data in res_mlb.items():
                     eq_loc_match = item["equipo_loc"].lower() in match_title.lower() or score_data["loc_name"].lower() in item["equipo_loc"].lower()
@@ -216,8 +213,66 @@ def auto_verificar_apuestas():
                         linea = item.get("linea", "")
                         ks_dict = score_data["ks_dict"]
 
-                        # A) NRFI / YRFI (1ER INNING)
-                        if "NRFI" in mercado or "YRFI" in mercado or "1st Inning" in mercado:
+                        # A) OVER / UNDER TOTALES (EVALUACIÓN EN VIVO O FINAL)
+                        if "Carreras" in mercado:
+                            try:
+                                val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
+                            except Exception:
+                                val_target = 8.5
+
+                            if "Over" in mercado or "OVER" in mercado:
+                                if tot_carreras > val_target:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{r_loc} - {r_vis}"
+                                    actualizados += 1
+                                elif score_data["completed"]:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{r_loc} - {r_vis}"
+                                    actualizados += 1
+                                else:
+                                    item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
+
+                            elif "Under" in mercado or "UNDER" in mercado:
+                                if tot_carreras > val_target:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{r_loc} - {r_vis}"
+                                    actualizados += 1
+                                elif score_data["completed"]:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{r_loc} - {r_vis}"
+                                    actualizados += 1
+                                else:
+                                    item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
+
+                        # B) MONEYLINE / GANADOR DIRECTO
+                        elif "Gana" in mercado or "ML" in mercado:
+                            if score_data["completed"] or score_data["period"] >= 9:
+                                item["resultado_real"] = f"{r_loc} - {r_vis}"
+                                if item["equipo_loc"] in mercado and r_loc > r_vis: item["estado"] = "WIN"
+                                elif item["equipo_vis"] in mercado and r_vis > r_loc: item["estado"] = "WIN"
+                                else: item["estado"] = "LOSS"
+                                actualizados += 1
+                            else:
+                                item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
+
+                        # C) RUN LINE (-1.5 / +1.5)
+                        elif "RL" in mercado or "Run Line" in mercado:
+                            if score_data["completed"] or score_data["period"] >= 9:
+                                item["resultado_real"] = f"{r_loc} - {r_vis}"
+                                if item["equipo_loc"] in mercado:
+                                    diff = r_loc - r_vis
+                                    if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
+                                    elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
+                                elif item["equipo_vis"] in mercado:
+                                    diff = r_vis - r_loc
+                                    if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
+                                    elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
+                                actualizados += 1
+                            else:
+                                item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
+
+                        # D) NRFI / YRFI (1ER INNING)
+                        elif "NRFI" in mercado or "YRFI" in mercado or "1st Inning" in mercado:
                             if "NRFI" in mercado or "0 Carreras" in mercado:
                                 if score_data["r1_tot"] > 0:
                                     item["estado"] = "LOSS"
@@ -237,7 +292,7 @@ def auto_verificar_apuestas():
                                     item["resultado_real"] = "0 Carreras 1st Inn"
                                     actualizados += 1
 
-                        # B) PRIMERAS 5 ENTRADAS (F5 ML Y OVER/UNDER)
+                        # E) PRIMERAS 5 ENTRADAS (F5)
                         elif "F5" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 3.5
@@ -278,7 +333,7 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5 en Vivo)"
 
-                        # C) PONCHES (K'S) EN VIVO
+                        # F) PONCHES (K'S) EN VIVO
                         elif "K's" in mercado or "Ponches" in mercado:
                             val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 5.5
                             k_actuales = max(ks_dict.values()) if ks_dict else 0
@@ -306,35 +361,6 @@ def auto_verificar_apuestas():
                                     actualizados += 1
                                 else:
                                     item["resultado_real"] = f"{k_actuales} K's en Vivo"
-
-                        # D) JUEGO COMPLETO FINALIZADO
-                        elif score_data["completed"]:
-                            item["resultado_real"] = f"{r_loc} - {r_vis}"
-                            if "Gana" in mercado or "ML" in mercado:
-                                if item["equipo_loc"] in mercado and r_loc > r_vis: item["estado"] = "WIN"
-                                elif item["equipo_vis"] in mercado and r_vis > r_loc: item["estado"] = "WIN"
-                                else: item["estado"] = "LOSS"
-                            
-                            elif "Over" in mercado and "Carreras" in mercado:
-                                val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
-                                item["estado"] = "WIN" if tot_carreras > val_target else "LOSS"
-                            elif "Under" in mercado and "Carreras" in mercado:
-                                val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
-                                item["estado"] = "WIN" if tot_carreras < val_target else "LOSS"
-                            
-                            elif "RL" in mercado or "Run Line" in mercado:
-                                if item["equipo_loc"] in mercado:
-                                    diff = r_loc - r_vis
-                                    if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
-                                    elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
-                                elif item["equipo_vis"] in mercado:
-                                    diff = r_vis - r_loc
-                                    if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
-                                    elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
-                            actualizados += 1
-                        
-                        elif score_data["state"] == "in":
-                            item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
     guardar_base_datos(historial)
     st.session_state.historial_apuestas = historial
@@ -1318,7 +1344,6 @@ else:
 
         partido_nombre_mlb = f"{local_nombre} vs {visita_nombre}"
 
-        # RENDERIZADOR MLB CON COMBINACIÓN DORADA
         def render_card_mlb_con_tracker(titulo, prob_real, ev, mercado_str, momio_val, linea_val=""):
             momio_justo = 1.0 / prob_real if prob_real > 0 else 99.0
             momio_am = to_american_str(prob_real)
