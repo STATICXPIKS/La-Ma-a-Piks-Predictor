@@ -282,7 +282,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     return p_loc, p_vis
 
 # ==========================================
-# ESTILOS CSS CON FIX DE SELECTOR DE DEPORTE & EXPANDERS
+# ESTILOS CSS CORREGIDOS: FONDO GRIS BOTELLA Y TEXTO VERDE NEÓN
 # ==========================================
 st.markdown("""
 <style>
@@ -292,12 +292,12 @@ st.markdown("""
         font-family: 'Inter', sans-serif; 
     }
     
+    /* FONDO DE LA APP TIPO GRIS BOTELLA ELEGANTE (IMAGEN 3) */
     .stApp { 
-        background-color: #0b1210; 
+        background-color: #1d2220 !important; 
         color: #e2e8f0; 
     }
     
-    /* FIX DE SELECTOR DE DEPORTE SUPERIOR */
     .top-deporte-title {
         font-family: 'Orbitron', sans-serif !important;
         font-size: 20px !important;
@@ -308,22 +308,25 @@ st.markdown("""
         white-space: nowrap;
     }
     
-    /* TEXTO DE LAS OPCIONES DE RADIO (FUTURISTAS & VISIBLES) */
-    div[data-testid="stRadioButton"] label p {
-        font-size: 15px !important;
+    /* FIX 1: TEXTOS DE LOS DEPORTES LIGA MX Y MLB VERDE FLUORESCENTE Y MAS GRANDES */
+    div[data-testid="stRadioButton"] label,
+    div[data-testid="stRadioButton"] label span,
+    div[data-testid="stRadioButton"] label p,
+    div[role="radiogroup"] label * {
+        font-size: 18px !important;
         font-weight: 900 !important;
         color: #00ff66 !important;
-        text-shadow: 0 0 5px rgba(0, 255, 102, 0.4) !important;
+        text-shadow: 0 0 8px rgba(0, 255, 102, 0.5) !important;
     }
     
-    /* FIX BARRAS EXPANDIBLES (EXPANDER) */
+    /* BARRAS EXPANDIBLES (EXPANDER) GRIS BOTELLA OSCURO */
     details[data-testid="stExpander"], details[data-testid="stExpander"][open] {
-        background-color: #111a17 !important;
-        border: 1px solid #1a3328 !important;
+        background-color: #242a26 !important;
+        border: 1px solid #2d3833 !important;
         border-radius: 8px !important;
     }
     summary[data-testid="stExpanderSummary"] {
-        background-color: #111a17 !important;
+        background-color: #242a26 !important;
         border-radius: 8px !important;
     }
     summary[data-testid="stExpanderSummary"] * {
@@ -358,10 +361,10 @@ st.markdown("""
         font-weight: 900 !important;
     }
     
-    /* TARJETAS DE VEREDICTO CON NEÓN */
+    /* TARJETAS CON BORDE VERDE NEÓN DE CORTE ELEGANTE */
     .card-pro {
-        background: #111a17;
-        border: 1px solid #1a3328;
+        background: #242a26;
+        border: 1px solid #2d3833;
         border-left: 4px solid #00ff66;
         border-radius: 6px;
         padding: 12px 16px;
@@ -385,9 +388,9 @@ st.markdown("""
         box-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
     }
     .badge-skip { 
-        background: #2d1317; 
+        background: #3d1b20; 
         color: #ff3366; 
-        border: 1px solid #541a22;
+        border: 1px solid #661e27;
         font-weight: 900; 
         padding: 4px 12px; 
         border-radius: 4px; 
@@ -408,8 +411,8 @@ st.markdown("""
     .subtext { color: #94a3b8; font-size: 12px; margin-top: 3px; }
     
     .team-badge-card {
-        background: #111a17;
-        border: 1px solid #1a3328;
+        background: #242a26;
+        border: 1px solid #2d3833;
         border-radius: 6px;
         padding: 10px 14px;
         display: flex;
@@ -418,7 +421,7 @@ st.markdown("""
     }
 
     .pitcher-box {
-        background: #111a17;
+        background: #242a26;
         border-left: 4px solid #f5d742;
         padding: 10px 14px;
         border-radius: 6px;
@@ -474,12 +477,12 @@ def render_tabla_historial_html(data_list):
     for row in data_list:
         badge_color = "#00ff66" if row["estado"] == "WIN" else ("#ff3366" if row["estado"] == "LOSS" else "#f5d742")
         badge_bg = "rgba(0,255,102,0.15)" if row["estado"] == "WIN" else ("rgba(255,51,102,0.15)" if row["estado"] == "LOSS" else "rgba(245,215,66,0.15)")
-        rows_html += f'<tr style="border-bottom: 1px solid #1a3328;"><td style="padding: 10px 12px; color:#94a3b8;">{row.get("fecha","")}</td><td style="padding: 10px 12px; font-weight:700;">{row.get("deporte","")}</td><td style="padding: 10px 12px; font-weight:800; color:#ffffff;">{row.get("partido","")}</td><td style="padding: 10px 12px;">{row.get("mercado","")}</td><td style="padding: 10px 12px; font-weight:900; color:#f5d742;">{row.get("momio","")}</td><td style="padding: 10px 12px;">{row.get("resultado_real","En Espera")}</td><td style="padding: 10px 12px;"><span style="color:{badge_color}; background:{badge_bg}; padding: 4px 10px; border-radius:4px; font-weight:900; font-size:11px;">{row.get("estado","")}</span></td></tr>'
+        rows_html += f'<tr style="border-bottom: 1px solid #2d3833;"><td style="padding: 10px 12px; color:#94a3b8;">{row.get("fecha","")}</td><td style="padding: 10px 12px; font-weight:700;">{row.get("deporte","")}</td><td style="padding: 10px 12px; font-weight:800; color:#ffffff;">{row.get("partido","")}</td><td style="padding: 10px 12px;">{row.get("mercado","")}</td><td style="padding: 10px 12px; font-weight:900; color:#f5d742;">{row.get("momio","")}</td><td style="padding: 10px 12px;">{row.get("resultado_real","En Espera")}</td><td style="padding: 10px 12px;"><span style="color:{badge_color}; background:{badge_bg}; padding: 4px 10px; border-radius:4px; font-weight:900; font-size:11px;">{row.get("estado","")}</span></td></tr>'
     
-    html_code = f'<div style="overflow-x:auto; border: 1px solid #1a3328; border-radius: 8px; background-color: #111a17; margin-top: 10px;"><table style="width:100%; border-collapse: collapse; color: #e2e8f0; font-size: 13px;"><thead><tr style="background-color: #0b1210; border-bottom: 2px solid #1a3328; text-align: left;"><th style="padding: 12px; color: #00ff66; font-weight:800;">FECHA</th><th style="padding: 12px; color: #00ff66; font-weight:800;">DEPORTE</th><th style="padding: 12px; color: #00ff66; font-weight:800;">PARTIDO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">MERCADO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">MOMIO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">RESULTADO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">ESTADO</th></tr></thead><tbody>{rows_html}</tbody></table></div>'
+    html_code = f'<div style="overflow-x:auto; border: 1px solid #2d3833; border-radius: 8px; background-color: #242a26; margin-top: 10px;"><table style="width:100%; border-collapse: collapse; color: #e2e8f0; font-size: 13px;"><thead><tr style="background-color: #1a201d; border-bottom: 2px solid #2d3833; text-align: left;"><th style="padding: 12px; color: #00ff66; font-weight:800;">FECHA</th><th style="padding: 12px; color: #00ff66; font-weight:800;">DEPORTE</th><th style="padding: 12px; color: #00ff66; font-weight:800;">PARTIDO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">MERCADO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">MOMIO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">RESULTADO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">ESTADO</th></tr></thead><tbody>{rows_html}</tbody></table></div>'
     st.markdown(html_code, unsafe_allow_html=True)
 
-# BARRA SUPERIOR DE NAVEGACIÓN REESTRUCTURADA
+# BARRA SUPERIOR DE NAVEGACIÓN
 c_top_label, c_top_radio = st.columns([1, 3])
 with c_top_label:
     st.markdown("<div class='top-deporte-title'>SELECCIONAR DEPORTE:</div>", unsafe_allow_html=True)
@@ -581,8 +584,8 @@ if not es_mlb:
         fig_xg.add_trace(go.Scatter(x=minutos, y=xg_acc_visita, mode='lines', name=visita_nombre, line=dict(color='#f5d742', width=3)))
         fig_xg.update_layout(
             title=dict(text="xG Progresión por Minuto", font=dict(size=12, color="#f5d742")),
-            height=190, paper_bgcolor='#111a17', plot_bgcolor='#111a17', font=dict(color='#ffffff', size=9),
-            xaxis=dict(gridcolor='#1a3328'), yaxis=dict(gridcolor='#1a3328'), margin=dict(l=25, r=15, t=30, b=20),
+            height=190, paper_bgcolor='#242a26', plot_bgcolor='#242a26', font=dict(color='#ffffff', size=9),
+            xaxis=dict(gridcolor='#2d3833'), yaxis=dict(gridcolor='#2d3833'), margin=dict(l=25, r=15, t=30, b=20),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
 
@@ -596,7 +599,7 @@ if not es_mlb:
         )])
         fig_pie.update_layout(
             title=dict(text="Distribución 1X2", font=dict(size=12, color="#f5d742")),
-            height=190, paper_bgcolor='#111a17', font=dict(color='#ffffff', size=9),
+            height=190, paper_bgcolor='#242a26', font=dict(color='#ffffff', size=9),
             margin=dict(l=15, r=15, t=30, b=15), showlegend=False
         )
 
@@ -861,8 +864,8 @@ else:
         fig_xr.add_trace(go.Scatter(x=innings, y=xr_acc_visita, mode='lines', name=visita_nombre, line=dict(color='#f5d742', width=3)))
         fig_xr.update_layout(
             title=dict(text="xR Progresión por Inning", font=dict(size=12, color="#f5d742")),
-            height=190, paper_bgcolor='#111a17', plot_bgcolor='#111a17', font=dict(color='#ffffff', size=9),
-            xaxis=dict(gridcolor='#1a3328'), yaxis=dict(gridcolor='#1a3328'), margin=dict(l=25, r=15, t=30, b=20),
+            height=190, paper_bgcolor='#242a26', plot_bgcolor='#242a26', font=dict(color='#ffffff', size=9),
+            xaxis=dict(gridcolor='#2d3833'), yaxis=dict(gridcolor='#2d3833'), margin=dict(l=25, r=15, t=30, b=20),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
 
@@ -875,7 +878,7 @@ else:
         )])
         fig_pie_mlb.update_layout(
             title=dict(text="Moneyline % Probabilidad", font=dict(size=12, color="#f5d742")),
-            height=190, paper_bgcolor='#111a17', font=dict(color='#ffffff', size=9),
+            height=190, paper_bgcolor='#242a26', font=dict(color='#ffffff', size=9),
             margin=dict(l=15, r=15, t=30, b=15), showlegend=False
         )
 
@@ -1118,7 +1121,7 @@ else:
 # ==========================================
 # PANEL INFERIOR: AUTO-TRACKING SEPARADO POR DEPORTE
 # ==========================================
-st.markdown("<br><hr style='border:1px solid #1a3328;'><br>", unsafe_allow_html=True)
+st.markdown("<br><hr style='border:1px solid #2d3833;'><br>", unsafe_allow_html=True)
 c_head1, c_head2 = st.columns([3, 1])
 with c_head1: 
     st.markdown(f"<h3 style='color:#f5d742;'>📈 TRACKER DE APUESTAS: <span style='color:#00ff66;'>{deporte_actual_key.upper()}</span></h3>", unsafe_allow_html=True)
@@ -1167,7 +1170,7 @@ else:
         fig_pie.update_layout(
             title=dict(text=f"Gráfica de Aciertos ({filtro_dep})", font=dict(color='#f5d742')), 
             height=250, 
-            paper_bgcolor='#111a17', 
+            paper_bgcolor='#242a26', 
             font=dict(color='#ffffff')
         )
         st.plotly_chart(fig_pie, use_container_width=True)
