@@ -57,7 +57,7 @@ def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, 
     st.toast(f"✅ Pick guardado: {mercado}", icon="📌")
 
 # ==========================================
-# MOTOR DE AUTO-VERIFICACIÓN (LIGA MX Y MLB)
+# MOTOR DE AUTO-VERIFICACIÓN EN VIVO (LIGA MX Y MLB)
 # ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -73,22 +73,25 @@ def auto_verificar_apuestas():
             for ev_item in events:
                 comp = ev_item.get("competitions", [])[0]
                 status = comp.get("status", {}).get("type", {}).get("completed", False)
-                if status:
-                    teams = comp.get("competitors", [])
-                    loc_name, vis_name = "", ""
-                    loc_score, vis_score = 0, 0
-                    for t in teams:
-                        if t.get("homeAway") == "home":
-                            loc_name = t.get("team", {}).get("name", "")
-                            loc_score = int(t.get("score", 0))
-                        else:
-                            vis_name = t.get("team", {}).get("name", "")
-                            vis_score = int(t.get("score", 0))
-                    res_mx[f"{loc_name} vs {vis_name}"] = {"loc_score": loc_score, "vis_score": vis_score}
+                teams = comp.get("competitors", [])
+                loc_name, vis_name = "", ""
+                loc_score, vis_score = 0, 0
+                for t in teams:
+                    if t.get("homeAway") == "home":
+                        loc_name = t.get("team", {}).get("name", "")
+                        loc_score = int(t.get("score", 0))
+                    else:
+                        vis_name = t.get("team", {}).get("name", "")
+                        vis_score = int(t.get("score", 0))
+                res_mx[f"{loc_name} vs {vis_name}"] = {
+                    "completed": status, 
+                    "loc_score": loc_score, 
+                    "vis_score": vis_score
+                }
     except Exception:
         pass
 
-    # 2. API MLB STATS (RESULTADOS COMPLETOS BÉISBOL)
+    # 2. API MLB STATS (RESULTADOS EN VIVO Y PITCHER BOXSCORES)
     url_mlb = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
     res_mlb = {}
     try:
@@ -96,29 +99,59 @@ def auto_verificar_apuestas():
         if r_mlb.status_code == 200:
             events = r_mlb.json().get("events", [])
             for ev_item in events:
+                game_id = ev_item.get("id")
                 comp = ev_item.get("competitions", [])[0]
-                status = comp.get("status", {}).get("type", {}).get("completed", False)
-                if status:
-                    teams = comp.get("competitors", [])
-                    loc_name, vis_name = "", ""
-                    loc_score, vis_score = 0, 0
-                    for t in teams:
-                        if t.get("homeAway") == "home":
-                            loc_name = t.get("team", {}).get("displayName", "")
-                            loc_score = int(t.get("score", 0))
-                        else:
-                            vis_name = t.get("team", {}).get("displayName", "")
-                            vis_score = int(t.get("score", 0))
-                    res_mlb[f"{loc_name} vs {vis_name}"] = {
-                        "loc_name": loc_name, 
-                        "vis_name": vis_name, 
-                        "loc_score": loc_score, 
-                        "vis_score": vis_score
-                    }
+                status_completed = comp.get("status", {}).get("type", {}).get("completed", False)
+                status_state = comp.get("status", {}).get("type", {}).get("state", "pre") # pre, in, post
+                
+                teams = comp.get("competitors", [])
+                loc_name, vis_name = "", ""
+                loc_score, vis_score = 0, 0
+                for t in teams:
+                    if t.get("homeAway") == "home":
+                        loc_name = t.get("team", {}).get("displayName", "")
+                        loc_score = int(t.get("score", 0))
+                    else:
+                        vis_name = t.get("team", {}).get("displayName", "")
+                        vis_score = int(t.get("score", 0))
+
+                # Extraer Boxscore de Ponches en vivo de los abridores si el juego inició o terminó
+                ks_dict = {}
+                if status_state in ["in", "post"]:
+                    try:
+                        url_box = f"https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event={game_id}"
+                        r_box = requests.get(url_box, timeout=4)
+                        if r_box.status_code == 200:
+                            box_data = r_box.json()
+                            players = box_data.get("boxscore", {}).get("players", [])
+                            for team_p in players:
+                                statistics = team_p.get("statistics", [])
+                                for stat_cat in statistics:
+                                    if stat_cat.get("type") == "pitching":
+                                        athletes = stat_cat.get("athletes", [])
+                                        for ath in athletes:
+                                            p_name = ath.get("athlete", {}).get("displayName", "")
+                                            stats_vals = ath.get("stats", [])
+                                            # Indice estándar en ESPN Boxscore Pitching: [IP, H, R, ER, BB, SO/K, HR, ERA]
+                                            if len(stats_vals) >= 6:
+                                                so_val = int(stats_vals[5]) if str(stats_vals[5]).isdigit() else 0
+                                                ks_dict[p_name.lower()] = so_val
+                    except Exception:
+                        pass
+
+                res_mlb[f"{loc_name} vs {vis_name}"] = {
+                    "completed": status_completed,
+                    "state": status_state,
+                    "loc_name": loc_name, 
+                    "vis_name": vis_name, 
+                    "loc_score": loc_score, 
+                    "vis_score": vis_score,
+                    "ks_dict": ks_dict
+                }
     except Exception:
         pass
 
-    # CALIFICAR CADA APUESTA PENDIENTE
+    # EVALUAR CADA APUESTA PENDIENTE
     for item in historial:
         if item["estado"] == "PENDING":
             dep = item["deporte"]
@@ -131,23 +164,24 @@ def auto_verificar_apuestas():
                         g_vis = score_data["vis_score"]
                         tot_goles = g_loc + g_vis
                         mercado = item["mercado"]
-                        item["resultado_real"] = f"{g_loc} - {g_vis}"
+                        
+                        if score_data["completed"]:
+                            item["resultado_real"] = f"{g_loc} - {g_vis}"
+                            if "Gana" in mercado:
+                                if item["equipo_loc"] in mercado and g_loc > g_vis: item["estado"] = "WIN"
+                                elif item["equipo_vis"] in mercado and g_vis > g_loc: item["estado"] = "WIN"
+                                else: item["estado"] = "LOSS"
+                            elif "1X" in mercado:
+                                item["estado"] = "WIN" if g_loc >= g_vis else "LOSS"
+                            elif "X2" in mercado:
+                                item["estado"] = "WIN" if g_vis >= g_loc else "LOSS"
+                            elif "2.5 Goles" in mercado:
+                                item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
+                            elif "BTTS" in mercado:
+                                item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
+                            actualizados += 1
 
-                        if "Gana" in mercado:
-                            if item["equipo_loc"] in mercado and g_loc > g_vis: item["estado"] = "WIN"
-                            elif item["equipo_vis"] in mercado and g_vis > g_loc: item["estado"] = "WIN"
-                            else: item["estado"] = "LOSS"
-                        elif "1X" in mercado:
-                            item["estado"] = "WIN" if g_loc >= g_vis else "LOSS"
-                        elif "X2" in mercado:
-                            item["estado"] = "WIN" if g_vis >= g_loc else "LOSS"
-                        elif "2.5 Goles" in mercado:
-                            item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
-                        elif "BTTS" in mercado:
-                            item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
-                        actualizados += 1
-
-            # --- EVALUACIÓN MLB ---
+            # --- EVALUACIÓN MLB (SOPORTE EN VIVO PARA K'S Y MARCADORES) ---
             elif "MLB" in dep:
                 for match_title, score_data in res_mlb.items():
                     eq_loc_match = item["equipo_loc"].lower() in match_title.lower() or score_data["loc_name"].lower() in item["equipo_loc"].lower()
@@ -159,34 +193,66 @@ def auto_verificar_apuestas():
                         tot_carreras = r_loc + r_vis
                         mercado = item["mercado"]
                         linea = item.get("linea", "")
-                        item["resultado_real"] = f"{r_loc} - {r_vis}"
+                        ks_dict = score_data["ks_dict"]
 
-                        # 1. Moneyline
-                        if "Gana" in mercado or "ML" in mercado:
-                            if item["equipo_loc"] in mercado and r_loc > r_vis: item["estado"] = "WIN"
-                            elif item["equipo_vis"] in mercado and r_vis > r_loc: item["estado"] = "WIN"
-                            else: item["estado"] = "LOSS"
+                        # EVALUACIÓN EN VIVO DE K'S (PONCHES)
+                        if "K's" in mercado or "Ponches" in mercado:
+                            val_target = float(linea) if linea.replace('.','',1).isdigit() else 5.5
+                            # Buscar ponches registrados para abridores
+                            k_actuales = max(ks_dict.values()) if ks_dict else 0
+                            
+                            if "Over" in mercado or "Más" in mercado:
+                                if k_actuales > val_target:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{k_actuales} K's (Cumplido)"
+                                    actualizados += 1
+                                elif score_data["completed"]:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{k_actuales} K's Final"
+                                    actualizados += 1
+                                else:
+                                    item["resultado_real"] = f"{k_actuales} K's en Vivo"
+                            
+                            elif "Under" in mercado or "Menos" in mercado:
+                                if k_actuales > val_target:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{k_actuales} K's (Superado)"
+                                    actualizados += 1
+                                elif score_data["completed"]:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{k_actuales} K's Final"
+                                    actualizados += 1
+                                else:
+                                    item["resultado_real"] = f"{k_actuales} K's en Vivo"
+
+                        # EVALUACIÓN DE JUEGO COMPLETO (FINALIZADO)
+                        elif score_data["completed"]:
+                            item["resultado_real"] = f"{r_loc} - {r_vis}"
+                            if "Gana" in mercado or "ML" in mercado:
+                                if item["equipo_loc"] in mercado and r_loc > r_vis: item["estado"] = "WIN"
+                                elif item["equipo_vis"] in mercado and r_vis > r_loc: item["estado"] = "WIN"
+                                else: item["estado"] = "LOSS"
+                            
+                            elif "Over" in mercado and "Carreras" in mercado:
+                                val_target = float(linea) if linea.replace('.','',1).isdigit() else 8.5
+                                item["estado"] = "WIN" if tot_carreras > val_target else "LOSS"
+                            elif "Under" in mercado and "Carreras" in mercado:
+                                val_target = float(linea) if linea.replace('.','',1).isdigit() else 8.5
+                                item["estado"] = "WIN" if tot_carreras < val_target else "LOSS"
+                            
+                            elif "RL" in mercado or "Run Line" in mercado:
+                                if item["equipo_loc"] in mercado:
+                                    diff = r_loc - r_vis
+                                    if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
+                                    elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
+                                elif item["equipo_vis"] in mercado:
+                                    diff = r_vis - r_loc
+                                    if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
+                                    elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
+                            actualizados += 1
                         
-                        # 2. Total Carreras Over / Under
-                        elif "Over" in mercado and "Carreras" in mercado:
-                            val_target = float(linea) if linea.replace('.','',1).isdigit() else 8.5
-                            item["estado"] = "WIN" if tot_carreras > val_target else "LOSS"
-                        elif "Under" in mercado and "Carreras" in mercado:
-                            val_target = float(linea) if linea.replace('.','',1).isdigit() else 8.5
-                            item["estado"] = "WIN" if tot_carreras < val_target else "LOSS"
-                        
-                        # 3. Run Line (-1.5 / +1.5)
-                        elif "RL" in mercado or "Run Line" in mercado:
-                            if item["equipo_loc"] in mercado:
-                                diff = r_loc - r_vis
-                                if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
-                                elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
-                            elif item["equipo_vis"] in mercado:
-                                diff = r_vis - r_loc
-                                if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
-                                elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
-                        
-                        actualizados += 1
+                        elif score_data["state"] == "in":
+                            item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
     guardar_base_datos(historial)
     st.session_state.historial_apuestas = historial
@@ -360,7 +426,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     return p_loc, p_vis
 
 # ==========================================
-# ESTILOS CSS CORREGIDOS DE ALTO CONTRASTE
+# ESTILOS CSS
 # ==========================================
 st.markdown("""
 <style>
@@ -385,7 +451,6 @@ st.markdown("""
         white-space: nowrap;
     }
     
-    /* TEXTO DE SELECCIÓN DE DEPORTE SÚPER POTENTE Y VISIBLE */
     div[data-testid="stRadioButton"] label,
     div[data-testid="stRadioButton"] label span,
     div[data-testid="stRadioButton"] label p,
@@ -396,7 +461,6 @@ st.markdown("""
         text-shadow: 0 0 8px rgba(0, 255, 102, 0.8) !important;
     }
     
-    /* BARRAS EXPANDIBLES (EXPANDER) */
     details[data-testid="stExpander"], details[data-testid="stExpander"][open] {
         background-color: #242a26 !important;
         border: 1px solid #2d3833 !important;
@@ -505,7 +569,6 @@ st.markdown("""
         color: #ffffff;
     }
 
-    /* BOTONES VERDE FLUORESCENTE */
     div.stButton > button {
         background: #00ff66 !important;
         color: #000000 !important;
@@ -527,7 +590,6 @@ st.markdown("""
 def generar_jersey_svg(equipo_nombre, diccionario_jerseys):
     col = diccionario_jerseys.get(equipo_nombre, {"c1": "#333333", "c2": "#666666"})
     c1, c2 = col["c1"], col["c2"]
-    
     svg = f"""<svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M30 20 L40 10 L60 10 L70 20 L85 30 L75 45 L68 40 L68 85 L32 85 L32 40 L25 45 L15 30 Z" fill="{c1}" stroke="#ffffff" stroke-width="3"/><path d="M50 10 L50 85" stroke="{c2}" stroke-width="12"/><path d="M30 20 L40 10 L60 10 L70 20" fill="none" stroke="#ffffff" stroke-width="3"/></svg>"""
     return svg
 
