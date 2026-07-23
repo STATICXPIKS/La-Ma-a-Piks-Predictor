@@ -282,7 +282,7 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     return p_loc, p_vis
 
 # ==========================================
-# ESTILOS CSS CORREGIDOS (FIX EXPANDERS & ESTILOS TABLA)
+# ESTILOS CSS CON FIX DE SELECTOR DE DEPORTE & EXPANDERS
 # ==========================================
 st.markdown("""
 <style>
@@ -297,7 +297,26 @@ st.markdown("""
         color: #e2e8f0; 
     }
     
-    /* FIX 1: CORRECCIÓN DE BARRAS EXPANDIBLES (DESPLEGADAS Y CERRADAS OSCURAS) */
+    /* FIX DE SELECTOR DE DEPORTE SUPERIOR */
+    .top-deporte-title {
+        font-family: 'Orbitron', sans-serif !important;
+        font-size: 20px !important;
+        font-weight: 900 !important;
+        color: #f5d742 !important;
+        text-shadow: 0 0 8px rgba(245, 215, 66, 0.5);
+        margin-right: 15px;
+        white-space: nowrap;
+    }
+    
+    /* TEXTO DE LAS OPCIONES DE RADIO (FUTURISTAS & VISIBLES) */
+    div[data-testid="stRadioButton"] label p {
+        font-size: 15px !important;
+        font-weight: 900 !important;
+        color: #00ff66 !important;
+        text-shadow: 0 0 5px rgba(0, 255, 102, 0.4) !important;
+    }
+    
+    /* FIX BARRAS EXPANDIBLES (EXPANDER) */
     details[data-testid="stExpander"], details[data-testid="stExpander"][open] {
         background-color: #111a17 !important;
         border: 1px solid #1a3328 !important;
@@ -339,7 +358,7 @@ st.markdown("""
         font-weight: 900 !important;
     }
     
-    /* TARJETAS CON BORDE VERDE NEÓN */
+    /* TARJETAS DE VEREDICTO CON NEÓN */
     .card-pro {
         background: #111a17;
         border: 1px solid #1a3328;
@@ -448,7 +467,6 @@ def to_american_str(prob):
         am = int(round(-100 / (dec - 1)))
         return f"{am}"
 
-# FIX 3: FUNCIÓN RENDERIZADORA CORREGIDA PARA LA TABLA (HTML LIMPIO SIN SANGRÍAS)
 def render_tabla_historial_html(data_list):
     if not data_list:
         return
@@ -461,14 +479,17 @@ def render_tabla_historial_html(data_list):
     html_code = f'<div style="overflow-x:auto; border: 1px solid #1a3328; border-radius: 8px; background-color: #111a17; margin-top: 10px;"><table style="width:100%; border-collapse: collapse; color: #e2e8f0; font-size: 13px;"><thead><tr style="background-color: #0b1210; border-bottom: 2px solid #1a3328; text-align: left;"><th style="padding: 12px; color: #00ff66; font-weight:800;">FECHA</th><th style="padding: 12px; color: #00ff66; font-weight:800;">DEPORTE</th><th style="padding: 12px; color: #00ff66; font-weight:800;">PARTIDO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">MERCADO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">MOMIO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">RESULTADO</th><th style="padding: 12px; color: #00ff66; font-weight:800;">ESTADO</th></tr></thead><tbody>{rows_html}</tbody></table></div>'
     st.markdown(html_code, unsafe_allow_html=True)
 
-# BARRA SUPERIOR DE NAVEGACIÓN
-c_top1, c_top2, _ = st.columns([2, 3, 5])
-with c_top1:
-    st.markdown("<span style='font-size:12px; color:#f5d742; font-weight:800;'>SELECCIONAR DEPORTE:</span>", unsafe_allow_html=True)
+# BARRA SUPERIOR DE NAVEGACIÓN REESTRUCTURADA
+c_top_label, c_top_radio = st.columns([1, 3])
+with c_top_label:
+    st.markdown("<div class='top-deporte-title'>SELECCIONAR DEPORTE:</div>", unsafe_allow_html=True)
+with c_top_radio:
     deporte = st.radio("", ["⚽ Liga MX (API LIVE)", "⚾ MLB Sabermétrico (API AUTO)"], horizontal=True, label_visibility="collapsed")
 
 es_mlb = "MLB" in deporte
 deporte_actual_key = "MLB" if es_mlb else "Liga MX"
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 col_izq, col_der = st.columns([1, 1], gap="large")
 
@@ -896,7 +917,7 @@ else:
             m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
             m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # FIX 2: ALINEACIÓN PERFECTA DE PROPS DE PITCHERS (EN FILAS Y CON LABELS DEDICADOS)
+            # PROPS DE PITCHERS (ALINEADOS EN FILAS SEPARADAS)
             opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
             
             st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S): {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
@@ -1153,5 +1174,4 @@ else:
 
     with col_g2:
         st.markdown(f"**Historial Registrado ({filtro_dep}):**")
-        # RENDERIZAMOS LA TABLA HTML LIMPIA CORREGIDA
         render_tabla_historial_html(historial_filtrado)
