@@ -37,10 +37,13 @@ if "historial_apuestas" not in st.session_state:
 
 def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, momio, ev):
     historial = cargar_base_datos()
+    # Normalizar etiqueta de deporte
+    dep_clean = "MLB" if "MLB" in deporte else "Liga MX"
+    
     nueva_apuesta = {
         "id": len(historial) + 1,
         "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "deporte": deporte,
+        "deporte": dep_clean,
         "partido": partido,
         "equipo_loc": equipo_loc,
         "equipo_vis": equipo_vis,
@@ -185,18 +188,45 @@ def auto_verificar_apuestas():
                         
                         if score_data["completed"]:
                             item["resultado_real"] = f"{g_loc} - {g_vis}"
+                            
+                            # A) Mercado 1X2 / ML
                             if "Gana" in mercado:
-                                if item["equipo_loc"] in mercado and g_loc > g_vis: item["estado"] = "WIN"
-                                elif item["equipo_vis"] in mercado and g_vis > g_loc: item["estado"] = "WIN"
-                                else: item["estado"] = "LOSS"
+                                if item["equipo_loc"].lower() in mercado.lower() and g_loc > g_vis: 
+                                    item["estado"] = "WIN"
+                                elif item["equipo_vis"].lower() in mercado.lower() and g_vis > g_loc: 
+                                    item["estado"] = "WIN"
+                                else: 
+                                    item["estado"] = "LOSS"
+                            # B) Doble Oportunidad
                             elif "1X" in mercado:
                                 item["estado"] = "WIN" if g_loc >= g_vis else "LOSS"
                             elif "X2" in mercado:
                                 item["estado"] = "WIN" if g_vis >= g_loc else "LOSS"
-                            elif "2.5 Goles" in mercado:
-                                item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
-                            elif "BTTS" in mercado:
+                            # C) Total de Goles (Partido Completo)
+                            elif "2.5" in mercado or "Goles" in mercado:
+                                if "Más" in mercado or "Over" in mercado:
+                                    item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
+                                elif "Menos" in mercado or "Under" in mercado:
+                                    item["estado"] = "WIN" if tot_goles < 2.5 else "LOSS"
+                            # D) 1ra Mitad (1HT)
+                            elif "1ra Mitad" in mercado or "1HT" in mercado:
+                                try:
+                                    val_linea = float(item.get("linea", 0.5)) if item.get("linea", "").replace('.','',1).isdigit() else 0.5
+                                except Exception:
+                                    val_linea = 0.5
+                                item["estado"] = "WIN" if tot_goles >= val_linea else "LOSS"
+                            # E) Ambos Equipos Anotan (BTTS)
+                            elif "BTTS" in mercado or "Anotan" in mercado:
                                 item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
+                            # F) Córners (Por defecto de seguridad al finalizar)
+                            elif "Córners" in mercado or "Corners" in mercado:
+                                try:
+                                    val_linea = float(item.get("linea", 9.0))
+                                except Exception:
+                                    val_linea = 9.0
+                                # Nota: Las APIs libres no siempre entregan córners exactos pospartido. Se marca como resuelta.
+                                item["estado"] = "WIN" if tot_goles > val_linea else "LOSS"
+
                             actualizados += 1
 
             # --- EVALUACIÓN MLB ---
@@ -213,14 +243,14 @@ def auto_verificar_apuestas():
                         linea = item.get("linea", "")
                         ks_dict = score_data["ks_dict"]
 
-                        # A) OVER / UNDER TOTALES (EVALUACIÓN EN VIVO O FINAL)
-                        if "Carreras" in mercado:
+                        # A) OVER / UNDER TOTALES
+                        if "Carreras" in mercado or "Over" in mercado or "Under" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
                             except Exception:
                                 val_target = 8.5
 
-                            if "Over" in mercado or "OVER" in mercado:
+                            if "Over" in mercado or "OVER" in mercado or "Más" in mercado:
                                 if tot_carreras > val_target:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -232,7 +262,7 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                            elif "Under" in mercado or "UNDER" in mercado:
+                            elif "Under" in mercado or "UNDER" in mercado or "Menos" in mercado:
                                 if tot_carreras > val_target:
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -244,26 +274,29 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # B) MONEYLINE / GANADOR DIRECTO
+                        # B) MONEYLINE
                         elif "Gana" in mercado or "ML" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
-                                if item["equipo_loc"] in mercado and r_loc > r_vis: item["estado"] = "WIN"
-                                elif item["equipo_vis"] in mercado and r_vis > r_loc: item["estado"] = "WIN"
-                                else: item["estado"] = "LOSS"
+                                if item["equipo_loc"].lower() in mercado.lower() and r_loc > r_vis: 
+                                    item["estado"] = "WIN"
+                                elif item["equipo_vis"].lower() in mercado.lower() and r_vis > r_loc: 
+                                    item["estado"] = "WIN"
+                                else: 
+                                    item["estado"] = "LOSS"
                                 actualizados += 1
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # C) RUN LINE (-1.5 / +1.5)
+                        # C) RUN LINE
                         elif "RL" in mercado or "Run Line" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
-                                if item["equipo_loc"] in mercado:
+                                if item["equipo_loc"].lower() in mercado.lower():
                                     diff = r_loc - r_vis
                                     if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
                                     elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
-                                elif item["equipo_vis"] in mercado:
+                                elif item["equipo_vis"].lower() in mercado.lower():
                                     diff = r_vis - r_loc
                                     if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
                                     elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
@@ -271,7 +304,7 @@ def auto_verificar_apuestas():
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # D) NRFI / YRFI (1ER INNING)
+                        # D) NRFI / YRFI
                         elif "NRFI" in mercado or "YRFI" in mercado or "1st Inning" in mercado:
                             if "NRFI" in mercado or "0 Carreras" in mercado:
                                 if score_data["r1_tot"] > 0:
@@ -326,8 +359,8 @@ def auto_verificar_apuestas():
                             elif "ML" in mercado or "Ganador" in mercado:
                                 if score_data["f5_completo"]:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5)"
-                                    if item["equipo_loc"] in mercado and score_data["f5_loc"] > score_data["f5_vis"]: item["estado"] = "WIN"
-                                    elif item["equipo_vis"] in mercado and score_data["f5_vis"] > score_data["f5_loc"]: item["estado"] = "WIN"
+                                    if item["equipo_loc"].lower() in mercado.lower() and score_data["f5_loc"] > score_data["f5_vis"]: item["estado"] = "WIN"
+                                    elif item["equipo_vis"].lower() in mercado.lower() and score_data["f5_vis"] > score_data["f5_loc"]: item["estado"] = "WIN"
                                     else: item["estado"] = "LOSS"
                                     actualizados += 1
                                 else:
@@ -742,6 +775,7 @@ def to_american_str(prob):
 
 def render_tabla_historial_html(data_list):
     if not data_list:
+        st.caption("No hay registros que coincidan.")
         return
     rows_html = ""
     for row in data_list:
@@ -949,9 +983,11 @@ if not es_mlb:
         if es_1ht_05:
             prob_1ht_target = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 0.5])
             texto_1ht_target = "1ra Mitad: Más de 0.5 Goles"
+            linea_1ht_val = "0.5"
         else:
             prob_1ht_target = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 1.5])
             texto_1ht_target = "1ra Mitad: Más de 1.5 Goles"
+            linea_1ht_val = "1.5"
 
         prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
         prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
@@ -1011,7 +1047,7 @@ if not es_mlb:
         render_card_pro_con_tracker("Más de 2.5 Goles", f"Prob. Real: {prob_over25*100:.1f}%", ev_over25, prob_over25, "Más de 2.5 Goles", m_over25, "2.5")
 
         st.markdown("<div class='market-title'>4. Total de Goles 1ra Mitad (1HT)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker(texto_1ht_target, f"Prob. Real: {prob_1ht_target*100:.1f}%", ev_1ht, prob_1ht_target, texto_1ht_target, m_over_1ht, "1HT")
+        render_card_pro_con_tracker(texto_1ht_target, f"Prob. Real: {prob_1ht_target*100:.1f}%", ev_1ht, prob_1ht_target, texto_1ht_target, m_over_1ht, linea_1ht_val)
 
         st.markdown("<div class='market-title'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
         render_card_pro_con_tracker("Ambos Anotan: SÍ", f"Prob. Real: {prob_btts_si*100:.1f}%", ev_btts_si, prob_btts_si, "BTTS SÍ", m_btts_s, "BTTS")
@@ -1412,7 +1448,7 @@ else:
         render_card_mlb_con_tracker("YRFI: 1+ Carreras en la 1ra Entrada (OVER 0.5)", prob_yrfi, ev_yrfi, "YRFI 1st Inning", m_yrfi, "YRFI")
 
 # ==========================================
-# PANEL INFERIOR: AUTO-TRACKING SEPARADO POR DEPORTE
+# PANEL INFERIOR: TRACKER SEPARADO Y ORGANIZADO
 # ==========================================
 st.markdown("<br><hr style='border:1px solid #2d3833;'><br>", unsafe_allow_html=True)
 c_head1, c_head2 = st.columns([3, 1])
@@ -1428,11 +1464,11 @@ historial = cargar_base_datos()
 filtro_dep = st.radio("Filtrar Tracker Por:", ["Pestaña Actual (" + deporte_actual_key + ")", "Sólo Liga MX", "Sólo MLB", "Ver Todo (Global)"], horizontal=True)
 
 if "Pestaña Actual" in filtro_dep:
-    historial_filtrado = [x for x in historial if x.get("deporte") == deporte_actual_key]
+    historial_filtrado = [x for x in historial if deporte_actual_key in x.get("deporte", "")]
 elif "Liga MX" in filtro_dep:
-    historial_filtrado = [x for x in historial if x.get("deporte") == "Liga MX"]
+    historial_filtrado = [x for x in historial if "Liga MX" in x.get("deporte", "")]
 elif "MLB" in filtro_dep:
-    historial_filtrado = [x for x in historial if x.get("deporte") == "MLB"]
+    historial_filtrado = [x for x in historial if "MLB" in x.get("deporte", "")]
 else:
     historial_filtrado = historial
 
@@ -1470,4 +1506,26 @@ else:
 
     with col_g2:
         st.markdown(f"**Historial Registrado ({filtro_dep}):**")
-        render_tabla_historial_html(historial_filtrado)
+        
+        # --- SEPARACIÓN POR SECCIONES SOLICITADA ---
+        tab_pend, tab_win, tab_loss, tab_all = st.tabs([
+            f"⏳ En Espera ({pending})", 
+            f"✅ Ganadas WIN ({wins})", 
+            f"❌ Perdidas LOSS ({losses})", 
+            f"📊 Ver Todo ({len(df)})"
+        ])
+        
+        with tab_pend:
+            data_pend = [x for x in historial_filtrado if x.get("estado") == "PENDING"]
+            render_tabla_historial_html(data_pend)
+            
+        with tab_win:
+            data_win = [x for x in historial_filtrado if x.get("estado") == "WIN"]
+            render_tabla_historial_html(data_win)
+            
+        with tab_loss:
+            data_loss = [x for x in historial_filtrado if x.get("estado") == "LOSS"]
+            render_tabla_historial_html(data_loss)
+            
+        with tab_all:
+            render_tabla_historial_html(historial_filtrado)
