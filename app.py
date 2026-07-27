@@ -65,7 +65,7 @@ def eliminar_apuesta(id_apuesta):
     st.rerun()
 
 # ==========================================
-# MOTOR DE AUTO-VERIFICACIÓN EN VIVO MEJORADO
+# MOTOR DE AUTO-VERIFICACIÓN EN VIVO CORREGIDO
 # ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -80,21 +80,35 @@ def auto_verificar_apuestas():
             events = r_mx.json().get("events", [])
             for ev_item in events:
                 comp = ev_item.get("competitions", [])[0]
-                status = comp.get("status", {}).get("type", {}).get("completed", False)
+                status_completed = comp.get("status", {}).get("type", {}).get("completed", False)
+                period = comp.get("status", {}).get("period", 0)
                 teams = comp.get("competitors", [])
+                
                 loc_name, vis_name = "", ""
                 loc_score, vis_score = 0, 0
+                loc_ht_score, vis_ht_score = 0, 0
+                
                 for t in teams:
+                    linescores = t.get("linescores", [])
+                    ht_val = int(linescores[0].get("value", 0)) if len(linescores) >= 1 else 0
+                    
                     if t.get("homeAway") == "home":
                         loc_name = t.get("team", {}).get("name", "")
                         loc_score = int(t.get("score", 0))
+                        loc_ht_score = ht_val
                     else:
                         vis_name = t.get("team", {}).get("name", "")
                         vis_score = int(t.get("score", 0))
+                        vis_ht_score = ht_val
+
                 res_mx[f"{loc_name} vs {vis_name}"] = {
-                    "completed": status, 
+                    "completed": status_completed, 
+                    "period": period,
                     "loc_score": loc_score, 
-                    "vis_score": vis_score
+                    "vis_score": vis_score,
+                    "ht_score_tot": loc_ht_score + vis_ht_score,
+                    "loc_ht_score": loc_ht_score,
+                    "vis_ht_score": vis_ht_score
                 }
     except Exception:
         pass
@@ -189,23 +203,75 @@ def auto_verificar_apuestas():
                         g_loc = score_data["loc_score"]
                         g_vis = score_data["vis_score"]
                         tot_goles = g_loc + g_vis
+                        ht_goles = score_data["ht_score_tot"]
                         mercado = item["mercado"]
-                        
-                        if score_data["completed"]:
-                            item["resultado_real"] = f"{g_loc} - {g_vis}"
-                            if "Gana" in mercado:
+                        linea = item.get("linea", "")
+
+                        # A) MERCADOS DE 1RA MITAD / 1HT
+                        if "1ra Mitad" in mercado or "1HT" in mercado:
+                            try:
+                                val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else (0.5 if "0.5" in mercado else 1.5)
+                            except Exception:
+                                val_target = 0.5 if "0.5" in mercado else 1.5
+
+                            if "Más" in mercado or "Over" in mercado:
+                                if ht_goles > val_target:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{ht_goles} Goles (1HT)"
+                                    actualizados += 1
+                                elif score_data["period"] >= 2 or score_data["completed"]:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{ht_goles} Goles (1HT)"
+                                    actualizados += 1
+
+                        # B) TOTAL DE GOLES 90 MINUTOS
+                        elif "Goles" in mercado or "Over" in mercado or "Under" in mercado:
+                            try:
+                                val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 2.5
+                            except Exception:
+                                val_target = 2.5
+
+                            if "Más" in mercado or "Over" in mercado:
+                                if tot_goles > val_target:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{g_loc} - {g_vis}"
+                                    actualizados += 1
+                                elif score_data["completed"]:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{g_loc} - {g_vis}"
+                                    actualizados += 1
+
+                        # C) GANADOR DIRECTO / MONEYLINE
+                        elif "Gana" in mercado:
+                            if score_data["completed"]:
+                                item["resultado_real"] = f"{g_loc} - {g_vis}"
                                 if item["equipo_loc"] in mercado and g_loc > g_vis: item["estado"] = "WIN"
                                 elif item["equipo_vis"] in mercado and g_vis > g_loc: item["estado"] = "WIN"
                                 else: item["estado"] = "LOSS"
-                            elif "1X" in mercado:
+                                actualizados += 1
+
+                        # D) DOBLE OPORTUNIDAD
+                        elif "1X" in mercado:
+                            if score_data["completed"]:
+                                item["resultado_real"] = f"{g_loc} - {g_vis}"
                                 item["estado"] = "WIN" if g_loc >= g_vis else "LOSS"
-                            elif "X2" in mercado:
+                                actualizados += 1
+                        elif "X2" in mercado:
+                            if score_data["completed"]:
+                                item["resultado_real"] = f"{g_loc} - {g_vis}"
                                 item["estado"] = "WIN" if g_vis >= g_loc else "LOSS"
-                            elif "2.5 Goles" in mercado:
-                                item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
-                            elif "BTTS" in mercado:
-                                item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
-                            actualizados += 1
+                                actualizados += 1
+
+                        # E) BOTH TEAMS TO SCORE (BTTS)
+                        elif "BTTS" in mercado or "Ambos" in mercado:
+                            if g_loc > 0 and g_vis > 0:
+                                item["estado"] = "WIN"
+                                item["resultado_real"] = f"{g_loc} - {g_vis}"
+                                actualizados += 1
+                            elif score_data["completed"]:
+                                item["estado"] = "LOSS"
+                                item["resultado_real"] = f"{g_loc} - {g_vis}"
+                                actualizados += 1
 
             # --- EVALUACIÓN MLB ---
             elif "MLB" in dep:
@@ -986,9 +1052,11 @@ if not es_mlb:
         if es_1ht_05:
             prob_1ht_target = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 0.5])
             texto_1ht_target = "1ra Mitad: Más de 0.5 Goles"
+            linea_1ht_val = "0.5"
         else:
             prob_1ht_target = np.sum([matrix_1ht[x, y] for x in range(max_goles) for y in range(max_goles) if x + y > 1.5])
             texto_1ht_target = "1ra Mitad: Más de 1.5 Goles"
+            linea_1ht_val = "1.5"
 
         prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
         prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
@@ -1048,7 +1116,7 @@ if not es_mlb:
         render_card_pro_con_tracker("Más de 2.5 Goles", f"Prob. Real: {prob_over25*100:.1f}%", ev_over25, prob_over25, "Más de 2.5 Goles", m_over25, "2.5")
 
         st.markdown("<div class='market-title'>4. Total de Goles 1ra Mitad (1HT)</div>", unsafe_allow_html=True)
-        render_card_pro_con_tracker(texto_1ht_target, f"Prob. Real: {prob_1ht_target*100:.1f}%", ev_1ht, prob_1ht_target, texto_1ht_target, m_over_1ht, "1HT")
+        render_card_pro_con_tracker(texto_1ht_target, f"Prob. Real: {prob_1ht_target*100:.1f}%", ev_1ht, prob_1ht_target, texto_1ht_target, m_over_1ht, linea_1ht_val)
 
         st.markdown("<div class='market-title'>5. Ambos Equipos Anotan (BTTS)</div>", unsafe_allow_html=True)
         render_card_pro_con_tracker("Ambos Anotan: SÍ", f"Prob. Real: {prob_btts_si*100:.1f}%", ev_btts_si, prob_btts_si, "BTTS SÍ", m_btts_s, "BTTS")
