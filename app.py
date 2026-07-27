@@ -37,7 +37,6 @@ if "historial_apuestas" not in st.session_state:
 
 def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, momio, ev):
     historial = cargar_base_datos()
-    # Normalizar etiqueta de deporte
     dep_clean = "MLB" if "MLB" in deporte else "Liga MX"
     
     nueva_apuesta = {
@@ -60,13 +59,13 @@ def registrar_apuesta(deporte, partido, equipo_loc, equipo_vis, mercado, linea, 
     st.toast(f"✅ Pick guardado: {mercado}", icon="📌")
 
 # ==========================================
-# MOTOR DE AUTO-VERIFICACIÓN EN VIVO MEJORADO
+# MOTOR DE AUTO-VERIFICACIÓN EN VIVO CORREGIDO
 # ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
     actualizados = 0
 
-    # 1. API LIGA MX (ESPN)
+    # 1. API LIGA MX (ESPN) CON PARSEO DE PERÍODOS (1HT Y FULL TIME)
     url_mx = "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard"
     res_mx = {}
     try:
@@ -75,21 +74,35 @@ def auto_verificar_apuestas():
             events = r_mx.json().get("events", [])
             for ev_item in events:
                 comp = ev_item.get("competitions", [])[0]
-                status = comp.get("status", {}).get("type", {}).get("completed", False)
+                status_completed = comp.get("status", {}).get("type", {}).get("completed", False)
+                period = comp.get("status", {}).get("period", 0)
                 teams = comp.get("competitors", [])
+                
                 loc_name, vis_name = "", ""
                 loc_score, vis_score = 0, 0
+                loc_1ht, vis_1ht = 0, 0
+                
                 for t in teams:
-                    if t.get("homeAway") == "home":
-                        loc_name = t.get("team", {}).get("name", "")
-                        loc_score = int(t.get("score", 0))
+                    is_home = t.get("homeAway") == "home"
+                    t_name = t.get("team", {}).get("name", "")
+                    t_score = int(t.get("score", 0))
+                    
+                    linescore = t.get("linescores", [])
+                    t_1ht = int(linescore[0].get("value", 0)) if len(linescore) >= 1 else 0
+                    
+                    if is_home:
+                        loc_name, loc_score, loc_1ht = t_name, t_score, t_1ht
                     else:
-                        vis_name = t.get("team", {}).get("name", "")
-                        vis_score = int(t.get("score", 0))
+                        vis_name, vis_score, vis_1ht = t_name, t_score, t_1ht
+
                 res_mx[f"{loc_name} vs {vis_name}"] = {
-                    "completed": status, 
-                    "loc_score": loc_score, 
-                    "vis_score": vis_score
+                    "completed": status_completed,
+                    "period": period,
+                    "loc_score": loc_score,
+                    "vis_score": vis_score,
+                    "g_1ht": loc_1ht + vis_1ht,
+                    "loc_1ht": loc_1ht,
+                    "vis_1ht": vis_1ht
                 }
     except Exception:
         pass
@@ -183,13 +196,31 @@ def auto_verificar_apuestas():
                     if item["equipo_loc"].lower() in match_title.lower() and item["equipo_vis"].lower() in match_title.lower():
                         g_loc = score_data["loc_score"]
                         g_vis = score_data["vis_score"]
+                        g_1ht = score_data["g_1ht"]
                         tot_goles = g_loc + g_vis
                         mercado = item["mercado"]
+                        linea_str = item.get("linea", "")
                         
-                        if score_data["completed"]:
+                        # A) MERCADOS PRIMERA MITAD (1HT) - EVALUACIÓN EN VIVO / MEDIO TIEMPO
+                        if "1ra Mitad" in mercado or "1HT" in mercado:
+                            try:
+                                val_linea = float(linea_str) if linea_str.replace('.','',1).isdigit() else 0.5
+                            except Exception:
+                                val_linea = 0.5
+
+                            if g_1ht > val_linea:
+                                item["estado"] = "WIN"
+                                item["resultado_real"] = f"{g_1ht} Goles (1HT)"
+                                actualizados += 1
+                            elif score_data["period"] >= 2 or score_data["completed"]:
+                                item["estado"] = "LOSS"
+                                item["resultado_real"] = f"{g_1ht} Goles (1HT Final)"
+                                actualizados += 1
+
+                        # B) MERCADOS DE RESULTADO FINAL / 90 MINUTOS
+                        elif score_data["completed"]:
                             item["resultado_real"] = f"{g_loc} - {g_vis}"
                             
-                            # A) Mercado 1X2 / ML
                             if "Gana" in mercado:
                                 if item["equipo_loc"].lower() in mercado.lower() and g_loc > g_vis: 
                                     item["estado"] = "WIN"
@@ -197,35 +228,18 @@ def auto_verificar_apuestas():
                                     item["estado"] = "WIN"
                                 else: 
                                     item["estado"] = "LOSS"
-                            # B) Doble Oportunidad
+
                             elif "1X" in mercado:
                                 item["estado"] = "WIN" if g_loc >= g_vis else "LOSS"
+
                             elif "X2" in mercado:
                                 item["estado"] = "WIN" if g_vis >= g_loc else "LOSS"
-                            # C) Total de Goles (Partido Completo)
-                            elif "2.5" in mercado or "Goles" in mercado:
-                                if "Más" in mercado or "Over" in mercado:
-                                    item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
-                                elif "Menos" in mercado or "Under" in mercado:
-                                    item["estado"] = "WIN" if tot_goles < 2.5 else "LOSS"
-                            # D) 1ra Mitad (1HT)
-                            elif "1ra Mitad" in mercado or "1HT" in mercado:
-                                try:
-                                    val_linea = float(item.get("linea", 0.5)) if item.get("linea", "").replace('.','',1).isdigit() else 0.5
-                                except Exception:
-                                    val_linea = 0.5
-                                item["estado"] = "WIN" if tot_goles >= val_linea else "LOSS"
-                            # E) Ambos Equipos Anotan (BTTS)
+
+                            elif "Más de 2.5" in mercado or "2.5" in linea_str:
+                                item["estado"] = "WIN" if tot_goles > 2.5 else "LOSS"
+
                             elif "BTTS" in mercado or "Anotan" in mercado:
                                 item["estado"] = "WIN" if (g_loc > 0 and g_vis > 0) else "LOSS"
-                            # F) Córners (Por defecto de seguridad al finalizar)
-                            elif "Córners" in mercado or "Corners" in mercado:
-                                try:
-                                    val_linea = float(item.get("linea", 9.0))
-                                except Exception:
-                                    val_linea = 9.0
-                                # Nota: Las APIs libres no siempre entregan córners exactos pospartido. Se marca como resuelta.
-                                item["estado"] = "WIN" if tot_goles > val_linea else "LOSS"
 
                             actualizados += 1
 
@@ -243,7 +257,7 @@ def auto_verificar_apuestas():
                         linea = item.get("linea", "")
                         ks_dict = score_data["ks_dict"]
 
-                        # A) OVER / UNDER TOTALES
+                        # OVER / UNDER TOTALES
                         if "Carreras" in mercado or "Over" in mercado or "Under" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
@@ -274,7 +288,7 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # B) MONEYLINE
+                        # MONEYLINE
                         elif "Gana" in mercado or "ML" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -288,7 +302,7 @@ def auto_verificar_apuestas():
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # C) RUN LINE
+                        # RUN LINE
                         elif "RL" in mercado or "Run Line" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -304,7 +318,7 @@ def auto_verificar_apuestas():
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # D) NRFI / YRFI
+                        # NRFI / YRFI
                         elif "NRFI" in mercado or "YRFI" in mercado or "1st Inning" in mercado:
                             if "NRFI" in mercado or "0 Carreras" in mercado:
                                 if score_data["r1_tot"] > 0:
@@ -325,7 +339,7 @@ def auto_verificar_apuestas():
                                     item["resultado_real"] = "0 Carreras 1st Inn"
                                     actualizados += 1
 
-                        # E) PRIMERAS 5 ENTRADAS (F5)
+                        # PRIMERAS 5 ENTRADAS (F5)
                         elif "F5" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 3.5
@@ -366,7 +380,7 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5 en Vivo)"
 
-                        # F) PONCHES (K'S) EN VIVO
+                        # PONCHES (K'S) EN VIVO
                         elif "K's" in mercado or "Ponches" in mercado:
                             val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 5.5
                             k_actuales = max(ks_dict.values()) if ks_dict else 0
@@ -775,7 +789,7 @@ def to_american_str(prob):
 
 def render_tabla_historial_html(data_list):
     if not data_list:
-        st.caption("No hay registros que coincidan.")
+        st.caption("No hay registros en esta sección.")
         return
     rows_html = ""
     for row in data_list:
@@ -1507,7 +1521,6 @@ else:
     with col_g2:
         st.markdown(f"**Historial Registrado ({filtro_dep}):**")
         
-        # --- SEPARACIÓN POR SECCIONES SOLICITADA ---
         tab_pend, tab_win, tab_loss, tab_all = st.tabs([
             f"⏳ En Espera ({pending})", 
             f"✅ Ganadas WIN ({wins})", 
