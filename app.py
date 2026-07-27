@@ -207,7 +207,6 @@ def auto_verificar_apuestas():
                         mercado = item["mercado"]
                         linea = item.get("linea", "")
 
-                        # A) MERCADOS DE 1RA MITAD / 1HT
                         if "1ra Mitad" in mercado or "1HT" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else (0.5 if "0.5" in mercado else 1.5)
@@ -224,7 +223,6 @@ def auto_verificar_apuestas():
                                     item["resultado_real"] = f"{ht_goles} Goles (1HT)"
                                     actualizados += 1
 
-                        # B) TOTAL DE GOLES 90 MINUTOS
                         elif "Goles" in mercado or "Over" in mercado or "Under" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 2.5
@@ -241,7 +239,6 @@ def auto_verificar_apuestas():
                                     item["resultado_real"] = f"{g_loc} - {g_vis}"
                                     actualizados += 1
 
-                        # C) GANADOR DIRECTO / MONEYLINE
                         elif "Gana" in mercado:
                             if score_data["completed"]:
                                 item["resultado_real"] = f"{g_loc} - {g_vis}"
@@ -250,7 +247,6 @@ def auto_verificar_apuestas():
                                 else: item["estado"] = "LOSS"
                                 actualizados += 1
 
-                        # D) DOBLE OPORTUNIDAD
                         elif "1X" in mercado:
                             if score_data["completed"]:
                                 item["resultado_real"] = f"{g_loc} - {g_vis}"
@@ -262,7 +258,6 @@ def auto_verificar_apuestas():
                                 item["estado"] = "WIN" if g_vis >= g_loc else "LOSS"
                                 actualizados += 1
 
-                        # E) BOTH TEAMS TO SCORE (BTTS)
                         elif "BTTS" in mercado or "Ambos" in mercado:
                             if g_loc > 0 and g_vis > 0:
                                 item["estado"] = "WIN"
@@ -287,7 +282,6 @@ def auto_verificar_apuestas():
                         linea = item.get("linea", "")
                         ks_dict = score_data["ks_dict"]
 
-                        # A) OVER / UNDER TOTALES (EVALUACIÓN EN VIVO O FINAL)
                         if "Carreras" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
@@ -318,7 +312,6 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # B) MONEYLINE / GANADOR DIRECTO
                         elif "Gana" in mercado or "ML" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -329,7 +322,6 @@ def auto_verificar_apuestas():
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # C) RUN LINE (-1.5 / +1.5)
                         elif "RL" in mercado or "Run Line" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -345,7 +337,6 @@ def auto_verificar_apuestas():
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
-                        # D) NRFI / YRFI (1ER INNING)
                         elif "NRFI" in mercado or "YRFI" in mercado or "1st Inning" in mercado:
                             if "NRFI" in mercado or "0 Carreras" in mercado:
                                 if score_data["r1_tot"] > 0:
@@ -366,7 +357,6 @@ def auto_verificar_apuestas():
                                     item["resultado_real"] = "0 Carreras 1st Inn"
                                     actualizados += 1
 
-                        # E) PRIMERAS 5 ENTRADAS (F5)
                         elif "F5" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 3.5
@@ -407,7 +397,6 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5 en Vivo)"
 
-                        # F) PONCHES (K'S) EN VIVO
                         elif "K's" in mercado or "Ponches" in mercado:
                             val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 5.5
                             k_actuales = max(ks_dict.values()) if ks_dict else 0
@@ -1178,21 +1167,29 @@ else:
             whip_vis = pv5.number_input("WHIP", value=float(eq_visita_base["whip"]), step=0.01, format="%.2f", key="whip_vis")
             k_vis = pv6.number_input("K Total", value=int(eq_visita_base["k"]), step=1, key="k_vis")
 
-            st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:10px;'>CONDICIONES DEL CLIMA</p>", unsafe_allow_html=True)
-            cw1, cw2, cw3, cw4 = st.columns(4)
-            viento_kmh = cw1.number_input("Viento (km/h)", value=16, step=1)
-            viento_dir = cw2.selectbox("Dirección Viento", ["A favor (Out)", "En contra (In)", "Cruzado (Cross)"])
-            temp_c = cw3.number_input("Temperatura (°C)", value=24, step=1)
-            precip_pct = cw4.number_input("Precipitación (%)", value=0, step=5)
-
-        mult_viento = 1.0
-        if "favor" in viento_dir:
-            mult_viento += (viento_kmh * 0.006)
-        elif "contra" in viento_dir:
-            mult_viento -= (viento_kmh * 0.006)
+            # --- CONDICIONES DE CLIMA CON ESTADIO TECHADO Y TEMPERATURA DECIMAL ---
+            st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:10px;'>CONDICIONES DEL CLIMA Y ESTADIO</p>", unsafe_allow_html=True)
             
-        mult_temp = 1.0 + ((temp_c - 21) * 0.003)
-        mult_clima = mult_viento * mult_temp
+            tipo_estadio = st.radio("Tipo de Estadio:", ["Abierto (Open Air)", "Techo Cerrado / Domo (Indoor)"], horizontal=True, key="tipo_estadio")
+            es_domo = "Domo" in tipo_estadio or "Cerrado" in tipo_estadio
+
+            cw1, cw2, cw3, cw4 = st.columns(4)
+            viento_kmh = cw1.number_input("Viento (km/h)", value=0 if es_domo else 16, step=1, disabled=es_domo)
+            viento_dir = cw2.selectbox("Dirección Viento", ["A favor (Out)", "En contra (In)", "Cruzado (Cross)"], disabled=es_domo)
+            temp_c = cw3.number_input("Temperatura (°C)", value=21.0 if es_domo else 24.0, step=0.1, format="%.1f")
+            precip_pct = cw4.number_input("Precipitación (%)", value=0, step=5, disabled=es_domo)
+
+        if es_domo:
+            mult_clima = 1.0  # El clima exterior no afecta a un estadio techado / domo
+        else:
+            mult_viento = 1.0
+            if "favor" in viento_dir:
+                mult_viento += (viento_kmh * 0.006)
+            elif "contra" in viento_dir:
+                mult_viento -= (viento_kmh * 0.006)
+                
+            mult_temp = 1.0 + ((temp_c - 21.0) * 0.003)
+            mult_clima = mult_viento * mult_temp
 
         xr_local = ((eq_local_base["wRC_plus"] / 100.0) * (era_vis / 4.10) * (whip_vis / 1.25) * 4.30) * mult_clima
         xr_visita = ((eq_visita_base["wRC_plus"] / 100.0) * (era_loc / 4.10) * (whip_loc / 1.25) * 4.10) * mult_clima
