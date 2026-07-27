@@ -1149,7 +1149,7 @@ else:
         """, unsafe_allow_html=True)
 
         with st.expander("📊 PARÁMETROS DE ABRIDORES Y CLIMA", expanded=True):
-            st.markdown(f"<p style='color:#f5d742; font-weight:800;'>ESTADÍSTICAS ABRIDOR LOCAL: {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#f5d742; font-weight:800;'>ESTADÍSTICAS ABRIDOR LOCAL: {local_nombre[:3].upper()} ({pitcher_loc_auto})</p>", unsafe_allow_html=True)
             pl1, pl2, pl3, pl4, pl5, pl6 = st.columns(6)
             w_loc = pl1.number_input("W", value=int(eq_local_base["w"]), step=1, key="w_loc")
             l_loc = pl2.number_input("L", value=int(eq_local_base["l"]), step=1, key="l_loc")
@@ -1158,7 +1158,7 @@ else:
             whip_loc = pl5.number_input("WHIP", value=float(eq_local_base["whip"]), step=0.01, format="%.2f", key="whip_loc")
             k_loc = pl6.number_input("K Total", value=int(eq_local_base["k"]), step=1, key="k_loc")
 
-            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:10px;'>ESTADÍSTICAS ABRIDOR VISITANTE: {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:10px;'>ESTADÍSTICAS ABRIDOR VISITANTE: {visita_nombre[:3].upper()} ({pitcher_vis_auto})</p>", unsafe_allow_html=True)
             pv1, pv2, pv3, pv4, pv5, pv6 = st.columns(6)
             w_vis = pv1.number_input("W", value=int(eq_visita_base["w"]), step=1, key="w_vis")
             l_vis = pv2.number_input("L", value=int(eq_visita_base["l"]), step=1, key="l_vis")
@@ -1167,7 +1167,7 @@ else:
             whip_vis = pv5.number_input("WHIP", value=float(eq_visita_base["whip"]), step=0.01, format="%.2f", key="whip_vis")
             k_vis = pv6.number_input("K Total", value=int(eq_visita_base["k"]), step=1, key="k_vis")
 
-            # --- CONDICIONES DE CLIMA CON ESTADIO TECHADO Y TEMPERATURA DECIMAL ---
+            # CONDICIONES DE CLIMA CON ESTADIO TECHADO Y TEMPERATURA DECIMAL
             st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:10px;'>CONDICIONES DEL CLIMA Y ESTADIO</p>", unsafe_allow_html=True)
             
             tipo_estadio = st.radio("Tipo de Estadio:", ["Abierto (Open Air)", "Techo Cerrado / Domo (Indoor)"], horizontal=True, key="tipo_estadio")
@@ -1180,7 +1180,7 @@ else:
             precip_pct = cw4.number_input("Precipitación (%)", value=0, step=5, disabled=es_domo)
 
         if es_domo:
-            mult_clima = 1.0  # El clima exterior no afecta a un estadio techado / domo
+            mult_clima = 1.0
         else:
             mult_viento = 1.0
             if "favor" in viento_dir:
@@ -1303,31 +1303,31 @@ else:
             m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
             m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # PROPS DE PITCHERS
+            # PROPS DE PITCHERS CON NOMBRES DE PITCHERS
             opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
             
-            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S): {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S): <span style='color:#00ff66;'>{pitcher_loc_auto.upper()} ({local_nombre[:3].upper()})</span></p>", unsafe_allow_html=True)
             fk1, fk2, fk3 = st.columns(3)
-            linea_k_loc = fk1.selectbox(f"Línea K's ({local_nombre[:3]})", opciones_ks, index=5, key="lk_loc")
+            linea_k_loc = fk1.selectbox(f"Línea K's ({pitcher_loc_auto})", opciones_ks, index=5, key="lk_loc")
             m_k_loc_over_in = fk2.number_input("Over K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d", key="mk_loc_o")
             m_k_loc_under_in = fk3.number_input("Under K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d", key="mk_loc_u")
 
-            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:4px;'>PROPS DE PONCHES (K'S): {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:4px;'>PROPS DE PONCHES (K'S): <span style='color:#00ff66;'>{pitcher_vis_auto.upper()} ({visita_nombre[:3].upper()})</span></p>", unsafe_allow_html=True)
             fk4, fk5, fk6 = st.columns(3)
-            linea_k_vis = fk4.selectbox(f"Línea K's ({visita_nombre[:3]})", opciones_ks, index=5, key="lk_vis")
+            linea_k_vis = fk4.selectbox(f"Línea K's ({pitcher_vis_auto})", opciones_ks, index=5, key="lk_vis")
             m_k_vis_over_in = fk5.number_input("Over K's", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d", key="mk_vis_o")
             m_k_vis_under_in = fk6.number_input("Under K's", value=1.870 if es_dec else -115, format="%.3f" if es_dec else "%d", key="mk_vis_u")
 
             opciones_outs = ["13.5", "14.5", "15.5", "17.5", "18.5"]
-            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS: {local_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>6. PROPS DE OUTS REGISTRADOS: <span style='color:#00ff66;'>{pitcher_loc_auto.upper()} ({local_nombre[:3].upper()})</span></p>", unsafe_allow_html=True)
             fo1, fo2, fo3 = st.columns(3)
-            linea_outs_loc = fo1.selectbox(f"Línea Outs ({local_nombre[:3]})", opciones_outs, index=2, key="lo_loc")
+            linea_outs_loc = fo1.selectbox(f"Línea Outs ({pitcher_loc_auto})", opciones_outs, index=2, key="lo_loc")
             m_outs_loc_over_in = fo2.number_input("Over Outs", value=1.750 if es_dec else -133, format="%.3f" if es_dec else "%d", key="mo_loc_o")
             m_outs_loc_under_in = fo3.number_input("Under Outs", value=2.000 if es_dec else 100, format="%.3f" if es_dec else "%d", key="mo_loc_u")
 
-            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:4px;'>PROPS DE OUTS REGISTRADOS: {visita_nombre[:3].upper()}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:4px;'>PROPS DE OUTS REGISTRADOS: <span style='color:#00ff66;'>{pitcher_vis_auto.upper()} ({visita_nombre[:3].upper()})</span></p>", unsafe_allow_html=True)
             fo4, fo5, fo6 = st.columns(3)
-            linea_outs_vis = fo4.selectbox(f"Línea Outs ({visita_nombre[:3]})", opciones_outs, index=2, key="lo_vis")
+            linea_outs_vis = fo4.selectbox(f"Línea Outs ({pitcher_vis_auto})", opciones_outs, index=2, key="lo_vis")
             m_outs_vis_over_in = fo5.number_input("Over Outs", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d", key="mo_vis_o")
             m_outs_vis_under_in = fo6.number_input("Under Outs", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d", key="mo_vis_u")
 
@@ -1492,16 +1492,16 @@ else:
         render_card_mlb_con_tracker(f"{visita_nombre} Run Line +1.5", prob_rl_vis_plus, ev_rl_vis_plus, f"{visita_nombre} RL +1.5", m_rl_vis_plus, "+1.5")
 
         st.markdown("<div class='market-title'>4. Props de Pitcheo: Ponches (K's)</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_k_loc} K's", prob_k_loc_over, ev_k_loc_over, f"Abridor {local_nombre[:3]} Over {linea_k_loc} K's", m_k_loc_over, linea_k_loc)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_k_loc} K's", prob_k_loc_under, ev_k_loc_under, f"Abridor {local_nombre[:3]} Under {linea_k_loc} K's", m_k_loc_under, linea_k_loc)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_k_vis} K's", prob_k_vis_over, ev_k_vis_over, f"Abridor {visita_nombre[:3]} Over {linea_k_vis} K's", m_k_vis_over, linea_k_vis)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_k_vis} K's", prob_k_vis_under, ev_k_vis_under, f"Abridor {visita_nombre[:3]} Under {linea_k_vis} K's", m_k_vis_under, linea_k_vis)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_loc_auto} ({local_nombre[:3]}): OVER {linea_k_loc} K's", prob_k_loc_over, ev_k_loc_over, f"Abridor {pitcher_loc_auto} Over {linea_k_loc} K's", m_k_loc_over, linea_k_loc)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_loc_auto} ({local_nombre[:3]}): UNDER {linea_k_loc} K's", prob_k_loc_under, ev_k_loc_under, f"Abridor {pitcher_loc_auto} Under {linea_k_loc} K's", m_k_loc_under, linea_k_loc)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_vis_auto} ({visita_nombre[:3]}): OVER {linea_k_vis} K's", prob_k_vis_over, ev_k_vis_over, f"Abridor {pitcher_vis_auto} Over {linea_k_vis} K's", m_k_vis_over, linea_k_vis)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_vis_auto} ({visita_nombre[:3]}): UNDER {linea_k_vis} K's", prob_k_vis_under, ev_k_vis_under, f"Abridor {pitcher_vis_auto} Under {linea_k_vis} K's", m_k_vis_under, linea_k_vis)
 
         st.markdown("<div class='market-title'>5. Props de Pitcheo: Outs Registrados</div>", unsafe_allow_html=True)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: OVER {linea_outs_loc} Outs", prob_outs_loc_over, ev_outs_loc_over, f"Abridor {local_nombre[:3]} Over {linea_outs_loc} Outs", m_outs_loc_over, linea_outs_loc)
-        render_card_mlb_con_tracker(f"Abridor {local_nombre}: UNDER {linea_outs_loc} Outs", prob_outs_loc_under, ev_outs_loc_under, f"Abridor {local_nombre[:3]} Under {linea_outs_loc} Outs", m_outs_loc_under, linea_outs_loc)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: OVER {linea_outs_vis} Outs", prob_outs_vis_over, ev_outs_vis_over, f"Abridor {visita_nombre[:3]} Over {linea_outs_vis} Outs", m_outs_vis_over, linea_outs_vis)
-        render_card_mlb_con_tracker(f"Abridor {visita_nombre}: UNDER {linea_outs_vis} Outs", prob_outs_vis_under, ev_outs_vis_under, f"Abridor {visita_nombre[:3]} Under {linea_outs_vis} Outs", m_outs_vis_under, linea_outs_vis)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_loc_auto} ({local_nombre[:3]}): OVER {linea_outs_loc} Outs", prob_outs_loc_over, ev_outs_loc_over, f"Abridor {pitcher_loc_auto} Over {linea_outs_loc} Outs", m_outs_loc_over, linea_outs_loc)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_loc_auto} ({local_nombre[:3]}): UNDER {linea_outs_loc} Outs", prob_outs_loc_under, ev_outs_loc_under, f"Abridor {pitcher_loc_auto} Under {linea_outs_loc} Outs", m_outs_loc_under, linea_outs_loc)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_vis_auto} ({visita_nombre[:3]}): OVER {linea_outs_vis} Outs", prob_outs_vis_over, ev_outs_vis_over, f"Abridor {pitcher_vis_auto} Over {linea_outs_vis} Outs", m_outs_vis_over, linea_outs_vis)
+        render_card_mlb_con_tracker(f"Abridor {pitcher_vis_auto} ({visita_nombre[:3]}): UNDER {linea_outs_vis} Outs", prob_outs_vis_under, ev_outs_vis_under, f"Abridor {pitcher_vis_auto} Under {linea_outs_vis} Outs", m_outs_vis_under, linea_outs_vis)
 
         st.markdown("<div class='market-title'>6. Primeras 5 Entradas (F5 ML y Over/Under)</div>", unsafe_allow_html=True)
         render_card_mlb_con_tracker(f"F5 Ganador {local_nombre}", prob_f5_loc, ev_f5_loc, f"F5 ML {local_nombre}", m_f5_loc, "F5 ML")
