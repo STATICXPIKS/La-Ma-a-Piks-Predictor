@@ -152,6 +152,7 @@ def auto_verificar_apuestas():
                 f5_completo = (period > 5) or status_completed or (len(loc_linescore) >= 5 and len(vis_linescore) >= 5 and period == 5 and status_state == "post")
 
                 ks_dict = {}
+                outs_dict = {}
                 if status_state in ["in", "post"]:
                     try:
                         url_box = f"https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event={game_id}"
@@ -168,8 +169,19 @@ def auto_verificar_apuestas():
                                             p_name = ath.get("athlete", {}).get("displayName", "")
                                             stats_vals = ath.get("stats", [])
                                             if len(stats_vals) >= 6:
+                                                # Calcular Outs desde IP (Innings Pitched)
+                                                ip_str = str(stats_vals[0])
+                                                if "." in ip_str:
+                                                    parts = ip_str.split(".")
+                                                    outs_val = int(parts[0]) * 3 + int(parts[1])
+                                                elif ip_str.isdigit():
+                                                    outs_val = int(ip_str) * 3
+                                                else:
+                                                    outs_val = 0
+                                                
                                                 so_val = int(stats_vals[5]) if str(stats_vals[5]).isdigit() else 0
                                                 ks_dict[p_name.lower()] = so_val
+                                                outs_dict[p_name.lower()] = outs_val
                     except Exception:
                         pass
 
@@ -186,7 +198,8 @@ def auto_verificar_apuestas():
                     "f5_vis": f5_vis,
                     "f5_tot": f5_tot,
                     "f5_completo": f5_completo,
-                    "ks_dict": ks_dict
+                    "ks_dict": ks_dict,
+                    "outs_dict": outs_dict
                 }
     except Exception:
         pass
@@ -281,7 +294,9 @@ def auto_verificar_apuestas():
                         mercado = item["mercado"]
                         linea = item.get("linea", "")
                         ks_dict = score_data["ks_dict"]
+                        outs_dict = score_data["outs_dict"]
 
+                        # A) OVER / UNDER TOTALES (EVALUACIÓN EN VIVO O FINAL)
                         if "Carreras" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
@@ -312,6 +327,7 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
+                        # B) MONEYLINE / GANADOR DIRECTO
                         elif "Gana" in mercado or "ML" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -322,6 +338,7 @@ def auto_verificar_apuestas():
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
+                        # C) RUN LINE (-1.5 / +1.5)
                         elif "RL" in mercado or "Run Line" in mercado:
                             if score_data["completed"] or score_data["period"] >= 9:
                                 item["resultado_real"] = f"{r_loc} - {r_vis}"
@@ -337,6 +354,7 @@ def auto_verificar_apuestas():
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
+                        # D) NRFI / YRFI (1ER INNING)
                         elif "NRFI" in mercado or "YRFI" in mercado or "1st Inning" in mercado:
                             if "NRFI" in mercado or "0 Carreras" in mercado:
                                 if score_data["r1_tot"] > 0:
@@ -357,6 +375,7 @@ def auto_verificar_apuestas():
                                     item["resultado_real"] = "0 Carreras 1st Inn"
                                     actualizados += 1
 
+                        # E) PRIMERAS 5 ENTRADAS (F5)
                         elif "F5" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 3.5
@@ -397,9 +416,21 @@ def auto_verificar_apuestas():
                                 else:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5 en Vivo)"
 
+                        # F) PONCHES (K'S) EN VIVO
                         elif "K's" in mercado or "Ponches" in mercado:
-                            val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 5.5
-                            k_actuales = max(ks_dict.values()) if ks_dict else 0
+                            try:
+                                val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 5.5
+                            except Exception:
+                                val_target = 5.5
+
+                            k_actuales = 0
+                            if ks_dict:
+                                for p_name_k, k_val in ks_dict.items():
+                                    if p_name_k in mercado.lower():
+                                        k_actuales = k_val
+                                        break
+                                else:
+                                    k_actuales = max(ks_dict.values())
                             
                             if "Over" in mercado or "Más" in mercado:
                                 if k_actuales > val_target:
@@ -424,6 +455,46 @@ def auto_verificar_apuestas():
                                     actualizados += 1
                                 else:
                                     item["resultado_real"] = f"{k_actuales} K's en Vivo"
+
+                        # G) OUTS REGISTRADOS (PITCHERS)
+                        elif "Outs" in mercado:
+                            try:
+                                val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 15.5
+                            except Exception:
+                                val_target = 15.5
+
+                            outs_actuales = 0
+                            if outs_dict:
+                                for p_name_k, o_val in outs_dict.items():
+                                    if p_name_k in mercado.lower():
+                                        outs_actuales = o_val
+                                        break
+                                else:
+                                    outs_actuales = max(outs_dict.values())
+
+                            if "Over" in mercado or "Más" in mercado:
+                                if outs_actuales > val_target:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{outs_actuales} Outs (Cumplido)"
+                                    actualizados += 1
+                                elif score_data["completed"]:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{outs_actuales} Outs Final"
+                                    actualizados += 1
+                                else:
+                                    item["resultado_real"] = f"{outs_actuales} Outs en Vivo"
+
+                            elif "Under" in mercado or "Menos" in mercado:
+                                if outs_actuales > val_target:
+                                    item["estado"] = "LOSS"
+                                    item["resultado_real"] = f"{outs_actuales} Outs (Superado)"
+                                    actualizados += 1
+                                elif score_data["completed"]:
+                                    item["estado"] = "WIN"
+                                    item["resultado_real"] = f"{outs_actuales} Outs Final"
+                                    actualizados += 1
+                                else:
+                                    item["resultado_real"] = f"{outs_actuales} Outs en Vivo"
 
     guardar_base_datos(historial)
     st.session_state.historial_apuestas = historial
