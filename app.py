@@ -108,7 +108,7 @@ def obtener_lesiones_espn(deporte_key):
     return bajas_reportadas[:3]
 
 # ==========================================
-# MOTOR DE AUTO-VERIFICACIÓN EN VIVO
+# MOTOR DE AUTO-VERIFICACIÓN EN VIVO (CORREGIDO PARA DOBLE CARTELERA)
 # ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -116,7 +116,7 @@ def auto_verificar_apuestas():
 
     # 1. API LIGA MX (ESPN)
     url_mx = "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard"
-    res_mx = {}
+    res_mx = []
     try:
         r_mx = requests.get(url_mx, timeout=5)
         if r_mx.status_code == 200:
@@ -144,7 +144,10 @@ def auto_verificar_apuestas():
                         vis_score = int(t.get("score", 0))
                         vis_ht_score = ht_val
 
-                res_mx[f"{loc_name} vs {vis_name}"] = {
+                res_mx.append({
+                    "match_title": f"{loc_name} vs {vis_name}",
+                    "loc_name": loc_name,
+                    "vis_name": vis_name,
                     "completed": status_completed, 
                     "period": period,
                     "loc_score": loc_score, 
@@ -152,13 +155,13 @@ def auto_verificar_apuestas():
                     "ht_score_tot": loc_ht_score + vis_ht_score,
                     "loc_ht_score": loc_ht_score,
                     "vis_ht_score": vis_ht_score
-                }
+                })
     except Exception:
         pass
 
-    # 2. API MLB STATS
+    # 2. API MLB STATS (Soporta múltiples juegos/Doble Cartelera)
     url_mlb = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
-    res_mlb = {}
+    res_mlb = []
     try:
         r_mlb = requests.get(url_mlb, timeout=5)
         if r_mlb.status_code == 200:
@@ -227,7 +230,8 @@ def auto_verificar_apuestas():
                     except Exception:
                         pass
 
-                res_mlb[f"{loc_name} vs {vis_name}"] = {
+                res_mlb.append({
+                    "match_title": f"{loc_name} vs {vis_name}",
                     "completed": status_completed,
                     "state": status_state,
                     "period": period,
@@ -242,9 +246,12 @@ def auto_verificar_apuestas():
                     "f5_completo": f5_completo,
                     "ks_dict": ks_dict,
                     "outs_dict": outs_dict
-                }
+                })
     except Exception:
         pass
+
+    # Ordenar MLB para priorizar partidos ya concluidos
+    res_mlb.sort(key=lambda x: (not x["completed"], x["state"] == "pre"))
 
     # EVALUAR CADA APUESTA PENDIENTE
     for item in historial:
@@ -253,7 +260,8 @@ def auto_verificar_apuestas():
             
             # --- EVALUACIÓN LIGA MX ---
             if "Liga MX" in dep:
-                for match_title, score_data in res_mx.items():
+                for score_data in res_mx:
+                    match_title = score_data["match_title"]
                     if item["equipo_loc"].lower() in match_title.lower() and item["equipo_vis"].lower() in match_title.lower():
                         g_loc = score_data["loc_score"]
                         g_vis = score_data["vis_score"]
@@ -325,11 +333,14 @@ def auto_verificar_apuestas():
 
             # --- EVALUACIÓN MLB ---
             elif "MLB" in dep:
-                for match_title, score_data in res_mlb.items():
+                for score_data in res_mlb:
+                    match_title = score_data["match_title"]
+                    
+                    # Verificar coincidencia de ambos equipos
                     eq_loc_match = item["equipo_loc"].lower() in match_title.lower() or score_data["loc_name"].lower() in item["equipo_loc"].lower()
                     eq_vis_match = item["equipo_vis"].lower() in match_title.lower() or score_data["vis_name"].lower() in item["equipo_vis"].lower()
                     
-                    if eq_loc_match or eq_vis_match:
+                    if eq_loc_match and eq_vis_match:
                         r_loc = score_data["loc_score"]
                         r_vis = score_data["vis_score"]
                         tot_carreras = r_loc + r_vis
@@ -350,10 +361,12 @@ def auto_verificar_apuestas():
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{r_loc} - {r_vis}"
                                     actualizados += 1
+                                    break
                                 elif score_data["completed"]:
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{r_loc} - {r_vis}"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
@@ -362,10 +375,12 @@ def auto_verificar_apuestas():
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{r_loc} - {r_vis}"
                                     actualizados += 1
+                                    break
                                 elif score_data["completed"]:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{r_loc} - {r_vis}"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
@@ -377,6 +392,7 @@ def auto_verificar_apuestas():
                                 elif item["equipo_vis"] in mercado and r_vis > r_loc: item["estado"] = "WIN"
                                 else: item["estado"] = "LOSS"
                                 actualizados += 1
+                                break
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
@@ -393,6 +409,7 @@ def auto_verificar_apuestas():
                                     if "-1.5" in mercado or "-1.5" in linea: item["estado"] = "WIN" if diff >= 2 else "LOSS"
                                     elif "+1.5" in mercado or "+1.5" in linea: item["estado"] = "WIN" if diff >= -1 else "LOSS"
                                 actualizados += 1
+                                break
                             else:
                                 item["resultado_real"] = f"{r_loc} - {r_vis} (En Vivo)"
 
@@ -403,19 +420,23 @@ def auto_verificar_apuestas():
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{score_data['r1_tot']} Carreras 1st Inn"
                                     actualizados += 1
+                                    break
                                 elif score_data["period"] >= 2 or score_data["completed"]:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = "0 Carreras 1st Inn"
                                     actualizados += 1
+                                    break
                             elif "YRFI" in mercado or "1+" in mercado:
                                 if score_data["r1_tot"] > 0:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{score_data['r1_tot']} Carreras 1st Inn"
                                     actualizados += 1
+                                    break
                                 elif score_data["period"] >= 2 or score_data["completed"]:
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = "0 Carreras 1st Inn"
                                     actualizados += 1
+                                    break
 
                         # E) PRIMERAS 5 ENTRADAS (F5)
                         elif "F5" in mercado:
@@ -429,10 +450,12 @@ def auto_verificar_apuestas():
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5)"
                                     actualizados += 1
+                                    break
                                 elif score_data["f5_completo"]:
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5)"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5 en Vivo)"
                             
@@ -441,10 +464,12 @@ def auto_verificar_apuestas():
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5)"
                                     actualizados += 1
+                                    break
                                 elif score_data["f5_completo"]:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5)"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5 en Vivo)"
                             
@@ -455,6 +480,7 @@ def auto_verificar_apuestas():
                                     elif item["equipo_vis"] in mercado and score_data["f5_vis"] > score_data["f5_loc"]: item["estado"] = "WIN"
                                     else: item["estado"] = "LOSS"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{score_data['f5_loc']} - {score_data['f5_vis']} (F5 en Vivo)"
 
@@ -472,17 +498,19 @@ def auto_verificar_apuestas():
                                         k_actuales = k_val
                                         break
                                 else:
-                                    k_actuales = max(ks_dict.values())
+                                    k_actuales = max(ks_dict.values()) if ks_dict.values() else 0
                             
                             if "Over" in mercado or "Más" in mercado:
                                 if k_actuales > val_target:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{k_actuales} K's (Cumplido)"
                                     actualizados += 1
+                                    break
                                 elif score_data["completed"]:
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{k_actuales} K's Final"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{k_actuales} K's en Vivo"
                             
@@ -491,10 +519,12 @@ def auto_verificar_apuestas():
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{k_actuales} K's (Superado)"
                                     actualizados += 1
+                                    break
                                 elif score_data["completed"]:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{k_actuales} K's Final"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{k_actuales} K's en Vivo"
 
@@ -512,17 +542,19 @@ def auto_verificar_apuestas():
                                         outs_actuales = o_val
                                         break
                                 else:
-                                    outs_actuales = max(outs_dict.values())
+                                    outs_actuales = max(outs_dict.values()) if outs_dict.values() else 0
 
                             if "Over" in mercado or "Más" in mercado:
                                 if outs_actuales > val_target:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{outs_actuales} Outs (Cumplido)"
                                     actualizados += 1
+                                    break
                                 elif score_data["completed"]:
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{outs_actuales} Outs Final"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{outs_actuales} Outs en Vivo"
 
@@ -531,10 +563,12 @@ def auto_verificar_apuestas():
                                     item["estado"] = "LOSS"
                                     item["resultado_real"] = f"{outs_actuales} Outs (Superado)"
                                     actualizados += 1
+                                    break
                                 elif score_data["completed"]:
                                     item["estado"] = "WIN"
                                     item["resultado_real"] = f"{outs_actuales} Outs Final"
                                     actualizados += 1
+                                    break
                                 else:
                                     item["resultado_real"] = f"{outs_actuales} Outs en Vivo"
 
