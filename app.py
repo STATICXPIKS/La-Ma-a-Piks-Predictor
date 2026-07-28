@@ -65,7 +65,50 @@ def eliminar_apuesta(id_apuesta):
     st.rerun()
 
 # ==========================================
-# MOTOR DE AUTO-VERIFICACIÓN EN VIVO CORREGIDO
+# MOTOR DE DETECCIÓN DE TRAMPAS Y BAJAS
+# ==========================================
+def evaluar_riesgo_trampa(prob_real, momio_decimal, ev):
+    """
+    Evalúa si un +EV desproporcionado o una cuota desfasada 
+    pueden ser una trampa del casino por información de último momento.
+    """
+    if ev > 0.18:
+        return True, "⚠️ ALERTA TRAP: +EV anómalo (>18%). Posible baja clave de último minuto."
+    
+    if prob_real >= 0.65 and momio_decimal >= 2.20:
+        return True, "⚠️ ALERTA TRAP: Cuota sospechosamente alta para la probabilidad estimada."
+        
+    return False, ""
+
+@st.cache_data(ttl=900)
+def obtener_lesiones_espn(deporte_key):
+    """
+    Obtiene las últimas noticias y bajas reportadas en la API de ESPN
+    """
+    url_map = {
+        "Liga MX": "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/news",
+        "MLB": "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/news"
+    }
+    
+    bajas_reportadas = []
+    try:
+        url = url_map.get(deporte_key)
+        if url:
+            r = requests.get(url, timeout=4)
+            if r.status_code == 200:
+                articles = r.json().get("articles", [])
+                for art in articles:
+                    headline = art.get("headline", "")
+                    description = art.get("description", "")
+                    text = f"{headline} {description}".lower()
+                    if any(k in text for k in ["baja", "lesion", "out", "injured", "duda", "scratched", "lineup"]):
+                        bajas_reportadas.append(headline)
+    except Exception:
+        pass
+    return bajas_reportadas[:3]
+
+# ==========================================
+# MOTOR DE AUTO-VERIFICACIÓN EN VIVO
 # ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
@@ -169,7 +212,6 @@ def auto_verificar_apuestas():
                                             p_name = ath.get("athlete", {}).get("displayName", "")
                                             stats_vals = ath.get("stats", [])
                                             if len(stats_vals) >= 6:
-                                                # Calcular Outs desde IP (Innings Pitched)
                                                 ip_str = str(stats_vals[0])
                                                 if "." in ip_str:
                                                     parts = ip_str.split(".")
@@ -296,7 +338,7 @@ def auto_verificar_apuestas():
                         ks_dict = score_data["ks_dict"]
                         outs_dict = score_data["outs_dict"]
 
-                        # A) OVER / UNDER TOTALES (EVALUACIÓN EN VIVO O FINAL)
+                        # A) OVER / UNDER TOTALES
                         if "Carreras" in mercado:
                             try:
                                 val_target = float(linea) if (linea and linea.replace('.','',1).isdigit()) else 8.5
@@ -772,6 +814,17 @@ st.markdown("""
         border-color: #00ff66;
         box-shadow: 0 0 18px rgba(0, 255, 102, 0.5);
     }
+
+    .card-trap {
+        background: #381a20;
+        border: 1px solid #ff3366;
+        border-left: 5px solid #ff3366;
+        box-shadow: 0 0 14px rgba(255, 51, 102, 0.35);
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
     
     .badge-star {
         background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
@@ -802,6 +855,16 @@ st.markdown("""
         border-radius: 4px; 
         float: right; 
         font-size: 12px; 
+    }
+    .badge-trap-flag {
+        background: #ff3366;
+        color: #ffffff;
+        font-weight: 900;
+        padding: 4px 12px;
+        border-radius: 4px;
+        float: right;
+        font-size: 12px;
+        box-shadow: 0 0 10px rgba(255, 51, 102, 0.8);
     }
     
     .market-title { 
@@ -852,7 +915,6 @@ st.markdown("""
         box-shadow: 0 0 18px rgba(0, 255, 102, 0.9) !important;
     }
     
-    /* Estilos para las pestañas de listas */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
@@ -926,6 +988,13 @@ es_mlb = "MLB" in deporte
 deporte_actual_key = "MLB" if es_mlb else "Liga MX"
 
 st.markdown("<br>", unsafe_allow_html=True)
+
+# REPORTE EN VIVO DE LESIONES / BAJAS Y NOTICIAS
+noticias_lesiones = obtener_lesiones_espn(deporte_actual_key)
+if noticias_lesiones:
+    with st.expander(f"🩹 REPORTES DE BAJAS Y NOTICIAS EN VIVO - {deporte_actual_key.upper()}", expanded=False):
+        for noti in noticias_lesiones:
+            st.markdown(f"• <span style='color:#f5d742; font-size:13px;'>{noti}</span>", unsafe_allow_html=True)
 
 col_izq, col_der = st.columns([1, 1], gap="large")
 
@@ -1118,9 +1187,6 @@ if not es_mlb:
             texto_1ht_target = "1ra Mitad: Más de 1.5 Goles"
             linea_1ht_val = "1.5"
 
-        prob_ha_local = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (x - y) > 1])
-        prob_ha_visita = np.sum([matrix[x, y] for x in range(max_goles) for y in range(max_goles) if (y - x) > 1])
-
         c_target = int(linea_corners_sel)
         lambda_corners = corn_loc + corn_vis
         prob_over_corners = 1.0 - poisson.cdf(c_target, lambda_corners)
@@ -1139,10 +1205,14 @@ if not es_mlb:
         partido_nombre_mx = f"{local_nombre} vs {visita_nombre}"
 
         def render_card_pro_con_tracker(titulo, subtitulo, ev, prob_val, mercado_str, momio_val, linea_val=""):
-            es_estrella = (0.75 <= prob_val <= 0.90) and (ev > 0.0)
+            es_trampa, msj_trampa = evaluar_riesgo_trampa(prob_val, momio_val, ev)
+            es_estrella = (0.75 <= prob_val <= 0.90) and (0.02 < ev <= 0.18) and not es_trampa
             
-            if es_estrella:
-                badge_html = "<span class='badge-star'>💎 APUESTA ESTRELLA (+EV / ERROR DE CUOTA)</span>"
+            if es_trampa:
+                badge_html = "<span class='badge-trap-flag'>⚠️ POSIBLE TRAMPA (+EV SOSPECHOSO)</span>"
+                card_class = "card-trap"
+            elif es_estrella:
+                badge_html = "<span class='badge-star'>💎 APUESTA ESTRELLA (+EV VALIDADO)</span>"
                 card_class = "card-star"
             elif ev > 0.02:
                 badge_html = "<span class='badge-bet'>BET</span>"
@@ -1158,6 +1228,7 @@ if not es_mlb:
                     {badge_html}
                     <div style="font-weight: 800; font-size: 15px; color: #ffffff;">{titulo}</div>
                     <div class="subtext">{subtitulo} · <b style="color:#00ff66;">EV {ev*100:+.1f}%</b></div>
+                    {f'<div style="color:#ff3366; font-size:11px; font-weight:800; margin-top:4px;">{msj_trampa}</div>' if es_trampa else ''}
                 </div>
                 """, unsafe_allow_html=True)
             with c_card2:
@@ -1238,7 +1309,6 @@ else:
             whip_vis = pv5.number_input("WHIP", value=float(eq_visita_base["whip"]), step=0.01, format="%.2f", key="whip_vis")
             k_vis = pv6.number_input("K Total", value=int(eq_visita_base["k"]), step=1, key="k_vis")
 
-            # CONDICIONES DE CLIMA CON ESTADIO TECHADO Y TEMPERATURA DECIMAL
             st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:10px;'>CONDICIONES DEL CLIMA Y ESTADIO</p>", unsafe_allow_html=True)
             
             tipo_estadio = st.radio("Tipo de Estadio:", ["Abierto (Open Air)", "Techo Cerrado / Domo (Indoor)"], horizontal=True, key="tipo_estadio")
@@ -1344,20 +1414,17 @@ else:
             es_dec = "Decimal" in formato_m
             tipo_str = "Decimal" if es_dec else "Americano"
             
-            # 1. MONEYLINE
             st.markdown("<p style='color:#f5d742; font-weight:800;'>1. MONEYLINE (GANADOR DIRECTO)</p>", unsafe_allow_html=True)
             f1_1, f1_2 = st.columns(2)
             m_ml_loc_in = f1_1.number_input(f"ML {local_nombre.upper()}", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
             m_ml_vis_in = f1_2.number_input(f"ML {visita_nombre.upper()}", value=2.050 if es_dec else 105, format="%.3f" if es_dec else "%d")
             
-            # 2. TOTAL DE CARRERAS
             st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:8px;'>2. TOTAL DE CARRERAS (O/U)</p>", unsafe_allow_html=True)
             f2_1, f2_2, f2_3 = st.columns(3)
             linea_tot_mlb = f2_1.selectbox("LINEA TOTAL", ["8.5", "7.5", "9.5"])
             m_over_tot_in = f2_2.number_input("OVER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
             m_under_tot_in = f2_3.number_input("UNDER TOTAL", value=1.900 if es_dec else -110, format="%.3f" if es_dec else "%d")
 
-            # 3. RUN LINE
             st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:8px;'>3. RUN LINE (+1.5 Y -1.5 AMBOS EQUIPOS)</p>", unsafe_allow_html=True)
             f3_1, f3_2, f3_3, f3_4 = st.columns(4)
             m_rl_loc_minus_in = f3_1.number_input(f"RL {local_nombre[:3]} -1.5", value=2.450 if es_dec else 145, format="%.3f" if es_dec else "%d")
@@ -1365,7 +1432,6 @@ else:
             m_rl_vis_minus_in = f3_3.number_input(f"RL {visita_nombre[:3]} -1.5", value=2.600 if es_dec else 160, format="%.3f" if es_dec else "%d")
             m_rl_vis_plus_in = f3_4.number_input(f"RL {visita_nombre[:3]} +1.5", value=1.600 if es_dec else -166, format="%.3f" if es_dec else "%d")
 
-            # 4. F5
             st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:8px;'>4. PRIMERAS 5 ENTRADAS (F5 ML Y OVER/UNDER 3.5 A 5.5)</p>", unsafe_allow_html=True)
             f4_1, f4_2, f4_3, f4_4, f4_5 = st.columns(5)
             m_f5_loc_in = f4_1.number_input(f"F5 ML {local_nombre[:3]}", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d")
@@ -1374,7 +1440,6 @@ else:
             m_f5_over_in = f4_4.number_input(f"F5 OVER {linea_f5_sel}", value=1.850 if es_dec else -118, format="%.3f" if es_dec else "%d")
             m_f5_under_in = f4_5.number_input(f"F5 UNDER {linea_f5_sel}", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d")
 
-            # PROPS DE PITCHERS CON NOMBRES DE PITCHERS
             opciones_ks = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5", "6.5", "7.5", "8.5"]
             
             st.markdown(f"<p style='color:#f5d742; font-weight:800; margin-top:8px;'>5. PROPS DE PONCHES (K'S): <span style='color:#00ff66;'>{pitcher_loc_auto.upper()} ({local_nombre[:3].upper()})</span></p>", unsafe_allow_html=True)
@@ -1402,7 +1467,6 @@ else:
             m_outs_vis_over_in = fo5.number_input("Over Outs", value=1.800 if es_dec else -125, format="%.3f" if es_dec else "%d", key="mo_vis_o")
             m_outs_vis_under_in = fo6.number_input("Under Outs", value=1.950 if es_dec else -105, format="%.3f" if es_dec else "%d", key="mo_vis_u")
 
-            # 7. NRFI / YRFI
             st.markdown("<p style='color:#f5d742; font-weight:800; margin-top:8px;'>7. MERCADO 1ER INNING (NRFI / YRFI)</p>", unsafe_allow_html=True)
             fn1, fn2 = st.columns(2)
             m_nrfi_in = fn1.number_input("NRFI - No Run 1st Inning (Under 0.5)", value=1.830 if es_dec else -120, format="%.3f" if es_dec else "%d")
@@ -1444,18 +1508,15 @@ else:
         prob_ml_loc = np.sum(np.tril(matrix_mlb, -1))
         prob_ml_vis = np.sum(np.triu(matrix_mlb, 1))
 
-        # TOTALES
         tot_target = float(linea_tot_mlb)
         prob_tot_over = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y > tot_target])
         prob_tot_under = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y < tot_target])
 
-        # RUN LINE (+1.5 Y -1.5)
         prob_rl_loc_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
         prob_rl_loc_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= -1])
         prob_rl_vis_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= 2])
         prob_rl_vis_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
 
-        # K'S OVER Y UNDER
         k_target_loc = float(linea_k_loc)
         k_rate_loc = (k_loc / ip_loc) if ip_loc > 0 else 1.0
         outs_exp_loc_val = 17.5
@@ -1470,7 +1531,6 @@ else:
         prob_k_vis_over = 1.0 - poisson.cdf(int(k_target_vis), lambda_k_vis)
         prob_k_vis_under = poisson.cdf(int(k_target_vis), lambda_k_vis)
 
-        # OUTS OVER Y UNDER
         outs_target_loc = float(linea_outs_loc)
         prob_outs_loc_over = 1.0 - poisson.cdf(int(outs_target_loc), outs_exp_loc_val)
         prob_outs_loc_under = poisson.cdf(int(outs_target_loc), outs_exp_loc_val)
@@ -1479,19 +1539,16 @@ else:
         prob_outs_vis_over = 1.0 - poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
         prob_outs_vis_under = poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
 
-        # F5
         prob_f5_loc = np.sum(np.tril(matrix_f5, -1))
         prob_f5_vis = np.sum(np.triu(matrix_f5, 1))
         f5_target = float(linea_f5_sel)
         prob_f5_over = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y > f5_target])
         prob_f5_under = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y < f5_target])
 
-        # 1ER INNING (NRFI / YRFI)
         xr_1st_inn = (xr_local + xr_visita) * 0.13
         prob_nrfi = poisson.pmf(0, xr_1st_inn)
         prob_yrfi = 1.0 - prob_nrfi
 
-        # CÁLCULO DE VALOR ESPERADO (+EV%)
         ev_ml_loc = (prob_ml_loc * m_ml_loc) - 1
         ev_ml_vis = (prob_ml_vis * m_ml_vis) - 1
         ev_tot_over = (prob_tot_over * m_over_tot) - 1
@@ -1521,10 +1578,14 @@ else:
             momio_justo = 1.0 / prob_real if prob_real > 0 else 99.0
             momio_am = to_american_str(prob_real)
             
-            es_estrella = (0.75 <= prob_real <= 0.90) and (ev > 0.0)
+            es_trampa, msj_trampa = evaluar_riesgo_trampa(prob_real, momio_val, ev)
+            es_estrella = (0.75 <= prob_real <= 0.90) and (0.02 < ev <= 0.18) and not es_trampa
             
-            if es_estrella:
-                badge_html = "<span class='badge-star'>💎 APUESTA ESTRELLA (+EV / ERROR DE CUOTA)</span>"
+            if es_trampa:
+                badge_html = "<span class='badge-trap-flag'>⚠️ POSIBLE TRAMPA (+EV SOSPECHOSO)</span>"
+                card_class = "card-trap"
+            elif es_estrella:
+                badge_html = "<span class='badge-star'>💎 APUESTA ESTRELLA (+EV VALIDADO)</span>"
                 card_class = "card-star"
             elif ev > 0.02:
                 badge_html = "<span class='badge-bet'>BET</span>"
@@ -1542,6 +1603,7 @@ else:
                     <div class="subtext">
                         Prob. Real: <b>{prob_real*100:.1f}%</b> · Momio Justo: <b>{momio_justo:.3f} ({momio_am})</b> · <b style="color:#00ff66;">EV {ev*100:+.1f}%</b>
                     </div>
+                    {f'<div style="color:#ff3366; font-size:11px; font-weight:800; margin-top:4px;">{msj_trampa}</div>' if es_trampa else ''}
                 </div>
                 """, unsafe_allow_html=True)
             with c_card2:
@@ -1614,7 +1676,6 @@ if len(historial_filtrado) == 0:
 else:
     df = pd.DataFrame(historial_filtrado)
     
-    # SEPARACIÓN POR FASES DE APUESTA
     list_pending = [x for x in historial_filtrado if x.get("estado") == "PENDING"]
     list_win = [x for x in historial_filtrado if x.get("estado") == "WIN"]
     list_loss = [x for x in historial_filtrado if x.get("estado") == "LOSS"]
