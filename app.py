@@ -397,6 +397,39 @@ JERSEYS_LIGA_MX = {
     "Tijuana": {"c1": "#DA291C", "c2": "#000000"}, "Toluca": {"c1": "#DA291C", "c2": "#FFFFFF"}
 }
 
+JERSEYS_MLB = {
+    "NY Yankees": {"c1": "#001C43", "c2": "#FFFFFF"},
+    "LA Dodgers": {"c1": "#005A9C", "c2": "#FFFFFF"},
+    "Boston Red Sox": {"c1": "#BD3039", "c2": "#0C2340"},
+    "Houston Astros": {"c1": "#002D62", "c2": "#EB6E1F"},
+    "Atlanta Braves": {"c1": "#13274F", "c2": "#CE1141"},
+    "SD Padres": {"c1": "#2F241D", "c2": "#FFC425"},
+    "Chicago Cubs": {"c1": "#0E3386", "c2": "#CC3433"},
+    "SF Giants": {"c1": "#FD5A1E", "c2": "#000000"},
+    "NY Mets": {"c1": "#002D72", "c2": "#FF5910"},
+    "Philadelphia Phillies": {"c1": "#E81828", "c2": "#002D72"},
+    "Texas Rangers": {"c1": "#003278", "c2": "#C0111F"},
+    "Toronto Blue Jays": {"c1": "#134A8E", "c2": "#1D2D5C"},
+    "Seattle Mariners": {"c1": "#0C2340", "c2": "#005C5C"},
+    "Baltimore Orioles": {"c1": "#DF4601", "c2": "#000000"},
+    "Tampa Bay Rays": {"c1": "#092C5C", "c2": "#8FBCE6"},
+    "Arizona Diamondbacks": {"c1": "#A71930", "c2": "#E3D4AD"},
+    "Milwaukee Brewers": {"c1": "#12284C", "c2": "#FFC52F"},
+    "St. Louis Cardinals": {"c1": "#C41E3A", "c2": "#0C2340"},
+    "Cleveland Guardians": {"c1": "#0C2340", "c2": "#E31937"},
+    "Minnesota Twins": {"c1": "#002B5C", "c2": "#D31145"},
+    "Detroit Tigers": {"c1": "#0C2340", "c2": "#FA4616"},
+    "Chicago White Sox": {"c1": "#27251F", "c2": "#FFFFFF"},
+    "KC Royals": {"c1": "#004687", "c2": "#74B4E7"},
+    "LA Angels": {"c1": "#003263", "c2": "#BA0021"},
+    "Cincinnati Reds": {"c1": "#C6011F", "c2": "#000000"},
+    "Colorado Rockies": {"c1": "#333366", "c2": "#C4CED4"},
+    "Miami Marlins": {"c1": "#00A3E0", "c2": "#EF3340"},
+    "Pittsburgh Pirates": {"c1": "#FDB827", "c2": "#000000"},
+    "Washington Nationals": {"c1": "#AB0003", "c2": "#14225A"},
+    "Oakland Athletics": {"c1": "#003831", "c2": "#EFB21E"}
+}
+
 EQUIPOS_LIGA_MX_BASE = {
     "América": {"altitud": 2240, "att": 2.10, "def": 0.85, "corners": 6.2},
     "Chivas": {"altitud": 1560, "att": 1.60, "def": 1.05, "corners": 5.5},
@@ -440,6 +473,36 @@ def obtener_abridores_mlb_hoy(team_id_local, team_id_visita):
     except Exception:
         pass
     return p_loc, p_vis
+
+@st.cache_data(ttl=3600)
+def obtener_stats_liga_mx_api():
+    url = "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/standings"
+    stats_actualizadas = EQUIPOS_LIGA_MX_BASE.copy()
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            children = data.get("children", [])
+            if children:
+                standings = children[0].get("standings", {}).get("entries", [])
+                for entry in standings:
+                    team_name = entry.get("team", {}).get("name", "")
+                    stats = entry.get("stats", [])
+                    mp, gf, ga = 1, 0, 0
+                    for s in stats:
+                        if s.get("name") == "gamesPlayed": mp = s.get("value", 1)
+                        if s.get("name") == "pointsFor": gf = s.get("value", 0)
+                        if s.get("name") == "pointsAgainst": ga = s.get("value", 0)
+                    if mp > 0:
+                        att_calc = max(0.8, gf / mp)
+                        def_calc = max(0.7, ga / mp)
+                        for eq in stats_actualizadas:
+                            if eq.lower() in team_name.lower() or team_name.lower() in eq.lower():
+                                stats_actualizadas[eq]["att"] = round(att_calc, 2)
+                                stats_actualizadas[eq]["def"] = round(def_calc, 2)
+    except Exception:
+        pass
+    return stats_actualizadas
 
 # ==========================================
 # ESTILOS CSS
@@ -744,18 +807,18 @@ if es_mlb:
             prob_impl_casa = 1.0 / m_casa if m_casa > 0 else 0.0
             brecha_ev = (p - prob_impl_casa) * 100
 
-            # 1. MATRIZ DE RIESGO DE 3 NIVELES SIN BRECHAS
+            # 1. MATRIZ DE RIESGO DE 3 NIVELES
             if 0.75 <= p <= 0.90:
                 certeza_txt = "HIGH CONFIDENCE (75%-90%)"
                 badge_certeza = "<span class='badge-high'>🟢 HIGH</span>"
             elif 0.60 <= p <= 0.74:
                 certeza_txt = "MEDIUM PROBABILITY (60%-74%)"
                 badge_certeza = "<span class='badge-med'>🟠 MEDIUM</span>"
-            else: # 10% a 59%
+            else:
                 certeza_txt = "LOW PROBABILITY (10%-59%)"
                 badge_certeza = "<span class='badge-low'>🔴 LOW</span>"
 
-            # 2. AUDITORÍA ANTI-TRAMPA (3 ETIQUETAS)
+            # 2. AUDITORÍA ANTI-TRAMPA
             if brecha_ev > 25.0:
                 auditoria = "⚠️ ALERTA DE FACTOR OCULTO"
             elif ev < -0.10:
@@ -802,13 +865,14 @@ if es_mlb:
         st.dataframe(df_resumen, use_container_width=True, hide_index=True)
 
 # ==========================================
-# SECCIÓN LIGA MX (MANTENIDA)
+# SECCIÓN LIGA MX
 # ==========================================
 else:
     EQUIPOS = obtener_stats_liga_mx_api()
+    JERSEYS = JERSEYS_LIGA_MX
     with col_izq:
         st.markdown("<div class='header-text-left'>ANALISIS PRO-LIGA MX</div>", unsafe_allow_html=True)
-        st.info("💡 Cambia a 'MLB Sabermétrico' en la barra superior para ejecutar el Auditor Anti-Trampa.")
+        st.info("💡 Cambia a 'MLB Sabermétrico' arriba para el Auditor Anti-Trampa.")
 
 # ==========================================
 # PANEL INFERIOR: TRACKER EN 3 PESTAÑAS
