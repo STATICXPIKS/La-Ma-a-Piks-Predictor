@@ -72,8 +72,8 @@ ESTADIOS_COORDS = {
     "Oracle Park": {"lat": 37.7786, "lon": -122.3893, "factor": 0.93},
     "Truist Park": {"lat": 33.8908, "lon": -84.4678, "factor": 1.01},
     "Great American Ball Park": {"lat": 39.0974, "lon": -84.5085, "factor": 1.08},
-    "Daikin Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
     "Minute Maid Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
+    "Daikin Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
     "Rogers Centre": {"lat": 43.6414, "lon": -79.3894, "factor": 1.02},
 }
 
@@ -84,8 +84,9 @@ def obtener_clima_estadio(nombre_estadio):
     try:
         res = requests.get(url, timeout=5).json()
         current = res.get("current", {})
+        temp_c = current.get('temperature_2m', 24)
         return {
-            "temperatura": f"{current.get('temperature_2m', 24)}°C",
+            "temperatura": f"{temp_c}°C",
             "humedad": f"{current.get('relative_humidity_2m', 55)}%",
             "viento": f"{current.get('wind_speed_10m', 9)} km/h",
             "park_factor": coords["factor"]
@@ -106,13 +107,12 @@ def obtener_juegos_hoy(fecha_str):
                 home_team = game["teams"]["home"]["team"]["name"]
                 venue_name = game.get("venue", {}).get("name", "Great American Ball Park")
                 
-                # Extract confirmed probable pitchers safely
                 probable_pitchers = game.get("probablePitchers", {})
-                away_pitcher_data = probable_pitchers.get("away")
-                home_pitcher_data = probable_pitchers.get("home")
+                away_p_data = probable_pitchers.get("away")
+                home_p_data = probable_pitchers.get("home")
                 
-                away_pitcher = away_pitcher_data.get("fullName", f"Abridor {away_team}") if away_pitcher_data else f"Abridor {away_team}"
-                home_pitcher = home_pitcher_data.get("fullName", f"Abridor {home_team}") if home_pitcher_data else f"Abridor {home_team}"
+                away_pitcher = away_p_data.get("fullName") if away_p_data and "fullName" in away_p_data else f"Abridor {away_team}"
+                home_pitcher = home_p_data.get("fullName") if home_p_data and "fullName" in home_p_data else f"Abridor {home_team}"
                 
                 juegos_lista.append({
                     "matchup": f"{away_team} @ {home_team}",
@@ -168,8 +168,8 @@ def evaluar_opcion(prob_modelo_pct, momio_casa):
         clase_css = "badge-fade"
     return edge, estado, clase_css
 
-st.title("⚾ Analizador Sabermétrico MLB (Selección Dual de Momios Over/Under)")
-st.markdown("Introduce los momios del casino para **ambos lados** en los 7 mercados clave. El modelo sabermétrico contrastará xERA, FIP, WHIP, K%, Bullpen y Clima para determinar cuál lado tiene mayor valor y probabilidad.")
+st.title("⚾ Analizador Sabermétrico MLB (Selección Dual de Momios)")
+st.markdown("Introduce los momios del casino para **ambos lados** en los 7 mercados clave. El modelo sabermétrico contrastará xERA, FIP, WHIP, K%, Bullpen y Clima.")
 
 st.sidebar.header("📅 Fecha y Encuentro")
 fecha_seleccionada = st.sidebar.date_input("Fecha", datetime.now())
