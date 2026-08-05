@@ -74,6 +74,7 @@ ESTADIOS_COORDS = {
     "Great American Ball Park": {"lat": 39.0974, "lon": -84.5085, "factor": 1.08},
     "Daikin Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
     "Minute Maid Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
+    "Rogers Centre": {"lat": 43.6414, "lon": -79.3894, "factor": 1.02},
 }
 
 @st.cache_data(ttl=1800)
@@ -105,12 +106,13 @@ def obtener_juegos_hoy(fecha_str):
                 home_team = game["teams"]["home"]["team"]["name"]
                 venue_name = game.get("venue", {}).get("name", "Great American Ball Park")
                 
-                # Robust extraction of probable pitchers with fallback names
-                away_pitcher_data = game.get("probablePitchers", {}).get("away")
-                home_pitcher_data = game.get("probablePitchers", {}).get("home")
+                # Extract confirmed probable pitchers safely
+                probable_pitchers = game.get("probablePitchers", {})
+                away_pitcher_data = probable_pitchers.get("away")
+                home_pitcher_data = probable_pitchers.get("home")
                 
-                away_pitcher = away_pitcher_data.get("fullName", "Pitcher Visitante (Por Anunciar)") if away_pitcher_data else "Shane Bieber (Estelar Abridor)"
-                home_pitcher = home_pitcher_data.get("fullName", "Pitcher Local (Por Anunciar)") if home_pitcher_data else "Gerrit Cole (Estelar Abridor)"
+                away_pitcher = away_pitcher_data.get("fullName", f"Abridor {away_team}") if away_pitcher_data else f"Abridor {away_team}"
+                home_pitcher = home_pitcher_data.get("fullName", f"Abridor {home_team}") if home_pitcher_data else f"Abridor {home_team}"
                 
                 juegos_lista.append({
                     "matchup": f"{away_team} @ {home_team}",
@@ -123,13 +125,13 @@ def obtener_juegos_hoy(fecha_str):
                 })
         if not juegos_lista:
             juegos_lista = [{
-                "matchup": "Athletics @ Reds (Ejemplo Estelar)",
+                "matchup": "Athletics @ Reds (Juego Muestra)",
                 "away": "Athletics",
                 "home": "Reds",
                 "away_pitcher": "Jacob Lopez",
                 "home_pitcher": "Rhett Lowder",
                 "venue": "Great American Ball Park",
-                "status": "Pre-Game"
+                "status": "Scheduled"
             }]
         return juegos_lista
     except:
@@ -212,18 +214,19 @@ edge_a, est_a, css_a = evaluar_opcion(32.8, momio_away_ml)
 edge_h, est_h, css_h = evaluar_opcion(67.2, momio_home_ml)
 mejor_ml = "Home" if edge_h >= edge_a else "Away"
 
-st.markdown(f"""
-<div class="pick-box">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span><b>{juego['away']}:</b> Prob 32.8% | Momio {momio_away_ml} | Edge {edge_a:+.1f}% <span class="{css_a}">{est_a}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (HOME)</span>' if mejor_ml == 'Home' else ''}
+with st.container():
+    st.markdown(f"""
+    <div class="pick-box">
+        <div style="margin-bottom:8px;">
+            <b>{juego['away']}:</b> Prob 32.8% | Momio {momio_away_ml} | Edge {edge_a:+.1f}% <span class="{css_a}">{est_a}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_ml == 'Away' else ''}
+        </div>
+        <div>
+            <b>{juego['home']}:</b> Prob 67.2% | Momio {momio_home_ml} | Edge {edge_h:+.1f}% <span class="{css_h}">{est_h}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_ml == 'Home' else ''}
+        </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span><b>{juego['home']}:</b> Prob 67.2% | Momio {momio_home_ml} | Edge {edge_h:+.1f}% <span class="{css_h}">{est_h}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (AWAY)</span>' if mejor_ml == 'Away' else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 st.markdown(f"**2. Total Carreras (Over / Under Línea Estándar)**")
 col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
@@ -238,18 +241,19 @@ edge_ov, est_ov, css_ov = evaluar_opcion(61.4, momio_over)
 edge_un, est_un, css_un = evaluar_opcion(38.6, momio_under)
 mejor_ou = "Over" if edge_ov >= edge_un else "Under"
 
-st.markdown(f"""
-<div class="pick-box">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span><b>Over 9.5:</b> Prob 61.4% | Momio {momio_over} | Edge {edge_ov:+.1f}% <span class="{css_ov}">{est_ov}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (OVER)</span>' if mejor_ou == 'Over' else ''}
+with st.container():
+    st.markdown(f"""
+    <div class="pick-box">
+        <div style="margin-bottom:8px;">
+            <b>Over 9.5:</b> Prob 61.4% | Momio {momio_over} | Edge {edge_ov:+.1f}% <span class="{css_ov}">{est_ov}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_ou == 'Over' else ''}
+        </div>
+        <div>
+            <b>Under 9.5:</b> Prob 38.6% | Momio {momio_under} | Edge {edge_un:+.1f}% <span class="{css_un}">{est_un}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_ou == 'Under' else ''}
+        </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span><b>Under 9.5:</b> Prob 38.6% | Momio {momio_under} | Edge {edge_un:+.1f}% <span class="{css_un}">{est_un}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (UNDER)</span>' if mejor_ou == 'Under' else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 st.markdown(f"**3. Run Line / Hándicap (-1.5 / +1.5)**")
 col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
@@ -264,20 +268,21 @@ edge_rlh, est_rlh, css_rlh = evaluar_opcion(54.2, momio_rl_home)
 edge_rla, est_rla, css_rla = evaluar_opcion(45.8, momio_rl_away)
 mejor_rl = "Home" if edge_rlh >= edge_rla else "Away"
 
-st.markdown(f"""
-<div class="pick-box">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span><b>{juego['home']} -1.5:</b> Prob 54.2% | Momio {momio_rl_home} | Edge {edge_rlh:+.1f}% <span class="{css_rlh}">{est_rlh}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_rl == 'Home' else ''}
+with st.container():
+    st.markdown(f"""
+    <div class="pick-box">
+        <div style="margin-bottom:8px;">
+            <b>{juego['home']} -1.5:</b> Prob 54.2% | Momio {momio_rl_home} | Edge {edge_rlh:+.1f}% <span class="{css_rlh}">{est_rlh}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_rl == 'Home' else ''}
+        </div>
+        <div>
+            <b>{juego['away']} +1.5:</b> Prob 45.8% | Momio {momio_rl_away} | Edge {edge_rla:+.1f}% <span class="{css_rla}">{est_rla}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_rl == 'Away' else ''}
+        </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span><b>{juego['away']} +1.5:</b> Prob 45.8% | Momio {momio_rl_away} | Edge {edge_rla:+.1f}% <span class="{css_rla}">{est_rla}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_rl == 'Away' else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-st.markdown(f"**4. Ponches Totales (Over/Under K's del Abridor Local: {juego['home_pitcher']})**")
+st.markdown(f"**4. Ponches Totales (Props de K's del Abridor Local: {juego['home_pitcher']})**")
 col_k1, col_k2, col_k3 = st.columns([2, 1, 1])
 with col_k1:
     st.write("Análisis K% y BvP del abridor local: **Over 5.5 K's (66.5%)** / **Under 5.5 K's (33.5%)**")
@@ -290,18 +295,19 @@ edge_kov, est_kov, css_kov = evaluar_opcion(66.5, momio_k_over)
 edge_kun, est_kun, css_kun = evaluar_opcion(33.5, momio_k_under)
 mejor_k = "Over" if edge_kov >= edge_kun else "Under"
 
-st.markdown(f"""
-<div class="pick-box">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span><b>Over 5.5 K's:</b> Prob 66.5% | Momio {momio_k_over} | Edge {edge_kov:+.1f}% <span class="{css_kov}">{est_kov}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (OVER)</span>' if mejor_k == 'Over' else ''}
+with st.container():
+    st.markdown(f"""
+    <div class="pick-box">
+        <div style="margin-bottom:8px;">
+            <b>Over 5.5 K's:</b> Prob 66.5% | Momio {momio_k_over} | Edge {edge_kov:+.1f}% <span class="{css_kov}">{est_kov}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_k == 'Over' else ''}
+        </div>
+        <div>
+            <b>Under 5.5 K's:</b> Prob 33.5% | Momio {momio_k_under} | Edge {edge_kun:+.1f}% <span class="{css_kun}">{est_kun}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_k == 'Under' else ''}
+        </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span><b>Under 5.5 K's:</b> Prob 33.5% | Momio {momio_k_under} | Edge {edge_kun:+.1f}% <span class="{css_kun}">{est_kun}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (UNDER)</span>' if mejor_k == 'Under' else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 st.markdown(f"**5. Outs Totales del Abridor Local ({juego['home_pitcher']})**")
 col_o1, col_o2, col_o3 = st.columns([2, 1, 1])
@@ -316,18 +322,19 @@ edge_oov, est_oov, css_oov = evaluar_opcion(70.2, momio_out_over)
 edge_oun, est_oun, css_oun = evaluar_opcion(29.8, momio_out_under)
 mejor_out = "Over" if edge_oov >= edge_oun else "Under"
 
-st.markdown(f"""
-<div class="pick-box">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span><b>Over 17.5 Outs:</b> Prob 70.2% | Momio {momio_out_over} | Edge {edge_oov:+.1f}% <span class="{css_oov}">{est_oov}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (OVER)</span>' if mejor_out == 'Over' else ''}
+with st.container():
+    st.markdown(f"""
+    <div class="pick-box">
+        <div style="margin-bottom:8px;">
+            <b>Over 17.5 Outs:</b> Prob 70.2% | Momio {momio_out_over} | Edge {edge_oov:+.1f}% <span class="{css_oov}">{est_oov}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_out == 'Over' else ''}
+        </div>
+        <div>
+            <b>Under 17.5 Outs:</b> Prob 29.8% | Momio {momio_out_under} | Edge {edge_oun:+.1f}% <span class="{css_oun}">{est_oun}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_out == 'Under' else ''}
+        </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span><b>Under 17.5 Outs:</b> Prob 29.8% | Momio {momio_out_under} | Edge {edge_oun:+.1f}% <span class="{css_oun}">{est_oun}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (UNDER)</span>' if mejor_out == 'Under' else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 st.markdown(f"**6. Primeras 5 Entradas (F5 - Ganador)**")
 col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
@@ -342,18 +349,19 @@ edge_f5a, est_f5a, css_f5a = evaluar_opcion(35.0, momio_f5_away)
 edge_f5h, est_f5h, css_f5h = evaluar_opcion(65.0, momio_f5_home)
 mejor_f5 = "Home" if edge_f5h >= edge_f5a else "Away"
 
-st.markdown(f"""
-<div class="pick-box">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span><b>{juego['away']} F5:</b> Prob 35.0% | Momio {momio_f5_away} | Edge {edge_f5a:+.1f}% <span class="{css_f5a}">{est_f5a}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_f5 == 'Away' else ''}
+with st.container():
+    st.markdown(f"""
+    <div class="pick-box">
+        <div style="margin-bottom:8px;">
+            <b>{juego['away']} F5:</b> Prob 35.0% | Momio {momio_f5_away} | Edge {edge_f5a:+.1f}% <span class="{css_f5a}">{est_f5a}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_f5 == 'Away' else ''}
+        </div>
+        <div>
+            <b>{juego['home']} F5:</b> Prob 65.0% | Momio {momio_f5_home} | Edge {edge_f5h:+.1f}% <span class="{css_f5h}">{est_f5h}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_f5 == 'Home' else ''}
+        </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span><b>{juego['home']} F5:</b> Prob 65.0% | Momio {momio_f5_home} | Edge {edge_f5h:+.1f}% <span class="{css_f5h}">{est_f5h}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_f5 == 'Home' else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 st.markdown(f"**7. NRFI / YRFI (Carrera en la 1ª Entrada)**")
 col_n1, col_n2, col_n3 = st.columns([2, 1, 1])
@@ -368,18 +376,19 @@ edge_nr, est_nr, css_nr = evaluar_opcion(62.5, momio_nrfi)
 edge_yr, est_yr, css_yr = evaluar_opcion(37.5, momio_yrfi)
 mejor_ny = "NRFI" if edge_nr >= edge_yr else "YRFI"
 
-st.markdown(f"""
-<div class="pick-box">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span><b>NRFI (No):</b> Prob 62.5% | Momio {momio_nrfi} | Edge {edge_nr:+.1f}% <span class="{css_nr}">{est_nr}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (NRFI)</span>' if mejor_ny == 'NRFI' else ''}
+with st.container():
+    st.markdown(f"""
+    <div class="pick-box">
+        <div style="margin-bottom:8px;">
+            <b>NRFI (No):</b> Prob 62.5% | Momio {momio_nrfi} | Edge {edge_nr:+.1f}% <span class="{css_nr}">{est_nr}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_ny == 'NRFI' else ''}
+        </div>
+        <div>
+            <b>YRFI (Yes):</b> Prob 37.5% | Momio {momio_yrfi} | Edge {edge_yr:+.1f}% <span class="{css_yr}">{est_yr}</span>
+            {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_ny == 'YRFI' else ''}
+        </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span><b>YRFI (Yes):</b> Prob 37.5% | Momio {momio_yrfi} | Edge {edge_yr:+.1f}% <span class="{css_yr}">{est_yr}</span></span>
-        {'<span class="best-value-tag">⭐ MAYOR VALOR (YRFI)</span>' if mejor_ny == 'YRFI' else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 st.markdown("💡 *Nota: El sistema evalúa de forma automática qué lado de la apuesta ofrece el mayor retorno positivo (+EV) frente a la probabilidad matemática del modelo sabermétrico.*")
