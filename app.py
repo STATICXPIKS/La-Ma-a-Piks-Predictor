@@ -99,13 +99,16 @@ st.markdown("""
     p, span, label {
         color: #cbd5e1 !important;
     }
-    /* Estilo de inputs de números y textos flotantes para asegurar visibilidad total */
+    
+    /* Forzar fondo Negro-Carbón en todas las cajas de números y inputs */
     div[data-baseweb="input"] {
-        background-color: #081c13 !important;
+        background-color: #121212 !important;
         border-color: #10b981 !important;
     }
     input {
+        background-color: #121212 !important;
         color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -260,7 +263,7 @@ def render_pick_box_clean(label_izq, prob_izq, momio_izq, label_der, prob_der, m
         st.markdown(f"""
         <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:14px; margin-bottom:8px;">
             <div style="color:#ffffff; font-weight:bold; font-size:1.05rem; margin-bottom:4px;">{label_izq}</div>
-            <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:8px;">Prob: {prob_izq}% | Momio: {momio_izq} | Edge: {edge_i:+.1f}%</div>
+            <div style="color:#cbd5e1; font-size:0.85rem; margin-bottom:8px;">Prob: {prob_izq}% | Momio: {momio_izq} | Edge: {edge_i:+.1f}%</div>
             <div>{tags_html}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -275,7 +278,7 @@ def render_pick_box_clean(label_izq, prob_izq, momio_izq, label_der, prob_der, m
         st.markdown(f"""
         <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:14px; margin-bottom:8px;">
             <div style="color:#ffffff; font-weight:bold; font-size:1.05rem; margin-bottom:4px;">{label_der}</div>
-            <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:8px;">Prob: {prob_der}% | Momio: {momio_der} | Edge: {edge_d:+.1f}%</div>
+            <div style="color:#cbd5e1; font-size:0.85rem; margin-bottom:8px;">Prob: {prob_der}% | Momio: {momio_der} | Edge: {edge_d:+.1f}%</div>
             <div>{tags_html_d}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -297,7 +300,7 @@ st.sidebar.markdown(f"🌡️ **Temp:** {clima['temperatura']} | 💨 **Viento:*
 col_h1, col_h2 = st.columns([4, 1])
 with col_h1:
     st.markdown("## ⚾ LA MAÑA PIKS · Auditoría Sabermétrica MLB")
-    st.markdown("<span style='color: #94a3b8;'>Comparativa en tiempo real contra cuotas de casino. Detección automática de Errores de Cuota (+EV) y Apuestas Estrella.</span>", unsafe_allow_html=True)
+    st.markdown("<span style='color: #94a3b8;'>Compara tu probabilidad calculada contra la probabilidad implícita de la cuota/momio del casino para determinar si existe Valor Esperado Positivo (+EV) o un Error de Cuota (Mispriced Line). Añade un distintivo especial si detectas la combinación dorada: 💎 APUESTA ESTRELLA (+EV / ERROR DE CUOTA): Reservada ÚNICAMENTE para selecciones en RANGO VERDE (75%-90%)</span>", unsafe_allow_html=True)
 with col_h2:
     st.markdown("<div style='text-align: right; padding-top: 10px;'><span style='background-color:rgba(16, 185, 129, 0.25); color:#34d399; border:1px solid #10b981; padding:6px 12px; border-radius:8px; font-weight:bold;'>🟢 API EN VIVO</span></div>", unsafe_allow_html=True)
 
@@ -312,13 +315,13 @@ st.markdown(f"""
     <div style="display:flex; align-items:center; margin-bottom: 12px;">
         <img src="{juego['away_logo']}" width="36" height="36" style="margin-right: 12px; object-fit: contain;" onerror="this.src='https://placehold.co/36x36/png?text=MLB'">
         <div style="font-size: 1.15rem; font-weight: bold; color: #ffffff;">
-            {juego['away']} <span style="font-size: 0.85rem; color:#94a3b8; font-weight:normal;">(Abre {juego['away_pitcher']})</span>
+            {juego['away']} <span style="font-size: 0.85rem; color:#cbd5e1; font-weight:normal;">(Abre {juego['away_pitcher']})</span>
         </div>
     </div>
     <div style="display:flex; align-items:center;">
         <img src="{juego['home_logo']}" width="36" height="36" style="margin-right: 12px; object-fit: contain;" onerror="this.src='https://placehold.co/36x36/png?text=MLB'">
         <div style="font-size: 1.15rem; font-weight: bold; color: #ffffff;">
-            {juego['home']} <span style="font-size: 0.85rem; color:#94a3b8; font-weight:normal;">(Abre {juego['home_pitcher']})</span>
+            {juego['home']} <span style="font-size: 0.85rem; color:#cbd5e1; font-weight:normal;">(Abre {juego['home_pitcher']})</span>
         </div>
     </div>
 </div>
@@ -337,49 +340,85 @@ with col_m3:
     momio_home_ml = st.number_input(f"Momio {juego['home']} (ML)", value=-170, step=5, key="ml_home")
 render_pick_box_clean(juego['away'], 38.5, momio_away_ml, juego['home'], 61.5, momio_home_ml)
 
-# 2. Total Carreras
-st.markdown(f"**2. Total Carreras (Over / Under Línea Estándar 9.5)**")
+# 2. Total Carreras (Over / Under Línea Personalizable 4.5 a 15.5)
+st.markdown(f"**2. Total Carreras (Over / Under Personalizable)**")
+col_sel_line, _ = st.columns([1, 3])
+with col_sel_line:
+    linea_ou = st.selectbox("Seleccionar Línea O/U", [4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5], index=5, key="linea_ou_sel")
+
+# Probabilidades dinámicas según la línea elegida
+prob_over_dinamica = max(15.0, min(90.0, round(78.0 - (linea_ou - 9.5) * 6.5, 1)))
+prob_under_dinamica = round(100.0 - prob_over_dinamica, 1)
+
 col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
 with col_t1:
-    st.markdown(f"<span style='color:#cbd5e1;'>Park Factor ({clima['park_factor']}) & Clima ({clima['temperatura']}): <b>Over 9.5 (78.0%)</b> / <b>Under 9.5 (22.0%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1;'>Park Factor ({clima['park_factor']}) & Clima ({clima['temperatura']}): <b>Over {linea_ou} ({prob_over_dinamica}%)</b> / <b>Under {linea_ou} ({prob_under_dinamica}%)</b></span>", unsafe_allow_html=True)
 with col_t2:
-    momio_over = st.number_input("Momio Over 9.5", value=-110, step=5, key="ou_over")
+    momio_over = st.number_input(f"Momio Over {linea_ou}", value=-110, step=5, key="ou_over")
 with col_t3:
-    momio_under = st.number_input("Momio Under 9.5", value=-110, step=5, key="ou_under")
-render_pick_box_clean("Over 9.5", 78.0, momio_over, "Under 9.5", 22.0, momio_under)
+    momio_under = st.number_input(f"Momio Under {linea_ou}", value=-110, step=5, key="ou_under")
+render_pick_box_clean(f"Over {linea_ou}", prob_over_dinamica, momio_over, f"Under {linea_ou}", prob_under_dinamica, momio_under)
 
-# 3. Run Line
+# 3. Run Line / Hándicap (-1.5 / +1.5) con opción para ambos equipos
 st.markdown(f"**3. Run Line / Hándicap (-1.5 / +1.5)**")
 col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
 with col_r1:
     st.markdown(f"<span style='color:#cbd5e1;'>wRC+ y Bullpen: <b>{juego['home']} -1.5 (56.0%)</b> vs <b>{juego['away']} +1.5 (44.0%)</b></span>", unsafe_allow_html=True)
 with col_r2:
-    momio_rl_home = st.number_input(f"Momio {juego['home']} -1.5", value=+120, step=5, key="rl_home")
+    momio_rl_home_minus = st.number_input(f"Momio {juego['home']} -1.5", value=+120, step=5, key="rl_home_m")
 with col_r3:
-    momio_rl_away = st.number_input(f"Momio {juego['away']} +1.5", value=-140, step=5, key="rl_away")
-render_pick_box_clean(f"{juego['home']} -1.5", 56.0, momio_rl_home, f"{juego['away']} +1.5", 44.0, momio_rl_away)
+    momio_rl_away_plus = st.number_input(f"Momio {juego['away']} +1.5", value=-140, step=5, key="rl_away_p")
+render_pick_box_clean(f"{juego['home']} -1.5", 56.0, momio_rl_home_minus, f"{juego['away']} +1.5", 44.0, momio_rl_away_plus)
 
-# 4. Ponches Totales
-st.markdown(f"**4. Ponches Totales (Props de K's del Abridor Local: {juego['home_pitcher']})**")
+# Opcional Hándicap Inverso (Away -1.5 / Home +1.5)
+col_r_inv1, col_r_inv2, col_r_inv3 = st.columns([2, 1, 1])
+with col_r_inv1:
+    st.markdown(f"<span style='color:#cbd5e1;'>Alternativo: <b>{juego['away']} -1.5 (34.0%)</b> vs <b>{juego['home']} +1.5 (66.0%)</b></span>", unsafe_allow_html=True)
+with col_r_inv2:
+    momio_rl_away_minus = st.number_input(f"Momio {juego['away']} -1.5", value=+160, step=5, key="rl_away_m")
+with col_r_inv3:
+    momio_rl_home_plus = st.number_input(f"Momio {juego['home']} +1.5", value=-190, step=5, key="rl_home_p")
+render_pick_box_clean(f"{juego['away']} -1.5", 34.0, momio_rl_away_minus, f"{juego['home']} +1.5", 66.0, momio_rl_home_plus)
+
+# 4. Ponches Totales (1.5 hasta 10.5 para ambos pitchers)
+st.markdown(f"**4. Ponches Totales (Props de K's de Abridores)**")
+col_p_sel1, col_p_sel2, _ = st.columns([1, 1, 2])
+with col_p_sel1:
+    pitcher_k_elegido = st.selectbox("Seleccionar Picher", [f"{juego['home_pitcher']} (Local)", f"{juego['away_pitcher']} (Visita)"], key="p_k_pitcher")
+with col_p_sel2:
+    linea_k = st.selectbox("Línea de K's", [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5], index=4, key="p_k_linea")
+
+prob_k_over = max(20.0, min(88.0, round(82.5 - (linea_k - 5.5) * 8.0, 1)))
+prob_k_under = round(100.0 - prob_k_over, 1)
+
 col_k1, col_k2, col_k3 = st.columns([2, 1, 1])
 with col_k1:
-    st.markdown(f"<span style='color:#cbd5e1;'>K% y BvP: <b>Over 5.5 K's (82.5%)</b> / <b>Under 5.5 K's (17.5%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1;'>K% y BvP ({pitcher_k_elegido}): <b>Over {linea_k} K's ({prob_k_over}%)</b> / <b>Under {linea_k} K's ({prob_k_under}%)</b></span>", unsafe_allow_html=True)
 with col_k2:
-    momio_k_over = st.number_input("Momio Over K's", value=-115, step=5, key="k_over")
+    momio_k_over = st.number_input(f"Momio Over {linea_k} K's", value=-115, step=5, key="k_over_val")
 with col_k3:
-    momio_k_under = st.number_input("Momio Under K's", value=-105, step=5, key="k_under")
-render_pick_box_clean("Over 5.5 K's", 82.5, momio_k_over, "Under 5.5 K's", 17.5, momio_k_under)
+    momio_k_under = st.number_input(f"Momio Under {linea_k} K's", value=-105, step=5, key="k_under_val")
+render_pick_box_clean(f"Over {linea_k} K's", prob_k_over, momio_k_over, f"Under {linea_k} K's", prob_k_under, momio_k_under)
 
-# 5. Outs Totales
-st.markdown(f"**5. Outs Totales del Abridor Local ({juego['home_pitcher']})**")
-col_o1, col_o2, col_o3 = st.columns([2, 1, 1])
-with col_o1:
-    st.markdown(f"<span style='color:#cbd5e1;'>WHIP y Conteo de Pitcheo: <b>Over 17.5 Outs (72.0%)</b> / <b>Under 17.5 Outs (28.0%)</b></span>", unsafe_allow_html=True)
-with col_o2:
-    momio_out_over = st.number_input("Momio Over Outs", value=-115, step=5, key="out_over")
-with col_o3:
-    momio_out_under = st.number_input("Momio Under Outs", value=-115, step=5, key="out_under")
-render_pick_box_clean("Over 17.5 Outs", 72.0, momio_out_over, "Under 17.5 Outs", 28.0, momio_out_under)
+# 5. Outs Totales (3.5 hasta 19.5 para ambos pitchers)
+st.markdown(f"**5. Outs Totales de Abridores (3.5 a 19.5)**")
+col_o_sel1, col_o_sel2, _ = st.columns([1, 1, 2])
+with col_o_sel1:
+    pitcher_out_elegido = st.selectbox("Seleccionar Picher para Outs", [f"{juego['home_pitcher']} (Local)", f"{juego['away_pitcher']} (Visita)"], key="p_out_pitcher")
+with col_o_sel2:
+    linea_outs = st.selectbox("Línea de Outs", [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5, 19.5], index=14, key="p_out_linea")
+
+prob_out_over = max(20.0, min(88.0, round(72.0 - (linea_outs - 17.5) * 5.0, 1)))
+prob_out_under = round(100.0 - prob_out_over, 1)
+
+col_out1, col_out2, col_out3 = st.columns([2, 1, 1])
+with col_out1:
+    st.markdown(f"<span style='color:#cbd5e1;'>WHIP y Conteo ({pitcher_out_elegido}): <b>Over {linea_outs} Outs ({prob_out_over}%)</b> / <b>Under {linea_outs} Outs ({prob_out_under}%)</b></span>", unsafe_allow_html=True)
+with col_out2:
+    momio_out_over = st.number_input(f"Momio Over {linea_outs} Outs", value=-115, step=5, key="out_over_val")
+with col_out3:
+    momio_out_under = st.number_input(f"Momio Under {linea_outs} Outs", value=-115, step=5, key="out_under_val")
+render_pick_box_clean(f"Over {linea_outs} Outs", prob_out_over, momio_out_over, f"Under {linea_outs} Outs", prob_out_under, momio_out_under)
 
 # 6. Primeras 5 Entradas
 st.markdown(f"**6. Primeras 5 Entradas (F5 - Ganador)**")
@@ -408,3 +447,4 @@ st.markdown(f"""
     <b style="color:#34d399;">💡 AUDITORÍA DE VALOR (+EV):</b> El motor analiza la probabilidad estimada contra la cuota del casino. Las selecciones que caigan en el <b style="color:#fbbf24;">Rango Verde (75% - 90%)</b> activan automáticamente el distintivo de <b style="color:#ffd700;">💎 APUESTA ESTRELLA</b> como máxima recomendación de valor para este juego en el <b style="color:#34d399;">{juego['venue']}</b>.
 </div>
 """, unsafe_allow_html=True)
+```eof
