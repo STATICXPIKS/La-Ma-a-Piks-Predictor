@@ -124,6 +124,27 @@ ESTADIOS_COORDS = {
     "Minute Maid Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
     "Daikin Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
     "Rogers Centre": {"lat": 43.6414, "lon": -79.3894, "factor": 1.02},
+    "Citizens Bank Park": {"lat": 39.9061, "lon": -75.1665, "factor": 1.06},
+    "Nationals Park": {"lat": 38.8730, "lon": -77.0074, "factor": 1.01},
+    "Oriole Park at Camden Yards": {"lat": 39.2839, "lon": -76.6216, "factor": 1.04},
+    "Citi Field": {"lat": 40.7571, "lon": -73.8458, "factor": 0.97},
+    "Guaranteed Rate Field": {"lat": 41.8299, "lon": -87.6338, "factor": 1.04},
+    "Progressive Field": {"lat": 41.4962, "lon": -81.6852, "factor": 1.01},
+    "Comerica Park": {"lat": 42.3390, "lon": -83.0485, "factor": 0.99},
+    "Kauffman Stadium": {"lat": 39.0517, "lon": -94.4803, "factor": 1.00},
+    "Target Field": {"lat": 44.9817, "lon": -93.2775, "factor": 1.00},
+    "T-Mobile Park": {"lat": 47.5914, "lon": -122.3323, "factor": 0.96},
+    "RingCentral Coliseum": {"lat": 37.7516, "lon": -122.2005, "factor": 0.98},
+    "Angel Stadium": {"lat": 33.8003, "lon": -117.8827, "factor": 1.01},
+    "Globe Life Field": {"lat": 32.7512, "lon": -97.0825, "factor": 1.00},
+    "Busch Stadium": {"lat": 38.6226, "lon": -90.1928, "factor": 0.97},
+    "American Family Field": {"lat": 43.0280, "lon": -87.9712, "factor": 1.02},
+    "PNC Park": {"lat": 40.4469, "lon": -80.0057, "factor": 0.98},
+    "Petco Park": {"lat": 32.7076, "lon": -117.1570, "factor": 0.94},
+    "Coors Field": {"lat": 39.7559, "lon": -104.9942, "factor": 1.15},
+    "LoanDepot park": {"lat": 25.7781, "lon": -80.2196, "factor": 0.95},
+    "Tropicana Field": {"lat": 27.7682, "lon": -82.6534, "factor": 0.96},
+    "Chase Field": {"lat": 33.4455, "lon": -112.0667, "factor": 1.04},
 }
 
 TEAM_LOGOS = {
@@ -137,11 +158,31 @@ TEAM_LOGOS = {
     "Atlanta Braves": "https://www.mlbstatic.com/team-logos/144.svg",
     "Houston Astros": "https://www.mlbstatic.com/team-logos/117.svg",
     "Toronto Blue Jays": "https://www.mlbstatic.com/team-logos/141.svg",
+    "Washington Nationals": "https://www.mlbstatic.com/team-logos/120.svg",
+    "Philadelphia Phillies": "https://www.mlbstatic.com/team-logos/143.svg",
+    "New York Mets": "https://www.mlbstatic.com/team-logos/121.svg",
+    "Miami Marlins": "https://www.mlbstatic.com/team-logos/146.svg",
+    "Baltimore Orioles": "https://www.mlbstatic.com/team-logos/110.svg",
+    "Tampa Bay Rays": "https://www.mlbstatic.com/team-logos/139.svg",
+    "Cleveland Guardians": "https://www.mlbstatic.com/team-logos/114.svg",
+    "Detroit Tigers": "https://www.mlbstatic.com/team-logos/116.svg",
+    "Kansas City Royals": "https://www.mlbstatic.com/team-logos/118.svg",
+    "Minnesota Twins": "https://www.mlbstatic.com/team-logos/142.svg",
+    "Chicago White Sox": "https://www.mlbstatic.com/team-logos/145.svg",
+    "Milwaukee Brewers": "https://www.mlbstatic.com/team-logos/158.svg",
+    "St. Louis Cardinals": "https://www.mlbstatic.com/team-logos/138.svg",
+    "Pittsburgh Pirates": "https://www.mlbstatic.com/team-logos/134.svg",
+    "Arizona Diamondbacks": "https://www.mlbstatic.com/team-logos/109.svg",
+    "Colorado Rockies": "https://www.mlbstatic.com/team-logos/115.svg",
+    "San Diego Padres": "https://www.mlbstatic.com/team-logos/135.svg",
+    "Seattle Mariners": "https://www.mlbstatic.com/team-logos/136.svg",
+    "Texas Rangers": "https://www.mlbstatic.com/team-logos/140.svg",
+    "Los Angeles Angels": "https://www.mlbstatic.com/team-logos/108.svg",
 }
 
 def obtener_logo(nombre_equipo):
     for key, url in TEAM_LOGOS.items():
-        if key.lower() in nombre_equipo.lower():
+        if key.lower() in nombre_equipo.lower() or nombre_equipo.lower() in key.lower():
             return url
     return "https://www.mlbstatic.com/team-logos/default-team-logo.svg"
 
@@ -164,7 +205,7 @@ def obtener_clima_estadio(nombre_estadio):
 
 @st.cache_data(ttl=3600)
 def obtener_juegos_hoy(fecha_str):
-    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={fecha_str}&hydrate=probablePitcher,venue"
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={fecha_str}&hydrate=probablePitcher,venue,team"
     try:
         response = requests.get(url, timeout=10)
         data = response.json()
@@ -175,12 +216,20 @@ def obtener_juegos_hoy(fecha_str):
                 home_team = game["teams"]["home"]["team"]["name"]
                 venue_name = game.get("venue", {}).get("name", "Wrigley Field")
                 
+                # Extracción robusta de pícher abridor (puede venir en probablePitchers o dentro de team info)
                 probable_pitchers = game.get("probablePitchers", {})
                 away_p_data = probable_pitchers.get("away")
                 home_p_data = probable_pitchers.get("home")
                 
-                away_pitcher = away_p_data.get("fullName") if away_p_data and "fullName" in away_p_data else f"Abridor {away_team}"
-                home_pitcher = home_p_data.get("fullName") if home_p_data and "fullName" in home_p_data else f"Abridor {home_team}"
+                if away_p_data and "fullName" in away_p_data:
+                    away_pitcher = away_p_data["fullName"]
+                else:
+                    away_pitcher = game["teams"]["away"].get("probablePitcher", {}).get("fullName", f"Por Anunciar ({away_team})")
+                
+                if home_p_data and "fullName" in home_p_data:
+                    home_pitcher = home_p_data["fullName"]
+                else:
+                    home_pitcher = game["teams"]["home"].get("probablePitcher", {}).get("fullName", f"Por Anunciar ({home_team})")
                 
                 juegos_lista.append({
                     "matchup": f"{away_team} @ {home_team}",
