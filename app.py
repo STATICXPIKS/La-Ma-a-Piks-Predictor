@@ -341,12 +341,11 @@ with col_m3:
 render_pick_box_clean(juego['away'], 38.5, momio_away_ml, juego['home'], 61.5, momio_home_ml)
 
 # 2. Total Carreras (Over / Under Línea Personalizable 4.5 a 15.5)
-st.markdown(f"**2. Total Carreras (Over / Under Personalizable)**")
+st.markdown(f"**2. Total Carreras (Over / Under Personalizable 4.5 a 15.5)**")
 col_sel_line, _ = st.columns([1, 3])
 with col_sel_line:
     linea_ou = st.selectbox("Seleccionar Línea O/U", [4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5], index=5, key="linea_ou_sel")
 
-# Probabilidades dinámicas según la línea elegida
 prob_over_dinamica = max(15.0, min(90.0, round(78.0 - (linea_ou - 9.5) * 6.5, 1)))
 prob_under_dinamica = round(100.0 - prob_over_dinamica, 1)
 
@@ -370,7 +369,6 @@ with col_r3:
     momio_rl_away_plus = st.number_input(f"Momio {juego['away']} +1.5", value=-140, step=5, key="rl_away_p")
 render_pick_box_clean(f"{juego['home']} -1.5", 56.0, momio_rl_home_minus, f"{juego['away']} +1.5", 44.0, momio_rl_away_plus)
 
-# Opcional Hándicap Inverso (Away -1.5 / Home +1.5)
 col_r_inv1, col_r_inv2, col_r_inv3 = st.columns([2, 1, 1])
 with col_r_inv1:
     st.markdown(f"<span style='color:#cbd5e1;'>Alternativo: <b>{juego['away']} -1.5 (34.0%)</b> vs <b>{juego['home']} +1.5 (66.0%)</b></span>", unsafe_allow_html=True)
@@ -381,7 +379,7 @@ with col_r_inv3:
 render_pick_box_clean(f"{juego['away']} -1.5", 34.0, momio_rl_away_minus, f"{juego['home']} +1.5", 66.0, momio_rl_home_plus)
 
 # 4. Ponches Totales (1.5 hasta 10.5 para ambos pitchers)
-st.markdown(f"**4. Ponches Totales (Props de K's de Abridores)**")
+st.markdown(f"**4. Ponches Totales (Props de K's - 1.5 a 10.5)**")
 col_p_sel1, col_p_sel2, _ = st.columns([1, 1, 2])
 with col_p_sel1:
     pitcher_k_elegido = st.selectbox("Seleccionar Picher", [f"{juego['home_pitcher']} (Local)", f"{juego['away_pitcher']} (Visita)"], key="p_k_pitcher")
@@ -447,4 +445,3 @@ st.markdown(f"""
     <b style="color:#34d399;">💡 AUDITORÍA DE VALOR (+EV):</b> El motor analiza la probabilidad estimada contra la cuota del casino. Las selecciones que caigan en el <b style="color:#fbbf24;">Rango Verde (75% - 90%)</b> activan automáticamente el distintivo de <b style="color:#ffd700;">💎 APUESTA ESTRELLA</b> como máxima recomendación de valor para este juego en el <b style="color:#34d399;">{juego['venue']}</b>.
 </div>
 """, unsafe_allow_html=True)
-```eof
