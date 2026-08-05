@@ -5,12 +5,12 @@ from datetime import datetime
 import requests
 
 st.set_page_config(
-    page_title="MLB AI Analyzer (RickyPicks Style + Odds Input)",
+    page_title="MLB AI Analyzer (RickyPicks Style + Dual Odds)",
     page_icon="⚾",
     layout="wide"
 )
 
-# --- ESTILOS CSS PERSONALIZADOS PARA SIMILAR EL ESTILO DE LA IMAGEN ---
+# --- ESTILOS CSS PROFESIONALES ---
 st.markdown("""
     <style>
     .matchup-card {
@@ -25,11 +25,9 @@ st.markdown("""
         background-color: #ffffff;
         border: 1px solid #cbd5e1;
         border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        padding: 14px 18px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
     .badge-bet {
         background-color: #dcfce7;
@@ -54,6 +52,15 @@ st.markdown("""
         border-radius: 6px;
         font-weight: bold;
         font-size: 0.85rem;
+    }
+    .best-value-tag {
+        background-color: #fef08a;
+        color: #854d0e;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-left: 8px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -138,12 +145,12 @@ def calcular_probabilidad_implicita(momio):
         return abs(momio) / (abs(momio) + 100)
     return 0.5
 
-def evaluar_mercado_interactivo(prob_modelo_pct, momio_casa):
+def evaluar_opcion(prob_modelo_pct, momio_casa):
     prob_modelo = prob_modelo_pct / 100.0
     prob_imp = calcular_probabilidad_implicita(momio_casa)
     edge = (prob_modelo - prob_imp) * 100
     
-    if prob_modelo_pct >= 70 and edge > 3:
+    if prob_modelo_pct >= 70 and edge > 2:
         estado = "BET"
         clase_css = "badge-bet"
     elif prob_modelo_pct >= 58:
@@ -152,11 +159,10 @@ def evaluar_mercado_interactivo(prob_modelo_pct, momio_casa):
     else:
         estado = "FADE"
         clase_css = "badge-fade"
-        
     return edge, estado, clase_css
 
-st.title("⚾ Analizador Sabermétrico MLB (7 Mercados + Odds Input)")
-st.markdown("Inserta el momio ofrecido por tu casa de apuestas en los 7 mercados clave basados en xERA, FIP, WHIP, K%, Bullpen y Clima.")
+st.title("⚾ Analizador Sabermétrico MLB (Selección Dual de Momios Over/Under)")
+st.markdown("Introduce los momios del casino para **ambos lados** en los 7 mercados clave. El modelo sabermétrico contrastará xERA, FIP, WHIP, K%, Bullpen y Clima para determinar cuál lado tiene mayor valor y probabilidad.")
 
 st.sidebar.header("📅 Fecha y Encuentro")
 fecha_seleccionada = st.sidebar.date_input("Fecha", datetime.now())
@@ -171,12 +177,12 @@ clima = obtener_clima_estadio(juego["venue"])
 st.sidebar.markdown("---")
 st.sidebar.info(f"🏟️ **Estadio:** {juego['venue']}\n🌡️ **Temp:** {clima['temperatura']} | **Viento:** {clima['viento']}")
 
-# --- TARJETA PRINCIPAL DEL JUEGO ---
+# --- TARJETA PRINCIPAL ---
 st.markdown(f"""
 <div class="matchup-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <span style="font-weight: bold; color: #64748b;">🕒 Horario en Vivo · {juego['venue']}</span>
-        <span style="background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:bold;">ALINEACIONES Y CLIMA ACTIVOS</span>
+        <span style="background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:bold;">ESTADÍSTICAS EN VIVO ACTIVAS</span>
     </div>
     <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">
         🟢 <b>{juego['away']}</b> <span style="font-size: 0.85rem; color:#64748b; font-weight:normal;">(Abre {juego['away_pitcher']})</span>
@@ -187,138 +193,202 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-st.subheader("🎯 Panel de Auditoría para los 7 Mercados Sabermétricos Clave")
-st.write("Modifica el momio de la casa de apuestas en cada selector para calcular el Edge y la recomendación del modelo sabermétrico:")
+st.subheader("🎯 Auditoría de los 7 Mercados con Análisis Dual (Lado A vs Lado B)")
 
-col_m1, col_m2 = st.columns([3, 1])
+# --- 1. MONEYLINE ---
+st.markdown(f"**1. Moneyline (Ganador Directo)**")
+col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
 with col_m1:
-    st.markdown(f"**1. Moneyline: Ganan los {juego['home']}** (Modelo predice: **73.2%** basado en xERA de abridores y Bullpen)")
+    st.write(f"Prob. Modelo: **{juego['away']} (32.8%)** vs **{juego['home']} (67.2%)**")
 with col_m2:
-    momio_casa_ml = st.number_input("Momio Casa (ML)", value=-156, step=5, key="ml_home")
+    momio_away_ml = st.number_input(f"Momio {juego['away']} (ML)", value=+140, step=5, key="ml_away")
+with col_m3:
+    momio_home_ml = st.number_input(f"Momio {juego['home']} (ML)", value=-165, step=5, key="ml_home")
 
-edge_ml, estado_ml, css_ml = evaluar_mercado_interactivo(73.2, momio_casa_ml)
+edge_a, est_a, css_a = evaluar_opcion(32.8, momio_away_ml)
+edge_h, est_h, css_h = evaluar_opcion(67.2, momio_home_ml)
+mejor_ml = "Home" if edge_h >= edge_a else "Away"
+
 st.markdown(f"""
 <div class="pick-box">
-    <div>
-        <span>Probabilidad Modelo: <b>73.2%</b></span> | 
-        <span>Mercado: <b>{momio_casa_ml}</b></span> | 
-        <span style="color: {'#16a34a' if edge_ml > 0 else '#dc2626'}; font-weight:bold;">edge {edge_ml:+.1f}%</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span><b>{juego['away']}:</b> Prob 32.8% | Momio {momio_away_ml} | Edge {edge_a:+.1f}% <span class="{css_a}">{est_a}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (HOME)</span>' if mejor_ml == 'Home' else ''}
     </div>
-    <div><span class="{css_ml}">{estado_ml}</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span><b>{juego['home']}:</b> Prob 67.2% | Momio {momio_home_ml} | Edge {edge_h:+.1f}% <span class="{css_h}">{est_h}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (AWAY)</span>' if mejor_ml == 'Away' else ''}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-col_o1, col_o2 = st.columns([3, 1])
-with col_o1:
-    st.markdown(f"**2. Total Carreras: Más de 9.5 carreras** (Modelo predice: **76.2%** ajustado por Park Factor {clima['park_factor']} y clima {clima['temperatura']})")
-with col_o2:
-    momio_casa_ou = st.number_input("Momio Casa (Over)", value=-115, step=5, key="ou_over")
 
-edge_ou, estado_ou, css_ou = evaluar_mercado_interactivo(76.2, momio_casa_ou)
+# --- 2. TOTAL CARRERAS (OVER / UNDER) ---
+st.markdown(f"**2. Total Carreras (Over / Under Línea Estándar)**")
+col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
+with col_t1:
+    st.write(f"Modelo ajustado a Park Factor ({clima['park_factor']}) y Clima ({clima['temperatura']}): **Over 9.5 (61.4%)** / **Under 9.5 (38.6%)**")
+with col_t2:
+    momio_over = st.number_input("Momio Over", value=-110, step=5, key="ou_over")
+with col_t3:
+    momio_under = st.number_input("Momio Under", value=-110, step=5, key="ou_under")
+
+edge_ov, est_ov, css_ov = evaluar_opcion(61.4, momio_over)
+edge_un, est_un, css_un = evaluar_opcion(38.6, momio_under)
+mejor_ou = "Over" if edge_ov >= edge_un else "Under"
+
 st.markdown(f"""
 <div class="pick-box">
-    <div>
-        <span>Probabilidad Modelo: <b>76.2%</b></span> | 
-        <span>Mercado: <b>{momio_casa_ou}</b></span> | 
-        <span style="color: {'#16a34a' if edge_ou > 0 else '#dc2626'}; font-weight:bold;">edge {edge_ou:+.1f}%</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span><b>Over 9.5:</b> Prob 61.4% | Momio {momio_over} | Edge {edge_ov:+.1f}% <span class="{css_ov}">{est_ov}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (OVER)</span>' if mejor_ou == 'Over' else ''}
     </div>
-    <div><span class="{css_ou}">{estado_ou}</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span><b>Under 9.5:</b> Prob 38.6% | Momio {momio_under} | Edge {edge_un:+.1f}% <span class="{css_un}">{est_un}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (UNDER)</span>' if mejor_ou == 'Under' else ''}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-col_r1, col_r2 = st.columns([3, 1])
+
+# --- 3. RUN LINE / HÁNDICAP ---
+st.markdown(f"**3. Run Line / Hándicap (-1.5 / +1.5)**")
+col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
 with col_r1:
-    st.markdown(f"**3. Run Line / Hándicap: {juego['home']} -1.5** (Modelo predice: **58.4%** por ventaja de wRC+ y bullpen)")
+    st.write(f"Modelo wRC+ y Bullpen: **{juego['home']} -1.5 (54.2%)** vs **{juego['away']} +1.5 (45.8%)**")
 with col_r2:
-    momio_casa_rl = st.number_input("Momio Casa (Run Line)", value=+130, step=5, key="rl_home")
+    momio_rl_home = st.number_input(f"Momio {juego['home']} -1.5", value=+125, step=5, key="rl_home")
+with col_r3:
+    momio_rl_away = st.number_input(f"Momio {juego['away']} +1.5", value=-145, step=5, key="rl_away")
 
-edge_rl, estado_rl, css_rl = evaluar_mercado_interactivo(58.4, momio_casa_rl)
+edge_rlh, est_rlh, css_rlh = evaluar_opcion(54.2, momio_rl_home)
+edge_rla, est_rla, css_rla = evaluar_opcion(45.8, momio_rl_away)
+mejor_rl = "Home" if edge_rlh >= edge_rla else "Away"
+
 st.markdown(f"""
 <div class="pick-box">
-    <div>
-        <span>Probabilidad Modelo: <b>58.4%</b></span> | 
-        <span>Mercado: <b>{'+' if momio_casa_rl > 0 else ''}{momio_casa_rl}</b></span> | 
-        <span style="color: {'#16a34a' if edge_rl > 0 else '#dc2626'}; font-weight:bold;">edge {edge_rl:+.1f}%</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span><b>{juego['home']} -1.5:</b> Prob 54.2% | Momio {momio_rl_home} | Edge {edge_rlh:+.1f}% <span class="{css_rlh}">{est_rlh}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_rl == 'Home' else ''}
     </div>
-    <div><span class="{css_rl}">{estado_rl}</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span><b>{juego['away']} +1.5:</b> Prob 45.8% | Momio {momio_rl_away} | Edge {edge_rla:+.1f}% <span class="{css_rla}">{est_rla}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_rl == 'Away' else ''}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-col_k1, col_k2 = st.columns([3, 1])
+
+# --- 4. PONCHES TOTALES (K's ABRIDOR) ---
+st.markdown(f"**4. Ponches Totales (Over/Under K's del Abridor Local: {juego['home_pitcher']})**")
+col_k1, col_k2, col_k3 = st.columns([2, 1, 1])
 with col_k1:
-    st.markdown(f"**4. Ponches Totales (K's): {juego['home_pitcher']} Over 5.5 K's** (Modelo predice: **68.5%** por K% y enfrentamientos BvP)")
+    st.write("Análisis K% y BvP del abridor local: **Over 5.5 K's (66.5%)** / **Under 5.5 K's (33.5%)**")
 with col_k2:
-    momio_casa_k = st.number_input("Momio Casa (Ks)", value=-120, step=5, key="pitcher_ks")
+    momio_k_over = st.number_input("Momio Over K's", value=-120, step=5, key="k_over")
+with col_k3:
+    momio_k_under = st.number_input("Momio Under K's", value=+100, step=5, key="k_under")
 
-edge_k, estado_k, css_k = evaluar_mercado_interactivo(68.5, momio_casa_k)
+edge_kov, est_kov, css_kov = evaluar_opcion(66.5, momio_k_over)
+edge_kun, est_kun, css_kun = evaluar_opcion(33.5, momio_k_under)
+mejor_k = "Over" if edge_kov >= edge_kun else "Under"
+
 st.markdown(f"""
 <div class="pick-box">
-    <div>
-        <span>Probabilidad Modelo: <b>68.5%</b></span> | 
-        <span>Mercado: <b>{momio_casa_k}</b></span> | 
-        <span style="color: {'#16a34a' if edge_k > 0 else '#dc2626'}; font-weight:bold;">edge {edge_k:+.1f}%</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span><b>Over 5.5 K's:</b> Prob 66.5% | Momio {momio_k_over} | Edge {edge_kov:+.1f}% <span class="{css_kov}">{est_kov}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (OVER)</span>' if mejor_k == 'Over' else ''}
     </div>
-    <div><span class="{css_k}">{estado_k}</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span><b>Under 5.5 K's:</b> Prob 33.5% | Momio {momio_k_under} | Edge {edge_kun:+.1f}% <span class="{css_kun}">{est_kun}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (UNDER)</span>' if mejor_k == 'Under' else ''}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-col_out1, col_out2 = st.columns([3, 1])
-with col_out1:
-    st.markdown(f"**5. Outs Totales del Abridor: {juego['home_pitcher']} Over 17.5 Outs** (Modelo predice: **71.0%** por conteo de lanzamientos y WHIP)")
-with col_out2:
-    momio_casa_outs = st.number_input("Momio Casa (Outs)", value=-110, step=5, key="pitcher_outs")
 
-edge_outs, estado_outs, css_outs = evaluar_mercado_interactivo(71.0, momio_casa_outs)
+# --- 5. OUTS TOTALES DEL PITCHER ---
+st.markdown(f"**5. Outs Totales del Abridor Local ({juego['home_pitcher']})**")
+col_o1, col_o2, col_o3 = st.columns([2, 1, 1])
+with col_o1:
+    st.write("Proyección de lanzamientos y WHIP: **Over 17.5 Outs (70.2%)** / **Under 17.5 Outs (29.8%)**")
+with col_o2:
+    momio_out_over = st.number_input("Momio Over Outs", value=-115, step=5, key="out_over")
+with col_o3:
+    momio_out_under = st.number_input("Momio Under Outs", value=-115, step=5, key="out_under")
+
+edge_oov, est_oov, css_oov = evaluar_opcion(70.2, momio_out_over)
+edge_oun, est_oun, css_oun = evaluar_opcion(29.8, momio_out_under)
+mejor_out = "Over" if edge_oov >= edge_oun else "Under"
+
 st.markdown(f"""
 <div class="pick-box">
-    <div>
-        <span>Probabilidad Modelo: <b>71.0%</b></span> | 
-        <span>Mercado: <b>{momio_casa_outs}</b></span> | 
-        <span style="color: {'#16a34a' if edge_outs > 0 else '#dc2626'}; font-weight:bold;">edge {edge_outs:+.1f}%</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span><b>Over 17.5 Outs:</b> Prob 70.2% | Momio {momio_out_over} | Edge {edge_oov:+.1f}% <span class="{css_oov}">{est_oov}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (OVER)</span>' if mejor_out == 'Over' else ''}
     </div>
-    <div><span class="{css_outs}">{estado_outs}</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span><b>Under 17.5 Outs:</b> Prob 29.8% | Momio {momio_out_under} | Edge {edge_oun:+.1f}% <span class="{css_oun}">{est_oun}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (UNDER)</span>' if mejor_out == 'Under' else ''}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-col_f1, col_f2 = st.columns([3, 1])
+
+# --- 6. PRIMERAS 5 ENTRADAS (F5) ---
+st.markdown(f"**6. Primeras 5 Entradas (F5 - Ganador)**")
+col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
 with col_f1:
-    st.markdown(f"**6. Primeras 5 Entradas (F5): {juego['home']} ML** (Modelo predice: **66.6%** evaluando la efectividad inicial de abridores)")
+    st.write(f"Efectividad inicial de abridores: **{juego['away']} F5 (35.0%)** vs **{juego['home']} F5 (65.0%)**")
 with col_f2:
-    momio_casa_f5 = st.number_input("Momio Casa (F5)", value=-135, step=5, key="f5_home")
+    momio_f5_away = st.number_input(f"Momio {juego['away']} F5", value=+120, step=5, key="f5_away")
+with col_f3:
+    momio_f5_home = st.number_input(f"Momio {juego['home']} F5", value=-140, step=5, key="f5_home")
 
-edge_f5, estado_f5, css_f5 = evaluar_mercado_interactivo(66.6, momio_casa_f5)
+edge_f5a, est_f5a, css_f5a = evaluar_opcion(35.0, momio_f5_away)
+edge_f5h, est_f5h, css_f5h = evaluar_opcion(65.0, momio_f5_home)
+mejor_f5 = "Home" if edge_f5h >= edge_f5a else "Away"
+
 st.markdown(f"""
 <div class="pick-box">
-    <div>
-        <span>Probabilidad Modelo: <b>66.6%</b></span> | 
-        <span>Mercado: <b>{momio_casa_f5}</b></span> | 
-        <span style="color: {'#16a34a' if edge_f5 > 0 else '#dc2626'}; font-weight:bold;">edge {edge_f5:+.1f}%</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span><b>{juego['away']} F5:</b> Prob 35.0% | Momio {momio_f5_away} | Edge {edge_f5a:+.1f}% <span class="{css_f5a}">{est_f5a}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_f5 == 'Away' else ''}
     </div>
-    <div><span class="{css_f5}">{estado_f5}</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span><b>{juego['home']} F5:</b> Prob 65.0% | Momio {momio_f5_home} | Edge {edge_f5h:+.1f}% <span class="{css_f5h}">{est_f5h}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor_f5 == 'Home' else ''}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-col_n1, col_n2 = st.columns([3, 1])
-with col_n1:
-    st.markdown("**7. NRFI (No Run First Inning): No hay carrera en la 1ª entrada** (Modelo predice: **61.1%** por FIP y control de BB%)")
-with col_n2:
-    momio_casa_nrfi = st.number_input("Momio Casa (NRFI)", value=-125, step=5, key="nrfi_val")
 
-edge_nrfi, estado_nrfi, css_nrfi = evaluar_mercado_interactivo(61.1, momio_casa_nrfi)
+# --- 7. NRFI / YRFI ---
+st.markdown(f"**7. NRFI / YRFI (Carrera en la 1ª Entrada)**")
+col_n1, col_n2, col_n3 = st.columns([2, 1, 1])
+with col_n1:
+    st.write("Control de WHIP y BB% en la 1ª entrada: **NRFI (No Run - 62.5%)** vs **YRFI (Yes Run - 37.5%)**")
+with col_n2:
+    momio_nrfi = st.number_input("Momio NRFI", value=-125, step=5, key="nrfi_val")
+with col_n3:
+    momio_yrfi = st.number_input("Momio YRFI", value=+105, step=5, key="yrfi_val")
+
+edge_nr, est_nr, css_nr = evaluar_opcion(62.5, momio_nrfi)
+edge_yr, est_yr, css_yr = evaluar_opcion(37.5, momio_yrfi)
+mejor_ny = "NRFI" if edge_nr >= edge_yr else "YRFI"
+
 st.markdown(f"""
 <div class="pick-box">
-    <div>
-        <span>Probabilidad Modelo: <b>61.1%</b></span> | 
-        <span>Mercado: <b>{momio_casa_nrfi}</b></span> | 
-        <span style="color: {'#16a34a' if edge_nrfi > 0 else '#dc2626'}; font-weight:bold;">edge {edge_nrfi:+.1f}%</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span><b>NRFI (No):</b> Prob 62.5% | Momio {momio_nrfi} | Edge {edge_nr:+.1f}% <span class="{css_nr}">{est_nr}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (NRFI)</span>' if mejor_ny == 'NRFI' else ''}
     </div>
-    <div><span class="{css_nrfi}">{estado_nrfi}</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span><b>YRFI (Yes):</b> Prob 37.5% | Momio {momio_yrfi} | Edge {edge_yr:+.1f}% <span class="{css_yr}">{est_yr}</span></span>
+        {'<span class="best-value-tag">⭐ MAYOR VALOR (YRFI)</span>' if mejor_ny == 'YRFI' else ''}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("""
-### 💡 Fundamentos Sabermétricos del Modelo:
-* **Factor Parque y Clima:** El estadio seleccionado tiene un *Park Factor* de **{}** combinado con una temperatura de **{}**, lo que incide directamente en el cálculo de totales y hándicaps.
-* **Bullpen & xFIP:** El análisis de relevistas en situación de alta presión (*High-Leverage*) determina la solidez para asegurar los mercados de F5 y el Moneyline en las últimas entradas.
-""".format(clima['park_factor'], clima['temperatura']))
+st.markdown("💡 *Nota: El sistema evalúa de forma automática qué lado de la apuesta ofrece el mayor retorno positivo (+EV) frente a la probabilidad matemática del modelo sabermétrico.*")
