@@ -231,7 +231,6 @@ def evaluar_opcion_robusta(prob_modelo_pct, momio_casa):
     prob_imp = calcular_probabilidad_implicita(momio_casa)
     edge = (prob_modelo - prob_imp) * 100
     
-    # Detección de Apuesta Estrella (Rango Verde 75% - 90%)
     es_apuesta_estrella = 75.0 <= prob_modelo_pct <= 90.0 and edge > 0
     
     if prob_modelo_pct >= 70 and edge > 1:
@@ -340,7 +339,7 @@ with col_m3:
     momio_home_ml = st.number_input(f"Momio {juego['home']} (ML)", value=-170, step=5, key="ml_home")
 render_pick_box_clean(juego['away'], 38.5, momio_away_ml, juego['home'], 61.5, momio_home_ml)
 
-# 2. Total Carreras (Over / Under Línea Personalizable 4.5 a 15.5)
+# 2. Total Carreras
 st.markdown(f"**2. Total Carreras (Over / Under Personalizable 4.5 a 15.5)**")
 col_sel_line, _ = st.columns([1, 3])
 with col_sel_line:
@@ -358,7 +357,7 @@ with col_t3:
     momio_under = st.number_input(f"Momio Under {linea_ou}", value=-110, step=5, key="ou_under")
 render_pick_box_clean(f"Over {linea_ou}", prob_over_dinamica, momio_over, f"Under {linea_ou}", prob_under_dinamica, momio_under)
 
-# 3. Run Line / Hándicap (-1.5 / +1.5) con opción para ambos equipos
+# 3. Run Line / Hándicap
 st.markdown(f"**3. Run Line / Hándicap (-1.5 / +1.5)**")
 col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
 with col_r1:
@@ -378,47 +377,81 @@ with col_r_inv3:
     momio_rl_home_plus = st.number_input(f"Momio {juego['home']} +1.5", value=-190, step=5, key="rl_home_p")
 render_pick_box_clean(f"{juego['away']} -1.5", 34.0, momio_rl_away_minus, f"{juego['home']} +1.5", 66.0, momio_rl_home_plus)
 
-# 4. Ponches Totales (1.5 hasta 10.5 para ambos pitchers)
-st.markdown(f"**4. Ponches Totales (Props de K's - 1.5 a 10.5)**")
-col_p_sel1, col_p_sel2, _ = st.columns([1, 1, 2])
-with col_p_sel1:
-    pitcher_k_elegido = st.selectbox("Seleccionar Picher", [f"{juego['home_pitcher']} (Local)", f"{juego['away_pitcher']} (Visita)"], key="p_k_pitcher")
-with col_p_sel2:
-    linea_k = st.selectbox("Línea de K's", [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5], index=4, key="p_k_linea")
+# 4. Ponches Totales (AMBOS ABRIDORES)
+st.markdown(f"**4. Ponches Totales (Props de K's - Ambos Abridores)**")
 
-prob_k_over = max(20.0, min(88.0, round(82.5 - (linea_k - 5.5) * 8.0, 1)))
-prob_k_under = round(100.0 - prob_k_over, 1)
+st.markdown(f"<div style='background-color:#0d291b; padding:10px 14px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:10px;'><b>📍 Pícher Visitante: {juego['away_pitcher']} ({juego['away']})</b></div>", unsafe_allow_html=True)
+col_pk_s1, col_pk_s2, _ = st.columns([1, 1, 2])
+with col_pk_s1:
+    linea_k_away = st.selectbox("Línea de K's (Visita)", [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5], index=4, key="k_line_away_all")
+prob_k_away_over = max(20.0, min(88.0, round(82.5 - (linea_k_away - 5.5) * 8.0, 1)))
+prob_k_away_under = round(100.0 - prob_k_away_over, 1)
 
-col_k1, col_k2, col_k3 = st.columns([2, 1, 1])
-with col_k1:
-    st.markdown(f"<span style='color:#cbd5e1;'>K% y BvP ({pitcher_k_elegido}): <b>Over {linea_k} K's ({prob_k_over}%)</b> / <b>Under {linea_k} K's ({prob_k_under}%)</b></span>", unsafe_allow_html=True)
-with col_k2:
-    momio_k_over = st.number_input(f"Momio Over {linea_k} K's", value=-115, step=5, key="k_over_val")
-with col_k3:
-    momio_k_under = st.number_input(f"Momio Under {linea_k} K's", value=-105, step=5, key="k_under_val")
-render_pick_box_clean(f"Over {linea_k} K's", prob_k_over, momio_k_over, f"Under {linea_k} K's", prob_k_under, momio_k_under)
+col_ka1, col_ka2, col_ka3 = st.columns([2, 1, 1])
+with col_ka1:
+    st.markdown(f"<span style='color:#cbd5e1;'>Modelo K%: <b>Over {linea_k_away} ({prob_k_away_over}%)</b> / <b>Under {linea_k_away} ({prob_k_away_under}%)</b></span>", unsafe_allow_html=True)
+with col_ka2:
+    momio_k_away_over = st.number_input(f"Momio Over {linea_k_away} K's (Visita)", value=-115, step=5, key="k_away_o_val")
+with col_ka3:
+    momio_k_away_under = st.number_input(f"Momio Under {linea_k_away} K's (Visita)", value=-105, step=5, key="k_away_u_val")
+render_pick_box_clean(f"Over {linea_k_away} K's ({juego['away_pitcher']})", prob_k_away_over, momio_k_away_over, f"Under {linea_k_away} K's ({juego['away_pitcher']})", prob_k_away_under, momio_k_away_under)
 
-# 5. Outs Totales (3.5 hasta 19.5 para ambos pitchers)
-st.markdown(f"**5. Outs Totales de Abridores (3.5 a 19.5)**")
-col_o_sel1, col_o_sel2, _ = st.columns([1, 1, 2])
-with col_o_sel1:
-    pitcher_out_elegido = st.selectbox("Seleccionar Picher para Outs", [f"{juego['home_pitcher']} (Local)", f"{juego['away_pitcher']} (Visita)"], key="p_out_pitcher")
-with col_o_sel2:
-    linea_outs = st.selectbox("Línea de Outs", [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5, 19.5], index=14, key="p_out_linea")
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(f"<div style='background-color:#0d291b; padding:10px 14px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:10px;'><b>📍 Pícher Local: {juego['home_pitcher']} ({juego['home']})</b></div>", unsafe_allow_html=True)
+col_pk_h1, col_pk_h2, _ = st.columns([1, 1, 2])
+with col_pk_h1:
+    linea_k_home = st.selectbox("Línea de K's (Local)", [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5], index=4, key="k_line_home_all")
+prob_k_home_over = max(20.0, min(88.0, round(82.5 - (linea_k_home - 5.5) * 8.0, 1)))
+prob_k_home_under = round(100.0 - prob_k_home_over, 1)
 
-prob_out_over = max(20.0, min(88.0, round(72.0 - (linea_outs - 17.5) * 5.0, 1)))
-prob_out_under = round(100.0 - prob_out_over, 1)
+col_kh1, col_kh2, col_kh3 = st.columns([2, 1, 1])
+with col_kh1:
+    st.markdown(f"<span style='color:#cbd5e1;'>Modelo K%: <b>Over {linea_k_home} ({prob_k_home_over}%)</b> / <b>Under {linea_k_home} ({prob_k_home_under}%)</b></span>", unsafe_allow_html=True)
+with col_kh2:
+    momio_k_home_over = st.number_input(f"Momio Over {linea_k_home} K's (Local)", value=-115, step=5, key="k_home_o_val")
+with col_kh3:
+    momio_k_home_under = st.number_input(f"Momio Under {linea_k_home} K's (Local)", value=-105, step=5, key="k_home_u_val")
+render_pick_box_clean(f"Over {linea_k_home} K's ({juego['home_pitcher']})", prob_k_home_over, momio_k_home_over, f"Under {linea_k_home} K's ({juego['home_pitcher']})", prob_k_home_under, momio_k_home_under)
 
-col_out1, col_out2, col_out3 = st.columns([2, 1, 1])
-with col_out1:
-    st.markdown(f"<span style='color:#cbd5e1;'>WHIP y Conteo ({pitcher_out_elegido}): <b>Over {linea_outs} Outs ({prob_out_over}%)</b> / <b>Under {linea_outs} Outs ({prob_out_under}%)</b></span>", unsafe_allow_html=True)
-with col_out2:
-    momio_out_over = st.number_input(f"Momio Over {linea_outs} Outs", value=-115, step=5, key="out_over_val")
-with col_out3:
-    momio_out_under = st.number_input(f"Momio Under {linea_outs} Outs", value=-115, step=5, key="out_under_val")
-render_pick_box_clean(f"Over {linea_outs} Outs", prob_out_over, momio_out_over, f"Under {linea_outs} Outs", prob_out_under, momio_out_under)
+# 5. Outs Totales (AMBOS ABRIDORES)
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(f"**5. Outs Totales de Abridores (Ambos Abridores - 3.5 a 19.5)**")
+
+st.markdown(f"<div style='background-color:#0d291b; padding:10px 14px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:10px;'><b>📍 Pícher Visitante: {juego['away_pitcher']} ({juego['away']})</b></div>", unsafe_allow_html=True)
+col_po_s1, col_po_s2, _ = st.columns([1, 1, 2])
+with col_po_s1:
+    linea_outs_away = st.selectbox("Línea de Outs (Visita)", [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5, 19.5], index=14, key="out_line_away_all")
+prob_out_away_over = max(20.0, min(88.0, round(72.0 - (linea_outs_away - 17.5) * 5.0, 1)))
+prob_out_away_under = round(100.0 - prob_out_away_over, 1)
+
+col_outa1, col_outa2, col_outa3 = st.columns([2, 1, 1])
+with col_outa1:
+    st.markdown(f"<span style='color:#cbd5e1;'>WHIP y Conteo: <b>Over {linea_outs_away} Outs ({prob_out_away_over}%)</b> / <b>Under {linea_outs_away} Outs ({prob_out_away_under}%)</b></span>", unsafe_allow_html=True)
+with col_outa2:
+    momio_out_away_over = st.number_input(f"Momio Over {linea_outs_away} Outs (Visita)", value=-115, step=5, key="out_away_o_val")
+with col_outa3:
+    momio_out_away_under = st.number_input(f"Momio Under {linea_outs_away} Outs (Visita)", value=-115, step=5, key="out_away_u_val")
+render_pick_box_clean(f"Over {linea_outs_away} Outs ({juego['away_pitcher']})", prob_out_away_over, momio_out_away_over, f"Under {linea_outs_away} Outs ({juego['away_pitcher']})", prob_out_away_under, momio_out_away_under)
+
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(f"<div style='background-color:#0d291b; padding:10px 14px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:10px;'><b>📍 Pícher Local: {juego['home_pitcher']} ({juego['home']})</b></div>", unsafe_allow_html=True)
+col_po_h1, col_po_h2, _ = st.columns([1, 1, 2])
+with col_po_h1:
+    linea_outs_home = st.selectbox("Línea de Outs (Local)", [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5, 19.5], index=14, key="out_line_home_all")
+prob_out_home_over = max(20.0, min(88.0, round(72.0 - (linea_outs_home - 17.5) * 5.0, 1)))
+prob_out_home_under = round(100.0 - prob_out_home_over, 1)
+
+col_outh1, col_outh2, col_outh3 = st.columns([2, 1, 1])
+with col_outh1:
+    st.markdown(f"<span style='color:#cbd5e1;'>WHIP y Conteo: <b>Over {linea_outs_home} Outs ({prob_out_home_over}%)</b> / <b>Under {linea_outs_home} Outs ({prob_out_home_under}%)</b></span>", unsafe_allow_html=True)
+with col_outh2:
+    momio_out_home_over = st.number_input(f"Momio Over {linea_outs_home} Outs (Local)", value=-115, step=5, key="out_home_o_val")
+with col_outh3:
+    momio_out_home_under = st.number_input(f"Momio Under {linea_outs_home} Outs (Local)", value=-115, step=5, key="out_home_u_val")
+render_pick_box_clean(f"Over {linea_outs_home} Outs ({juego['home_pitcher']})", prob_out_home_over, momio_out_home_over, f"Under {linea_outs_home} Outs ({juego['home_pitcher']})", prob_out_home_under, momio_out_home_under)
 
 # 6. Primeras 5 Entradas
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown(f"**6. Primeras 5 Entradas (F5 - Ganador)**")
 col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
 with col_f1:
