@@ -123,26 +123,28 @@ st.markdown("""
         min-height: 38px !important;
         height: 38px !important;
     }
-    /* Estilización compacta y unificada para botones de selección */
+    /* Estilización compacta, limpia y con efecto píldora verde brillante para botones de selección */
     div.stButton > button {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-        color: #0b1f14 !important;
-        font-weight: 900 !important;
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
         border: 1px solid #34d399 !important;
-        border-radius: 8px !important;
-        padding: 4px 10px !important;
-        height: 36px !important;
+        border-radius: 50px !important;
+        padding: 4px 14px !important;
+        height: 38px !important;
         font-size: 0.85rem !important;
         width: 100% !important;
-        max-width: 220px !important;
-        box-shadow: 0 0 10px rgba(16, 185, 129, 0.3) !important;
-        transition: all 0.3s ease !important;
+        max-width: 240px !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+        transition: all 0.2s ease-in-out !important;
         display: block !important;
-        margin: 6px auto 0 auto !important;
+        margin: 8px auto 0 auto !important;
+        letter-spacing: 0.5px;
     }
     div.stButton > button:hover {
-        background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
-        box-shadow: 0 0 15px rgba(52, 211, 153, 0.6) !important;
+        background: linear-gradient(135deg, #34d399 0%, #059669 100%) !important;
+        box-shadow: 0 6px 16px rgba(52, 211, 153, 0.5) !important;
+        transform: translateY(-1px);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -363,15 +365,15 @@ def render_pick_box_clean(partido_key, label_izq, prob_izq, momio_izq, label_der
             tipo_est = "⭐ +EV VALOR"
             
         st.markdown(f"""
-        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:12px 14px; margin-bottom:4px;">
-            <div style="color:#ffffff; font-weight:bold; font-size:1.0rem; margin-bottom:2px;">{label_izq}</div>
-            <div style="color:#cbd5e1; font-size:0.8rem; margin-bottom:6px;">Prob: {prob_izq}% | Momio: {momio_izq} | Edge: {edge_i:+.1f}%</div>
+        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:12px; padding:14px 16px; margin-bottom:6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+            <div style="color:#ffffff; font-weight:bold; font-size:1.0rem; margin-bottom:3px;">{label_izq}</div>
+            <div style="color:#cbd5e1; font-size:0.8rem; margin-bottom:8px;">Prob: {prob_izq}% | Momio: {momio_izq} | Edge: {edge_i:+.1f}%</div>
             <div>{tags_html}</div>
         </div>
         """, unsafe_allow_html=True)
         
         btn_key_izq = f"btn_{partido_key}_{label_izq.replace(' ', '_')}"
-        if st.button(f"📥 Seleccionar {label_izq}", key=btn_key_izq):
+        if st.button(f"📥 SELECCIONAR PICK", key=btn_key_izq):
             agregar_al_historial(partido_key, label_izq, prob_izq, momio_izq, edge_i, tipo_est)
             st.success(f"¡Selección guardada!")
         
@@ -386,15 +388,15 @@ def render_pick_box_clean(partido_key, label_izq, prob_izq, momio_izq, label_der
             tipo_est_d = "⭐ +EV VALOR"
             
         st.markdown(f"""
-        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:12px 14px; margin-bottom:4px;">
-            <div style="color:#ffffff; font-weight:bold; font-size:1.0rem; margin-bottom:2px;">{label_der}</div>
-            <div style="color:#cbd5e1; font-size:0.8rem; margin-bottom:6px;">Prob: {prob_der}% | Momio: {momio_der} | Edge: {edge_d:+.1f}%</div>
+        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:12px; padding:14px 16px; margin-bottom:6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+            <div style="color:#ffffff; font-weight:bold; font-size:1.0rem; margin-bottom:3px;">{label_der}</div>
+            <div style="color:#cbd5e1; font-size:0.8rem; margin-bottom:8px;">Prob: {prob_der}% | Momio: {momio_der} | Edge: {edge_d:+.1f}%</div>
             <div>{tags_html_d}</div>
         </div>
         """, unsafe_allow_html=True)
         
         btn_key_der = f"btn_{partido_key}_{label_der.replace(' ', '_')}"
-        if st.button(f"📥 Seleccionar {label_der}", key=btn_key_der):
+        if st.button(f"📥 SELECCIONAR PICK", key=btn_key_der):
             agregar_al_historial(partido_key, label_der, prob_der, momio_der, edge_d, tipo_est_d)
             st.success(f"¡Selección guardada!")
 
