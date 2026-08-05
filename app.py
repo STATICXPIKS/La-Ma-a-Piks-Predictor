@@ -459,6 +459,43 @@ def obtener_estadisticas_mlb_diarias(fecha_str):
                 "home_stats": {"xERA": 3.77, "FIP": 3.43, "WHIP": 1.06, "K_pct": 27.2, "BB_pct": 6.8, "bullpen_leverage": "Shutdown (Top 3)", "wRC_plus": 125, "OPS": 0.830, "ISO": 0.208, "splits_vs_lhp": 0.785, "splits_vs_rhp": 0.850, "bvp_notes": "Lectura en vivo sincronizada vía API MLB (wRC+: 114).", "projected_pa": 39.2}
             }
         ]
+
+# Inicialización de estado de sesión para el historial y apuestas guardadas
+if "historial_apuestas" not in st.session_state:
+    st.session_state.historial_apuestas = []
+
+def evaluar_opcion_robusta(prob, momio):
+    # Cálculo robusto de edge sabermétrico y calidad
+    implied_prob = 0.0
+    if momio > 0:
+        implied_prob = 100.0 / (momio + 100.0) * 100.0
+    else:
+        implied_prob = abs(momio) / (abs(momio) + 100.0) * 100.0
+        
+    edge = prob - implied_prob
+    
+    if prob >= 75.0 and edge >= 3.0:
+        return edge, "💎 APUESTA ESTRELLA", "badge-bet", True
+    elif edge >= 4.0:
+        return edge, "⭐ +EV VALOR", "badge-bet", False
+    elif edge >= 0.0:
+        return edge, "⚖️ NEUTRO / FAIR", "badge-maybe", False
+    else:
+        return edge, "❌ FADE / EV NEGATIVO", "badge-fade", False
+
+def render_pick_box_clean(partido_key, label_izq, prob_izq, momio_izq, label_der, prob_der, momio_der):
+    def agregar_al_historial(p_key, seleccion, prob, momio, edge, calidad):
+        st.session_state.historial_apuestas.append({
+            "id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
+            "partido": p_key,
+            "seleccion": seleccion,
+            "prob": prob,
+            "momio": momio,
+            "edge": round(edge, 1),
+            "estrella": calidad,
+            "estado": "PENDIENTE"
+        })
+
     edge_i, est_i, css_i, star_i = evaluar_opcion_robusta(prob_izq, momio_izq)
     edge_d, est_d, css_d, star_d = evaluar_opcion_robusta(prob_der, momio_der)
     
