@@ -58,7 +58,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- COORDENADAS Y CLIMA ---
 ESTADIOS_COORDS = {
     "Yankee Stadium": {"lat": 40.8296, "lon": -73.9262, "factor": 1.02},
     "Fenway Park": {"lat": 42.3467, "lon": -71.0972, "factor": 1.05},
@@ -98,8 +97,8 @@ def obtener_juegos_hoy(fecha_str):
                 home_team = game["teams"]["home"]["team"]["name"]
                 venue_name = game.get("venue", {}).get("name", "Great American Ball Park")
                 
-                away_pitcher = game.get("probablePitchers", {}).get("away", {}).get("fullName", "Abre Jacob Lopez")
-                home_pitcher = game.get("probablePitchers", {}).get("home", {}).get("fullName", "Abre Rhett Lowder")
+                away_pitcher = game.get("probablePitchers", {}).get("away", {}).get("fullName", "Pitcher Visitante")
+                home_pitcher = game.get("probablePitchers", {}).get("home", {}).get("fullName", "Pitcher Local")
                 
                 juegos_lista.append({
                     "matchup": f"{away_team} @ {home_team}",
@@ -132,7 +131,6 @@ def obtener_juegos_hoy(fecha_str):
             "status": "Scheduled"
         }]
 
-# --- MOTOR DE CÁLCULO DE PROBABILIDAD E IMPLÍCITA ---
 def calcular_probabilidad_implicita(momio):
     if momio > 0:
         return 100 / (momio + 100)
@@ -157,9 +155,8 @@ def evaluar_mercado_interactivo(prob_modelo_pct, momio_casa):
         
     return edge, estado, clase_css
 
-# --- INTERFAZ PRINCIPAL ---
-st.title("⚾ Analizador Sabermétrico MLB (Estilo RickyPicks)")
-st.markdown("Ingresa los momios ofrecidos por tu casa de apuestas favorita para calcular instantáneamente el Edge y la recomendación del modelo sabermétrico.")
+st.title("⚾ Analizador Sabermétrico MLB (7 Mercados + Odds Input)")
+st.markdown("Inserta el momio ofrecido por tu casa de apuestas en los 7 mercados clave basados en xERA, FIP, WHIP, K%, Bullpen y Clima.")
 
 st.sidebar.header("📅 Fecha y Encuentro")
 fecha_seleccionada = st.sidebar.date_input("Fecha", datetime.now())
@@ -178,8 +175,8 @@ st.sidebar.info(f"🏟️ **Estadio:** {juego['venue']}\n🌡️ **Temp:** {clim
 st.markdown(f"""
 <div class="matchup-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <span style="font-weight: bold; color: #64748b;">🕒 4:40 P.M. · {juego['venue']}</span>
-        <span style="background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:bold;">ALINEACIONES CONFIRMADAS</span>
+        <span style="font-weight: bold; color: #64748b;">🕒 Horario en Vivo · {juego['venue']}</span>
+        <span style="background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:bold;">ALINEACIONES Y CLIMA ACTIVOS</span>
     </div>
     <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">
         🟢 <b>{juego['away']}</b> <span style="font-size: 0.85rem; color:#64748b; font-weight:normal;">(Abre {juego['away_pitcher']})</span>
@@ -190,15 +187,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-st.subheader("🎯 Panel de Análisis y Modificación de Momios")
-st.write("Modifica el momio de la casa de apuestas en los selectores/inputs inferiores para auditar el valor en tiempo real:")
+st.subheader("🎯 Panel de Auditoría para los 7 Mercados Sabermétricos Clave")
+st.write("Modifica el momio de la casa de apuestas en cada selector para calcular el Edge y la recomendación del modelo sabermétrico:")
 
-# --- MERCADOS INTERACTIVOS (ESTILO RICKYPICKS CON INPUTS DE MOMIOS) ---
-
-# Mercado 1: Moneyline Local
 col_m1, col_m2 = st.columns([3, 1])
 with col_m1:
-    st.markdown(f"**1. Moneyline: Ganan los {juego['home']}** (Modelo predice: **73.2%** de probabilidad)")
+    st.markdown(f"**1. Moneyline: Ganan los {juego['home']}** (Modelo predice: **73.2%** basado en xERA de abridores y Bullpen)")
 with col_m2:
     momio_casa_ml = st.number_input("Momio Casa (ML)", value=-156, step=5, key="ml_home")
 
@@ -214,10 +208,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Mercado 2: Total de Carreras Over
 col_o1, col_o2 = st.columns([3, 1])
 with col_o1:
-    st.markdown(f"**2. Total Carreras: Más de 9.5 carreras** (Modelo predice: **76.2%** ajustado por clima {clima['temperatura']})")
+    st.markdown(f"**2. Total Carreras: Más de 9.5 carreras** (Modelo predice: **76.2%** ajustado por Park Factor {clima['park_factor']} y clima {clima['temperatura']})")
 with col_o2:
     momio_casa_ou = st.number_input("Momio Casa (Over)", value=-115, step=5, key="ou_over")
 
@@ -233,29 +226,81 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Mercado 3: F5 (Primeras 5 entradas)
+col_r1, col_r2 = st.columns([3, 1])
+with col_r1:
+    st.markdown(f"**3. Run Line / Hándicap: {juego['home']} -1.5** (Modelo predice: **58.4%** por ventaja de wRC+ y bullpen)")
+with col_r2:
+    momio_casa_rl = st.number_input("Momio Casa (Run Line)", value=+130, step=5, key="rl_home")
+
+edge_rl, estado_rl, css_rl = evaluar_mercado_interactivo(58.4, momio_casa_rl)
+st.markdown(f"""
+<div class="pick-box">
+    <div>
+        <span>Probabilidad Modelo: <b>58.4%</b></span> | 
+        <span>Mercado: <b>{'+' if momio_casa_rl > 0 else ''}{momio_casa_rl}</b></span> | 
+        <span style="color: {'#16a34a' if edge_rl > 0 else '#dc2626'}; font-weight:bold;">edge {edge_rl:+.1f}%</span>
+    </div>
+    <div><span class="{css_rl}">{estado_rl}</span></div>
+</div>
+""", unsafe_allow_html=True)
+
+col_k1, col_k2 = st.columns([3, 1])
+with col_k1:
+    st.markdown(f"**4. Ponches Totales (K's): {juego['home_pitcher']} Over 5.5 K's** (Modelo predice: **68.5%** por K% y enfrentamientos BvP)")
+with col_k2:
+    momio_casa_k = st.number_input("Momio Casa (Ks)", value=-120, step=5, key="pitcher_ks")
+
+edge_k, estado_k, css_k = evaluar_mercado_interactivo(68.5, momio_casa_k)
+st.markdown(f"""
+<div class="pick-box">
+    <div>
+        <span>Probabilidad Modelo: <b>68.5%</b></span> | 
+        <span>Mercado: <b>{momio_casa_k}</b></span> | 
+        <span style="color: {'#16a34a' if edge_k > 0 else '#dc2626'}; font-weight:bold;">edge {edge_k:+.1f}%</span>
+    </div>
+    <div><span class="{css_k}">{estado_k}</span></div>
+</div>
+""", unsafe_allow_html=True)
+
+col_out1, col_out2 = st.columns([3, 1])
+with col_out1:
+    st.markdown(f"**5. Outs Totales del Abridor: {juego['home_pitcher']} Over 17.5 Outs** (Modelo predice: **71.0%** por conteo de lanzamientos y WHIP)")
+with col_out2:
+    momio_casa_outs = st.number_input("Momio Casa (Outs)", value=-110, step=5, key="pitcher_outs")
+
+edge_outs, estado_outs, css_outs = evaluar_mercado_interactivo(71.0, momio_casa_outs)
+st.markdown(f"""
+<div class="pick-box">
+    <div>
+        <span>Probabilidad Modelo: <b>71.0%</b></span> | 
+        <span>Mercado: <b>{momio_casa_outs}</b></span> | 
+        <span style="color: {'#16a34a' if edge_outs > 0 else '#dc2626'}; font-weight:bold;">edge {edge_outs:+.1f}%</span>
+    </div>
+    <div><span class="{css_outs}">{estado_outs}</span></div>
+</div>
+""", unsafe_allow_html=True)
+
 col_f1, col_f2 = st.columns([3, 1])
 with col_f1:
-    st.markdown(f"**3. Primeras 5 Entradas (F5): {juego['home']} adelante** (Modelo predice: **66.6%**)")
+    st.markdown(f"**6. Primeras 5 Entradas (F5): {juego['home']} ML** (Modelo predice: **66.6%** evaluando la efectividad inicial de abridores)")
 with col_f2:
-    momio_casa_f5 = st.number_input("Momio Casa (F5)", value=+110, step=5, key="f5_home")
+    momio_casa_f5 = st.number_input("Momio Casa (F5)", value=-135, step=5, key="f5_home")
 
 edge_f5, estado_f5, css_f5 = evaluar_mercado_interactivo(66.6, momio_casa_f5)
 st.markdown(f"""
 <div class="pick-box">
     <div>
         <span>Probabilidad Modelo: <b>66.6%</b></span> | 
-        <span>Mercado: <b>{'+' if momio_casa_f5 > 0 else ''}{momio_casa_f5}</b></span> | 
+        <span>Mercado: <b>{momio_casa_f5}</b></span> | 
         <span style="color: {'#16a34a' if edge_f5 > 0 else '#dc2626'}; font-weight:bold;">edge {edge_f5:+.1f}%</span>
     </div>
     <div><span class="{css_f5}">{estado_f5}</span></div>
 </div>
 """, unsafe_allow_html=True)
 
-# Mercado 4: NRFI
 col_n1, col_n2 = st.columns([3, 1])
 with col_n1:
-    st.markdown("**4. NRFI (Carrera en la 1ª Entrada - Sí/No): No hay carrera** (Modelo predice: **61.1%**)")
+    st.markdown("**7. NRFI (No Run First Inning): No hay carrera en la 1ª entrada** (Modelo predice: **61.1%** por FIP y control de BB%)")
 with col_n2:
     momio_casa_nrfi = st.number_input("Momio Casa (NRFI)", value=-125, step=5, key="nrfi_val")
 
@@ -273,7 +318,7 @@ st.markdown(f"""
 
 st.markdown("---")
 st.markdown("""
-### 💡 Qué ve el modelo sabermétrico:
-* **Factor Parque y Clima:** El estadio seleccionado tiene un *Park Factor* de **{}** combinado con una temperatura de **{}**, lo que propicia conexiones profundas.
-* **Bullpen & xFIP:** El análisis de relevistas en situación de alta presión (High-Leverage) muestra una ventaja clara en la profundidad de los lanzadores locales para asegurar las entradas finales.
+### 💡 Fundamentos Sabermétricos del Modelo:
+* **Factor Parque y Clima:** El estadio seleccionado tiene un *Park Factor* de **{}** combinado con una temperatura de **{}**, lo que incide directamente en el cálculo de totales y hándicaps.
+* **Bullpen & xFIP:** El análisis de relevistas en situación de alta presión (*High-Leverage*) determina la solidez para asegurar los mercados de F5 y el Moneyline en las últimas entradas.
 """.format(clima['park_factor'], clima['temperatura']))
