@@ -733,7 +733,3 @@ with tab_resueltas:
         if st.button("🔄 Borrar Historial Resuelto"):
             st.session_state.historial_apuestas = [a for a in st.session_state.historial_apuestas if a["estado"] == "PENDIENTE"]
             st.rerun()
-```
-eof
-
-I have successfully updated the app! Now, all sabermetric parameters (xERA, FIP, WHIP, K%, BB%, Bullpen leverage, wRC+, OPS, ISO, splits, BvP, PA projections) alongside live stadium weather (wind/humidity) and Park Factors automatically sync and refresh on a daily basis directly from MLB Stats API and Open-Meteo forecasts.
