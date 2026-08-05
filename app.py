@@ -62,9 +62,9 @@ st.markdown("""
     .best-value-tag {
         background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
         color: #0b1f14;
-        padding: 3px 10px;
+        padding: 2px 8px;
         border-radius: 6px;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 900;
         margin-left: 6px;
         box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
@@ -72,9 +72,9 @@ st.markdown("""
     .golden-star-tag {
         background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
         color: #0b1f14;
-        padding: 3px 10px;
+        padding: 2px 8px;
         border-radius: 6px;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 900;
         margin-left: 6px;
         box-shadow: 0 0 14px rgba(255, 215, 0, 0.6);
@@ -130,15 +130,15 @@ st.markdown("""
         font-weight: 800 !important;
         border: 1px solid #34d399 !important;
         border-radius: 50px !important;
-        padding: 4px 14px !important;
-        height: 38px !important;
-        font-size: 0.85rem !important;
+        padding: 2px 10px !important;
+        height: 32px !important;
+        font-size: 0.78rem !important;
         width: 100% !important;
-        max-width: 240px !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+        max-width: 180px !important;
+        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3) !important;
         transition: all 0.2s ease-in-out !important;
         display: block !important;
-        margin: 8px auto 0 auto !important;
+        margin: 4px auto 0 auto !important;
         letter-spacing: 0.5px;
     }
     div.stButton > button:hover {
@@ -353,50 +353,51 @@ def render_pick_box_clean(partido_key, label_izq, prob_izq, momio_izq, label_der
     
     mejor = "izq" if edge_i >= edge_d else "der"
     
-    col1, col2 = st.columns(2)
-    with col1:
+    # Envolver en columnas más estrechas centradas o de menor ancho proporcional
+    c_outer1, c_outer2, c_outer3 = st.columns([5, 5, 2])
+    with c_outer1:
         tags_html = f'<span class="{css_i}">{est_i}</span>'
         tipo_est = "Normal"
         if star_i:
-            tags_html += '<span class="golden-star-tag">💎 APUESTA ESTRELLA</span>'
+            tags_html += '<span class="golden-star-tag">💎 ESTRELLA</span>'
             tipo_est = "💎 APUESTA ESTRELLA"
         elif mejor == "izq":
-            tags_html += '<span class="best-value-tag">⭐ +EV VALOR</span>'
+            tags_html += '<span class="best-value-tag">⭐ +EV</span>'
             tipo_est = "⭐ +EV VALOR"
             
         st.markdown(f"""
-        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:12px; padding:14px 16px; margin-bottom:6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-            <div style="color:#ffffff; font-weight:bold; font-size:1.0rem; margin-bottom:3px;">{label_izq}</div>
-            <div style="color:#cbd5e1; font-size:0.8rem; margin-bottom:8px;">Prob: {prob_izq}% | Momio: {momio_izq} | Edge: {edge_i:+.1f}%</div>
+        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:10px 12px; margin-bottom:4px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            <div style="color:#ffffff; font-weight:bold; font-size:0.92rem; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{label_izq}</div>
+            <div style="color:#cbd5e1; font-size:0.75rem; margin-bottom:6px;">Prob: {prob_izq}% | Momio: {momio_izq} | Edge: {edge_i:+.1f}%</div>
             <div>{tags_html}</div>
         </div>
         """, unsafe_allow_html=True)
         
         btn_key_izq = f"btn_{partido_key}_{label_izq.replace(' ', '_')}"
-        if st.button(f"📥 SELECCIONAR PICK", key=btn_key_izq):
+        if st.button(f"📥 SELECCIONAR", key=btn_key_izq):
             agregar_al_historial(partido_key, label_izq, prob_izq, momio_izq, edge_i, tipo_est)
             st.success(f"¡Selección guardada!")
         
-    with col2:
+    with c_outer2:
         tags_html_d = f'<span class="{css_d}">{est_d}</span>'
         tipo_est_d = "Normal"
         if star_d:
-            tags_html_d += '<span class="golden-star-tag">💎 APUESTA ESTRELLA</span>'
+            tags_html_d += '<span class="golden-star-tag">💎 ESTRELLA</span>'
             tipo_est_d = "💎 APUESTA ESTRELLA"
         elif mejor == "der":
-            tags_html_d += '<span class="best-value-tag">⭐ +EV VALOR</span>'
+            tags_html_d += '<span class="best-value-tag">⭐ +EV</span>'
             tipo_est_d = "⭐ +EV VALOR"
             
         st.markdown(f"""
-        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:12px; padding:14px 16px; margin-bottom:6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-            <div style="color:#ffffff; font-weight:bold; font-size:1.0rem; margin-bottom:3px;">{label_der}</div>
-            <div style="color:#cbd5e1; font-size:0.8rem; margin-bottom:8px;">Prob: {prob_der}% | Momio: {momio_der} | Edge: {edge_d:+.1f}%</div>
+        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:10px 12px; margin-bottom:4px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            <div style="color:#ffffff; font-weight:bold; font-size:0.92rem; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{label_der}</div>
+            <div style="color:#cbd5e1; font-size:0.75rem; margin-bottom:6px;">Prob: {prob_der}% | Momio: {momio_der} | Edge: {edge_d:+.1f}%</div>
             <div>{tags_html_d}</div>
         </div>
         """, unsafe_allow_html=True)
         
         btn_key_der = f"btn_{partido_key}_{label_der.replace(' ', '_')}"
-        if st.button(f"📥 SELECCIONAR PICK", key=btn_key_der):
+        if st.button(f"📥 SELECCIONAR", key=btn_key_der):
             agregar_al_historial(partido_key, label_der, prob_der, momio_der, edge_d, tipo_est_d)
             st.success(f"¡Selección guardada!")
 
@@ -456,9 +457,9 @@ st.markdown("### 🎯 Análisis de los 7 Mercados Clave + Auditoría +EV")
 
 # 1. Moneyline
 st.markdown(f"**1. Moneyline (Ganador Directo)**")
-col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
+col_m1, col_m2, col_m3 = st.columns([2.4, 0.8, 0.8])
 with col_m1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>Modelo: <b>[VISITA] {juego['away']} (38.5%)</b> vs <b>[LOCAL] {juego['home']} (61.5%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'><b>[VISITA] {juego['away']} (38.5%)</b> vs <b>[LOCAL] {juego['home']} (61.5%)</b></span>", unsafe_allow_html=True)
 with col_m2:
     momio_away_ml = st.number_input(f"Momio [VISITA] {juego['away']} (ML)", value=+150, step=5, key="ml_away", label_visibility="collapsed")
 with col_m3:
@@ -474,9 +475,9 @@ with col_sel_line:
 prob_over_dinamica = max(15.0, min(90.0, round(78.0 - (linea_ou - 9.5) * 6.5, 1)))
 prob_under_dinamica = round(100.0 - prob_over_dinamica, 1)
 
-col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
+col_t1, col_t2, col_t3 = st.columns([2.4, 0.8, 0.8])
 with col_t1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>Park Factor ({clima['park_factor']}): <b>Over {linea_ou} ({prob_over_dinamica}%)</b> / <b>Under {linea_ou} ({prob_under_dinamica}%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'>Park Factor ({clima['park_factor']}): <b>Over {linea_ou} ({prob_over_dinamica}%)</b> / <b>Under {linea_ou} ({prob_under_dinamica}%)</b></span>", unsafe_allow_html=True)
 with col_t2:
     momio_over = st.number_input(f"Momio Over {linea_ou}", value=-110, step=5, key="ou_over", label_visibility="collapsed")
 with col_t3:
@@ -485,18 +486,18 @@ render_pick_box_clean(juego['matchup'], f"Over {linea_ou}", prob_over_dinamica, 
 
 # 3. Run Line / Hándicap
 st.markdown(f"**3. Run Line / Hándicap (-1.5 / +1.5)**")
-col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
+col_r1, col_r2, col_r3 = st.columns([2.4, 0.8, 0.8])
 with col_r1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>wRC+ y Bullpen: <b>[LOCAL] {juego['home']} -1.5 (56.0%)</b> vs <b>[VISITA] {juego['away']} +1.5 (44.0%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'><b>[LOCAL] {juego['home']} -1.5 (56.0%)</b> vs <b>[VISITA] {juego['away']} +1.5 (44.0%)</b></span>", unsafe_allow_html=True)
 with col_r2:
     momio_rl_home_minus = st.number_input(f"Momio [LOCAL] {juego['home']} -1.5", value=+120, step=5, key="rl_home_m", label_visibility="collapsed")
 with col_r3:
     momio_rl_away_plus = st.number_input(f"Momio [VISITA] {juego['away']} +1.5", value=-140, step=5, key="rl_away_p", label_visibility="collapsed")
 render_pick_box_clean(juego['matchup'], f"[LOCAL] {juego['home']} -1.5", 56.0, momio_rl_home_minus, f"[VISITA] {juego['away']} +1.5", 44.0, momio_rl_away_plus)
 
-col_r_inv1, col_r_inv2, col_r_inv3 = st.columns([2, 1, 1])
+col_r_inv1, col_r_inv2, col_r_inv3 = st.columns([2.4, 0.8, 0.8])
 with col_r_inv1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>Alternativo: <b>[VISITA] {juego['away']} -1.5 (34.0%)</b> vs <b>[LOCAL] {juego['home']} +1.5 (66.0%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'>Alternativo: <b>[VISITA] {juego['away']} -1.5 (34.0%)</b> vs <b>[LOCAL] {juego['home']} +1.5 (66.0%)</b></span>", unsafe_allow_html=True)
 with col_r_inv2:
     momio_rl_away_minus = st.number_input(f"Momio [VISITA] {juego['away']} -1.5", value=+160, step=5, key="rl_away_m", label_visibility="collapsed")
 with col_r_inv3:
@@ -506,16 +507,16 @@ render_pick_box_clean(juego['matchup'], f"[VISITA] {juego['away']} -1.5", 34.0, 
 # 4. Ponches Totales (AMBOS ABRIDORES)
 st.markdown(f"**4. Ponches Totales (Props de K's - Ambos Abridores)**")
 
-st.markdown(f"<div style='background-color:#0d291b; padding:8px 12px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:8px;'><b>📍 Pícher Visitante: {juego['away_pitcher']} ([VISITA] {juego['away']})</b></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='background-color:#0d291b; padding:6px 10px; border-radius:6px; border-left:4px solid #10b981; margin-bottom:6px; font-size:0.85rem;'><b>📍 Pícher Visitante: {juego['away_pitcher']} ([VISITA] {juego['away']})</b></div>", unsafe_allow_html=True)
 col_pk_s1, _ = st.columns([1, 3])
 with col_pk_s1:
     linea_k_away = st.selectbox(f"Línea K's {juego['away_pitcher']}", [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5], index=4, key="k_line_away_all", label_visibility="collapsed")
 prob_k_away_over = max(20.0, min(88.0, round(82.5 - (linea_k_away - 5.5) * 8.0, 1)))
 prob_k_away_under = round(100.0 - prob_k_away_over, 1)
 
-col_ka1, col_ka2, col_ka3 = st.columns([2, 1, 1])
+col_ka1, col_ka2, col_ka3 = st.columns([2.4, 0.8, 0.8])
 with col_ka1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>Modelo K%: <b>Over {linea_k_away} ({prob_k_away_over}%)</b> / <b>Under {linea_k_away} ({prob_k_away_under}%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'>Modelo K%: <b>Over {linea_k_away} ({prob_k_away_over}%)</b> / <b>Under {linea_k_away} ({prob_k_away_under}%)</b></span>", unsafe_allow_html=True)
 with col_ka2:
     momio_k_away_over = st.number_input(f"Momio Over {linea_k_away}", value=-115, step=5, key="k_away_o_val", label_visibility="collapsed")
 with col_ka3:
@@ -523,16 +524,16 @@ with col_ka3:
 render_pick_box_clean(juego['matchup'], f"Over {linea_k_away} K's ({juego['away_pitcher']} - Visita)", prob_k_away_over, momio_k_away_over, f"Under {linea_k_away} K's ({juego['away_pitcher']} - Visita)", prob_k_away_under, momio_k_away_under)
 
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown(f"<div style='background-color:#0d291b; padding:8px 12px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:8px;'><b>📍 Pícher Local: {juego['home_pitcher']} ([LOCAL] {juego['home']})</b></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='background-color:#0d291b; padding:6px 10px; border-radius:6px; border-left:4px solid #10b981; margin-bottom:6px; font-size:0.85rem;'><b>📍 Pícher Local: {juego['home_pitcher']} ([LOCAL] {juego['home']})</b></div>", unsafe_allow_html=True)
 col_pk_h1, _ = st.columns([1, 3])
 with col_pk_h1:
     linea_k_home = st.selectbox(f"Línea K's {juego['home_pitcher']}", [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5], index=4, key="k_line_home_all", label_visibility="collapsed")
 prob_k_home_over = max(20.0, min(88.0, round(82.5 - (linea_k_home - 5.5) * 8.0, 1)))
 prob_k_home_under = round(100.0 - prob_k_home_over, 1)
 
-col_kh1, col_kh2, col_kh3 = st.columns([2, 1, 1])
+col_kh1, col_kh2, col_kh3 = st.columns([2.4, 0.8, 0.8])
 with col_kh1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>Modelo K%: <b>Over {linea_k_home} ({prob_k_home_over}%)</b> / <b>Under {linea_k_home} ({prob_k_home_under}%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'>Modelo K%: <b>Over {linea_k_home} ({prob_k_home_over}%)</b> / <b>Under {linea_k_home} ({prob_k_home_under}%)</b></span>", unsafe_allow_html=True)
 with col_kh2:
     momio_k_home_over = st.number_input(f"Momio Over {linea_k_home}", value=-115, step=5, key="k_home_o_val", label_visibility="collapsed")
 with col_kh3:
@@ -543,16 +544,16 @@ render_pick_box_clean(juego['matchup'], f"Over {linea_k_home} K's ({juego['home_
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown(f"**5. Outs Totales de Abridores (Ambos Abridores)**")
 
-st.markdown(f"<div style='background-color:#0d291b; padding:8px 12px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:8px;'><b>📍 Pícher Visitante: {juego['away_pitcher']} ([VISITA] {juego['away']})</b></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='background-color:#0d291b; padding:6px 10px; border-radius:6px; border-left:4px solid #10b981; margin-bottom:6px; font-size:0.85rem;'><b>📍 Pícher Visitante: {juego['away_pitcher']} ([VISITA] {juego['away']})</b></div>", unsafe_allow_html=True)
 col_po_s1, _ = st.columns([1, 3])
 with col_po_s1:
     linea_outs_away = st.selectbox(f"Línea Outs {juego['away_pitcher']}", [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5, 19.5], index=14, key="out_line_away_all", label_visibility="collapsed")
 prob_out_away_over = max(20.0, min(88.0, round(72.0 - (linea_outs_away - 17.5) * 5.0, 1)))
 prob_out_away_under = round(100.0 - prob_out_away_over, 1)
 
-col_outa1, col_outa2, col_outa3 = st.columns([2, 1, 1])
+col_outa1, col_outa2, col_outa3 = st.columns([2.4, 0.8, 0.8])
 with col_outa1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>WHIP y Conteo: <b>Over {linea_outs_away} ({prob_out_away_over}%)</b> / <b>Under {linea_outs_away} ({prob_out_away_under}%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'>WHIP y Conteo: <b>Over {linea_outs_away} ({prob_out_away_over}%)</b> / <b>Under {linea_outs_away} ({prob_out_away_under}%)</b></span>", unsafe_allow_html=True)
 with col_outa2:
     momio_out_away_over = st.number_input(f"Momio Over {linea_outs_away}", value=-115, step=5, key="out_away_o_val", label_visibility="collapsed")
 with col_outa3:
@@ -560,16 +561,16 @@ with col_outa3:
 render_pick_box_clean(juego['matchup'], f"Over {linea_outs_away} Outs ({juego['away_pitcher']} - Visita)", prob_out_away_over, momio_out_away_over, f"Under {linea_outs_away} Outs ({juego['away_pitcher']} - Visita)", prob_out_away_under, momio_out_away_under)
 
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown(f"<div style='background-color:#0d291b; padding:8px 12px; border-radius:8px; border-left:4px solid #10b981; margin-bottom:8px;'><b>📍 Pícher Local: {juego['home_pitcher']} ([LOCAL] {juego['home']})</b></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='background-color:#0d291b; padding:6px 10px; border-radius:6px; border-left:4px solid #10b981; margin-bottom:6px; font-size:0.85rem;'><b>📍 Pícher Local: {juego['home_pitcher']} ([LOCAL] {juego['home']})</b></div>", unsafe_allow_html=True)
 col_po_h1, _ = st.columns([1, 3])
 with col_po_h1:
     linea_outs_home = st.selectbox(f"Línea Outs {juego['home_pitcher']}", [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5, 19.5], index=14, key="out_line_home_all", label_visibility="collapsed")
 prob_out_home_over = max(20.0, min(88.0, round(72.0 - (linea_outs_home - 17.5) * 5.0, 1)))
 prob_out_home_under = round(100.0 - prob_out_home_over, 1)
 
-col_outh1, col_outh2, col_outh3 = st.columns([2, 1, 1])
+col_outh1, col_outh2, col_outh3 = st.columns([2.4, 0.8, 0.8])
 with col_outh1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>WHIP y Conteo: <b>Over {linea_outs_home} ({prob_out_home_over}%)</b> / <b>Under {linea_outs_home} ({prob_out_home_under}%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'>WHIP y Conteo: <b>Over {linea_outs_home} ({prob_out_home_over}%)</b> / <b>Under {linea_outs_home} ({prob_out_home_under}%)</b></span>", unsafe_allow_html=True)
 with col_outh2:
     momio_out_home_over = st.number_input(f"Momio Over {linea_outs_home}", value=-115, step=5, key="out_home_o_val", label_visibility="collapsed")
 with col_outh3:
@@ -579,9 +580,9 @@ render_pick_box_clean(juego['matchup'], f"Over {linea_outs_home} Outs ({juego['h
 # 6. Primeras 5 Entradas
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown(f"**6. Primeras 5 Entradas (F5 - Ganador)**")
-col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
+col_f1, col_f2, col_f3 = st.columns([2.4, 0.8, 0.8])
 with col_f1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>Efectividad Abridores F5: <b>[VISITA] {juego['away']} (38.0%)</b> vs <b>[LOCAL] {juego['home']} (62.0%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'><b>[VISITA] {juego['away']} (38.0%)</b> vs <b>[LOCAL] {juego['home']} (62.0%)</b></span>", unsafe_allow_html=True)
 with col_f2:
     momio_f5_away = st.number_input(f"Momio [VISITA] F5", value=+125, step=5, key="f5_away", label_visibility="collapsed")
 with col_f3:
@@ -590,9 +591,9 @@ render_pick_box_clean(juego['matchup'], f"[VISITA] {juego['away']} F5", 38.0, mo
 
 # 7. NRFI / YRFI
 st.markdown(f"**7. NRFI / YRFI (Carrera en la 1ª Entrada)**")
-col_n1, col_n2, col_n3 = st.columns([2, 1, 1])
+col_n1, col_n2, col_n3 = st.columns([2.4, 0.8, 0.8])
 with col_n1:
-    st.markdown(f"<span style='color:#cbd5e1; line-height:38px;'>WHIP 1ª Entrada: <b>NRFI (65.0%)</b> vs <b>YRFI (35.0%)</b></span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:#cbd5e1; font-size:0.85rem; line-height:38px;'>WHIP 1ª Entrada: <b>NRFI (65.0%)</b> vs <b>YRFI (35.0%)</b></span>", unsafe_allow_html=True)
 with col_n2:
     momio_nrfi = st.number_input("Momio NRFI", value=-130, step=5, key="nrfi_val", label_visibility="collapsed")
 with col_n3:
