@@ -334,7 +334,30 @@ def render_pick_box_clean(partido_key, label_izq, prob_izq, momio_izq, label_der
             <div>{tags_html}</div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button(f"📥 Seleccionar {label_izq}", key=f"btn_{partido_key}_{label_izq.replace(' ', '_')}"):
+        
+        # Botón estilizado en verde fluorescente con HTML/Markdown nativo o estilización limpia
+        btn_key_izq = f"btn_{partido_key}_{label_izq.replace(' ', '_')}"
+        st.markdown("""
+            <style>
+            div.stButton > button[key^="btn_"] {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+                color: #0b1f14 !important;
+                font-weight: 900 !important;
+                border: 1px solid #34d399 !important;
+                border-radius: 8px !important;
+                padding: 6px 12px !important;
+                width: 100% !important;
+                box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
+                transition: all 0.3s ease !important;
+            }
+            div.stButton > button[key^="btn_"]:hover {
+                background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+                box-shadow: 0 0 18px rgba(52, 211, 153, 0.7) !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        if st.button(f"📥 Seleccionar {label_izq}", key=btn_key_izq):
             agregar_al_historial(partido_key, label_izq, prob_izq, momio_izq, edge_i, tipo_est)
             st.success(f"¡Selección guardada en tu historial!")
         
@@ -355,7 +378,9 @@ def render_pick_box_clean(partido_key, label_izq, prob_izq, momio_izq, label_der
             <div>{tags_html_d}</div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button(f"📥 Seleccionar {label_der}", key=f"btn_{partido_key}_{label_der.replace(' ', '_')}"):
+        
+        btn_key_der = f"btn_{partido_key}_{label_der.replace(' ', '_')}"
+        if st.button(f"📥 Seleccionar {label_der}", key=btn_key_der):
             agregar_al_historial(partido_key, label_der, prob_der, momio_der, edge_d, tipo_est_d)
             st.success(f"¡Selección guardada en tu historial!")
 
@@ -576,22 +601,26 @@ with tab_activas:
         st.info("No tienes apuestas seleccionadas actualmente. Usa los botones '📥 Seleccionar' en cada mercado para agregarlas aquí.")
     else:
         for idx, ap in enumerate(apuestas_pendientes):
-            col_a1, col_a2, col_a3, col_a4 = st.columns([3, 2, 1, 1])
+            col_a1, col_a2, col_a3, col_a4, col_a5 = st.columns([3, 2, 1, 1, 1])
             with col_a1:
                 st.markdown(f"**Partido:** {ap['partido']}<br>📌 **Pick:** `{ap['seleccion']}`", unsafe_allow_html=True)
             with col_a2:
                 st.markdown(f"Prob: **{ap['prob']}%** | Momio: **{ap['momio']}**<br>Calidad: **{ap['estrella']}**", unsafe_allow_html=True)
             with col_a3:
-                if st.button("✅ Marcar WIN", key=f"win_{ap['id']}"):
+                if st.button("✅ WIN", key=f"win_{ap['id']}"):
                     for item in st.session_state.historial_apuestas:
                         if item["id"] == ap["id"]:
                             item["estado"] = "WIN"
                     st.rerun()
             with col_a4:
-                if st.button("❌ Marcar LOSS", key=f"loss_{ap['id']}"):
+                if st.button("❌ LOSS", key=f"loss_{ap['id']}"):
                     for item in st.session_state.historial_apuestas:
                         if item["id"] == ap["id"]:
                             item["estado"] = "LOSS"
+                    st.rerun()
+            with col_a5:
+                if st.button("🗑️ Quitar", key=f"del_{ap['id']}"):
+                    st.session_state.historial_apuestas = [item for item in st.session_state.historial_apuestas if item["id"] != ap["id"]]
                     st.rerun()
             st.markdown("---")
         
