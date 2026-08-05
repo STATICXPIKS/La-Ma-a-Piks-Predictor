@@ -12,55 +12,84 @@ st.set_page_config(
 
 st.markdown("""
     <style>
+    /* Estilos Futuristas: Verde Botella, Verde Fluorescente y Oro */
+    .stApp {
+        background-color: #0b1f14;
+        color: #e2e8f0;
+    }
+    
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] {
+        background-color: #06140e;
+        border-right: 1px solid #10b981;
+    }
+    
     .matchup-card {
-        background-color: #ffffff;
-        border: 1px solid #cbd5e1;
+        background: linear-gradient(135deg, #0f2d1e 0%, #081c13 100%);
+        border: 1px solid #10b981;
         border-radius: 16px;
         padding: 24px;
         margin-bottom: 24px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
     }
     .badge-bet {
-        background-color: #dcfce7;
-        color: #166534;
+        background-color: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid #10b981;
         padding: 4px 10px;
         border-radius: 6px;
         font-weight: bold;
         font-size: 0.8rem;
     }
     .badge-maybe {
-        background-color: #e0f2fe;
-        color: #0369a1;
+        background-color: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid #f59e0b;
         padding: 4px 10px;
         border-radius: 6px;
         font-weight: bold;
         font-size: 0.8rem;
     }
     .badge-fade {
-        background-color: #fee2e2;
-        color: #991b1b;
+        background-color: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid #ef4444;
         padding: 4px 10px;
         border-radius: 6px;
         font-weight: bold;
         font-size: 0.8rem;
     }
     .best-value-tag {
-        background-color: #fef08a;
-        color: #854d0e;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: bold;
-        margin-left: 6px;
+        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+        color: #0b1f14;
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        margin-left: 8px;
+        box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
     }
     .model-explanation {
-        background-color: #f8fafc;
-        border-left: 4px solid #3b82f6;
-        padding: 14px 18px;
+        background: rgba(15, 45, 30, 0.8);
+        border-left: 4px solid #10b981;
+        border-right: 1px solid #10b981;
+        border-top: 1px solid #10b981;
+        border-bottom: 1px solid #10b981;
+        padding: 16px 20px;
         border-radius: 0 12px 12px 0;
-        margin-top: 15px;
+        margin-top: 20px;
         font-size: 0.95rem;
-        color: #334155;
+        color: #cbd5e1;
+    }
+    h1, h2, h3 {
+        color: #34d399 !important;
+        font-family: 'Inter', sans-serif;
+        text-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+    }
+    /* Inputs de Streamlit personalizados */
+    div[data-baseweb="input"] {
+        background-color: #081c13 !important;
+        border-color: #10b981 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -194,27 +223,33 @@ def evaluar_opcion(prob_modelo_pct, momio_casa):
         clase_css = "badge-fade"
     return edge, estado, clase_css
 
-def render_pick_box(label_izq, prob_izq, momio_izq, label_der, prob_der, momio_der):
+def render_pick_box_clean(label_izq, prob_izq, momio_izq, label_der, prob_der, momio_der):
     edge_i, est_i, css_i = evaluar_opcion(prob_izq, momio_izq)
     edge_d, est_d, css_d = evaluar_opcion(prob_der, momio_der)
     
     mejor = "izq" if edge_i >= edge_d else "der"
     
-    col_p1, col_p2 = st.columns(2)
-    with col_p1:
-        val_tag = '<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor == "izq" else ''
+    col1, col2 = st.columns(2)
+    with col1:
         st.markdown(f"""
-        <div style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:8px;">
-            <b>{label_izq}:</b> Prob {prob_izq}% | Momio {momio_izq} | Edge {edge_i:+.1f}% 
-            <span class="{css_i}">{est_i}</span> {val_tag}
+        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:12px; margin-bottom:8px;">
+            <span style="color:#e2e8f0; font-weight:bold;">{label_izq}</span><br>
+            <span style="color:#94a3b8; font-size:0.85rem;">Prob: {prob_izq}% | Momio: {momio_izq} | Edge: {edge_i:+.1f}%</span><br>
+            <div style="margin-top:6px;">
+                <span class="{css_i}">{est_i}</span>
+                {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor == "izq" else ''}
+            </div>
         </div>
         """, unsafe_allow_html=True)
-    with col_p2:
-        val_tag = '<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor == "der" else ''
+    with col2:
         st.markdown(f"""
-        <div style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:8px;">
-            <b>{label_der}:</b> Prob {prob_der}% | Momio {momio_der} | Edge {edge_d:+.1f}% 
-            <span class="{css_d}">{est_d}</span> {val_tag}
+        <div style="background-color:#081c13; border:1px solid #10b981; border-radius:10px; padding:12px; margin-bottom:8px;">
+            <span style="color:#e2e8f0; font-weight:bold;">{label_der}</span><br>
+            <span style="color:#94a3b8; font-size:0.85rem;">Prob: {prob_der}% | Momio: {momio_der} | Edge: {edge_d:+.1f}%</span><br>
+            <div style="margin-top:6px;">
+                <span class="{css_d}">{est_d}</span>
+                {'<span class="best-value-tag">⭐ MAYOR VALOR</span>' if mejor == "der" else ''}
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -235,28 +270,28 @@ st.sidebar.markdown(f"🌡️ **Temp:** {clima['temperatura']} | 💨 **Viento:*
 col_h1, col_h2 = st.columns([4, 1])
 with col_h1:
     st.markdown("## ⚾ LA MAÑA PIKS · Auditoría Sabermétrica MLB")
-    st.markdown("Consulte los picks analizados en vivo con probabilidades reales de éxito y cajas editables de momios de casino.")
+    st.markdown("<span style='color: #94a3b8;'>Consulte los picks analizados en vivo con probabilidades reales de éxito y cajas editables de momios de casino.</span>", unsafe_allow_html=True)
 with col_h2:
-    st.markdown("<div style='text-align: right; padding-top: 10px;'><span style='background-color:#dcfce7; color:#166534; padding:6px 12px; border-radius:8px; font-weight:bold;'>🟢 API EN VIVO</span></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: right; padding-top: 10px;'><span style='background-color:rgba(16, 185, 129, 0.2); color:#34d399; border:1px solid #10b981; padding:6px 12px; border-radius:8px; font-weight:bold;'>🟢 API EN VIVO</span></div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
 st.markdown(f"""
 <div class="matchup-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <span style="font-weight: bold; color: #64748b; font-size: 0.9rem;">🕒 4:40 P.M. · {juego['venue'].upper()}</span>
-        <span style="background-color: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight:bold;">ALINEACIONES CONFIRMADAS</span>
+        <span style="font-weight: bold; color: #34d399; font-size: 0.9rem;">🕒 4:40 P.M. · {juego['venue'].upper()}</span>
+        <span style="background-color: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid #f59e0b; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight:bold;">ALINEACIONES CONFIRMADAS</span>
     </div>
-    <div style="display:flex; align-items:center; margin-bottom: 10px;">
+    <div style="display:flex; align-items:center; margin-bottom: 12px;">
         <img src="{juego['away_logo']}" width="36" height="36" style="margin-right: 12px; object-fit: contain;" onerror="this.src='https://placehold.co/36x36/png?text=MLB'">
-        <div style="font-size: 1.15rem; font-weight: bold; color: #1e293b;">
-            {juego['away']} <span style="font-size: 0.85rem; color:#64748b; font-weight:normal;">(Abre {juego['away_pitcher']})</span>
+        <div style="font-size: 1.15rem; font-weight: bold; color: #ffffff;">
+            {juego['away']} <span style="font-size: 0.85rem; color:#94a3b8; font-weight:normal;">(Abre {juego['away_pitcher']})</span>
         </div>
     </div>
     <div style="display:flex; align-items:center;">
         <img src="{juego['home_logo']}" width="36" height="36" style="margin-right: 12px; object-fit: contain;" onerror="this.src='https://placehold.co/36x36/png?text=MLB'">
-        <div style="font-size: 1.15rem; font-weight: bold; color: #1e293b;">
-            {juego['home']} <span style="font-size: 0.85rem; color:#64748b; font-weight:normal;">(Abre {juego['home_pitcher']})</span>
+        <div style="font-size: 1.15rem; font-weight: bold; color: #ffffff;">
+            {juego['home']} <span style="font-size: 0.85rem; color:#94a3b8; font-weight:normal;">(Abre {juego['home_pitcher']})</span>
         </div>
     </div>
 </div>
@@ -268,81 +303,81 @@ st.markdown("### 🎯 Análisis de los 7 Mercados Clave + Momios de Casino")
 st.markdown(f"**1. Moneyline (Ganador Directo)**")
 col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
 with col_m1:
-    st.write(f"Prob. Modelo: **{juego['away']} (32.8%)** vs **{juego['home']} (67.2%)**")
+    st.markdown(f"<span style='color:#cbd5e1;'>Prob. Modelo: <b>{juego['away']} (32.8%)</b> vs <b>{juego['home']} (67.2%)</b></span>", unsafe_allow_html=True)
 with col_m2:
     momio_away_ml = st.number_input(f"Momio {juego['away']} (ML)", value=+140, step=5, key="ml_away")
 with col_m3:
     momio_home_ml = st.number_input(f"Momio {juego['home']} (ML)", value=-165, step=5, key="ml_home")
-render_pick_box(juego['away'], 32.8, momio_away_ml, juego['home'], 67.2, momio_home_ml)
+render_pick_box_clean(juego['away'], 32.8, momio_away_ml, juego['home'], 67.2, momio_home_ml)
 
 # 2. Total Carreras
 st.markdown(f"**2. Total Carreras (Over / Under Línea Estándar 9.5)**")
 col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
 with col_t1:
-    st.write(f"Park Factor ({clima['park_factor']}) & Clima ({clima['temperatura']}): **Over 9.5 (61.4%)** / **Under 9.5 (38.6%)**")
+    st.markdown(f"<span style='color:#cbd5e1;'>Park Factor ({clima['park_factor']}) & Clima ({clima['temperatura']}): <b>Over 9.5 (61.4%)</b> / <b>Under 9.5 (38.6%)</b></span>", unsafe_allow_html=True)
 with col_t2:
     momio_over = st.number_input("Momio Over 9.5", value=-110, step=5, key="ou_over")
 with col_t3:
     momio_under = st.number_input("Momio Under 9.5", value=-110, step=5, key="ou_under")
-render_pick_box("Over 9.5", 61.4, momio_over, "Under 9.5", 38.6, momio_under)
+render_pick_box_clean("Over 9.5", 61.4, momio_over, "Under 9.5", 38.6, momio_under)
 
 # 3. Run Line
 st.markdown(f"**3. Run Line / Hándicap (-1.5 / +1.5)**")
 col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
 with col_r1:
-    st.write(f"wRC+ y Bullpen: **{juego['home']} -1.5 (54.2%)** vs **{juego['away']} +1.5 (45.8%)**")
+    st.markdown(f"<span style='color:#cbd5e1;'>wRC+ y Bullpen: <b>{juego['home']} -1.5 (54.2%)</b> vs <b>{juego['away']} +1.5 (45.8%)</b></span>", unsafe_allow_html=True)
 with col_r2:
     momio_rl_home = st.number_input(f"Momio {juego['home']} -1.5", value=+125, step=5, key="rl_home")
 with col_r3:
     momio_rl_away = st.number_input(f"Momio {juego['away']} +1.5", value=-145, step=5, key="rl_away")
-render_pick_box(f"{juego['home']} -1.5", 54.2, momio_rl_home, f"{juego['away']} +1.5", 45.8, momio_rl_away)
+render_pick_box_clean(f"{juego['home']} -1.5", 54.2, momio_rl_home, f"{juego['away']} +1.5", 45.8, momio_rl_away)
 
 # 4. Ponches Totales
 st.markdown(f"**4. Ponches Totales (Props de K's del Abridor Local: {juego['home_pitcher']})**")
 col_k1, col_k2, col_k3 = st.columns([2, 1, 1])
 with col_k1:
-    st.write(f"K% y BvP: **Over 5.5 K's (66.5%)** / **Under 5.5 K's (33.5%)**")
+    st.markdown(f"<span style='color:#cbd5e1;'>K% y BvP: <b>Over 5.5 K's (66.5%)</b> / <b>Under 5.5 K's (33.5%)</b></span>", unsafe_allow_html=True)
 with col_k2:
     momio_k_over = st.number_input("Momio Over K's", value=-120, step=5, key="k_over")
 with col_k3:
     momio_k_under = st.number_input("Momio Under K's", value=+100, step=5, key="k_under")
-render_pick_box("Over 5.5 K's", 66.5, momio_k_over, "Under 5.5 K's", 33.5, momio_k_under)
+render_pick_box_clean("Over 5.5 K's", 66.5, momio_k_over, "Under 5.5 K's", 33.5, momio_k_under)
 
 # 5. Outs Totales
 st.markdown(f"**5. Outs Totales del Abridor Local ({juego['home_pitcher']})**")
 col_o1, col_o2, col_o3 = st.columns([2, 1, 1])
 with col_o1:
-    st.write(f"WHIP y Conteo de Lanzamientos: **Over 17.5 Outs (70.2%)** / **Under 17.5 Outs (29.8%)**")
+    st.markdown(f"<span style='color:#cbd5e1;'>WHIP y Conteo de Lanzamientos: <b>Over 17.5 Outs (70.2%)</b> / <b>Under 17.5 Outs (29.8%)</b></span>", unsafe_allow_html=True)
 with col_o2:
     momio_out_over = st.number_input("Momio Over Outs", value=-115, step=5, key="out_over")
 with col_o3:
     momio_out_under = st.number_input("Momio Under Outs", value=-115, step=5, key="out_under")
-render_pick_box("Over 17.5 Outs", 70.2, momio_out_over, "Under 17.5 Outs", 29.8, momio_out_under)
+render_pick_box_clean("Over 17.5 Outs", 70.2, momio_out_over, "Under 17.5 Outs", 29.8, momio_out_under)
 
 # 6. Primeras 5 Entradas
 st.markdown(f"**6. Primeras 5 Entradas (F5 - Ganador)**")
 col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
 with col_f1:
-    st.write(f"Efectividad Abridores F5: **{juego['away']} (35.0%)** vs **{juego['home']} (65.0%)**")
+    st.markdown(f"<span style='color:#cbd5e1;'>Efectividad Abridores F5: <b>{juego['away']} (35.0%)</b> vs <b>{juego['home']} (65.0%)</b></span>", unsafe_allow_html=True)
 with col_f2:
     momio_f5_away = st.number_input(f"Momio {juego['away']} F5", value=+120, step=5, key="f5_away")
 with col_f3:
     momio_f5_home = st.number_input(f"Momio {juego['home']} F5", value=-140, step=5, key="f5_home")
-render_pick_box(f"{juego['away']} F5", 35.0, momio_f5_away, f"{juego['home']} F5", 65.0, momio_f5_home)
+render_pick_box_clean(f"{juego['away']} F5", 35.0, momio_f5_away, f"{juego['home']} F5", 65.0, momio_f5_home)
 
 # 7. NRFI / YRFI
 st.markdown(f"**7. NRFI / YRFI (Carrera en la 1ª Entrada)**")
 col_n1, col_n2, col_n3 = st.columns([2, 1, 1])
 with col_n1:
-    st.write(f"WHIP 1ª Entrada: **NRFI (No Run - 62.5%)** vs **YRFI (Yes Run - 37.5%)**")
+    st.markdown(f"<span style='color:#cbd5e1;'>WHIP 1ª Entrada: <b>NRFI (No Run - 62.5%)</b> vs <b>YRFI (Yes Run - 37.5%)</b></span>", unsafe_allow_html=True)
 with col_n2:
     momio_nrfi = st.number_input("Momio NRFI", value=-125, step=5, key="nrfi_val")
 with col_n3:
     momio_yrfi = st.number_input("Momio YRFI", value=+105, step=5, key="yrfi_val")
-render_pick_box("NRFI (No)", 62.5, momio_nrfi, "YRFI (Yes)", 37.5, momio_yrfi)
+render_pick_box_clean("NRFI (No)", 62.5, momio_nrfi, "YRFI (Yes)", 37.5, momio_yrfi)
 
 st.markdown(f"""
 <div class="model-explanation">
-    <b>💡 QUÉ VE EL MODELO:</b> El sistema sabermétrico de <b>LA MAÑA PIKS</b> cruza las métricas de xERA, FIP, wRC+ y bullpen para este encuentro en el <b>{juego['venue']}</b>. Se observan ventajas claras respaldadas por el factor climático ({clima['temperatura']}, viento {clima['viento']}). Ajuste sus apuestas considerando las cuotas de su casino de preferencia.
+    <b style="color:#34d399;">💡 QUÉ VE EL MODELO:</b> El sistema sabermétrico de <b style="color:#fbbf24;">LA MAÑA PIKS</b> cruza las métricas de xERA, FIP, wRC+ y bullpen para este encuentro en el <b style="color:#34d399;">{juego['venue']}</b>. Se observan ventajas claras respaldadas por el factor climático ({clima['temperatura']}, viento {clima['viento']}). Ajuste sus apuestas considerando las cuotas de su casino de preferencia.
 </div>
 """, unsafe_allow_html=True)
