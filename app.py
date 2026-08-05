@@ -490,27 +490,29 @@ st.markdown(f"""
             [LOCAL] {juego['home']} <span style="font-size: 0.85rem; color:#cbd5e1; font-weight:normal;">(Abre {juego['home_pitcher']})</span>
         </div>
     </div>
-    
-    <!-- DESGLOSE DE MÉTRICAS SABERMÉTRICAS AUTOMÁTICAS -->
-    <div style="background: rgba(4, 28, 18, 0.8); border: 1px dashed #10b981; border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 0.82rem;">
-        <div style="color: #34d399; font-weight: bold; margin-bottom: 6px;">📊 Auditoría Sabermétrica Actualizada (Visitante vs Local):</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div>
-                <b>✈️ {juego['away']}:</b><br>
-                • xERA: <code>{juego['away_stats']['xERA']}</code> | FIP: <code>{juego['away_stats']['FIP']}</code> | WHIP: <code>{juego['away_stats']['WHIP']}<br>
-                • K%: <code>{juego['away_stats']['K_pct']}%</code> | BB%: <code>{juego['away_stats']['BB_pct']}%</code> | Bullpen: <code>{juego['away_stats']['bullpen_leverage']}</code><br>
-                • wRC+: <code>{juego['away_stats']['wRC_plus']}</code> | OPS: <code>{juego['away_stats']['OPS']}</code> | ISO: <code>{juego['away_stats']['ISO']}</code><br>
-                • Splits (v.L/v.R): <code>{juego['away_stats']['splits_vs_lhp']} / {juego['away_stats']['splits_vs_rhp']}</code><br>
-                • Proyección PA: <code>{juego['away_stats']['projected_pa']}</code> | BvP: {juego['away_stats']['bvp_notes']}
-            </div>
-            <div>
-                <b>🏠 {juego['home']}:</b><br>
-                • xERA: <code>{juego['home_stats']['xERA']}</code> | FIP: <code>{juego['home_stats']['FIP']}</code> | WHIP: <code>{juego['home_stats']['WHIP']}<br>
-                • K%: <code>{juego['home_stats']['K_pct']}%</code> | BB%: <code>{juego['home_stats']['BB_pct']}%</code> | Bullpen: <code>{juego['home_stats']['bullpen_leverage']}</code><br>
-                • wRC+: <code>{juego['home_stats']['wRC_plus']}</code> | OPS: <code>{juego['home_stats']['OPS']}</code> | ISO: <code>{juego['home_stats']['ISO']}</code><br>
-                • Splits (v.L/v.R): <code>{juego['home_stats']['splits_vs_lhp']} / {juego['home_stats']['splits_vs_rhp']}</code><br>
-                • Proyección PA: <code>{juego['home_stats']['projected_pa']}</code> | BvP: {juego['home_stats']['bvp_notes']}
-            </div>
+</div>
+""", unsafe_allow_html=True)
+
+# DESGLOSE DE MÉTRICAS SABERMÉTRICAS AUTOMÁTICAS (Renderizado seguro con HTML corregido)
+st.markdown(f"""
+<div style="background: rgba(4, 28, 18, 0.9); border: 1px dashed #10b981; border-radius: 10px; padding: 16px; margin-bottom: 20px; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+    <div style="color: #34d399; font-weight: bold; margin-bottom: 10px; font-size: 0.95rem;">📊 Auditoría Sabermétrica Actualizada (Visitante vs Local):</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div>
+            <b style="color: #34d399;">✈️ {juego['away']}:</b><br>
+            • xERA: <code>{juego['away_stats']['xERA']}</code> | FIP: <code>{juego['away_stats']['FIP']}</code> | WHIP: <code>{juego['away_stats']['WHIP']}</code><br>
+            • K%: <code>{juego['away_stats']['K_pct']}%</code> | BB%: <code>{juego['away_stats']['BB_pct']}%</code> | Bullpen: <code>{juego['away_stats']['bullpen_leverage']}</code><br>
+            • wRC+: <code>{juego['away_stats']['wRC_plus']}</code> | OPS: <code>{juego['away_stats']['OPS']}</code> | ISO: <code>{juego['away_stats']['ISO']}</code><br>
+            • Splits (v.L/v.R): <code>{juego['away_stats']['splits_vs_lhp']} / {juego['away_stats']['splits_vs_rhp']}</code><br>
+            • Proyección PA: <code>{juego['away_stats']['projected_pa']}</code> | BvP: {juego['away_stats']['bvp_notes']}
+        </div>
+        <div>
+            <b style="color: #34d399;">🏠 {juego['home']}:</b><br>
+            • xERA: <code>{juego['home_stats']['xERA']}</code> | FIP: <code>{juego['home_stats']['FIP']}</code> | WHIP: <code>{juego['home_stats']['WHIP']}</code><br>
+            • K%: <code>{juego['home_stats']['K_pct']}%</code> | BB%: <code>{juego['home_stats']['BB_pct']}%</code> | Bullpen: <code>{juego['home_stats']['bullpen_leverage']}</code><br>
+            • wRC+: <code>{juego['home_stats']['wRC_plus']}</code> | OPS: <code>{juego['home_stats']['OPS']}</code> | ISO: <code>{juego['home_stats']['ISO']}</code><br>
+            • Splits (v.L/v.R): <code>{juego['home_stats']['splits_vs_lhp']} / {juego['home_stats']['splits_vs_rhp']}</code><br>
+            • Proyección PA: <code>{juego['home_stats']['projected_pa']}</code> | BvP: {juego['home_stats']['bvp_notes']}
         </div>
     </div>
 </div>
