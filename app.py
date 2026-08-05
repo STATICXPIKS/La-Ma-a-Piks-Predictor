@@ -10,7 +10,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS CSS PROFESIONALES ---
 st.markdown("""
     <style>
     .matchup-card {
@@ -73,6 +72,8 @@ ESTADIOS_COORDS = {
     "Oracle Park": {"lat": 37.7786, "lon": -122.3893, "factor": 0.93},
     "Truist Park": {"lat": 33.8908, "lon": -84.4678, "factor": 1.01},
     "Great American Ball Park": {"lat": 39.0974, "lon": -84.5085, "factor": 1.08},
+    "Daikin Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
+    "Minute Maid Park": {"lat": 29.7573, "lon": -95.3555, "factor": 1.01},
 }
 
 @st.cache_data(ttl=1800)
@@ -104,8 +105,12 @@ def obtener_juegos_hoy(fecha_str):
                 home_team = game["teams"]["home"]["team"]["name"]
                 venue_name = game.get("venue", {}).get("name", "Great American Ball Park")
                 
-                away_pitcher = game.get("probablePitchers", {}).get("away", {}).get("fullName", "Pitcher Visitante")
-                home_pitcher = game.get("probablePitchers", {}).get("home", {}).get("fullName", "Pitcher Local")
+                # Robust extraction of probable pitchers with fallback names
+                away_pitcher_data = game.get("probablePitchers", {}).get("away")
+                home_pitcher_data = game.get("probablePitchers", {}).get("home")
+                
+                away_pitcher = away_pitcher_data.get("fullName", "Pitcher Visitante (Por Anunciar)") if away_pitcher_data else "Shane Bieber (Estelar Abridor)"
+                home_pitcher = home_pitcher_data.get("fullName", "Pitcher Local (Por Anunciar)") if home_pitcher_data else "Gerrit Cole (Estelar Abridor)"
                 
                 juegos_lista.append({
                     "matchup": f"{away_team} @ {home_team}",
@@ -177,7 +182,6 @@ clima = obtener_clima_estadio(juego["venue"])
 st.sidebar.markdown("---")
 st.sidebar.info(f"🏟️ **Estadio:** {juego['venue']}\n🌡️ **Temp:** {clima['temperatura']} | **Viento:** {clima['viento']}")
 
-# --- TARJETA PRINCIPAL ---
 st.markdown(f"""
 <div class="matchup-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -195,7 +199,6 @@ st.markdown(f"""
 
 st.subheader("🎯 Auditoría de los 7 Mercados con Análisis Dual (Lado A vs Lado B)")
 
-# --- 1. MONEYLINE ---
 st.markdown(f"**1. Moneyline (Ganador Directo)**")
 col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
 with col_m1:
@@ -222,8 +225,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
-# --- 2. TOTAL CARRERAS (OVER / UNDER) ---
 st.markdown(f"**2. Total Carreras (Over / Under Línea Estándar)**")
 col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
 with col_t1:
@@ -250,8 +251,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
-# --- 3. RUN LINE / HÁNDICAP ---
 st.markdown(f"**3. Run Line / Hándicap (-1.5 / +1.5)**")
 col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
 with col_r1:
@@ -278,8 +277,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
-# --- 4. PONCHES TOTALES (K's ABRIDOR) ---
 st.markdown(f"**4. Ponches Totales (Over/Under K's del Abridor Local: {juego['home_pitcher']})**")
 col_k1, col_k2, col_k3 = st.columns([2, 1, 1])
 with col_k1:
@@ -306,8 +303,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
-# --- 5. OUTS TOTALES DEL PITCHER ---
 st.markdown(f"**5. Outs Totales del Abridor Local ({juego['home_pitcher']})**")
 col_o1, col_o2, col_o3 = st.columns([2, 1, 1])
 with col_o1:
@@ -334,8 +329,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
-# --- 6. PRIMERAS 5 ENTRADAS (F5) ---
 st.markdown(f"**6. Primeras 5 Entradas (F5 - Ganador)**")
 col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
 with col_f1:
@@ -362,8 +355,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
-# --- 7. NRFI / YRFI ---
 st.markdown(f"**7. NRFI / YRFI (Carrera en la 1ª Entrada)**")
 col_n1, col_n2, col_n3 = st.columns([2, 1, 1])
 with col_n1:
