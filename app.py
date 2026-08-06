@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 # Configuración de página
-st.set_page_config(page_title="MAÑA PIKS - MLB SABERMÉTRICO PRO", layout="wide", page_icon="👑")
+st.set_page_config(page_title="MAÑA PIKS - MLB MONTE CARLO 10K", layout="wide", page_icon="👑")
 
 DB_FILE = "apuestas_db.json"
 
@@ -48,7 +48,7 @@ def registrar_apuesta(partido, equipo_loc, equipo_vis, mercado, linea, momio, ev
         "linea": str(linea),
         "momio": momio,
         "ev": round(ev * 100, 1),
-        "estado": "PENDING", # PENDING, WIN, LOSS
+        "estado": "PENDING",
         "resultado_real": "En Espera"
     }
     historial.append(nueva_apuesta)
@@ -63,6 +63,20 @@ def eliminar_apuesta(id_apuesta):
     st.session_state.historial_apuestas = historial
     st.toast("🗑️ Apuesta eliminada con éxito", icon="🗑️")
     st.rerun()
+
+# ==========================================
+# SIMULADOR MONTE CARLO (10,000 ENFRENTAMIENTOS)
+# ==========================================
+def simular_partido_montecarlo(xr_local, xr_visita, num_simulaciones=10000):
+    """
+    Ejecuta 10,000 simulaciones numéricas del partido entre ambos equipos
+    utilizando distribuciones de probabilidad Poisson estocásticas.
+    """
+    np.random.seed(42) # Semilla fija para reproducibilidad
+    carreras_loc = np.random.poisson(xr_local, num_simulaciones)
+    carreras_vis = np.random.poisson(xr_visita, num_simulaciones)
+    
+    return carreras_loc, carreras_vis
 
 # ==========================================
 # MOTOR DE DETECCIÓN DE TRAMPAS Y BAJAS MLB
@@ -92,9 +106,6 @@ def obtener_lesiones_espn():
         pass
     return bajas_reportadas[:3]
 
-# ==========================================
-# MINIGRÁFICA DE BARRAS PROPS BR (L10)
-# ==========================================
 def generar_grafica_barras_propsbr(prob_real):
     np.random.seed(int(prob_real * 10000) % 1000)
     hits = (np.random.rand(10) < prob_real).astype(int)
@@ -107,7 +118,7 @@ def generar_grafica_barras_propsbr(prob_real):
     return html
 
 # ==========================================
-# MOTOR DE AUTO-VERIFICACIÓN EN VIVO (MLB)
+# AUTO-VERIFICACIÓN EN VIVO
 # ==========================================
 def auto_verificar_apuestas():
     historial = cargar_base_datos()
