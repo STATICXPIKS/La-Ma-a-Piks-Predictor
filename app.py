@@ -842,20 +842,12 @@ with col_izq:
     xr_local = ((eq_local_base["wRC_plus"] / 100.0) * (era_vis / 4.10) * (whip_vis / 1.25) * 4.30) * mult_clima
     xr_visita = ((eq_visita_base["wRC_plus"] / 100.0) * (era_loc / 4.10) * (whip_loc / 1.25) * 4.10) * mult_clima
 
-    max_c = 16
-    matrix_mlb = np.zeros((max_c, max_c))
-    for x in range(max_c):
-        for y in range(max_c):
-            matrix_mlb[x, y] = poisson.pmf(x, xr_local) * poisson.pmf(y, xr_visita)
-    matrix_mlb /= np.sum(matrix_mlb)
+    # SIMULACIÓN MONTE CARLO (10,000 ENFRENTAMIENTOS REALES)
+    carreras_loc_sim, carreras_vis_sim = simular_partido_montecarlo(xr_local, xr_visita, 10000)
 
     xr_loc_f5 = (eq_local_base["wRC_plus"] / 100.0) * (era_vis / 4.10) * 2.35 * mult_clima
     xr_vis_f5 = (eq_visita_base["wRC_plus"] / 100.0) * (era_loc / 4.10) * 2.20 * mult_clima
-    matrix_f5 = np.zeros((max_c, max_c))
-    for x in range(max_c):
-        for y in range(max_c):
-            matrix_f5[x, y] = poisson.pmf(x, xr_loc_f5) * poisson.pmf(y, xr_vis_f5)
-    matrix_f5 /= np.sum(matrix_f5)
+    carreras_f5_loc_sim, carreras_f5_vis_sim = simular_partido_montecarlo(xr_loc_f5, xr_vis_f5, 10000)
 
     id_loc = eq_local_base.get("id", 147)
     id_vis = eq_visita_base.get("id", 119)
@@ -900,15 +892,15 @@ with col_izq:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    prob_ml_local = np.sum(np.tril(matrix_mlb, -1))
-    prob_ml_visita = np.sum(np.triu(matrix_mlb, 1))
+    prob_ml_local = np.mean(carreras_loc_sim > carreras_vis_sim)
+    prob_ml_visita = np.mean(carreras_vis_sim > carreras_loc_sim)
 
     fig_pie_mlb = go.Figure(data=[go.Pie(
         labels=[local_nombre, visita_nombre], values=[prob_ml_local, prob_ml_visita], hole=.55,
         marker=dict(colors=['#00ff66', '#f5d742'])
     )])
     fig_pie_mlb.update_layout(
-        title=dict(text="Moneyline % Probabilidad", font=dict(size=12, color="#f5d742")),
+        title=dict(text="Moneyline % Probabilidad (10K Sim)", font=dict(size=12, color="#f5d742")),
         height=190, paper_bgcolor='#242a26', font=dict(color='#ffffff', size=9),
         margin=dict(l=15, r=15, t=30, b=15), showlegend=False
     )
@@ -1012,18 +1004,20 @@ with col_der:
     </div>
     """, unsafe_allow_html=True)
 
-    prob_ml_loc = np.sum(np.tril(matrix_mlb, -1))
-    prob_ml_vis = np.sum(np.triu(matrix_mlb, 1))
-
+    # 1. TOTALES EMPÍRICOS SOBRE 10,000 SIMULACIONES
     tot_target = float(linea_tot_mlb)
-    prob_tot_over = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y > tot_target])
-    prob_tot_under = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if x + y < tot_target])
+    totales_sim = carreras_loc_sim + carreras_vis_sim
+    prob_tot_over = np.mean(totales_sim > tot_target)
+    prob_tot_under = np.mean(totales_sim < tot_target)
 
-    prob_rl_loc_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= 2])
-    prob_rl_loc_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (x - y) >= -1])
-    prob_rl_vis_minus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= 2])
-    prob_rl_vis_plus = np.sum([matrix_mlb[x, y] for x in range(max_c) for y in range(max_c) if (y - x) >= -1])
+    # 2. RUN LINE EMPÍRICO SOBRE 10,000 SIMULACIONES
+    diferencia_sim = carreras_loc_sim - carreras_vis_sim
+    prob_rl_loc_minus = np.mean(diferencia_sim >= 2)
+    prob_rl_loc_plus = np.mean(diferencia_sim >= -1)
+    prob_rl_vis_minus = np.mean(diferencia_sim <= -2)
+    prob_rl_vis_plus = np.mean(diferencia_sim <= 1)
 
+    # 3. K'S Y OUTS (CÁLCULOS PITCHERS)
     k_target_loc = float(linea_k_loc)
     k_rate_loc = (k_loc / ip_loc) if ip_loc > 0 else 1.0
     outs_exp_loc_val = 17.5
@@ -1046,18 +1040,25 @@ with col_der:
     prob_outs_vis_over = 1.0 - poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
     prob_outs_vis_under = poisson.cdf(int(outs_target_vis), outs_exp_vis_val)
 
-    prob_f5_loc = np.sum(np.tril(matrix_f5, -1))
-    prob_f5_vis = np.sum(np.triu(matrix_f5, 1))
+    # 4. F5 EMPÍRICO SOBRE 10,000 SIMULACIONES
+    prob_f5_loc = np.mean(carreras_f5_loc_sim > carreras_f5_vis_sim)
+    prob_f5_vis = np.mean(carreras_f5_vis_sim > carreras_f5_loc_sim)
     f5_target = float(linea_f5_sel)
-    prob_f5_over = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y > f5_target])
-    prob_f5_under = np.sum([matrix_f5[x, y] for x in range(max_c) for y in range(max_c) if x + y < f5_target])
+    totales_f5_sim = carreras_f5_loc_sim + carreras_f5_vis_sim
+    prob_f5_over = np.mean(totales_f5_sim > f5_target)
+    prob_f5_under = np.mean(totales_f5_sim < f5_target)
 
-    xr_1st_inn = (xr_local + xr_visita) * 0.13
-    prob_nrfi = poisson.pmf(0, xr_1st_inn)
-    prob_yrfi = 1.0 - prob_nrfi
+    # 5. NRFI / YRFI EMPÍRICO SOBRE 10,000 SIMULACIONES
+    xr_1st_inn_loc = xr_local * 0.13
+    xr_1st_inn_vis = xr_visita * 0.13
+    carreras_1st_loc_sim, carreras_1st_vis_sim = simular_partido_montecarlo(xr_1st_inn_loc, xr_1st_inn_vis, 10000)
+    totales_1st_sim = carreras_1st_loc_sim + carreras_1st_vis_sim
+    prob_nrfi = np.mean(totales_1st_sim == 0)
+    prob_yrfi = np.mean(totales_1st_sim > 0)
 
-    ev_ml_loc = (prob_ml_loc * m_ml_loc) - 1
-    ev_ml_vis = (prob_ml_vis * m_ml_vis) - 1
+    # CÁLCULO DE VALOR ESPERADO (+EV%)
+    ev_ml_loc = (prob_ml_local * m_ml_loc) - 1
+    ev_ml_vis = (prob_ml_visita * m_ml_vis) - 1
     ev_tot_over = (prob_tot_over * m_over_tot) - 1
     ev_tot_under = (prob_tot_under * m_under_tot) - 1
     ev_rl_loc_minus = (prob_rl_loc_minus * m_rl_loc_minus) - 1
@@ -1110,7 +1111,7 @@ with col_der:
                 {badge_html}
                 <div style="font-weight: 800; font-size: 15px; color: #ffffff;">{titulo}</div>
                 <div class="subtext">
-                    Prob. Real: <b>{prob_real*100:.1f}%</b> · Momio Justo: <b>{momio_justo:.3f} ({momio_am})</b> · <b style="color:#00ff66;">EV {ev*100:+.1f}%</b>
+                    Prob. Real (10K Sim): <b>{prob_real*100:.1f}%</b> · Momio Justo: <b>{momio_justo:.3f} ({momio_am})</b> · <b style="color:#00ff66;">EV {ev*100:+.1f}%</b>
                 </div>
                 {f'<div style="color:#ff3366; font-size:11px; font-weight:800; margin-top:4px;">{msj_trampa}</div>' if es_trampa else ''}
             </div>
@@ -1127,8 +1128,8 @@ with col_der:
                 registrar_apuesta(partido_nombre_mlb, local_nombre, visita_nombre, mercado_str, linea_val, momio_val, ev)
 
     st.markdown("<div class='market-title'>1. Moneyline (Ganador Directo - 9 Innings)</div>", unsafe_allow_html=True)
-    render_card_mlb_con_tracker(f"Gana {local_nombre} (ML)", prob_ml_loc, ev_ml_loc, f"Gana {local_nombre} ML", m_ml_loc, "ML")
-    render_card_mlb_con_tracker(f"Gana {visita_nombre} (ML)", prob_ml_vis, ev_ml_vis, f"Gana {visita_nombre} ML", m_ml_vis, "ML")
+    render_card_mlb_con_tracker(f"Gana {local_nombre} (ML)", prob_ml_local, ev_ml_loc, f"Gana {local_nombre} ML", m_ml_loc, "ML")
+    render_card_mlb_con_tracker(f"Gana {visita_nombre} (ML)", prob_ml_visita, ev_ml_vis, f"Gana {visita_nombre} ML", m_ml_vis, "ML")
 
     st.markdown("<div class='market-title'>2. Total de Carreras (Over / Under)</div>", unsafe_allow_html=True)
     render_card_mlb_con_tracker(f"Más de {tot_target} Carreras (OVER)", prob_tot_over, ev_tot_over, f"Over {tot_target} Carreras", m_over_tot, str(tot_target))
