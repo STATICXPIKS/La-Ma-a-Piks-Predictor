@@ -167,12 +167,12 @@ st.markdown(f"""
 <div class="cyber-header">
     <div style="display:flex; align-items:center; gap:15px;">
         <img src="{PL_LOGO}" style="width:45px; filter: brightness(0) invert(1);">
-        <h1 class="cyber-title">BET365 PREMIER LEAGUE // ALL-MARKETS PREDICTOR</h1>
+        <h1 class="cyber-title">BET365 PREMIER LEAGUE // DYNAMIC MARKETS PREDICTOR</h1>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# SELECCIÓN DE EQUIPOS Y CONFIGURACIÓN DE LÍNEAS
+# SELECCIÓN DE EQUIPOS
 col_t1, col_t2 = st.columns(2)
 with col_t1:
     home_team = st.selectbox("Selecciona Equipo Local", list(TEAMS_DATA.keys()), index=1)
@@ -184,104 +184,111 @@ with col_t2:
     fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
     rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
 
-st.markdown("### ⚙️ AJUSTE DINÁMICO DE LÍNEAS DE MERCADO")
-c_line1, c_line2, c_line3 = st.columns(3)
-with c_line1:
-    linea_goles = st.slider("3. Línea Total de Goles (FT)", 1.5, 4.5, 2.5, step=1.0)
-with c_line2:
-    linea_corners_ft = st.slider("5. Línea Total de Córners (FT)", 8.5, 12.5, 9.5, step=1.0)
-with c_line3:
-    linea_corners_ht = st.slider("9. Córners 1ra Mitad (HT)", 3.0, 6.0, 4.5, step=0.5)
-
-# CÁLCULOS ESTADÍSTICOS
+# CÁLCULOS BASE
 lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
 matriz_ft = generar_matriz(lam_h, lam_a)
 
 lam_h_ht, lam_a_ht = lam_h * 0.45, lam_a * 0.45
 matriz_ht = generar_matriz(lam_h_ht, lam_a_ht)
 
-# 1. RESULTADO FINAL (1X2)
+# PROBABILIDADES BASE 1X2 Y DNB
 p_1_ft, p_x_ft, p_2_ft = float(np.sum(np.tril(matriz_ft, -1))), float(np.sum(np.diag(matriz_ft))), float(np.sum(np.triu(matriz_ft, 1)))
-
-# 2. DOBLE OPORTUNIDAD
-p_1x = p_1_ft + p_x_ft
-p_x2 = p_2_ft + p_x_ft
-p_12 = p_1_ft + p_2_ft
-
-# 3. TOTAL GOLES (OVER / UNDER)
-p_under_goles = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h + a < linea_goles))
-p_over_goles = 1.0 - p_under_goles
-
-# 4. AMBOS EQUIPOS ANOTAN (BTTS)
-p_btts_yes = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
-p_btts_no = 1.0 - p_btts_yes
-
-# 5. TOTAL DE CÓRNERS (FT)
-exp_corners_ft = TEAMS_DATA[home_team]["corners"] + TEAMS_DATA[away_team]["corners"]
-p_over_corners_ft = float(1.0 - poisson.cdf(int(linea_corners_ft), exp_corners_ft))
-
-# 6. HÁNDICAP ASIÁTICO (+0.5, -0.5, 0, +1.0, -1.0)
-p_ah_h_plus05 = p_1_ft + p_x_ft
-p_ah_h_minus05 = p_1_ft
-p_ah_h_0 = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5 # Empate No Acción
-p_ah_h_plus10 = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if (h + 1.0) > a))
-p_ah_h_minus10 = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h > (a + 1.0)))
-
-# 7. 1RA MITAD RESULTADO (1X2)
 p_1_ht, p_x_ht, p_2_ht = float(np.sum(np.tril(matriz_ht, -1))), float(np.sum(np.diag(matriz_ht))), float(np.sum(np.triu(matriz_ht, 1)))
-
-# 8. OVER / UNDER GOLES 1RA MITAD (+0.5/-0.5, +1.5/-1.5)
-p_over05_ht = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
-p_under05_ht = 1.0 - p_over05_ht
-p_under15_ht = float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5))
-p_over15_ht = 1.0 - p_under15_ht
-
-# 9. TIROS DE ESQUINA 1RA MITAD
-exp_corners_ht = exp_corners_ft * 0.45
-p_over_corners_ht = float(1.0 - poisson.cdf(int(linea_corners_ht), exp_corners_ht))
-
-# 10. EMPATE NO ACCIÓN (DRAW NO BET / AH 0)
-p_dnb_h = p_ah_h_0
-
-# 11. GANA CUALQUIER MITAD
-p_win_any_h = 1.0 - ((1.0 - p_1_ht) * (1.0 - p_1_ft))
 
 st.markdown("---")
 
-# INGRESO DE MOMIOS DE LOS 11 MERCADOS
+# FORMATO DE MOMIOS Y CONFIGURACIÓN
 col_head, col_opt = st.columns([3, 2])
 with col_head:
-    st.markdown("<h3 style='color:#FFD700;'>⚡ METER MOMIOS PARA CADA MERCADO</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#FFD700;'>⚡ METER MOMIOS Y AJUSTES DINÁMICOS POR MERCADO</h3>", unsafe_allow_html=True)
 with col_opt:
     tipo_momio = st.radio("Formato de Momios:", ["Decimales", "Americanos"], horizontal=True)
 
 def default_val(prob):
     return format_odds_display(1/prob if prob > 0 else 2.0, tipo_momio)
 
-m1, m2, m3 = st.columns(3)
-with m1: m_1_ft = st.text_input(f"1. Gana {home_team[:3]} (1X2)", value=default_val(p_1_ft))
-with m2: m_1x = st.text_input(f"2. Doble Oportunidad ({home_team[:3]} o Empate 1X)", value=default_val(p_1x))
-with m3: m_over_goles = st.text_input(f"3. Goles Over {linea_goles}", value=default_val(p_over_goles))
+# ------------------------------------------------------------------------------
+# CONTROLES Y CAMPOS INTEGRADOS POR MERCADO
+# ------------------------------------------------------------------------------
 
-m4, m5, m6 = st.columns(3)
-with m4: m_btts_yes = st.text_input("4. Ambos Anotan (BTTS SÍ)", value=default_val(p_btts_yes))
-with m5: m_corners_ft = st.text_input(f"5. Córners Over {linea_corners_ft}", value=default_val(p_over_corners_ft))
-with m6: m_ah_h_p05 = st.text_input(f"6. Hándicap Asiático {home_team[:3]} (+0.5)", value=default_val(p_ah_h_plus05))
+# MERCADOS 1 Y 2: 1X2 Y DOBLE OPORTUNIDAD
+st.markdown("#### ⚽ 1. RESULTADO FINAL (1X2) & 2. DOBLE OPORTUNIDAD")
+c1, c2, c3, c4 = st.columns(4)
+with c1: m_1_ft = st.text_input(f"1X2: Gana {home_team[:3]}", value=default_val(p_1_ft))
+with c2: m_1x = st.text_input("Doble Chance: 1X", value=default_val(p_1_ft + p_x_ft))
+with c3: m_x2 = st.text_input("Doble Chance: X2", value=default_val(p_2_ft + p_x_ft))
+with c4: m_12 = st.text_input("Doble Chance: 12", value=default_val(p_1_ft + p_2_ft))
 
-m7, m8, m9 = st.columns(3)
-with m7: m_ah_h_m05 = st.text_input(f"6. Hándicap Asiático {home_team[:3]} (-0.5)", value=default_val(p_ah_h_minus05))
-with m8: m_ah_h_0 = st.text_input(f"6. Hándicap Asiático {home_team[:3]} (0)", value=default_val(p_ah_h_0))
-with m9: m_ah_h_p10 = st.text_input(f"6. Hándicap Asiático {home_team[:3]} (+1.0)", value=default_val(p_ah_h_plus10))
+# MERCADO 3: TOTAL DE GOLES (FT) CON AJUSTE DINÁMICO
+st.markdown("#### 🥅 3. TOTAL DE GOLES (FT)")
+cg1, cg2, cg3 = st.columns([2, 1, 1])
+with cg1:
+    linea_goles_ft = st.slider("3. Línea Total de Goles (FT)", 1.5, 4.5, 2.5, step=1.0)
+    p_under_goles = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h + a < linea_goles_ft))
+    p_over_goles = 1.0 - p_under_goles
+with cg2:
+    m_over_goles = st.text_input(f"Goles Over {linea_goles_ft}", value=default_val(p_over_goles))
+with cg3:
+    m_under_goles = st.text_input(f"Goles Under {linea_goles_ft}", value=default_val(p_under_goles))
 
-m10, m11, m12 = st.columns(3)
-with m10: m_1_ht = st.text_input(f"7. 1ra Mitad Gana {home_team[:3]}", value=default_val(p_1_ht))
-with m11: m_ht_o05 = st.text_input("8. Goles 1ra Mitad Over 0.5", value=default_val(p_over05_ht))
-with m12: m_ht_o15 = st.text_input("8. Goles 1ra Mitad Over 1.5", value=default_val(p_over15_ht))
+# MERCADO 4 Y 5: BTTS Y TOTAL DE CÓRNERS (FT) CON AJUSTE DINÁMICO
+st.markdown("#### 🚩 4. AMBOS ANOTAN & 5. TOTAL DE CÓRNERS (FT)")
+p_btts_yes = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
+exp_corners_ft = TEAMS_DATA[home_team]["corners"] + TEAMS_DATA[away_team]["corners"]
 
-m13, m14, m15 = st.columns(3)
-with m13: m_corners_ht = st.text_input(f"9. Córners 1ra Mitad Over {linea_corners_ht}", value=default_val(p_over_corners_ht))
-with m14: m_dnb = st.text_input(f"10. Empate No Acción {home_team[:3]}", value=default_val(p_dnb_h))
-with m15: m_win_any = st.text_input(f"11. Gana Cualquier Mitad {home_team[:3]}", value=default_val(p_win_any_h))
+cm1, cm2, cm3, cm4 = st.columns([1, 1, 2, 1])
+with cm1: m_btts_yes = st.text_input("4. BTTS SÍ", value=default_val(p_btts_yes))
+with cm2: m_btts_no = st.text_input("4. BTTS NO", value=default_val(1.0 - p_btts_yes))
+with cm3:
+    linea_corners_ft = st.slider("5. Línea Total de Córners (FT)", 8.5, 12.5, 9.5, step=1.0)
+    p_over_corners_ft = float(1.0 - poisson.cdf(int(linea_corners_ft), exp_corners_ft))
+with cm4:
+    m_corners_ft = st.text_input(f"Córners Over {linea_corners_ft}", value=default_val(p_over_corners_ft))
+
+# MERCADO 6: HÁNDICAP ASIÁTICO CON SELECTOR DINÁMICO DE LÍNEA
+st.markdown("#### ⚖️ 6. HÁNDICAP ASIÁTICO")
+ha_col1, ha_col2 = st.columns([2, 2])
+with ha_col1:
+    linea_ha = st.selectbox("6. Seleccionar Línea de Hándicap Asiático", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
+
+# CÁLCULO DE PROBABILIDAD DE HÁNDICAP ELEGIDO
+if linea_ha == "+0.5":
+    p_ha_selected = p_1_ft + p_x_ft
+elif linea_ha == "-0.5":
+    p_ha_selected = p_1_ft
+elif linea_ha == "0 (DNB)":
+    p_ha_selected = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
+elif linea_ha == "+1.0":
+    p_ha_selected = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if (h + 1.0) > a))
+else: # -1.0
+    p_ha_selected = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h > (a + 1.0)))
+
+with ha_col2:
+    m_ha_selected = st.text_input(f"Momio AH {home_team[:3]} ({linea_ha})", value=default_val(p_ha_selected))
+
+# MERCADOS 7 Y 8: 1RA MITAD 1X2 Y GOLES 1RA MITAD CON SELECCIÓN DE LÍNEA
+st.markdown("#### ⏱️ 7. 1RA MITAD RESULTADO & 8. OVER/UNDER GOLES 1RA MITAD")
+h1, h2, h3, h4 = st.columns([1, 1, 1, 1])
+with h1: m_1_ht = st.text_input(f"7. 1ra Mitad Gana {home_team[:3]}", value=default_val(p_1_ht))
+with h2:
+    linea_goles_ht = st.selectbox("8. Línea Goles HT", ["+0.5", "+1.5"], index=0)
+    p_goles_ht_sel = (1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))) if linea_goles_ht == "+0.5" else (1.0 - float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5)))
+with h3: m_goles_ht = st.text_input(f"Momio Goles HT ({linea_goles_ht})", value=default_val(p_goles_ht_sel))
+
+# MERCADOS 9, 10 Y 11: CÓRNERS HT CON SLIDER, DNB Y GANA CUALQUIER MITAD
+st.markdown("#### 🚩 9. CÓRNERS HT | 10. EMPATE NO ACCIÓN | 11. GANA CUALQUIER MITAD")
+m_c1, m_c2, m_c3, m_c4 = st.columns([2, 1, 1, 1])
+with m_c1:
+    linea_corners_ht = st.slider("9. Córners 1ra Mitad (HT)", 3.0, 6.0, 4.5, step=0.5)
+    exp_corners_ht = exp_corners_ft * 0.45
+    p_over_corners_ht = float(1.0 - poisson.cdf(int(linea_corners_ht), exp_corners_ht))
+with m_c2: m_corners_ht = st.text_input(f"Córners HT > {linea_corners_ht}", value=default_val(p_over_corners_ht))
+
+p_dnb_h = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
+p_win_any_h = 1.0 - ((1.0 - p_1_ht) * (1.0 - p_1_ft))
+
+with m_c3: m_dnb = st.text_input("10. Empate No Acción (DNB)", value=default_val(p_dnb_h))
+with m_c4: m_win_any = st.text_input("11. Gana Cualq. Mitad", value=default_val(p_win_any_h))
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -294,17 +301,13 @@ st.markdown("<h3 style='color:#00FF66;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES (
 
 mercados_list = [
     {"tit": f"1. Resultado Final (1X2): Gana {home_team}", "sub": "Ganador 90 min", "prob": p_1_ft, "odd": m_1_ft},
-    {"tit": f"2. Doble Oportunidad: {home_team} o Empate (1X)", "sub": "1X Doble Chance", "prob": p_1x, "odd": m_1x},
-    {"tit": f"3. Total de Goles: Over {linea_goles}", "sub": f"Goles Over {linea_goles}", "prob": p_over_goles, "odd": m_over_goles},
+    {"tit": f"2. Doble Oportunidad: {home_team} o Empate (1X)", "sub": "1X Doble Chance", "prob": p_1_ft + p_x_ft, "odd": m_1x},
+    {"tit": f"3. Total de Goles (FT): Over {linea_goles_ft}", "sub": f"Goles Over {linea_goles_ft}", "prob": p_over_goles, "odd": m_over_goles},
     {"tit": "4. Ambos Equipos Anotan: SÍ", "sub": "BTTS YES", "prob": p_btts_yes, "odd": m_btts_yes},
-    {"tit": f"5. Total de Córners: Over {linea_corners_ft}", "sub": f"Córners FT > {linea_corners_ft}", "prob": p_over_corners_ft, "odd": m_corners_ft},
-    {"tit": f"6. Hándicap Asiático: {home_team} (+0.5)", "sub": "AH +0.5", "prob": p_ah_h_plus05, "odd": m_ah_h_p05},
-    {"tit": f"6. Hándicap Asiático: {home_team} (-0.5)", "sub": "AH -0.5", "prob": p_ah_h_minus05, "odd": m_ah_h_m05},
-    {"tit": f"6. Hándicap Asiático: {home_team} (0)", "sub": "AH 0 (Draw No Bet)", "prob": p_ah_h_0, "odd": m_ah_h_0},
-    {"tit": f"6. Hándicap Asiático: {home_team} (+1.0)", "sub": "AH +1.0", "prob": p_ah_h_plus10, "odd": m_ah_h_p10},
+    {"tit": f"5. Total de Córners (FT): Over {linea_corners_ft}", "sub": f"Córners FT > {linea_corners_ft}", "prob": p_over_corners_ft, "odd": m_corners_ft},
+    {"tit": f"6. Hándicap Asiático: {home_team} ({linea_ha})", "sub": f"Línea elegida: {linea_ha}", "prob": p_ha_selected, "odd": m_ha_selected},
     {"tit": f"7. 1ra Mitad Resultado: Gana {home_team}", "sub": "1st Half 1X2", "prob": p_1_ht, "odd": m_1_ht},
-    {"tit": "8. Over/Under Goles 1ra Mitad: Over 0.5", "sub": "1st Half Goals > 0.5", "prob": p_over05_ht, "odd": m_ht_o05},
-    {"tit": "8. Over/Under Goles 1ra Mitad: Over 1.5", "sub": "1st Half Goals > 1.5", "prob": p_over15_ht, "odd": m_ht_o15},
+    {"tit": f"8. Goles 1ra Mitad: Over {linea_goles_ht}", "sub": f"1st Half Goals Over {linea_goles_ht}", "prob": p_goles_ht_sel, "odd": m_goles_ht},
     {"tit": f"9. Córners 1ra Mitad: Over {linea_corners_ht}", "sub": f"1st Half Corners > {linea_corners_ht}", "prob": p_over_corners_ht, "odd": m_corners_ht},
     {"tit": f"10. Empate No Acción: {home_team}", "sub": "Draw No Bet (DNB)", "prob": p_dnb_h, "odd": m_dnb},
     {"tit": f"11. Gana Cualquier Mitad: {home_team}", "sub": "Win Either Half", "prob": p_win_any_h, "odd": m_win_any}
