@@ -11,7 +11,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS FUTURISTA ULTRA-VIBRANTE CON FIX DE SELECTBOX Y POPOVER EN OSCURO
+# ESTILOS CSS CORREGIDOS PARA SELECTBOX Y CONTRASTE DE TEXTO
 st.markdown("""
 <style>
     .stApp {
@@ -48,38 +48,39 @@ st.markdown("""
         margin: 0;
     }
     
-    /* LOGO PREMIER LEAGUE AUMENTADO 4 VECES MÁS GRANDE (150px) */
     .pl-logo-header {
         width: 150px !important;
         height: auto !important;
         filter: drop-shadow(0 0 8px #00FF66) brightness(0) invert(1);
     }
 
-    /* FIX DEFINITIVO PARA SELECTBOX (MENÚ DESPLEGABLE CON FONDO NEGRO Y TEXTO LEÍBLE) */
-    div[data-baseweb="select"] {
-        background-color: #0a140d !important;
-        border-radius: 5px !important;
+    /* ESTILO PARA EL SELECTBOX SELECCIONADO: TEXTO NEGRO Y EN NEGRITAS */
+    div[data-baseweb="select"] > div {
+        background-color: #f0f4f1 !important;
+        border: 2px solid #00FF66 !important;
+        border-radius: 6px !important;
     }
 
-    div[data-baseweb="select"] * {
-        background-color: #0a140d !important;
-        color: #00FF66 !important;
-        font-weight: bold !important;
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        font-size: 0.92rem !important;
     }
 
-    /* Popover/Portal global donde se renderizan las opciones */
+    /* DESPLEGABLE CON LISTA DE OPCIONES EN TRASFONDO OSCURO CON VERDE NEÓN */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     div[data-baseweb="menu"] *,
     ul[role="listbox"],
     ul[role="listbox"] * {
-        background-color: #0a140d !important;
+        background-color: #0b140e !important;
         color: #00FF66 !important;
         font-weight: bold !important;
     }
 
-    /* Hover en opciones del menú desplegable */
+    /* HOVER EN OPCIONES DEL DESPLEGABLE */
     li[role="option"]:hover,
     li[role="option"]:hover * {
         background-color: #00FF66 !important;
@@ -204,7 +205,7 @@ st.markdown("""
 
 PL_LOGO = "https://raw.githubusercontent.com/football-data-org/football-data-api/master/logo/pl.png"
 
-# BASE DE DATOS ACTUALIZADA CON LOS 20 EQUIPOS DE TU IMAGEN
+# BASE DE DATOS DE EQUIPOS CON URLS DIRECTAS DE ESCUDOS ESTABLES CORREGIDOS
 TEAMS_DATA = {
     "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
     "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
@@ -299,7 +300,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS Y GRÁFICA)
+# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS Y GRÁFICAS)
 col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
@@ -310,7 +311,7 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3)
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=6) # Coventry City por defecto para probar
         st.image(TEAMS_DATA[home_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
@@ -318,7 +319,7 @@ with col_left_panel:
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=19)
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=19) # Tottenham
         st.image(TEAMS_DATA[away_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
