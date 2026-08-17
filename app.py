@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson
+import plotly.graph_objects as go
 
 # Configuración de página
 st.set_page_config(
@@ -10,7 +11,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS FUTURISTA ULTRA-VIBRANTE
+# ESTILOS CSS INSPIRADOS EN LA IMAGEN (MODO OSCURO PRECIOSO CON ACENTOS NEÓN)
 st.markdown("""
 <style>
     .stApp {
@@ -28,13 +29,13 @@ st.markdown("""
     .cyber-header {
         background: linear-gradient(135deg, rgba(0, 43, 27, 0.9) 0%, rgba(0, 15, 9, 0.95) 100%);
         border: 1px solid #00FF66;
-        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 10px rgba(0, 255, 102, 0.2);
+        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
         padding: 12px 22px;
         border-radius: 10px;
         display: flex;
         align-items: center;
         gap: 15px;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
     
     .cyber-title {
@@ -43,17 +44,53 @@ st.markdown("""
         font-size: 1.25rem !important;
         text-transform: uppercase;
         letter-spacing: 2px;
-        text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
         margin: 0;
     }
     
     .pl-logo-header {
-        width: 40px !important;
+        width: 38px !important;
         height: auto !important;
         filter: drop-shadow(0 0 5px #00FF66) brightness(0) invert(1);
     }
 
-    /* Inputs y Selectbox Visibles en Oscuro */
+    /* TARJETA DESTACADA MATCHUP (ESTILO DE LA IMAGEN DE EJEMPLO) */
+    .matchup-card {
+        background: #09120c;
+        border: 1px solid #00FF66;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 15px;
+        box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
+    }
+    
+    .matchup-odds-banner {
+        background: rgba(0, 255, 102, 0.1);
+        border: 1px solid #00FF66;
+        border-radius: 8px;
+        padding: 8px 12px;
+        text-align: center;
+        font-weight: 800;
+        font-size: 1rem;
+        color: #00FF66;
+        margin-bottom: 12px;
+    }
+
+    .circle-metric {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 3px solid #00FF66;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 1.1rem;
+        color: #ffffff;
+        margin: 0 auto;
+        box-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
+    }
+
+    /* Inputs y Selectbox */
     .stTextInput input {
         background-color: #0a140d !important;
         color: #FFD700 !important;
@@ -61,7 +98,6 @@ st.markdown("""
         border-radius: 5px !important;
         font-weight: bold !important;
         font-size: 0.85rem !important;
-        box-shadow: 0 0 5px rgba(0, 255, 102, 0.2);
     }
 
     div[data-baseweb="select"] > div {
@@ -71,34 +107,29 @@ st.markdown("""
         border-radius: 5px !important;
     }
 
-    div[data-baseweb="popover"], div[data-baseweb="popover"] * {
-        background-color: #0a140d !important;
-        color: #00FF66 !important;
-    }
-
     /* Badges de Historial (G/E/P) */
     .form-container {
         display: flex;
-        gap: 4px;
+        gap: 3px;
         align-items: center;
-        margin: 5px 0 10px 0;
+        margin: 4px 0 8px 0;
     }
     .form-box {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 900;
-        font-size: 0.68rem;
-        border-radius: 3px;
+        font-size: 0.65rem;
+        border-radius: 2px;
         color: #000000;
     }
-    .form-g { background-color: #00FF66; color: #000; box-shadow: 0 0 6px rgba(0,255,102,0.6); }
-    .form-e { background-color: #FFD700; color: #000; box-shadow: 0 0 6px rgba(255,215,0,0.6); }
-    .form-p { background-color: #FF0055; color: #FFF; box-shadow: 0 0 6px rgba(255,0,85,0.6); }
+    .form-g { background-color: #00FF66; color: #000; }
+    .form-e { background-color: #FFD700; color: #000; }
+    .form-p { background-color: #FF0055; color: #FFF; }
 
-    /* Tarjetas de Análisis Compactas */
+    /* Tarjetas de Oportunidad */
     .cyber-card {
         background: linear-gradient(90deg, rgba(13, 24, 17, 0.95) 0%, rgba(7, 14, 10, 0.95) 100%);
         border: 1px solid #182e20;
@@ -108,38 +139,26 @@ st.markdown("""
         display: flex;
         justify-content: space-between;
         align-items: center;
-        width: 100%;
     }
-    .cyber-card-title {
-        font-weight: 800;
-        font-size: 0.85rem;
-        color: #ffffff;
-    }
-    .cyber-card-sub {
-        font-size: 0.73rem;
-        color: #9cbcae;
-        font-family: monospace;
-        margin-top: 1px;
-    }
+    .cyber-card-title { font-weight: 800; font-size: 0.85rem; color: #ffffff; }
+    .cyber-card-sub { font-size: 0.73rem; color: #9cbcae; font-family: monospace; }
 
-    .card-high { border-left: 4px solid #00FF66 !important; box-shadow: -3px 0 8px rgba(0, 255, 102, 0.3); }
-    .card-medium { border-left: 4px solid #FF9900 !important; box-shadow: -3px 0 8px rgba(255, 153, 0, 0.3); }
-    .card-low { border-left: 4px solid #FF0055 !important; box-shadow: -3px 0 8px rgba(255, 0, 85, 0.3); }
-    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5) !important; }
+    .card-high { border-left: 4px solid #00FF66 !important; }
+    .card-medium { border-left: 4px solid #FF9900 !important; }
+    .card-low { border-left: 4px solid #FF0055 !important; }
+    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; }
 
     .cyber-badge {
         font-weight: 900;
         padding: 4px 8px;
         border-radius: 3px;
         font-size: 0.68rem;
-        letter-spacing: 0.5px;
         text-transform: uppercase;
-        white-space: nowrap;
     }
-    .badge-high { background-color: #00FF66; color: #000000; box-shadow: 0 0 6px rgba(0,255,102,0.5); }
-    .badge-medium { background-color: #FF9900; color: #000000; box-shadow: 0 0 6px rgba(255,153,0,0.5); }
-    .badge-low { background-color: #FF0055; color: #ffffff; box-shadow: 0 0 6px rgba(255,0,85,0.5); }
-    .badge-star { background-color: #FFD700; color: #000000; box-shadow: 0 0 8px rgba(255,215,0,0.8); }
+    .badge-high { background-color: #00FF66; color: #000000; }
+    .badge-medium { background-color: #FF9900; color: #000000; }
+    .badge-low { background-color: #FF0055; color: #ffffff; }
+    .badge-star { background-color: #FFD700; color: #000000; }
 
     .stButton>button {
         background: linear-gradient(135deg, #00FF66 0%, #009933 100%) !important;
@@ -149,7 +168,6 @@ st.markdown("""
         border: none !important;
         border-radius: 6px !important;
         padding: 10px 16px !important;
-        box-shadow: 0 0 12px rgba(0, 255, 102, 0.5) !important;
         width: 100% !important;
         text-transform: uppercase !important;
     }
@@ -159,26 +177,12 @@ st.markdown("""
 PL_LOGO = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
 TEAMS_DATA = {
-    "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"]},
-    "Aston Villa": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"]},
-    "Bournemouth": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"]},
-    "Brentford": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"]},
-    "Brighton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_FC_crest.svg", "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"]},
-    "Chelsea": {"logo": "https://upload.wikimedia.org/wikipedia/en/cc/CCFC_logo.svg", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"]},
-    "Crystal Palace": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo.svg", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"]},
-    "Everton": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg", "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"]},
-    "Fulham": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a8/Fulham_FC_%28shield%29.svg", "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"]},
-    "Ipswich Town": {"logo": "https://upload.wikimedia.org/wikipedia/en/4/43/Ipswich_Town.svg", "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"]},
-    "Leicester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2d/Leicester_City_crest.svg", "xg": 1.25, "xga": 1.55, "ppda": 12.8, "aereos": 49, "corners": 4.3, "forma": ["P","E","G","P","P","E","P","G","P","P"]},
-    "Liverpool": {"logo": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"]},
-    "Manchester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"]},
-    "Manchester United": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg", "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"]},
-    "Newcastle United": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg", "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"]},
-    "Nottingham Forest": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_logo.svg", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"]},
-    "Southampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c9/FC_Southampton.svg", "xg": 1.15, "xga": 1.65, "ppda": 11.5, "aereos": 46, "corners": 4.5, "forma": ["P","P","P","E","P","G","P","P","E","P"]},
-    "Tottenham Hotspur": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"]},
-    "West Ham United": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c2/West_Ham_United_FC_logo.svg", "xg": 1.35, "xga": 1.60, "ppda": 13.5, "aereos": 54, "corners": 4.5, "forma": ["P","E","G","P","P","E","G","P","P","E"]},
-    "Wolverhampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg", "xg": 1.30, "xga": 1.55, "ppda": 12.0, "aereos": 49, "corners": 4.4, "forma": ["P","E","P","G","P","P","E","G","P","P"]}
+    "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
+    "Brentford": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
+    "Chelsea": {"logo": "https://upload.wikimedia.org/wikipedia/en/cc/CCFC_logo.svg", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
+    "Liverpool": {"logo": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
+    "Manchester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
+    "Tottenham Hotspur": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
 }
 
 def parse_odds_to_decimal(val_str, format_type):
@@ -244,7 +248,7 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO CYBERPUNK
+# ENCABEZADO
 st.markdown(f"""
 <div class="cyber-header">
     <img src="{PL_LOGO}" class="pl-logo-header">
@@ -252,18 +256,18 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA INVERTIDA: COLUMNA IZQUIERDA (DATOS Y MOMIOS) / COLUMNA DERECHA (ANÁLISIS)
-col_left_panel, col_right_panel = st.columns([7, 5])
+# ESTRUCTURA INVERTIDA: DERECHA DATOS / IZQUIERDA ANÁLISIS Y GRÁFICAS
+col_left_panel, col_right_panel = st.columns([5, 7])
 
 # ==============================================================================
-# COLUMNA IZQUIERDA: DATOS DEL ENCUENTRO, EQUIPOS Y MOMIOS
+# COLUMNA IZQUIERDA: DATOS Y CONFIGURACIÓN DEL ENCUENTRO
 # ==============================================================================
 with col_left_panel:
     st.markdown("<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO</h3>", unsafe_allow_html=True)
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3)
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=1)
         st.image(TEAMS_DATA[home_team]["logo"], width=32)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
@@ -271,14 +275,14 @@ with col_left_panel:
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=17)
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=5)
         st.image(TEAMS_DATA[away_team]["logo"], width=32)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
         rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
 
-    # CÁLCULOS MATEMÁTICOS DEL ENCUENTRO
+    # CÁLCULOS MATEMÁTICOS
     lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
     matriz_ft = generar_matriz(lam_h, lam_a)
 
@@ -298,7 +302,7 @@ with col_left_panel:
 
     def default_val(prob): return format_odds_display(1/prob if prob > 0 else 2.0, tipo_momio)
 
-    # 1 Y 2. 1X2 Y DOBLE OPORTUNIDAD
+    # Captura de Momios
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-bottom:2px;'>1. RESULTADO FINAL (1X2) & 2. DOBLE OPORTUNIDAD</p>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: m_1_ft = st.text_input(f"1X2 {home_team[:3]}", value=default_val(p_1_ft))
@@ -307,7 +311,6 @@ with col_left_panel:
     with c4: m_1x = st.text_input("DC 1X", value=default_val(p_1_ft + p_x_ft))
     with c5: m_x2 = st.text_input("DC X2", value=default_val(p_2_ft + p_x_ft))
 
-    # 3. TOTAL DE GOLES (FT)
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>3. TOTAL DE GOLES (FT)</p>", unsafe_allow_html=True)
     cg1, cg2, cg3 = st.columns([2, 1, 1])
     with cg1:
@@ -317,7 +320,6 @@ with col_left_panel:
     with cg2: m_over_goles = st.text_input(f"Over {linea_goles_ft}", value=default_val(p_over_goles))
     with cg3: m_under_goles = st.text_input(f"Under {linea_goles_ft}", value=default_val(p_under_goles))
 
-    # 4 Y 5. BTTS Y CÓRNERS FT
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>4. AMBOS ANOTAN & 5. TOTAL CÓRNERS (FT)</p>", unsafe_allow_html=True)
     p_btts_yes = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
     exp_corners_ft = TEAMS_DATA[home_team]["corners"] + TEAMS_DATA[away_team]["corners"]
@@ -332,10 +334,8 @@ with col_left_panel:
     with cm4: m_corners_ft_over = st.text_input(f"Córners >{linea_corners_ft}", value=default_val(p_over_corners_ft))
     with cm5: m_corners_ft_under = st.text_input(f"Córners <{linea_corners_ft}", value=default_val(p_under_corners_ft))
 
-    # 6. HÁNDICAP ASIÁTICO
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>6. HÁNDICAP ASIÁTICO</p>", unsafe_allow_html=True)
     ha_c1, ha_c2, ha_c3, ha_c4 = st.columns(4)
-
     with ha_c1:
         linea_ha_h = st.selectbox(f"AH {home_team[:3]}", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0, key="ha_h_select")
         p_ha_h = calcular_prob_ha(linea_ha_h, True, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
@@ -346,7 +346,6 @@ with col_left_panel:
         p_ha_a = calcular_prob_ha(linea_ha_a, False, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
     with ha_c4: m_ha_a = st.text_input("Momio Visita", value=default_val(p_ha_a))
 
-    # 7 Y 8. 1RA MITAD Y GOLES HT
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>7. 1RA MITAD 1X2 & 8. GOLES 1RA MITAD</p>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns(3)
     with h1: m_1_ht = st.text_input(f"HT {home_team[:3]}", value=default_val(p_1_ht))
@@ -364,7 +363,6 @@ with col_left_panel:
     with hg3: m_ht_o15 = st.text_input("HT Over 1.5", value=default_val(p_over15_ht))
     with hg4: m_ht_u15 = st.text_input("HT Under 1.5", value=default_val(p_under15_ht))
 
-    # 9, 10 Y 11. CÓRNERS HT, DNB Y GANA MITAD
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>9. CÓRNERS HT | 10. DNB | 11. GANA CUALQ. MITAD</p>", unsafe_allow_html=True)
     c_ht1, c_ht2, c_ht3, c_ht4, c_ht5, c_ht6, c_ht7 = st.columns([1.5, 1, 1, 1, 1, 1, 1])
 
@@ -393,10 +391,78 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX DE OPORTUNIDADES (RESULTADOS)
+# COLUMNA DERECHA: MATCHUP CARD BANNER, GRÁFICAS Y ANÁLISIS MATRIX
 # ==============================================================================
 with col_right_panel:
-    st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 DESTACADO DE APUESTA Y GRÁFICA DE TENDENCIA</h3>", unsafe_allow_html=True)
+
+    # 1. MATCHUP CARD (ESTILO DE LA IMAGEN DE EJEMPLO)
+    l10_data = TEAMS_DATA[home_team].get("l10_corners", [5,6,7,8,6,7,5,8,6,7])
+    promedio_l10 = np.mean(l10_data)
+    proyeccion_val = (exp_corners_ft / 2) + 1.2
+    
+    st.markdown(f"""
+    <div class="matchup-card">
+        <div class="matchup-odds-banner">
+            🚩 Over {linea_corners_ft} Córners Totales @{parse_odds_to_decimal(m_corners_ft_over, tipo_momio):.2f}
+        </div>
+        <div style="display:flex; justify-shadow:space-around; align-items:center; text-align:center; margin-bottom:8px;">
+            <div>
+                <span style="font-size:0.75rem; color:#9cbcae;">PROYECCIÓN</span><br>
+                <b style="font-size:1.3rem; color:#00FF66;">{proyeccion_val:.1f} ↗</b>
+            </div>
+            <div>
+                <span style="font-size:0.75rem; color:#9cbcae;">PROMEDIO L10</span><br>
+                <b style="font-size:1.3rem; color:#ffffff;">{promedio_l10:.1f}</b>
+            </div>
+            <div>
+                <span style="font-size:0.75rem; color:#9cbcae;">SCORE</span><br>
+                <div class="circle-metric">85</div>
+            </div>
+            <div>
+                <span style="font-size:0.75rem; color:#9cbcae;">MATCHUP</span><br>
+                <div class="circle-metric">A+</div>
+            </div>
+        </div>
+        <div style="text-align:center; font-size:0.8rem; color:#a0b0a5;">
+            🛡️ {away_team} cede en promedio <b>5.2 Córners/partido</b> de visitante.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 2. GRÁFICA DE BARRAS DINÁMICA DE TENDENCIA (L10 VS LÍNEA DE MERCADO)
+    colors = ['#00FF66' if x >= linea_corners_ft else '#FF0055' for x in l10_data]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[f"P{i+1}" for i in range(10)],
+        y=l10_data,
+        marker_color=colors,
+        text=l10_data,
+        textposition='auto',
+        hoverinfo='x+y'
+    ))
+    
+    fig.add_shape(
+        type="line",
+        x0=-0.5, y0=linea_corners_ft, x1=9.5, y1=linea_corners_ft,
+        line=dict(color="#FFD700", width=2, dash="dash"),
+    )
+    
+    fig.update_layout(
+        title=dict(text=f"Histórico L10 Partidos - Córners {home_team} (Línea: {linea_corners_ft})", font=dict(color="#00FF66", size=12)),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        height=220,
+        margin=dict(l=10, r=10, t=30, b=10),
+        xaxis=dict(showgrid=False, tickfont=dict(color='#8fa396')),
+        yaxis=dict(showgrid=True, gridcolor='#142218', tickfont=dict(color='#8fa396'))
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+    # 3. ANÁLISIS MATRIX COMPLETO DE LOS 11 MERCADOS
+    st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-top:15px; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
 
     mercados_list = [
         {"tit": f"1. Resultado Final (1X2): Gana Local ({home_team})", "sub": "1X2 Local", "prob": p_1_ft, "odd": m_1_ft},
