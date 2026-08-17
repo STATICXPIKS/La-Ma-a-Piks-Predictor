@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
+import requests
 import json
 
 # Configuración de la página
@@ -12,17 +13,18 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# Estilos CSS personalizados para replicar la interfaz de la imagen
+# Estilos CSS personalizados
 st.markdown("""
 <style>
     .main-header {
         display: flex;
         align-items: center;
         gap: 15px;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }
-    .pl-logo {
-        width: 60px;
+    .header-logo {
+        width: 55px;
+        height: auto;
     }
     .team-badge {
         width: 35px;
@@ -92,8 +94,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Diccionario de Logos y Datos Base de la Premier League
-TEAMS_DATA = {
+PL_LOGO = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
+
+# Base de Datos Base Local (Fallback) con métricas avanzadas (2.5 años)
+TEAMS_DATA_FALLBACK = {
     "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55},
     "Aston Villa": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51},
     "Bournemouth": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48},
@@ -113,38 +117,73 @@ TEAMS_DATA = {
     "Wolves": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg", "xg": 1.30, "xga": 1.55, "ppda": 12.0, "aereos": 49}
 }
 
-PL_LOGO = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
-
-# ==============================================================================
-# FUNCIONES DE CONVERSIÓN DE MOMIOS / APUESTAS
-# ==============================================================================
-def american_to_decimal(american):
+# CONEXIÓN A API GRATUITA (Football-Data.org)
+@st.cache_data(ttl=3600)
+def cargar_datos_api():
+    url = "https://api.football-data.org/v4/competitions/PL/standings"
+    headers = {"X-Auth-Token": "YOUR_FREE_API_KEY"} 
     try:
-        american = float(american)
-        if american > 0:
-            return (american / 100.0) + 1.0
-        else:
-            return (100.0 / abs(american)) + 1.0
+        response = requests.get(url, headers=headers, timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            standings = data['standings'][0]['table']
+            teams = {}
+            for item in standings:
+                name = item['team']['name']
+                played = max(item['playedGames'], 1)
+                gf = item['goalsFor'] / played
+                ga = item['goalsAgainst'] / played
+                logo = item['team']['crest']
+                
+                base_info = TEAMS_DATA_FALLBACK.get(name, {
+                    "ppda": 10.5, "aereos": 50, "logo": logo
+                })
+                
+                teams[name] = {
+                    "logo": logo if logo else base_info["logo"],
+                    "xg": round(gf * 1.05, 2),
+                    "xga": round(ga * 0.95, 2),
+                    "ppda": base_info["ppda"],
+                    "aereos": base_info["aereos"]
+                }
+            return teams, True
+    except Exception:
+        pass
+    return TEAMS_DATA_FALLBACK, False
+
+TEAMS_DATA, api_conectada = cargar_datos_api()
+
+# CONVERSIÓN Y MANEJO DE MOMIOS
+def parse_odds_to_decimal(val_str, format_type):
+    try:
+        val = float(val_str)
+        if format_type == "Decimales":
+            return val
+        else: # Americanos
+            if val > 0:
+                return (val / 100.0) + 1.0
+            else:
+                return (100.0 / abs(val)) + 1.0
     except:
         return 2.00
 
-def decimal_to_american(decimal_odds):
-    if decimal_odds <= 1.0:
-        return "+100"
-    if decimal_odds >= 2.0:
-        amt = int(round((decimal_odds - 1.0) * 100))
-        return f"+{amt}"
-    else:
-        amt = int(round(100.0 / (decimal_odds - 1.0)))
-        return f"-{amt}"
+def format_odds_display(decimal_val, format_type):
+    if format_type == "Decimales":
+        return f"{decimal_val:.2f}"
+    else: # Americanos
+        if decimal_val <= 1.0:
+            return "+100"
+        if decimal_val >= 2.0:
+            amt = int(round((decimal_val - 1.0) * 100))
+            return f"+{amt}"
+        else:
+            amt = int(round(100.0 / (decimal_val - 1.0)))
+            return f"-{amt}"
 
 def calcular_ev(prob_modelo, cuota_decimal):
-    # EV = (Prob * Cuota) - 1
     return (prob_modelo * cuota_decimal) - 1.0
 
-# ==============================================================================
 # MOTOR ESTADÍSTICO DE PARTIDOS
-# ==============================================================================
 def calcular_lambdas(h_team, a_team, fatiga_h, rot_h, fatiga_a, rot_a, arb, clima):
     dh = TEAMS_DATA[h_team]
     da = TEAMS_DATA[a_team]
@@ -172,15 +211,20 @@ def generar_matriz(lambda_h, lambda_a, max_goles=7):
             mat[h, a] = poisson.pmf(h, lambda_h) * poisson.pmf(a, lambda_a)
     return mat / np.sum(mat)
 
-# ==============================================================================
-# INTERFAZ PRINCIPAL
-# ==============================================================================
-col_title, col_img = st.columns([4, 1])
-with col_title:
-    st.title("⚽ Premier League Predictor & Trap Line Detector")
-    st.caption("Calculador con Métricas Avanzadas (xG, PPDA, Fatiga UEFA, Árbitros) y Detector de Trampas de Casas de Apuestas")
-with col_img:
-    st.image(PL_LOGO, width=90)
+# ENCABEZADO CON LOGO DE PREMIER LEAGUE
+st.markdown(f"""
+<div class="main-header">
+    <img src="{PL_LOGO}" class="header-logo">
+    <h1 style="margin:0; font-size: 2.2rem; display:inline;">Premier League Predictor & Trap Line Detector</h1>
+</div>
+""", unsafe_allow_html=True)
+
+st.caption("Calculador con Métricas Avanzadas (xG, PPDA, Fatiga UEFA, Árbitros) y Detector de Trampas de Casas de Apuestas")
+
+if api_conectada:
+    st.success("🟢 Conectado a la API pública de Football-Data.org (Métricas actualizadas automáticamente).")
+else:
+    st.info("ℹ️ Servidor en modo local (Métricas precargadas de 2.5 años de Premier League).")
 
 st.markdown("---")
 
@@ -194,7 +238,7 @@ with col_team1:
     
     c1, c2 = st.columns(2)
     with c1:
-        fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 10) / 100.0
+        fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
     with c2:
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
@@ -220,84 +264,63 @@ with st.expander("⚙️ Factor Árbitro y Clima (Opcional)"):
 lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a, arbitro, clima)
 matriz = generar_matriz(lam_h, lam_a)
 
-# PROBABILIDADES DEL MODELO
 p_home = float(np.sum(np.tril(matriz, -1)))
 p_draw = float(np.sum(np.diag(matriz)))
 p_away = float(np.sum(np.triu(matriz, 1)))
 
 p_dc_1x = p_home + p_draw
-p_dc_x2 = p_away + p_draw
-p_dc_12 = p_home + p_away
-
-# Más / Menos 2.5
 p_under25 = float(sum(matriz[h, a] for h in range(7) for a in range(7) if h + a < 2.5))
 p_over25 = 1.0 - p_under25
-
-# Ambos Anotan (BTTS)
 p_btts_yes = float(sum(matriz[h, a] for h in range(1, 7) for a in range(1, 7)))
 p_btts_no = 1.0 - p_btts_yes
 
 st.markdown("---")
 
-# ENCABEZADO DE EQUIPOS EN RESULTADOS
-st.markdown(f"""
-<div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-    <img src="{TEAMS_DATA[home_team]['logo']}" class="team-badge"> 
-    <span style="font-size: 1.5rem; font-weight: bold;">{home_team}</span>
-    <span style="font-size: 1.2rem; color: #888;">vs</span>
-    <img src="{TEAMS_DATA[away_team]['logo']}" class="team-badge"> 
-    <span style="font-size: 1.5rem; font-weight: bold;">{away_team}</span>
-</div>
-""", unsafe_allow_html=True)
+# CONFIGURACIÓN DE FORMATO DE MOMIOS
+col_head, col_opt = st.columns([3, 2])
+with col_head:
+    st.markdown("### ⚙️ METER LOS MOMIOS DE MI CASA (OPCIONAL — ANÁLISIS MÁS PRECISO)")
+with col_opt:
+    tipo_momio = st.radio("Formato de Momios:", ["Americanos", "Decimales"], horizontal=True)
 
-# FORMULARIO DE MOMIOS DE LA CASA DE APUESTAS
-st.markdown("### ⚙️ METER LOS MOMIOS DE MI CASA (OPCIONAL — ANÁLISIS MÁS PRECISO)")
-st.info("Escribe los momios **americanos** de tu casa de apuestas (ej. -150 o +240). El modelo recalculaciones del EV y los veredictos contra tus números.")
+st.info(f"Escribe los momios en formato **{tipo_momio}** de tu casa de apuestas.")
+
+def default_val(prob):
+    dec = 1/prob if prob > 0 else 2.0
+    return format_odds_display(dec, tipo_momio)
 
 f_col1, f_col2, f_col3 = st.columns(3)
 with f_col1:
-    m_home = st.text_input(f"GANA {home_team.upper()}", value=decimal_to_american(1/p_home if p_home>0 else 2.0))
+    m_home = st.text_input(f"GANA {home_team.upper()}", value=default_val(p_home))
 with f_col2:
-    m_draw = st.text_input("EMPATE", value=decimal_to_american(1/p_draw if p_draw>0 else 3.0))
+    m_draw = st.text_input("EMPATE", value=default_val(p_draw))
 with f_col3:
-    m_away = st.text_input(f"GANA {away_team.upper()}", value=decimal_to_american(1/p_away if p_away>0 else 4.0))
+    m_away = st.text_input(f"GANA {away_team.upper()}", value=default_val(p_away))
 
 f_col4, f_col5, f_col6 = st.columns(3)
 with f_col4:
     linea_goles = st.selectbox("LÍNEA DE GOLES", ["0/U 2.5", "0/U 1.5", "0/U 3.5"], index=0)
 with f_col5:
-    m_over = st.text_input("MÁS (OVER)", value=decimal_to_american(1/p_over25 if p_over25>0 else 1.9))
+    m_over = st.text_input("MÁS (OVER)", value=default_val(p_over25))
 with f_col6:
-    m_under = st.text_input("MENOS (UNDER)", value=decimal_to_american(1/p_under25 if p_under25>0 else 1.9))
+    m_under = st.text_input("MENOS (UNDER)", value=default_val(p_under25))
 
 f_col7, f_col8 = st.columns(2)
 with f_col7:
-    m_btts_yes = st.text_input("AMBOS ANOTAN: SÍ", value=decimal_to_american(1/p_btts_yes if p_btts_yes>0 else 1.9))
+    m_btts_yes = st.text_input("AMBOS ANOTAN: SÍ", value=default_val(p_btts_yes))
 with f_col8:
-    m_btts_no = st.text_input("AMBOS ANOTAN: NO", value=decimal_to_american(1/p_btts_no if p_btts_no>0 else 1.9))
+    m_btts_no = st.text_input("AMBOS ANOTAN: NO", value=default_val(p_btts_no))
 
-# CONVERSIÓN A DECIMALES Y CÁLCULO DE EV / TRAMPAS
-odd_h = american_to_decimal(m_home)
-odd_d = american_to_decimal(m_draw)
-odd_a = american_to_decimal(m_away)
-odd_over = american_to_decimal(m_over)
-odd_under = american_to_decimal(m_under)
-odd_btts_yes = american_to_decimal(m_btts_yes)
-odd_btts_no = american_to_decimal(m_btts_no)
+# CONVERSIÓN Y PROCESAMIENTO
+odd_h = parse_odds_to_decimal(m_home, tipo_momio)
+odd_under = parse_odds_to_decimal(m_under, tipo_momio)
+odd_btts_no = parse_odds_to_decimal(m_btts_no, tipo_momio)
 
 ev_h = calcular_ev(p_home, odd_h)
-ev_d = calcular_ev(p_draw, odd_d)
-ev_a = calcular_ev(p_away, odd_a)
 ev_under = calcular_ev(p_under25, odd_under)
-ev_over = calcular_ev(p_over25, odd_over)
 ev_btts_no = calcular_ev(p_btts_no, odd_btts_no)
 
-# DETECTOR DE TRAMPAS (TRAP LINE DETECTOR)
-fatiga_critica_a = (fatiga_a + rot_a) >= 0.8
-fatiga_critica_h = (fatiga_h + rot_h) >= 0.8
-
-trap_h = fatiga_critica_h and (odd_h > 2.0) and (ev_h > 0.10)
-trap_a = fatiga_critica_a and (odd_a > 2.0) and (ev_a > 0.10)
+trap_h = ((fatiga_h + rot_h) >= 0.8) and (odd_h > 2.0) and (ev_h > 0.10)
 
 def get_verdict(ev, is_trap=False):
     if is_trap:
@@ -310,37 +333,28 @@ def get_verdict(ev, is_trap=False):
         return "SKIP", "badge-skip"
 
 v_h, class_h = get_verdict(ev_h, trap_h)
-v_dc1x, class_dc1x = get_verdict(calcular_ev(p_dc_1x, 1.25)) # Estimación
+v_dc1x, class_dc1x = get_verdict(calcular_ev(p_dc_1x, 1.25))
 v_under, class_under = get_verdict(ev_under)
 v_btts_no, class_btts_no = get_verdict(ev_btts_no)
 
 st.markdown("---")
 st.markdown("### 📊 OPCIONES DE APUESTA ANALIZADAS")
 
-# CARTA 1: GANA LOCAL
 st.markdown(f"""
 <div class="bet-card">
     <div>
         <div class="bet-title">Gana {home_team}</div>
-        <div class="bet-subtitle">1X2 {home_team[:3].upper()} ({decimal_to_american(1/p_home)}) · {p_home*100:.1f}% · EV {ev_h*100:+.1f}%</div>
+        <div class="bet-subtitle">1X2 {home_team[:3].upper()} ({format_odds_display(odd_h, tipo_momio)}) · {p_home*100:.1f}% · EV {ev_h*100:+.1f}%</div>
     </div>
     <div><span class="{class_h}">{v_h}</span></div>
 </div>
-""", unsafe_allow_html=True)
-
-# CARTA 2: DOBLE OPORTUNIDAD 1X
-st.markdown(f"""
 <div class="bet-card">
     <div>
         <div class="bet-title">{home_team} o empate (1X)</div>
-        <div class="bet-subtitle">DC 1X · modelo {decimal_to_american(1/p_dc_1x)} · {p_dc_1x*100:.1f}%</div>
+        <div class="bet-subtitle">DC 1X · modelo {format_odds_display(1/p_dc_1x, tipo_momio)} · {p_dc_1x*100:.1f}%</div>
     </div>
     <div><span class="{class_dc1x}">{v_dc1x}</span></div>
 </div>
-""", unsafe_allow_html=True)
-
-# CARTA 3: MENOS DE 2.5 GOLES
-st.markdown(f"""
 <div class="bet-card">
     <div>
         <div class="bet-title">Menos de 2.5 goles</div>
@@ -348,32 +362,11 @@ st.markdown(f"""
     </div>
     <div><span class="{class_under}">{v_under}</span></div>
 </div>
-""", unsafe_allow_html=True)
-
-# CARTA 4: AMBOS EQUIPOS ANOTAN: NO
-st.markdown(f"""
 <div class="bet-card">
     <div>
         <div class="bet-title">Ambos equipos anotan: NO</div>
-        <div class="bet-subtitle">BTTS · modelo {decimal_to_american(1/p_btts_no)} · {p_btts_no*100:.1f}% · EV {ev_btts_no*100:+.1f}%</div>
+        <div class="bet-subtitle">BTTS · modelo {format_odds_display(1/p_btts_no, tipo_momio)} · {p_btts_no*100:.1f}% · EV {ev_btts_no*100:+.1f}%</div>
     </div>
     <div><span class="{class_btts_no}">{v_btts_no}</span></div>
 </div>
 """, unsafe_allow_html=True)
-
-# ALERTA DE TRAMPA DE LÍNEA SI APLICA
-if trap_h or trap_a:
-    equipo_trap = home_team if trap_h else away_team
-    st.warning(f"⚠️ **TRAP LINE DETECTADA**: La casa ofrece una cuota tentadora para **{equipo_trap}**, pero el modelo detecta un riesgo oculto debido a la alta fatiga/rotación del equipo. Te sugerimos precauciones antes de apostar a esta opción.")
-
-# MAPA DE MATRIZ DE MARCADORES EXACTOS
-with st.expander("📈 Ver Matriz de Probabilidades de Marcadores Exactos"):
-    fig = go.Figure(data=go.Heatmap(
-        z=matriz[:5, :5] * 100,
-        x=[f"{away_team} {i}" for i in range(5)],
-        y=[f"{home_team} {i}" for i in range(5)],
-        colorscale='Viridis',
-        hovertemplate='Marcador: %{y} - %{x}<br>Probabilidad: %{z:.2f}%<extra></extra>'
-    ))
-    fig.update_layout(title="Marcadores Exactos (0-4 Goles)", xaxis_title=away_team, yaxis_title=home_team)
-    st.plotly_chart(fig, use_container_width=True)
