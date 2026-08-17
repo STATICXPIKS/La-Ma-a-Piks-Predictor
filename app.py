@@ -11,7 +11,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS INSPIRADOS EN LA IMAGEN (MODO OSCURO PRECIOSO CON ACENTOS NEÓN)
+# ESTILOS CSS FUTURISTA - CORRECCIÓN DE VISIBILIDAD DE SELECTBOX Y LOGO 4X
 st.markdown("""
 <style>
     .stApp {
@@ -29,68 +29,33 @@ st.markdown("""
     .cyber-header {
         background: linear-gradient(135deg, rgba(0, 43, 27, 0.9) 0%, rgba(0, 15, 9, 0.95) 100%);
         border: 1px solid #00FF66;
-        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
-        padding: 12px 22px;
+        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 10px rgba(0, 255, 102, 0.2);
+        padding: 15px 25px;
         border-radius: 10px;
         display: flex;
         align-items: center;
-        gap: 15px;
-        margin-bottom: 15px;
+        gap: 25px;
+        margin-bottom: 20px;
     }
     
     .cyber-title {
         color: #FFD700 !important;
         font-weight: 900;
-        font-size: 1.25rem !important;
+        font-size: 1.4rem !important;
         text-transform: uppercase;
         letter-spacing: 2px;
+        text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
         margin: 0;
     }
     
+    /* LOGO PREMIER LEAGUE AUMENTADO 4 VECES MAS GRANDE (150px) */
     .pl-logo-header {
-        width: 38px !important;
+        width: 150px !important;
         height: auto !important;
-        filter: drop-shadow(0 0 5px #00FF66) brightness(0) invert(1);
+        filter: drop-shadow(0 0 8px #00FF66) brightness(0) invert(1);
     }
 
-    /* TARJETA DESTACADA MATCHUP (ESTILO DE LA IMAGEN DE EJEMPLO) */
-    .matchup-card {
-        background: #09120c;
-        border: 1px solid #00FF66;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 15px;
-        box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
-    }
-    
-    .matchup-odds-banner {
-        background: rgba(0, 255, 102, 0.1);
-        border: 1px solid #00FF66;
-        border-radius: 8px;
-        padding: 8px 12px;
-        text-align: center;
-        font-weight: 800;
-        font-size: 1rem;
-        color: #00FF66;
-        margin-bottom: 12px;
-    }
-
-    .circle-metric {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        border: 3px solid #00FF66;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 900;
-        font-size: 1.1rem;
-        color: #ffffff;
-        margin: 0 auto;
-        box-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
-    }
-
-    /* Inputs y Selectbox */
+    /* Inputs y Selectbox Visibles en Oscuro */
     .stTextInput input {
         background-color: #0a140d !important;
         color: #FFD700 !important;
@@ -98,8 +63,10 @@ st.markdown("""
         border-radius: 5px !important;
         font-weight: bold !important;
         font-size: 0.85rem !important;
+        box-shadow: 0 0 5px rgba(0, 255, 102, 0.2);
     }
 
+    /* SOLUCIÓN AL TEXTO INVISIBLE EN EL SELECTBOX */
     div[data-baseweb="select"] > div {
         background-color: #0a140d !important;
         color: #00FF66 !important;
@@ -107,29 +74,47 @@ st.markdown("""
         border-radius: 5px !important;
     }
 
+    div[data-baseweb="popover"], 
+    div[data-baseweb="popover"] *,
+    div[data-baseweb="menu"],
+    div[data-baseweb="menu"] * {
+        background-color: #0f1a13 !important;
+        color: #00FF66 !important;
+    }
+
+    li[role="option"] {
+        color: #ffffff !important;
+        background-color: #0f1a13 !important;
+    }
+
+    li[role="option"]:hover {
+        background-color: #00FF66 !important;
+        color: #000000 !important;
+    }
+
     /* Badges de Historial (G/E/P) */
     .form-container {
         display: flex;
-        gap: 3px;
+        gap: 4px;
         align-items: center;
-        margin: 4px 0 8px 0;
+        margin: 5px 0 10px 0;
     }
     .form-box {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 900;
-        font-size: 0.65rem;
-        border-radius: 2px;
+        font-size: 0.68rem;
+        border-radius: 3px;
         color: #000000;
     }
-    .form-g { background-color: #00FF66; color: #000; }
-    .form-e { background-color: #FFD700; color: #000; }
-    .form-p { background-color: #FF0055; color: #FFF; }
+    .form-g { background-color: #00FF66; color: #000; box-shadow: 0 0 6px rgba(0,255,102,0.6); }
+    .form-e { background-color: #FFD700; color: #000; box-shadow: 0 0 6px rgba(255,215,0,0.6); }
+    .form-p { background-color: #FF0055; color: #FFF; box-shadow: 0 0 6px rgba(255,0,85,0.6); }
 
-    /* Tarjetas de Oportunidad */
+    /* Tarjetas de Análisis Compactas */
     .cyber-card {
         background: linear-gradient(90deg, rgba(13, 24, 17, 0.95) 0%, rgba(7, 14, 10, 0.95) 100%);
         border: 1px solid #182e20;
@@ -139,26 +124,73 @@ st.markdown("""
         display: flex;
         justify-content: space-between;
         align-items: center;
+        width: 100%;
     }
-    .cyber-card-title { font-weight: 800; font-size: 0.85rem; color: #ffffff; }
-    .cyber-card-sub { font-size: 0.73rem; color: #9cbcae; font-family: monospace; }
+    .cyber-card-title {
+        font-weight: 800;
+        font-size: 0.85rem;
+        color: #ffffff;
+    }
+    .cyber-card-sub {
+        font-size: 0.73rem;
+        color: #9cbcae;
+        font-family: monospace;
+        margin-top: 1px;
+    }
 
-    .card-high { border-left: 4px solid #00FF66 !important; }
-    .card-medium { border-left: 4px solid #FF9900 !important; }
-    .card-low { border-left: 4px solid #FF0055 !important; }
-    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; }
+    .card-high { border-left: 4px solid #00FF66 !important; box-shadow: -3px 0 8px rgba(0, 255, 102, 0.3); }
+    .card-medium { border-left: 4px solid #FF9900 !important; box-shadow: -3px 0 8px rgba(255, 153, 0, 0.3); }
+    .card-low { border-left: 4px solid #FF0055 !important; box-shadow: -3px 0 8px rgba(255, 0, 85, 0.3); }
+    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5) !important; }
 
     .cyber-badge {
         font-weight: 900;
         padding: 4px 8px;
         border-radius: 3px;
         font-size: 0.68rem;
+        letter-spacing: 0.5px;
         text-transform: uppercase;
+        white-space: nowrap;
     }
-    .badge-high { background-color: #00FF66; color: #000000; }
-    .badge-medium { background-color: #FF9900; color: #000000; }
-    .badge-low { background-color: #FF0055; color: #ffffff; }
-    .badge-star { background-color: #FFD700; color: #000000; }
+    .badge-high { background-color: #00FF66; color: #000000; box-shadow: 0 0 6px rgba(0,255,102,0.5); }
+    .badge-medium { background-color: #FF9900; color: #000000; box-shadow: 0 0 6px rgba(255,153,0,0.5); }
+    .badge-low { background-color: #FF0055; color: #ffffff; box-shadow: 0 0 6px rgba(255,0,85,0.5); }
+    .badge-star { background-color: #FFD700; color: #000000; box-shadow: 0 0 8px rgba(255,215,0,0.8); }
+
+    /* Matchup Card */
+    .matchup-card {
+        background: #09120c;
+        border: 1px solid #00FF66;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 15px;
+        box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
+    }
+    .matchup-odds-banner {
+        background: rgba(0, 255, 102, 0.1);
+        border: 1px solid #00FF66;
+        border-radius: 8px;
+        padding: 8px 12px;
+        text-align: center;
+        font-weight: 800;
+        font-size: 0.95rem;
+        color: #00FF66;
+        margin-bottom: 12px;
+    }
+    .circle-metric {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 2px solid #00FF66;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 1rem;
+        color: #ffffff;
+        margin: 0 auto;
+        box-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
+    }
 
     .stButton>button {
         background: linear-gradient(135deg, #00FF66 0%, #009933 100%) !important;
@@ -168,6 +200,7 @@ st.markdown("""
         border: none !important;
         border-radius: 6px !important;
         padding: 10px 16px !important;
+        box-shadow: 0 0 12px rgba(0, 255, 102, 0.5) !important;
         width: 100% !important;
         text-transform: uppercase !important;
     }
@@ -176,13 +209,28 @@ st.markdown("""
 
 PL_LOGO = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
+# BASE DE DATOS DE LOS 20 EQUIPOS CON ESCUDOS SVGS VÁLIDOS
 TEAMS_DATA = {
     "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
+    "Aston Villa": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
+    "Bournemouth": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
     "Brentford": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
-    "Chelsea": {"logo": "https://upload.wikimedia.org/wikipedia/en/cc/CCFC_logo.svg", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
+    "Brighton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_FC_crest.svg", "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
+    "Chelsea": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
+    "Crystal Palace": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo.svg", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"], "l10_corners": [4, 5, 4, 6, 3, 5, 6, 4, 5, 4]},
+    "Everton": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg", "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"], "l10_corners": [5, 4, 6, 3, 5, 4, 6, 5, 4, 5]},
+    "Fulham": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a8/Fulham_FC_%28shield%29.svg", "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
+    "Ipswich Town": {"logo": "https://upload.wikimedia.org/wikipedia/en/4/43/Ipswich_Town.svg", "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 3, 6, 4, 3, 5, 4]},
+    "Leicester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2d/Leicester_City_crest.svg", "xg": 1.25, "xga": 1.55, "ppda": 12.8, "aereos": 49, "corners": 4.3, "forma": ["P","E","G","P","P","E","P","G","P","P"], "l10_corners": [4, 5, 3, 5, 4, 4, 5, 3, 4, 5]},
     "Liverpool": {"logo": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
     "Manchester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
-    "Tottenham Hotspur": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
+    "Manchester United": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg", "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [6, 5, 7, 6, 8, 5, 6, 7, 5, 6]},
+    "Newcastle United": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg", "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"], "l10_corners": [7, 6, 8, 5, 7, 6, 7, 6, 5, 7]},
+    "Nottingham Forest": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_logo.svg", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
+    "Southampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c9/FC_Southampton.svg", "xg": 1.15, "xga": 1.65, "ppda": 11.5, "aereos": 46, "corners": 4.5, "forma": ["P","P","P","E","P","G","P","P","E","P"], "l10_corners": [4, 5, 4, 3, 5, 4, 5, 3, 4, 4]},
+    "Tottenham Hotspur": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]},
+    "West Ham United": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c2/West_Ham_United_FC_logo.svg", "xg": 1.35, "xga": 1.60, "ppda": 13.5, "aereos": 54, "corners": 4.5, "forma": ["P","E","G","P","P","E","G","P","P","E"], "l10_corners": [4, 5, 4, 6, 4, 5, 3, 5, 4, 5]},
+    "Wolverhampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg", "xg": 1.30, "xga": 1.55, "ppda": 12.0, "aereos": 49, "corners": 4.4, "forma": ["P","E","P","G","P","P","E","G","P","P"], "l10_corners": [4, 5, 3, 5, 4, 4, 5, 4, 3, 5]}
 }
 
 def parse_odds_to_decimal(val_str, format_type):
@@ -248,7 +296,7 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO
+# ENCABEZADO CYBERPUNK CON LOGO 4X
 st.markdown(f"""
 <div class="cyber-header">
     <img src="{PL_LOGO}" class="pl-logo-header">
@@ -256,8 +304,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA INVERTIDA: DERECHA DATOS / IZQUIERDA ANÁLISIS Y GRÁFICAS
-col_left_panel, col_right_panel = st.columns([5, 7])
+# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS)
+col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
 # COLUMNA IZQUIERDA: DATOS Y CONFIGURACIÓN DEL ENCUENTRO
@@ -267,22 +315,22 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=1)
-        st.image(TEAMS_DATA[home_team]["logo"], width=32)
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3)
+        st.image(TEAMS_DATA[home_team]["logo"], width=35)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
         fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=5)
-        st.image(TEAMS_DATA[away_team]["logo"], width=32)
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=17)
+        st.image(TEAMS_DATA[away_team]["logo"], width=35)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
         rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
 
-    # CÁLCULOS MATEMÁTICOS
+    # CÁLCULOS MATEMÁTICOS DEL ENCUENTRO
     lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
     matriz_ft = generar_matriz(lam_h, lam_a)
 
@@ -396,7 +444,7 @@ with col_left_panel:
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 DESTACADO DE APUESTA Y GRÁFICA DE TENDENCIA</h3>", unsafe_allow_html=True)
 
-    # 1. MATCHUP CARD (ESTILO DE LA IMAGEN DE EJEMPLO)
+    # MATCHUP CARD
     l10_data = TEAMS_DATA[home_team].get("l10_corners", [5,6,7,8,6,7,5,8,6,7])
     promedio_l10 = np.mean(l10_data)
     proyeccion_val = (exp_corners_ft / 2) + 1.2
@@ -430,7 +478,7 @@ with col_right_panel:
     </div>
     """, unsafe_allow_html=True)
 
-    # 2. GRÁFICA DE BARRAS DINÁMICA DE TENDENCIA (L10 VS LÍNEA DE MERCADO)
+    # GRÁFICA DE BARRAS DINÁMICA DE TENDENCIA (L10 VS LÍNEA DE MERCADO)
     colors = ['#00FF66' if x >= linea_corners_ft else '#FF0055' for x in l10_data]
     
     fig = go.Figure()
@@ -461,7 +509,7 @@ with col_right_panel:
     
     st.plotly_chart(fig, use_container_width=True)
 
-    # 3. ANÁLISIS MATRIX COMPLETO DE LOS 11 MERCADOS
+    # ANÁLISIS MATRIX COMPLETO DE LOS 11 MERCADOS
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-top:15px; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
 
     mercados_list = [
