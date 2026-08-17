@@ -252,13 +252,13 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA DE 2 COLUMNAS: IZQUIERDA (ANÁLISIS) / DERECHA (DATOS Y MOMIOS)
-col_left_panel, col_right_panel = st.columns([5, 7])
+# ESTRUCTURA INVERTIDA: COLUMNA IZQUIERDA (DATOS Y MOMIOS) / COLUMNA DERECHA (ANÁLISIS)
+col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
-# COLUMNA DERECHA: DATOS DEL ENCUENTRO, EQUIPOS Y MOMIOS
+# COLUMNA IZQUIERDA: DATOS DEL ENCUENTRO, EQUIPOS Y MOMIOS
 # ==============================================================================
-with col_right_panel:
+with col_left_panel:
     st.markdown("<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO</h3>", unsafe_allow_html=True)
     
     col_t1, col_t2 = st.columns(2)
@@ -393,9 +393,9 @@ with col_right_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA IZQUIERDA: ANÁLISIS MATRIX DE OPORTUNIDADES (PANTALLA PRINCIPAL)
+# COLUMNA DERECHA: ANÁLISIS MATRIX DE OPORTUNIDADES (RESULTADOS)
 # ==============================================================================
-with col_left_panel:
+with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
 
     mercados_list = [
