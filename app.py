@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
+import urllib.parse
 
 # Configuración de página
 st.set_page_config(
@@ -11,104 +12,135 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS REPLICANDO FIELMENTE EL ENCABEZADO Y SELECTBOXES DE LA IMAGEN
+# GENERADOR DE ESCUDOS VECTORIALES (SVG BASE64) PARA EVITAR IMÁGENES ROTAS
+def get_team_badge_svg(team_name, color_bg, color_text, initial):
+    svg_code = f"""
+    <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" fill="{color_bg}" stroke="#00FF66" stroke-width="4"/>
+        <text x="50" y="62" font-size="38" font-weight="900" font-family="Arial, sans-serif" fill="{color_text}" text-anchor="middle">{initial}</text>
+    </svg>
+    """
+    encoded = urllib.parse.quote(svg_code)
+    return f"data:image/svg+xml;utf8,{encoded}"
+
+# BASE DE DATOS COMPLETA DE EQUIPOS CON ESCUDOS GARANTIZADOS
+TEAMS_DATA = {
+    "ARSENAL": {"logo": get_team_badge_svg("ARSENAL", "#EF0107", "#FFFFFF", "A"), "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
+    "ASTON VILLA": {"logo": get_team_badge_svg("ASTON VILLA", "#95BFE5", "#670E36", "AV"), "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
+    "BOURNEMOUTH": {"logo": get_team_badge_svg("BOURNEMOUTH", "#DA291C", "#000000", "B"), "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
+    "BRENTFORD": {"logo": get_team_badge_svg("BRENTFORD", "#E30613", "#FFFFFF", "BF"), "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
+    "BRIGHTON": {"logo": get_team_badge_svg("BRIGHTON", "#0057B8", "#FFFFFF", "BH"), "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
+    "CHELSEA": {"logo": get_team_badge_svg("CHELSEA", "#034694", "#FFFFFF", "C"), "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
+    "COVENTRY CITY": {"logo": get_team_badge_svg("COVENTRY CITY", "#00A3E0", "#FFFFFF", "CC"), "xg": 1.30, "xga": 1.50, "ppda": 11.5, "aereos": 50, "corners": 4.8, "forma": ["G","E","P","G","E","P","G","P","E","G"], "l10_corners": [5, 4, 6, 5, 4, 6, 5, 4, 5, 4]},
+    "CRYSTAL PALACE": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo.svg", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"], "l10_corners": [4, 5, 4, 6, 3, 5, 6, 4, 5, 4]},
+    "EVERTON": {"logo": get_team_badge_svg("EVERTON", "#003399", "#FFFFFF", "E"), "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"], "l10_corners": [5, 4, 6, 3, 5, 4, 6, 5, 4, 5]},
+    "FULHAM": {"logo": get_team_badge_svg("FULHAM", "#000000", "#FFFFFF", "F"), "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
+    "HULL CITY": {"logo": get_team_badge_svg("HULL CITY", "#F5A623", "#000000", "HC"), "xg": 1.22, "xga": 1.58, "ppda": 12.0, "aereos": 47, "corners": 4.3, "forma": ["P","E","P","G","E","P","P","E","G","P"], "l10_corners": [4, 3, 5, 4, 5, 3, 4, 5, 3, 4]},
+    "IPSWICH": {"logo": get_team_badge_svg("IPSWICH", "#003399", "#FFFFFF", "I"), "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 3, 6, 4, 3, 5, 4]},
+    "LEEDS": {"logo": get_team_badge_svg("LEEDS", "#FFCD00", "#1D428A", "LU"), "xg": 1.45, "xga": 1.40, "ppda": 9.2, "aereos": 51, "corners": 5.5, "forma": ["G","E","G","P","E","G","P","G","E","P"], "l10_corners": [6, 5, 7, 5, 6, 4, 6, 7, 5, 6]},
+    "LIVERPOOL": {"logo": get_team_badge_svg("LIVERPOOL", "#C8102E", "#FFFFFF", "L"), "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
+    "MANCHESTER CITY": {"logo": get_team_badge_svg("MANCHESTER CITY", "#6CABDD", "#1C2C5B", "MC"), "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
+    "MANCHESTER UNITED": {"logo": get_team_badge_svg("MANCHESTER UNITED", "#DA291C", "#FFE500", "MU"), "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [6, 5, 7, 6, 8, 5, 6, 7, 5, 6]},
+    "NEWCASTLE": {"logo": get_team_badge_svg("NEWCASTLE", "#241F20", "#FFFFFF", "NC"), "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"], "l10_corners": [7, 6, 8, 5, 7, 6, 7, 6, 5, 7]},
+    "NOTTINGHAM FOREST": {"logo": get_team_badge_svg("NOTTINGHAM FOREST", "#DD0000", "#FFFFFF", "NF"), "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
+    "SUNDERLAND AFC": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/77/Sunderland_AFC_logo.svg", "xg": 1.28, "xga": 1.52, "ppda": 12.2, "aereos": 50, "corners": 4.4, "forma": ["G","P","E","P","G","P","E","P","G","E"], "l10_corners": [4, 5, 4, 6, 3, 5, 4, 5, 3, 4]},
+    "TOTTENHAM": {"logo": get_team_badge_svg("TOTTENHAM", "#132257", "#FFFFFF", "T"), "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
+}
+
+# ESTILOS CSS REFORZADOS
 st.markdown("""
 <style>
+    /* FONDO PRINCIPAL NEGRO NEÓN */
     .stApp {
         background-color: #000000 !important;
         color: #ffffff !important;
     }
-    
+
     label, p, span, div, .stMarkdown, .stRadio label, .stSlider label {
         color: #e2f8eb !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
         font-size: 0.85rem !important;
     }
-    
-    /* ENCABEZADO PERSONALIZADO SEGÚN IMAGEN */
-    .header-main-container {
+
+    /* ENCABEZADO CENTRADO CON LOGO PREMIER LEAGUE EN VERDE FLUORESCENTE */
+    .header-centered-container {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        margin-bottom: 25px;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 15px 0 25px 0;
         background-color: #000000;
-        padding-bottom: 10px;
+        border-bottom: 2px solid #00FF66;
+        margin-bottom: 20px;
     }
 
-    .header-top-row {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-
-    .brand-logo {
-        width: 85px !important;
-        height: auto !important;
-        border-radius: 8px;
-    }
-
-    .brand-title {
+    .brand-title-center {
         color: #FFD700 !important;
-        font-weight: 900;
-        font-size: 2.2rem !important;
+        font-weight: 900 !important;
+        font-size: 2.5rem !important;
         text-transform: uppercase;
-        letter-spacing: 2px;
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.6), 2px 2px 4px #000;
-        margin: 0;
+        letter-spacing: 3px;
+        text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 2px 2px 5px #000;
+        margin-bottom: 10px;
     }
 
-    .header-bottom-row {
+    .pl-row-center {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 15px;
     }
 
-    .pl-logo-img {
+    .pl-logo-neon {
         width: 140px !important;
         height: auto !important;
+        /* FILTRO DIGITAL QUE CONVIERTE EL LOGO DE LA PREMIER LEAGUE A VERDE FLUORESCENTE */
+        filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 10px #00FF66) !important;
     }
 
-    .pl-sub-title {
+    .pl-sub-title-center {
         color: #FFD700 !important;
-        font-weight: 800;
-        font-size: 1.15rem !important;
+        font-weight: 900;
+        font-size: 1.25rem !important;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
+        letter-spacing: 2px;
         margin: 0;
     }
 
-    /* ESTILO EXACTO DE SELECTBOXES: FONDO NEGRO Y TEXTO EN MAYÚSCULAS BLANCO EN NEGRITA */
+    /* FORZAR SELECTBOX EN FONDO NEGRO PURO #000000 CON TEXTO EN MAYÚSCULAS BLANCO Y NEGRITA */
     div[data-baseweb="select"] {
         background-color: #000000 !important;
-        border: 2px solid #ffffff !important;
+        border: 2px solid #00FF66 !important;
         border-radius: 6px !important;
     }
 
     div[data-baseweb="select"] *, 
     div[data-baseweb="select"] span,
-    div[data-baseweb="select"] input {
+    div[data-baseweb="select"] input,
+    div[data-baseweb="select"] div {
         color: #ffffff !important;
         font-weight: 900 !important;
-        font-size: 0.95rem !important;
+        font-size: 1rem !important;
         text-transform: uppercase !important;
         background-color: #000000 !important;
     }
 
-    /* DESPLEGABLE CON LISTA DE OPCIONES EN NEGRO CON TEXTO BLANCO */
+    /* DESPLEGABLE LISTA EN FONDO NEGRO Y TEXTO EN BLANCO/VERDE */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     div[data-baseweb="menu"] *,
     ul[role="listbox"],
     ul[role="listbox"] * {
-        background-color: #0d0d0d !important;
+        background-color: #000000 !important;
         color: #ffffff !important;
         font-weight: 900 !important;
         text-transform: uppercase !important;
     }
 
     li[role="option"] {
-        background-color: #0d0d0d !important;
+        background-color: #000000 !important;
         color: #ffffff !important;
         font-weight: 900 !important;
         text-transform: uppercase !important;
@@ -123,11 +155,11 @@ st.markdown("""
 
     /* Inputs de texto para momios */
     .stTextInput input {
-        background-color: #0a140d !important;
+        background-color: #000000 !important;
         color: #FFD700 !important;
         border: 1px solid #00FF66 !important;
         border-radius: 5px !important;
-        font-weight: bold !important;
+        font-weight: 900 !important;
         font-size: 0.85rem !important;
     }
 
@@ -189,7 +221,7 @@ st.markdown("""
 
     /* Matchup Card Banner */
     .matchup-card {
-        background: #09120c;
+        background: #000000;
         border: 1px solid #00FF66;
         border-radius: 12px;
         padding: 16px;
@@ -202,7 +234,7 @@ st.markdown("""
         border-radius: 8px;
         padding: 8px 12px;
         text-align: center;
-        font-weight: 800;
+        font-weight: 900;
         font-size: 0.95rem;
         color: #00FF66;
         margin-bottom: 12px;
@@ -237,32 +269,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# IMÁGENES Y LOGOS DIRECTOS
-BRAND_LOGO = "https://i.ibb.co/60B8Z7s/la-mana-picks.png" # Logo de marca La Maña
-PL_LOGO_PURPLE = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" # Premier League official SVG
-
-TEAMS_DATA = {
-    "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
-    "Aston Villa": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
-    "Bournemouth": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
-    "Brentford": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
-    "Brighton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_FC_crest.svg", "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
-    "Chelsea": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
-    "Coventry City": {"logo": "https://upload.wikimedia.org/wikipedia/en/9/94/Coventry_City_FC_logo.svg", "xg": 1.30, "xga": 1.50, "ppda": 11.5, "aereos": 50, "corners": 4.8, "forma": ["G","E","P","G","E","P","G","P","E","G"], "l10_corners": [5, 4, 6, 5, 4, 6, 5, 4, 5, 4]},
-    "Crystal Palace": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo.svg", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"], "l10_corners": [4, 5, 4, 6, 3, 5, 6, 4, 5, 4]},
-    "Everton": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg", "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"], "l10_corners": [5, 4, 6, 3, 5, 4, 6, 5, 4, 5]},
-    "Fulham": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a8/Fulham_FC_%28shield%29.svg", "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
-    "Hull City": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/54/Hull_City_A.F.C._logo.svg", "xg": 1.22, "xga": 1.58, "ppda": 12.0, "aereos": 47, "corners": 4.3, "forma": ["P","E","P","G","E","P","P","E","G","P"], "l10_corners": [4, 3, 5, 4, 5, 3, 4, 5, 3, 4]},
-    "Ipswich": {"logo": "https://upload.wikimedia.org/wikipedia/en/4/43/Ipswich_Town.svg", "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 3, 6, 4, 3, 5, 4]},
-    "Leeds": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/54/Leeds_United_F.C._logo.svg", "xg": 1.45, "xga": 1.40, "ppda": 9.2, "aereos": 51, "corners": 5.5, "forma": ["G","E","G","P","E","G","P","G","E","P"], "l10_corners": [6, 5, 7, 5, 6, 4, 6, 7, 5, 6]},
-    "Liverpool": {"logo": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
-    "Manchester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
-    "Manchester United": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg", "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [6, 5, 7, 6, 8, 5, 6, 7, 5, 6]},
-    "Newcastle": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg", "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"], "l10_corners": [7, 6, 8, 5, 7, 6, 7, 6, 5, 7]},
-    "Nottingham Forest": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_logo.svg", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
-    "Sunderland AFC": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/77/Sunderland_AFC_logo.svg", "xg": 1.28, "xga": 1.52, "ppda": 12.2, "aereos": 50, "corners": 4.4, "forma": ["G","P","E","P","G","P","E","P","G","E"], "l10_corners": [4, 5, 4, 6, 3, 5, 4, 5, 3, 4]},
-    "Tottenham": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
-}
+PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
 def parse_odds_to_decimal(val_str, format_type):
     try:
@@ -327,20 +334,18 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO EXACTO SEGÚN LA IMAGEN DE REFERENCIA
+# ENCABEZADO CENTRADO SEGÚN TU SOLICITUD
 st.markdown(f"""
-<div class="header-main-container">
-    <div class="header-top-row">
-        <h1 class="brand-title">LA MAÑA PICKS</h1>
-    </div>
-    <div class="header-bottom-row">
-        <img src="{PL_LOGO_PURPLE}" class="pl-logo-img">
-        <h2 class="pl-sub-title">PREMIER LEAGUE PREDICTIONS</h2>
+<div class="header-centered-container">
+    <h1 class="brand-title-center">LA MAÑA PICKS</h1>
+    <div class="pl-row-center">
+        <img src="{PL_LOGO_URL}" class="pl-logo-neon">
+        <h2 class="pl-sub-title-center">PREMIER LEAGUE PREDICTIONS</h2>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS Y GRÁFICAS)
+# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS Y GRÁFICA)
 col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
@@ -351,16 +356,16 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=1) # Arsenal
-        st.image(TEAMS_DATA[home_team]["logo"], width=40)
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=0)
+        st.image(TEAMS_DATA[home_team]["logo"], width=45)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
         fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=5) # Chelsea
-        st.image(TEAMS_DATA[away_team]["logo"], width=40)
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=5)
+        st.image(TEAMS_DATA[away_team]["logo"], width=45)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
@@ -389,9 +394,9 @@ with col_left_panel:
     # Captura de Momios
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-bottom:2px;'>1. RESULTADO FINAL (1X2) & 2. DOBLE OPORTUNIDAD</p>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
-    with c1: m_1_ft = st.text_input(f"1X2 {home_team[:3].upper()}", value=default_val(p_1_ft))
+    with c1: m_1_ft = st.text_input(f"1X2 {home_team[:3]}", value=default_val(p_1_ft))
     with c2: m_x_ft = st.text_input("Empate X", value=default_val(p_x_ft))
-    with c3: m_2_ft = st.text_input(f"1X2 {away_team[:3].upper()}", value=default_val(p_2_ft))
+    with c3: m_2_ft = st.text_input(f"1X2 {away_team[:3]}", value=default_val(p_2_ft))
     with c4: m_1x = st.text_input("DC 1X", value=default_val(p_1_ft + p_x_ft))
     with c5: m_x2 = st.text_input("DC X2", value=default_val(p_2_ft + p_x_ft))
 
@@ -421,20 +426,20 @@ with col_left_panel:
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>6. HÁNDICAP ASIÁTICO</p>", unsafe_allow_html=True)
     ha_c1, ha_c2, ha_c3, ha_c4 = st.columns(4)
     with ha_c1:
-        linea_ha_h = st.selectbox(f"AH {home_team[:3].upper()}", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0, key="ha_h_select")
+        linea_ha_h = st.selectbox(f"AH {home_team[:3]}", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0, key="ha_h_select")
         p_ha_h = calcular_prob_ha(linea_ha_h, True, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
     with ha_c2: m_ha_h = st.text_input("Momio Local", value=default_val(p_ha_h))
 
     with ha_c3:
-        linea_ha_a = st.selectbox(f"AH {away_team[:3].upper()}", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=1, key="ha_a_select")
+        linea_ha_a = st.selectbox(f"AH {away_team[:3]}", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=1, key="ha_a_select")
         p_ha_a = calcular_prob_ha(linea_ha_a, False, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
     with ha_c4: m_ha_a = st.text_input("Momio Visita", value=default_val(p_ha_a))
 
     st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>7. 1RA MITAD 1X2 & 8. GOLES 1RA MITAD</p>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns(3)
-    with h1: m_1_ht = st.text_input(f"HT {home_team[:3].upper()}", value=default_val(p_1_ht))
+    with h1: m_1_ht = st.text_input(f"HT {home_team[:3]}", value=default_val(p_1_ht))
     with h2: m_x_ht = st.text_input("HT Empate", value=default_val(p_x_ht))
-    with h3: m_2_ht = st.text_input(f"HT {away_team[:3].upper()}", value=default_val(p_2_ht))
+    with h3: m_2_ht = st.text_input(f"HT {away_team[:3]}", value=default_val(p_2_ht))
 
     p_over05_ht = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
     p_under05_ht = 1.0 - p_over05_ht
@@ -462,8 +467,8 @@ with col_left_panel:
     p_dnb_h = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
     p_dnb_a = 1.0 - p_dnb_h
 
-    with c_ht4: m_dnb_h = st.text_input(f"DNB {home_team[:3].upper()}", value=default_val(p_dnb_h))
-    with c_ht5: m_dnb_a = st.text_input(f"DNB {away_team[:3].upper()}", value=default_val(p_dnb_a))
+    with c_ht4: m_dnb_h = st.text_input(f"DNB {home_team[:3]}", value=default_val(p_dnb_h))
+    with c_ht5: m_dnb_a = st.text_input(f"DNB {away_team[:3]}", value=default_val(p_dnb_a))
 
     p_win_any_h = 1.0 - ((1.0 - p_1_ht) * (1.0 - p_1_ft))
     p_win_any_a = 1.0 - ((1.0 - p_2_ht) * (1.0 - p_2_ft))
