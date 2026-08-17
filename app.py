@@ -5,12 +5,12 @@ from scipy.stats import poisson
 
 # Configuración de página
 st.set_page_config(
-    page_title="Premier League Predictor - Cyberpunk Bet365",
+    page_title="LA MAÑA PICKS - PREMIER LEAGUE PREDICTIONS",
     layout="wide",
     page_icon="⚽"
 )
 
-# ESTILOS CSS CYBERPUNK - BET365 (VERDE Y ORO)
+# ESTILOS CSS CYBERPUNK - BET365
 st.markdown("""
 <style>
     .stApp {
@@ -27,22 +27,30 @@ st.markdown("""
         background: linear-gradient(135deg, #002b1b 0%, #00120b 100%);
         border: 2px solid #00FF66;
         box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
-        padding: 15px 25px;
+        padding: 20px 30px;
         border-radius: 10px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
+        gap: 20px;
+        margin-bottom: 25px;
     }
+    
     .cyber-title {
         color: #FFD700 !important;
         font-weight: 900;
-        font-size: 1.8rem;
+        font-size: 2rem;
         text-transform: uppercase;
         letter-spacing: 2px;
         text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        margin: 0;
     }
     
+    .pl-logo-header {
+        width: 80px !important;
+        height: auto !important;
+        filter: brightness(0) invert(1);
+    }
+
     .stTextInput input, div[data-baseweb="select"] > div {
         background-color: #121915 !important;
         color: #FFD700 !important;
@@ -95,10 +103,10 @@ st.markdown("""
         background: linear-gradient(135deg, #00FF66 0%, #009933 100%) !important;
         color: #000000 !important;
         font-weight: 900 !important;
-        font-size: 1.2rem !important;
+        font-size: 1.3rem !important;
         border: none !important;
         border-radius: 8px !important;
-        padding: 12px 24px !important;
+        padding: 15px 24px !important;
         box-shadow: 0 0 15px rgba(0, 255, 102, 0.5) !important;
         width: 100% !important;
         text-transform: uppercase !important;
@@ -162,17 +170,15 @@ def generar_matriz(lambda_h, lambda_a, max_goles=8):
             mat[h, a] = poisson.pmf(h, lambda_h) * poisson.pmf(a, lambda_a)
     return mat / np.sum(mat)
 
-# ENCABEZADO
+# ENCABEZADO CON ESCUDO AMPLIADO Y TÍTULO SOLICITADO
 st.markdown(f"""
 <div class="cyber-header">
-    <div style="display:flex; align-items:center; gap:15px;">
-        <img src="{PL_LOGO}" style="width:45px; filter: brightness(0) invert(1);">
-        <h1 class="cyber-title">BET365 PREMIER LEAGUE // DYNAMIC MARKETS PREDICTOR</h1>
-    </div>
+    <img src="{PL_LOGO}" class="pl-logo-header">
+    <h1 class="cyber-title">LA MAÑA PICKS - PREMIER LEAGUE PREDICTIONS</h1>
 </div>
 """, unsafe_allow_html=True)
 
-# SELECCIÓN DE EQUIPOS
+# SELECCIÓN DE EQUIPOS Y VARIABLES CONTEXTUALES
 col_t1, col_t2 = st.columns(2)
 with col_t1:
     home_team = st.selectbox("Selecciona Equipo Local", list(TEAMS_DATA.keys()), index=1)
@@ -184,34 +190,28 @@ with col_t2:
     fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
     rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
 
-# CÁLCULOS BASE
+# CÁLCULOS MATEMÁTICOS PRINCIPALES
 lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
 matriz_ft = generar_matriz(lam_h, lam_a)
 
 lam_h_ht, lam_a_ht = lam_h * 0.45, lam_a * 0.45
 matriz_ht = generar_matriz(lam_h_ht, lam_a_ht)
 
-# PROBABILIDADES BASE 1X2 Y DNB
 p_1_ft, p_x_ft, p_2_ft = float(np.sum(np.tril(matriz_ft, -1))), float(np.sum(np.diag(matriz_ft))), float(np.sum(np.triu(matriz_ft, 1)))
 p_1_ht, p_x_ht, p_2_ht = float(np.sum(np.tril(matriz_ht, -1))), float(np.sum(np.diag(matriz_ht))), float(np.sum(np.triu(matriz_ht, 1)))
 
 st.markdown("---")
 
-# FORMATO DE MOMIOS Y CONFIGURACIÓN
 col_head, col_opt = st.columns([3, 2])
 with col_head:
-    st.markdown("<h3 style='color:#FFD700;'>⚡ METER MOMIOS Y AJUSTES DINÁMICOS POR MERCADO</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#FFD700;'>⚡ METER MOMIOS Y CONFIGURACIÓN DE LOS 11 MERCADOS</h3>", unsafe_allow_html=True)
 with col_opt:
     tipo_momio = st.radio("Formato de Momios:", ["Decimales", "Americanos"], horizontal=True)
 
 def default_val(prob):
     return format_odds_display(1/prob if prob > 0 else 2.0, tipo_momio)
 
-# ------------------------------------------------------------------------------
-# CONTROLES Y CAMPOS INTEGRADOS POR MERCADO
-# ------------------------------------------------------------------------------
-
-# MERCADOS 1 Y 2: 1X2 Y DOBLE OPORTUNIDAD
+# BLOQUES DE INGRESO DE MOMIOS AJUSTABLES
 st.markdown("#### ⚽ 1. RESULTADO FINAL (1X2) & 2. DOBLE OPORTUNIDAD")
 c1, c2, c3, c4 = st.columns(4)
 with c1: m_1_ft = st.text_input(f"1X2: Gana {home_team[:3]}", value=default_val(p_1_ft))
@@ -219,19 +219,15 @@ with c2: m_1x = st.text_input("Doble Chance: 1X", value=default_val(p_1_ft + p_x
 with c3: m_x2 = st.text_input("Doble Chance: X2", value=default_val(p_2_ft + p_x_ft))
 with c4: m_12 = st.text_input("Doble Chance: 12", value=default_val(p_1_ft + p_2_ft))
 
-# MERCADO 3: TOTAL DE GOLES (FT) CON AJUSTE DINÁMICO
 st.markdown("#### 🥅 3. TOTAL DE GOLES (FT)")
 cg1, cg2, cg3 = st.columns([2, 1, 1])
 with cg1:
     linea_goles_ft = st.slider("3. Línea Total de Goles (FT)", 1.5, 4.5, 2.5, step=1.0)
     p_under_goles = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h + a < linea_goles_ft))
     p_over_goles = 1.0 - p_under_goles
-with cg2:
-    m_over_goles = st.text_input(f"Goles Over {linea_goles_ft}", value=default_val(p_over_goles))
-with cg3:
-    m_under_goles = st.text_input(f"Goles Under {linea_goles_ft}", value=default_val(p_under_goles))
+with cg2: m_over_goles = st.text_input(f"Goles Over {linea_goles_ft}", value=default_val(p_over_goles))
+with cg3: m_under_goles = st.text_input(f"Goles Under {linea_goles_ft}", value=default_val(p_under_goles))
 
-# MERCADO 4 Y 5: BTTS Y TOTAL DE CÓRNERS (FT) CON AJUSTE DINÁMICO
 st.markdown("#### 🚩 4. AMBOS ANOTAN & 5. TOTAL DE CÓRNERS (FT)")
 p_btts_yes = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
 exp_corners_ft = TEAMS_DATA[home_team]["corners"] + TEAMS_DATA[away_team]["corners"]
@@ -242,31 +238,21 @@ with cm2: m_btts_no = st.text_input("4. BTTS NO", value=default_val(1.0 - p_btts
 with cm3:
     linea_corners_ft = st.slider("5. Línea Total de Córners (FT)", 8.5, 12.5, 9.5, step=1.0)
     p_over_corners_ft = float(1.0 - poisson.cdf(int(linea_corners_ft), exp_corners_ft))
-with cm4:
-    m_corners_ft = st.text_input(f"Córners Over {linea_corners_ft}", value=default_val(p_over_corners_ft))
+with cm4: m_corners_ft = st.text_input(f"Córners Over {linea_corners_ft}", value=default_val(p_over_corners_ft))
 
-# MERCADO 6: HÁNDICAP ASIÁTICO CON SELECTOR DINÁMICO DE LÍNEA
 st.markdown("#### ⚖️ 6. HÁNDICAP ASIÁTICO")
 ha_col1, ha_col2 = st.columns([2, 2])
 with ha_col1:
     linea_ha = st.selectbox("6. Seleccionar Línea de Hándicap Asiático", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
 
-# CÁLCULO DE PROBABILIDAD DE HÁNDICAP ELEGIDO
-if linea_ha == "+0.5":
-    p_ha_selected = p_1_ft + p_x_ft
-elif linea_ha == "-0.5":
-    p_ha_selected = p_1_ft
-elif linea_ha == "0 (DNB)":
-    p_ha_selected = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
-elif linea_ha == "+1.0":
-    p_ha_selected = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if (h + 1.0) > a))
-else: # -1.0
-    p_ha_selected = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h > (a + 1.0)))
+if linea_ha == "+0.5": p_ha_selected = p_1_ft + p_x_ft
+elif linea_ha == "-0.5": p_ha_selected = p_1_ft
+elif linea_ha == "0 (DNB)": p_ha_selected = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
+elif linea_ha == "+1.0": p_ha_selected = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if (h + 1.0) > a))
+else: p_ha_selected = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h > (a + 1.0)))
 
-with ha_col2:
-    m_ha_selected = st.text_input(f"Momio AH {home_team[:3]} ({linea_ha})", value=default_val(p_ha_selected))
+with ha_col2: m_ha_selected = st.text_input(f"Momio AH {home_team[:3]} ({linea_ha})", value=default_val(p_ha_selected))
 
-# MERCADOS 7 Y 8: 1RA MITAD 1X2 Y GOLES 1RA MITAD CON SELECCIÓN DE LÍNEA
 st.markdown("#### ⏱️ 7. 1RA MITAD RESULTADO & 8. OVER/UNDER GOLES 1RA MITAD")
 h1, h2, h3, h4 = st.columns([1, 1, 1, 1])
 with h1: m_1_ht = st.text_input(f"7. 1ra Mitad Gana {home_team[:3]}", value=default_val(p_1_ht))
@@ -275,7 +261,6 @@ with h2:
     p_goles_ht_sel = (1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))) if linea_goles_ht == "+0.5" else (1.0 - float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5)))
 with h3: m_goles_ht = st.text_input(f"Momio Goles HT ({linea_goles_ht})", value=default_val(p_goles_ht_sel))
 
-# MERCADOS 9, 10 Y 11: CÓRNERS HT CON SLIDER, DNB Y GANA CUALQUIER MITAD
 st.markdown("#### 🚩 9. CÓRNERS HT | 10. EMPATE NO ACCIÓN | 11. GANA CUALQUIER MITAD")
 m_c1, m_c2, m_c3, m_c4 = st.columns([2, 1, 1, 1])
 with m_c1:
@@ -291,11 +276,9 @@ with m_c3: m_dnb = st.text_input("10. Empate No Acción (DNB)", value=default_va
 with m_c4: m_win_any = st.text_input("11. Gana Cualq. Mitad", value=default_val(p_win_any_h))
 
 st.markdown("<br>", unsafe_allow_html=True)
-
-# BOTÓN DE RECÁLCULO
 recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
-# PROCESAR CÁLCULOS Y MOSTRAR RESULTADOS
+# RESULTADOS DE EVALUACIÓN
 st.markdown("---")
 st.markdown("<h3 style='color:#00FF66;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES (11 MERCADOS)</h3>", unsafe_allow_html=True)
 
