@@ -11,7 +11,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS FUTURISTA - CORRECCIÓN DE VISIBILIDAD DE SELECTBOX Y LOGO 4X
+# ESTILOS CSS CON CORRECCIÓN DIRECTA SOBRE BASEWEB POPOVER (DESPLEGABLE NEGRO / VERDE NEÓN)
 st.markdown("""
 <style>
     .stApp {
@@ -29,8 +29,8 @@ st.markdown("""
     .cyber-header {
         background: linear-gradient(135deg, rgba(0, 43, 27, 0.9) 0%, rgba(0, 15, 9, 0.95) 100%);
         border: 1px solid #00FF66;
-        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 10px rgba(0, 255, 102, 0.2);
-        padding: 15px 25px;
+        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+        padding: 12px 22px;
         border-radius: 10px;
         display: flex;
         align-items: center;
@@ -44,18 +44,47 @@ st.markdown("""
         font-size: 1.4rem !important;
         text-transform: uppercase;
         letter-spacing: 2px;
-        text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
         margin: 0;
     }
     
-    /* LOGO PREMIER LEAGUE AUMENTADO 4 VECES MAS GRANDE (150px) */
     .pl-logo-header {
         width: 150px !important;
         height: auto !important;
         filter: drop-shadow(0 0 8px #00FF66) brightness(0) invert(1);
     }
 
-    /* Inputs y Selectbox Visibles en Oscuro */
+    /* FIX DEFINITIVO PARA SELECTBOX (MENÚ DESPLEGABLE CON FONDO NEGRO Y TEXTO LEIBLE) */
+    div[data-baseweb="select"] {
+        background-color: #0a140d !important;
+        border-radius: 5px !important;
+    }
+
+    div[data-baseweb="select"] * {
+        background-color: #0a140d !important;
+        color: #00FF66 !important;
+        font-weight: bold !important;
+    }
+
+    /* Popover/Portal global donde se renderizan las opciones */
+    div[data-baseweb="popover"], 
+    div[data-baseweb="popover"] *,
+    div[data-baseweb="menu"],
+    div[data-baseweb="menu"] *,
+    ul[role="listbox"],
+    ul[role="listbox"] * {
+        background-color: #0a140d !important;
+        color: #00FF66 !important;
+        font-weight: bold !important;
+    }
+
+    /* Hover en opciones del menú desplegable */
+    li[role="option"]:hover,
+    li[role="option"]:hover * {
+        background-color: #00FF66 !important;
+        color: #000000 !important;
+    }
+
+    /* Inputs de texto para momios */
     .stTextInput input {
         background-color: #0a140d !important;
         color: #FFD700 !important;
@@ -63,33 +92,6 @@ st.markdown("""
         border-radius: 5px !important;
         font-weight: bold !important;
         font-size: 0.85rem !important;
-        box-shadow: 0 0 5px rgba(0, 255, 102, 0.2);
-    }
-
-    /* SOLUCIÓN AL TEXTO INVISIBLE EN EL SELECTBOX */
-    div[data-baseweb="select"] > div {
-        background-color: #0a140d !important;
-        color: #00FF66 !important;
-        border: 1px solid #00FF66 !important;
-        border-radius: 5px !important;
-    }
-
-    div[data-baseweb="popover"], 
-    div[data-baseweb="popover"] *,
-    div[data-baseweb="menu"],
-    div[data-baseweb="menu"] * {
-        background-color: #0f1a13 !important;
-        color: #00FF66 !important;
-    }
-
-    li[role="option"] {
-        color: #ffffff !important;
-        background-color: #0f1a13 !important;
-    }
-
-    li[role="option"]:hover {
-        background-color: #00FF66 !important;
-        color: #000000 !important;
     }
 
     /* Badges de Historial (G/E/P) */
@@ -126,17 +128,8 @@ st.markdown("""
         align-items: center;
         width: 100%;
     }
-    .cyber-card-title {
-        font-weight: 800;
-        font-size: 0.85rem;
-        color: #ffffff;
-    }
-    .cyber-card-sub {
-        font-size: 0.73rem;
-        color: #9cbcae;
-        font-family: monospace;
-        margin-top: 1px;
-    }
+    .cyber-card-title { font-weight: 800; font-size: 0.85rem; color: #ffffff; }
+    .cyber-card-sub { font-size: 0.73rem; color: #9cbcae; font-family: monospace; }
 
     .card-high { border-left: 4px solid #00FF66 !important; box-shadow: -3px 0 8px rgba(0, 255, 102, 0.3); }
     .card-medium { border-left: 4px solid #FF9900 !important; box-shadow: -3px 0 8px rgba(255, 153, 0, 0.3); }
@@ -152,9 +145,9 @@ st.markdown("""
         text-transform: uppercase;
         white-space: nowrap;
     }
-    .badge-high { background-color: #00FF66; color: #000000; box-shadow: 0 0 6px rgba(0,255,102,0.5); }
-    .badge-medium { background-color: #FF9900; color: #000000; box-shadow: 0 0 6px rgba(255,153,0,0.5); }
-    .badge-low { background-color: #FF0055; color: #ffffff; box-shadow: 0 0 6px rgba(255,0,85,0.5); }
+    .badge-high { background-color: #00FF66; color: #000000; }
+    .badge-medium { background-color: #FF9900; color: #000000; }
+    .badge-low { background-color: #FF0055; color: #ffffff; }
     .badge-star { background-color: #FFD700; color: #000000; box-shadow: 0 0 8px rgba(255,215,0,0.8); }
 
     /* Matchup Card */
@@ -207,30 +200,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-PL_LOGO = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
+PL_LOGO = "https://raw.githubusercontent.com/football-data-org/football-data-api/master/logo/pl.png"
 
-# BASE DE DATOS DE LOS 20 EQUIPOS CON ESCUDOS SVGS VÁLIDOS
+# BASE DE DATOS DE EQUIPOS CON URLS DIRECTAS DE ESCUDOS ESTABLES (FOOTBALL-DATA CDN)
 TEAMS_DATA = {
-    "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
-    "Aston Villa": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
-    "Bournemouth": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
-    "Brentford": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
-    "Brighton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_FC_crest.svg", "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
-    "Chelsea": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
-    "Crystal Palace": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo.svg", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"], "l10_corners": [4, 5, 4, 6, 3, 5, 6, 4, 5, 4]},
-    "Everton": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg", "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"], "l10_corners": [5, 4, 6, 3, 5, 4, 6, 5, 4, 5]},
-    "Fulham": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a8/Fulham_FC_%28shield%29.svg", "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
-    "Ipswich Town": {"logo": "https://upload.wikimedia.org/wikipedia/en/4/43/Ipswich_Town.svg", "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 3, 6, 4, 3, 5, 4]},
-    "Leicester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2d/Leicester_City_crest.svg", "xg": 1.25, "xga": 1.55, "ppda": 12.8, "aereos": 49, "corners": 4.3, "forma": ["P","E","G","P","P","E","P","G","P","P"], "l10_corners": [4, 5, 3, 5, 4, 4, 5, 3, 4, 5]},
-    "Liverpool": {"logo": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
-    "Manchester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
-    "Manchester United": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg", "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [6, 5, 7, 6, 8, 5, 6, 7, 5, 6]},
-    "Newcastle United": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg", "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"], "l10_corners": [7, 6, 8, 5, 7, 6, 7, 6, 5, 7]},
-    "Nottingham Forest": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_logo.svg", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
-    "Southampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c9/FC_Southampton.svg", "xg": 1.15, "xga": 1.65, "ppda": 11.5, "aereos": 46, "corners": 4.5, "forma": ["P","P","P","E","P","G","P","P","E","P"], "l10_corners": [4, 5, 4, 3, 5, 4, 5, 3, 4, 4]},
-    "Tottenham Hotspur": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]},
-    "West Ham United": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c2/West_Ham_United_FC_logo.svg", "xg": 1.35, "xga": 1.60, "ppda": 13.5, "aereos": 54, "corners": 4.5, "forma": ["P","E","G","P","P","E","G","P","P","E"], "l10_corners": [4, 5, 4, 6, 4, 5, 3, 5, 4, 5]},
-    "Wolverhampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg", "xg": 1.30, "xga": 1.55, "ppda": 12.0, "aereos": 49, "corners": 4.4, "forma": ["P","E","P","G","P","P","E","G","P","P"], "l10_corners": [4, 5, 3, 5, 4, 4, 5, 4, 3, 5]}
+    "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
+    "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
+    "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
+    "Brentford": {"logo": "https://crests.football-data.org/402.png", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
+    "Brighton": {"logo": "https://crests.football-data.org/397.png", "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
+    "Chelsea": {"logo": "https://crests.football-data.org/61.png", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
+    "Crystal Palace": {"logo": "https://crests.football-data.org/354.png", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"], "l10_corners": [4, 5, 4, 6, 3, 5, 6, 4, 5, 4]},
+    "Everton": {"logo": "https://crests.football-data.org/62.png", "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"], "l10_corners": [5, 4, 6, 3, 5, 4, 6, 5, 4, 5]},
+    "Fulham": {"logo": "https://crests.football-data.org/63.png", "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
+    "Ipswich Town": {"logo": "https://crests.football-data.org/349.png", "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 3, 6, 4, 3, 5, 4]},
+    "Leicester City": {"logo": "https://crests.football-data.org/338.png", "xg": 1.25, "xga": 1.55, "ppda": 12.8, "aereos": 49, "corners": 4.3, "forma": ["P","E","G","P","P","E","P","G","P","P"], "l10_corners": [4, 5, 3, 5, 4, 4, 5, 3, 4, 5]},
+    "Liverpool": {"logo": "https://crests.football-data.org/64.png", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
+    "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
+    "Manchester United": {"logo": "https://crests.football-data.org/66.png", "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [6, 5, 7, 6, 8, 5, 6, 7, 5, 6]},
+    "Newcastle United": {"logo": "https://crests.football-data.org/67.png", "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"], "l10_corners": [7, 6, 8, 5, 7, 6, 7, 6, 5, 7]},
+    "Nottingham Forest": {"logo": "https://crests.football-data.org/351.png", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
+    "Southampton": {"logo": "https://crests.football-data.org/340.png", "xg": 1.15, "xga": 1.65, "ppda": 11.5, "aereos": 46, "corners": 4.5, "forma": ["P","P","P","E","P","G","P","P","E","P"], "l10_corners": [4, 5, 4, 3, 5, 4, 5, 3, 4, 4]},
+    "Tottenham Hotspur": {"logo": "https://crests.football-data.org/73.png", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]},
+    "West Ham United": {"logo": "https://crests.football-data.org/563.png", "xg": 1.35, "xga": 1.60, "ppda": 13.5, "aereos": 54, "corners": 4.5, "forma": ["P","E","G","P","P","E","G","P","P","E"], "l10_corners": [4, 5, 4, 6, 4, 5, 3, 5, 4, 5]},
+    "Wolverhampton": {"logo": "https://crests.football-data.org/76.png", "xg": 1.30, "xga": 1.55, "ppda": 12.0, "aereos": 49, "corners": 4.4, "forma": ["P","E","P","G","P","P","E","G","P","P"], "l10_corners": [4, 5, 3, 5, 4, 4, 5, 4, 3, 5]}
 }
 
 def parse_odds_to_decimal(val_str, format_type):
@@ -304,7 +297,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS)
+# ESTRUCTURA: COLUMNA IZQUIERDA (DATOS Y MOMIOS) / COLUMNA DERECHA (ANÁLISIS)
 col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
@@ -315,16 +308,16 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3)
-        st.image(TEAMS_DATA[home_team]["logo"], width=35)
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=1)
+        st.image(TEAMS_DATA[home_team]["logo"], width=45)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
         fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=17)
-        st.image(TEAMS_DATA[away_team]["logo"], width=35)
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=8)
+        st.image(TEAMS_DATA[away_team]["logo"], width=45)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
