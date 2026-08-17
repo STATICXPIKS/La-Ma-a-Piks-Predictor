@@ -10,7 +10,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS CORREGIDOS (MÁXIMA VISIBILIDAD EN SELECTORES Y TEXTOS)
+# ESTILOS CSS CON CORRECCIÓN TOTAL DE OVERLAY EN SELECTBOXES
 st.markdown("""
 <style>
     .stApp {
@@ -39,7 +39,7 @@ st.markdown("""
     .cyber-title {
         color: #FFD700 !important;
         font-weight: 900;
-        font-size: 1.3rem !important; /* TAMAÑO DE TÍTULO REDUCIDO */
+        font-size: 1.3rem !important;
         text-transform: uppercase;
         letter-spacing: 1.5px;
         margin: 0;
@@ -51,7 +51,7 @@ st.markdown("""
         filter: brightness(0) invert(1);
     }
 
-    /* Corrección de Visibilidad en Inputs y Selectbox (Menú desplegable visible) */
+    /* Estilos de Inputs */
     .stTextInput input {
         background-color: #121915 !important;
         color: #FFD700 !important;
@@ -60,25 +60,25 @@ st.markdown("""
         font-weight: bold !important;
     }
 
+    /* Solución CSS para el fondo y texto de Selectbox en Modo Oscuro */
     div[data-baseweb="select"] > div {
         background-color: #121915 !important;
-        color: #FFD700 !important;
+        color: #00FF66 !important;
         border: 1px solid #00FF66 !important;
         border-radius: 6px !important;
     }
 
-    /* Forzar fondo oscuro y texto claro en la lista desplegable de selectbox */
-    ul[role="listbox"] {
+    div[data-baseweb="popover"], div[data-baseweb="popover"] * {
         background-color: #121915 !important;
-        border: 1px solid #00FF66 !important;
-    }
-    
-    li[role="option"] {
-        color: #ffffff !important;
-        background-color: #121915 !important;
+        color: #00FF66 !important;
     }
 
-    li[role="option"]:hover {
+    ul[role="listbox"] li {
+        background-color: #121915 !important;
+        color: #00FF66 !important;
+    }
+
+    ul[role="listbox"] li:hover {
         background-color: #002b1b !important;
         color: #FFD700 !important;
     }
@@ -141,13 +141,28 @@ st.markdown("""
 
 PL_LOGO = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
+# TODOS LOS EQUIPOS CON SUS ESCUDOS OFICIALES
 TEAMS_DATA = {
     "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8},
+    "Aston Villa": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4},
+    "Bournemouth": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9},
     "Brentford": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6},
+    "Brighton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_FC_crest.svg", "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8},
     "Chelsea": {"logo": "https://upload.wikimedia.org/wikipedia/en/cc/CCFC_logo.svg", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6},
+    "Crystal Palace": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo.svg", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8},
+    "Everton": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg", "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7},
+    "Fulham": {"logo": "https://upload.wikimedia.org/wikipedia/en/a/a8/Fulham_FC_%28shield%29.svg", "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1},
+    "Ipswich Town": {"logo": "https://upload.wikimedia.org/wikipedia/en/4/43/Ipswich_Town.svg", "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2},
+    "Leicester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/2/2d/Leicester_City_crest.svg", "xg": 1.25, "xga": 1.55, "ppda": 12.8, "aereos": 49, "corners": 4.3},
     "Liverpool": {"logo": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1},
     "Manchester City": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5},
-    "Tottenham": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3}
+    "Manchester United": {"logo": "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg", "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9},
+    "Newcastle United": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg", "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1},
+    "Nottingham Forest": {"logo": "https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_logo.svg", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1},
+    "Southampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c9/FC_Southampton.svg", "xg": 1.15, "xga": 1.65, "ppda": 11.5, "aereos": 46, "corners": 4.5},
+    "Tottenham Hotspur": {"logo": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3},
+    "West Ham United": {"logo": "https://upload.wikimedia.org/wikipedia/en/c/c2/West_Ham_United_FC_logo.svg", "xg": 1.35, "xga": 1.60, "ppda": 13.5, "aereos": 54, "corners": 4.5},
+    "Wolverhampton": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg", "xg": 1.30, "xga": 1.55, "ppda": 12.0, "aereos": 49, "corners": 4.4}
 }
 
 def parse_odds_to_decimal(val_str, format_type):
@@ -195,7 +210,26 @@ def generar_matriz(lambda_h, lambda_a, max_goles=8):
             mat[h, a] = poisson.pmf(h, lambda_h) * poisson.pmf(a, lambda_a)
     return mat / np.sum(mat)
 
-# ENCABEZADO COMPACTO
+def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
+    if linea_str == "+0.5":
+        return (p_1 + p_x) if is_local else (p_2 + p_x)
+    elif linea_str == "-0.5":
+        return p_1 if is_local else p_2
+    elif linea_str == "0 (DNB)":
+        return (p_1 / (p_1 + p_2)) if is_local else (p_2 / (p_1 + p_2))
+    elif linea_str == "+1.0":
+        if is_local:
+            return float(sum(matriz[h, a] for h in range(8) for a in range(8) if (h + 1.0) > a))
+        else:
+            return float(sum(matriz[h, a] for h in range(8) for a in range(8) if (a + 1.0) > h))
+    elif linea_str == "-1.0":
+        if is_local:
+            return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0)))
+        else:
+            return float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
+    return 0.5
+
+# ENCABEZADO
 st.markdown(f"""
 <div class="cyber-header">
     <img src="{PL_LOGO}" class="pl-logo-header">
@@ -206,42 +240,37 @@ st.markdown(f"""
 # SELECCIÓN DE EQUIPOS
 col_t1, col_t2 = st.columns(2)
 with col_t1:
-    home_team = st.selectbox("Selecciona Equipo Local", list(TEAMS_DATA.keys()), index=1)
+    home_team = st.selectbox("Selecciona Equipo Local", list(TEAMS_DATA.keys()), index=3)
+    st.image(TEAMS_DATA[home_team]["logo"], width=45)
     fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
     rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
 with col_t2:
-    away_team = st.selectbox("Selecciona Equipo Visitante", list(TEAMS_DATA.keys()), index=5)
+    away_team = st.selectbox("Selecciona Equipo Visitante", list(TEAMS_DATA.keys()), index=17)
+    st.image(TEAMS_DATA[away_team]["logo"], width=45)
     fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
     rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
 
-# CÁLCULOS ESTADÍSTICOS Y MODELADO
+# MODELADO ESTADÍSTICO
 lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
 matriz_ft = generar_matriz(lam_h, lam_a)
 
 lam_h_ht, lam_a_ht = lam_h * 0.45, lam_a * 0.45
 matriz_ht = generar_matriz(lam_h_ht, lam_a_ht)
 
-# PROBABILIDADES FT
 p_1_ft, p_x_ft, p_2_ft = float(np.sum(np.tril(matriz_ft, -1))), float(np.sum(np.diag(matriz_ft))), float(np.sum(np.triu(matriz_ft, 1)))
-
-# PROBABILIDADES HT
 p_1_ht, p_x_ht, p_2_ht = float(np.sum(np.tril(matriz_ht, -1))), float(np.sum(np.diag(matriz_ht))), float(np.sum(np.triu(matriz_ht, 1)))
 
 st.markdown("---")
 
 col_head, col_opt = st.columns([3, 2])
 with col_head:
-    st.markdown("<h3 style='color:#FFD700; margin:0;'>⚡ CONFIGURACIÓN Y MOMIOS DE LOS 11 MERCADOS</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#FFD700; margin:0;'>⚡ METER MOMIOS Y CONFIGURACIÓN DE MERCADOS</h3>", unsafe_allow_html=True)
 with col_opt:
     tipo_momio = st.radio("Formato de Momios:", ["Decimales", "Americanos"], horizontal=True)
 
 def default_val(prob):
     return format_odds_display(1/prob if prob > 0 else 2.0, tipo_momio)
-
-# ------------------------------------------------------------------------------
-# INGRESO DE MOMIOS CON DUALIDAD LOCAL/VISITANTE Y OVER/UNDER COMPLETO
-# ------------------------------------------------------------------------------
 
 # 1 Y 2. 1X2 Y DOBLE OPORTUNIDAD
 st.markdown("#### ⚽ 1. RESULTADO FINAL (1X2) & 2. DOBLE OPORTUNIDAD")
@@ -249,8 +278,8 @@ c1, c2, c3, c4, c5 = st.columns(5)
 with c1: m_1_ft = st.text_input(f"Gana Local ({home_team[:3]})", value=default_val(p_1_ft))
 with c2: m_x_ft = st.text_input("Empate (X)", value=default_val(p_x_ft))
 with c3: m_2_ft = st.text_input(f"Gana Visita ({away_team[:3]})", value=default_val(p_2_ft))
-with c4: m_1x = st.text_input("Doble Chance: 1X", value=default_val(p_1_ft + p_x_ft))
-with c5: m_x2 = st.text_input("Doble Chance: X2", value=default_val(p_2_ft + p_x_ft))
+with c4: m_1x = st.text_input("Doble Chance 1X", value=default_val(p_1_ft + p_x_ft))
+with c5: m_x2 = st.text_input("Doble Chance X2", value=default_val(p_2_ft + p_x_ft))
 
 # 3. TOTAL DE GOLES (FT)
 st.markdown("#### 🥅 3. TOTAL DE GOLES (FT)")
@@ -262,7 +291,7 @@ with cg1:
 with cg2: m_over_goles = st.text_input(f"Over {linea_goles_ft} Goles", value=default_val(p_over_goles))
 with cg3: m_under_goles = st.text_input(f"Under {linea_goles_ft} Goles", value=default_val(p_under_goles))
 
-# 4 Y 5. BTTS Y TOTAL DE CÓRNERS (FT) - OVER & UNDER
+# 4 Y 5. BTTS Y CÓRNERS FT (OVER Y UNDER)
 st.markdown("#### 🚩 4. AMBOS ANOTAN & 5. TOTAL DE CÓRNERS (FT)")
 p_btts_yes = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
 exp_corners_ft = TEAMS_DATA[home_team]["corners"] + TEAMS_DATA[away_team]["corners"]
@@ -277,42 +306,41 @@ with cm3:
 with cm4: m_corners_ft_over = st.text_input(f"Córners Over {linea_corners_ft}", value=default_val(p_over_corners_ft))
 with cm5: m_corners_ft_under = st.text_input(f"Córners Under {linea_corners_ft}", value=default_val(p_under_corners_ft))
 
-# 6. HÁNDICAP ASIÁTICO (LOCAL Y VISITANTE)
-st.markdown("#### ⚖️ 6. HÁNDICAP ASIÁTICO")
-ha_col1, ha_col2, ha_col3 = st.columns([2, 1, 1])
-with ha_col1:
-    linea_ha = st.selectbox("6. Seleccionar Línea de Hándicap Asiático", ["+0.5 / -0.5", "0 (DNB)", "+1.0 / -1.0"], index=0)
+# 6. HÁNDICAP ASIÁTICO INDEPENDIENTE (LOCAL Y VISITANTE)
+st.markdown("#### ⚖️ 6. HÁNDICAP ASIÁTICO (INDEPENDIENTE LOCAL / VISITANTE)")
+ha_c1, ha_c2, ha_c3, ha_c4 = st.columns(4)
 
-if linea_ha == "+0.5 / -0.5":
-    p_ha_h, p_ha_a = (p_1_ft + p_x_ft), p_2_ft
-    lbl_h_ha, lbl_a_ha = f"{home_team[:3]} (+0.5)", f"{away_team[:3]} (-0.5)"
-elif linea_ha == "0 (DNB)":
-    p_ha_h = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
-    p_ha_a = 1.0 - p_ha_h
-    lbl_h_ha, lbl_a_ha = f"{home_team[:3]} (0)", f"{away_team[:3]} (0)"
-else: # +1.0 / -1.0
-    p_ha_h = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if (h + 1.0) > a))
-    p_ha_a = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
-    lbl_h_ha, lbl_a_ha = f"{home_team[:3]} (+1.0)", f"{away_team[:3]} (-1.0)"
+with ha_c1:
+    linea_ha_h = st.selectbox(f"Hándicap Local ({home_team[:3]})", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0, key="ha_h_select")
+    p_ha_h = calcular_prob_ha(linea_ha_h, True, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
+with ha_c2:
+    m_ha_h = st.text_input(f"Momio Local ({linea_ha_h})", value=default_val(p_ha_h))
 
-with ha_col2: m_ha_h = st.text_input(f"Momio {lbl_h_ha}", value=default_val(p_ha_h))
-with ha_col3: m_ha_a = st.text_input(f"Momio {lbl_a_ha}", value=default_val(p_ha_a))
+with ha_c3:
+    linea_ha_a = st.selectbox(f"Hándicap Visita ({away_team[:3]})", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=1, key="ha_a_select")
+    p_ha_a = calcular_prob_ha(linea_ha_a, False, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
+with ha_c4:
+    m_ha_a = st.text_input(f"Momio Visita ({linea_ha_a})", value=default_val(p_ha_a))
 
-# 7 Y 8. 1RA MITAD 1X2 Y GOLES 1RA MITAD
-st.markdown("#### ⏱️ 7. 1RA MITAD RESULTADO & 8. GOLES 1RA MITAD")
-h1, h2, h3, h4, h5 = st.columns(5)
-with h1: m_1_ht = st.text_input(f"7. HT {home_team[:3]}", value=default_val(p_1_ht))
-with h2: m_x_ht = st.text_input("7. HT Empate", value=default_val(p_x_ht))
-with h3: m_2_ht = st.text_input(f"7. HT {away_team[:3]}", value=default_val(p_2_ht))
+# 7 Y 8. 1RA MITAD 1X2 Y GOLES 1RA MITAD (OVER/UNDER 0.5 Y 1.5)
+st.markdown("#### ⏱️ 7. 1RA MITAD RESULTADO & 8. OVER/UNDER GOLES 1RA MITAD (0.5 / 1.5)")
+h1, h2, h3 = st.columns(3)
+with h1: m_1_ht = st.text_input(f"HT Gana Local ({home_team[:3]})", value=default_val(p_1_ht))
+with h2: m_x_ht = st.text_input("HT Empate (X)", value=default_val(p_x_ht))
+with h3: m_2_ht = st.text_input(f"HT Gana Visita ({away_team[:3]})", value=default_val(p_2_ht))
 
-linea_goles_ht = "+0.5"
-p_over_goles_ht = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
-p_under_goles_ht = 1.0 - p_over_goles_ht
+p_over05_ht = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
+p_under05_ht = 1.0 - p_over05_ht
+p_under15_ht = float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5))
+p_over15_ht = 1.0 - p_under15_ht
 
-with h4: m_ht_goles_over = st.text_input("8. HT Over 0.5 Goles", value=default_val(p_over_goles_ht))
-with h5: m_ht_goles_under = st.text_input("8. HT Under 0.5 Goles", value=default_val(p_under_goles_ht))
+hg1, hg2, hg3, hg4 = st.columns(4)
+with hg1: m_ht_o05 = st.text_input("HT Over 0.5 Goles", value=default_val(p_over05_ht))
+with hg2: m_ht_u05 = st.text_input("HT Under 0.5 Goles", value=default_val(p_under05_ht))
+with hg3: m_ht_o15 = st.text_input("HT Over 1.5 Goles", value=default_val(p_over15_ht))
+with hg4: m_ht_u15 = st.text_input("HT Under 1.5 Goles", value=default_val(p_under15_ht))
 
-# 9, 10 Y 11. CÓRNERS HT (OVER/UNDER), EMPATE NO ACCIÓN Y GANA CUALQUIER MITAD (LOCAL/VISITANTE)
+# 9, 10 Y 11. CÓRNERS HT (OVER/UNDER), EMPATE NO ACCIÓN Y GANA CUALQUIER MITAD (LOCAL Y VISITA)
 st.markdown("#### 🚩 9. CÓRNERS HT | 10. EMPATE NO ACCIÓN | 11. GANA CUALQUIER MITAD")
 c_ht1, c_ht2, c_ht3, c_ht4, c_ht5, c_ht6, c_ht7 = st.columns([1.5, 1, 1, 1, 1, 1, 1])
 
@@ -328,41 +356,43 @@ with c_ht3: m_corners_ht_under = st.text_input(f"Córners HT Under {linea_corner
 p_dnb_h = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
 p_dnb_a = 1.0 - p_dnb_h
 
-with c_ht4: m_dnb_h = st.text_input(f"10. DNB {home_team[:3]}", value=default_val(p_dnb_h))
-with c_ht5: m_dnb_a = st.text_input(f"10. DNB {away_team[:3]}", value=default_val(p_dnb_a))
+with c_ht4: m_dnb_h = st.text_input(f"DNB Local ({home_team[:3]})", value=default_val(p_dnb_h))
+with c_ht5: m_dnb_a = st.text_input(f"DNB Visita ({away_team[:3]})", value=default_val(p_dnb_a))
 
 p_win_any_h = 1.0 - ((1.0 - p_1_ht) * (1.0 - p_1_ft))
 p_win_any_a = 1.0 - ((1.0 - p_2_ht) * (1.0 - p_2_ft))
 
-with c_ht6: m_win_any_h = st.text_input(f"11. Gana Mitad {home_team[:3]}", value=default_val(p_win_any_h))
-with c_ht7: m_win_any_a = st.text_input(f"11. Gana Mitad {away_team[:3]}", value=default_val(p_win_any_a))
+with c_ht6: m_win_any_h = st.text_input(f"Gana Mitad Local", value=default_val(p_win_any_h))
+with c_ht7: m_win_any_a = st.text_input(f"Gana Mitad Visita", value=default_val(p_win_any_a))
 
 st.markdown("<br>", unsafe_allow_html=True)
 recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
-# RESULTADOS EN PANTALLA
+# RESULTADOS DE EVALUACIÓN
 st.markdown("---")
-st.markdown("<h3 style='color:#00FF66;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES (LOCAL / VISITANTE / OVER / UNDER)</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='color:#00FF66;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
 
 mercados_list = [
-    {"tit": f"1. Resultado Final (1X2): Gana {home_team}", "sub": "Ganador Local", "prob": p_1_ft, "odd": m_1_ft},
-    {"tit": f"1. Resultado Final (1X2): Gana {away_team}", "sub": "Ganador Visitante", "prob": p_2_ft, "odd": m_2_ft},
+    {"tit": f"1. Resultado Final (1X2): Gana Local ({home_team})", "sub": "1X2 Local", "prob": p_1_ft, "odd": m_1_ft},
+    {"tit": f"1. Resultado Final (1X2): Gana Visitante ({away_team})", "sub": "1X2 Visitante", "prob": p_2_ft, "odd": m_2_ft},
     {"tit": f"2. Doble Oportunidad: {home_team} o Empate (1X)", "sub": "1X Doble Chance", "prob": p_1_ft + p_x_ft, "odd": m_1x},
     {"tit": f"2. Doble Oportunidad: {away_team} o Empate (X2)", "sub": "X2 Doble Chance", "prob": p_2_ft + p_x_ft, "odd": m_x2},
-    {"tit": f"3. Total de Goles (FT): Over {linea_goles_ft}", "sub": f"Goles FT Over {linea_goles_ft}", "prob": p_over_goles, "odd": m_over_goles},
-    {"tit": f"3. Total de Goles (FT): Under {linea_goles_ft}", "sub": f"Goles FT Under {linea_goles_ft}", "prob": p_under_goles, "odd": m_under_goles},
+    {"tit": f"3. Total de Goles (FT): Over {linea_goles_ft}", "sub": f"Goles Over {linea_goles_ft}", "prob": p_over_goles, "odd": m_over_goles},
+    {"tit": f"3. Total de Goles (FT): Under {linea_goles_ft}", "sub": f"Goles Under {linea_goles_ft}", "prob": p_under_goles, "odd": m_under_goles},
     {"tit": "4. Ambos Equipos Anotan: SÍ", "sub": "BTTS YES", "prob": p_btts_yes, "odd": m_btts_yes},
     {"tit": "4. Ambos Equipos Anotan: NO", "sub": "BTTS NO", "prob": 1.0 - p_btts_yes, "odd": m_btts_no},
-    {"tit": f"5. Total de Córners (FT): Over {linea_corners_ft}", "sub": f"Córners FT Over {linea_corners_ft}", "prob": p_over_corners_ft, "odd": m_corners_ft_over},
-    {"tit": f"5. Total de Córners (FT): Under {linea_corners_ft}", "sub": f"Córners FT Under {linea_corners_ft}", "prob": p_under_corners_ft, "odd": m_corners_ft_under},
-    {"tit": f"6. Hándicap Asiático: {lbl_h_ha}", "sub": "AH Local", "prob": p_ha_h, "odd": m_ha_h},
-    {"tit": f"6. Hándicap Asiático: {lbl_a_ha}", "sub": "AH Visitante", "prob": p_ha_a, "odd": m_ha_a},
-    {"tit": f"7. 1ra Mitad Resultado: Gana {home_team}", "sub": "HT Local", "prob": p_1_ht, "odd": m_1_ht},
-    {"tit": f"7. 1ra Mitad Resultado: Gana {away_team}", "sub": "HT Visitante", "prob": p_2_ht, "odd": m_2_ht},
-    {"tit": "8. Goles 1ra Mitad: Over 0.5", "sub": "HT Goals Over 0.5", "prob": p_over_goles_ht, "odd": m_ht_goles_over},
-    {"tit": "8. Goles 1ra Mitad: Under 0.5", "sub": "HT Goals Under 0.5", "prob": p_under_goles_ht, "odd": m_ht_goles_under},
-    {"tit": f"9. Córners 1ra Mitad: Over {linea_corners_ht}", "sub": f"HT Corners Over {linea_corners_ht}", "prob": p_over_corners_ht, "odd": m_corners_ht_over},
-    {"tit": f"9. Córners 1ra Mitad: Under {linea_corners_ht}", "sub": f"HT Corners Under {linea_corners_ht}", "prob": p_under_corners_ht, "odd": m_corners_ht_under},
+    {"tit": f"5. Total de Córners (FT): Over {linea_corners_ft}", "sub": f"Córners Over {linea_corners_ft}", "prob": p_over_corners_ft, "odd": m_corners_ft_over},
+    {"tit": f"5. Total de Córners (FT): Under {linea_corners_ft}", "sub": f"Córners Under {linea_corners_ft}", "prob": p_under_corners_ft, "odd": m_corners_ft_under},
+    {"tit": f"6. Hándicap Asiático Local: {home_team} ({linea_ha_h})", "sub": f"AH Local {linea_ha_h}", "prob": p_ha_h, "odd": m_ha_h},
+    {"tit": f"6. Hándicap Asiático Visitante: {away_team} ({linea_ha_a})", "sub": f"AH Visita {linea_ha_a}", "prob": p_ha_a, "odd": m_ha_a},
+    {"tit": f"7. 1ra Mitad Resultado: Gana Local ({home_team})", "sub": "1st Half Local", "prob": p_1_ht, "odd": m_1_ht},
+    {"tit": f"7. 1ra Mitad Resultado: Gana Visitante ({away_team})", "sub": "1st Half Visitante", "prob": p_2_ht, "odd": m_2_ht},
+    {"tit": "8. Goles 1ra Mitad: Over 0.5", "sub": "HT Over 0.5", "prob": p_over05_ht, "odd": m_ht_o05},
+    {"tit": "8. Goles 1ra Mitad: Under 0.5", "sub": "HT Under 0.5", "prob": p_under05_ht, "odd": m_ht_u05},
+    {"tit": "8. Goles 1ra Mitad: Over 1.5", "sub": "HT Over 1.5", "prob": p_over15_ht, "odd": m_ht_o15},
+    {"tit": "8. Goles 1ra Mitad: Under 1.5", "sub": "HT Under 1.5", "prob": p_under15_ht, "odd": m_ht_u15},
+    {"tit": f"9. Córners 1ra Mitad: Over {linea_corners_ht}", "sub": f"HT Córners Over {linea_corners_ht}", "prob": p_over_corners_ht, "odd": m_corners_ht_over},
+    {"tit": f"9. Córners 1ra Mitad: Under {linea_corners_ht}", "sub": f"HT Córners Under {linea_corners_ht}", "prob": p_under_corners_ht, "odd": m_corners_ht_under},
     {"tit": f"10. Empate No Acción: {home_team}", "sub": "DNB Local", "prob": p_dnb_h, "odd": m_dnb_h},
     {"tit": f"10. Empate No Acción: {away_team}", "sub": "DNB Visitante", "prob": p_dnb_a, "odd": m_dnb_a},
     {"tit": f"11. Gana Cualquier Mitad: {home_team}", "sub": "Win Either Half Local", "prob": p_win_any_h, "odd": m_win_any_h},
