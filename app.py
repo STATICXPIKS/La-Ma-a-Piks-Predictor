@@ -10,98 +10,98 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS PROFESIONALES CYBERPUNK (COMPACTOS Y ALINEADOS)
+# ESTILOS CSS FUTURISTA ULTRA-VIBRANTE
 st.markdown("""
 <style>
     .stApp {
-        background-color: #050806 !important;
+        background-color: #030705 !important;
         color: #ffffff !important;
     }
     
     label, p, span, div, .stMarkdown, .stRadio label, .stSlider label {
-        color: #e0f2fe !important;
-        font-weight: 500 !important;
+        color: #e2f8eb !important;
+        font-weight: 600 !important;
         font-size: 0.85rem !important;
     }
     
-    /* Header compacto */
+    /* Header Neón Cyberpunk */
     .cyber-header {
-        background: linear-gradient(135deg, #001f12 0%, #000905 100%);
+        background: linear-gradient(135deg, rgba(0, 43, 27, 0.9) 0%, rgba(0, 15, 9, 0.95) 100%);
         border: 1px solid #00FF66;
-        box-shadow: 0 0 12px rgba(0, 255, 102, 0.25);
-        padding: 12px 20px;
-        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 10px rgba(0, 255, 102, 0.2);
+        padding: 12px 22px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         gap: 15px;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
     }
     
     .cyber-title {
         color: #FFD700 !important;
-        font-weight: 800;
-        font-size: 1.15rem !important;
+        font-weight: 900;
+        font-size: 1.25rem !important;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
+        text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
         margin: 0;
     }
     
     .pl-logo-header {
-        width: 38px !important;
+        width: 40px !important;
         height: auto !important;
-        filter: brightness(0) invert(1);
+        filter: drop-shadow(0 0 5px #00FF66) brightness(0) invert(1);
     }
 
-    /* Inputs y Selects compactos */
+    /* Inputs y Selectbox Visibles en Oscuro */
     .stTextInput input {
-        background-color: #0b130e !important;
+        background-color: #0a140d !important;
         color: #FFD700 !important;
         border: 1px solid #00FF66 !important;
-        border-radius: 4px !important;
+        border-radius: 5px !important;
         font-weight: bold !important;
         font-size: 0.85rem !important;
-        padding: 4px 8px !important;
+        box-shadow: 0 0 5px rgba(0, 255, 102, 0.2);
     }
 
     div[data-baseweb="select"] > div {
-        background-color: #0b130e !important;
+        background-color: #0a140d !important;
         color: #00FF66 !important;
         border: 1px solid #00FF66 !important;
-        border-radius: 4px !important;
-        min-height: 32px !important;
+        border-radius: 5px !important;
     }
 
     div[data-baseweb="popover"], div[data-baseweb="popover"] * {
-        background-color: #0b130e !important;
+        background-color: #0a140d !important;
         color: #00FF66 !important;
     }
 
-    /* Historial de Forma (G/E/P) */
+    /* Badges de Historial (G/E/P) */
     .form-container {
         display: flex;
-        gap: 3px;
+        gap: 4px;
         align-items: center;
-        margin: 4px 0 8px 0;
+        margin: 5px 0 10px 0;
     }
     .form-box {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
-        font-size: 0.65rem;
-        border-radius: 2px;
+        font-weight: 900;
+        font-size: 0.68rem;
+        border-radius: 3px;
         color: #000000;
     }
-    .form-g { background-color: #00FF66; color: #000; }
-    .form-e { background-color: #FFD700; color: #000; }
-    .form-p { background-color: #FF0055; color: #FFF; }
+    .form-g { background-color: #00FF66; color: #000; box-shadow: 0 0 6px rgba(0,255,102,0.6); }
+    .form-e { background-color: #FFD700; color: #000; box-shadow: 0 0 6px rgba(255,215,0,0.6); }
+    .form-p { background-color: #FF0055; color: #FFF; box-shadow: 0 0 6px rgba(255,0,85,0.6); }
 
-    /* Tarjetas de Análisis Compactas y Perfectamente Alineadas */
+    /* Tarjetas de Análisis Compactas */
     .cyber-card {
-        background-color: #090f0b;
-        border: 1px solid #142218;
+        background: linear-gradient(90deg, rgba(13, 24, 17, 0.95) 0%, rgba(7, 14, 10, 0.95) 100%);
+        border: 1px solid #182e20;
         border-radius: 6px;
         padding: 8px 12px;
         margin-bottom: 6px;
@@ -111,24 +111,24 @@ st.markdown("""
         width: 100%;
     }
     .cyber-card-title {
-        font-weight: 700;
-        font-size: 0.82rem;
+        font-weight: 800;
+        font-size: 0.85rem;
         color: #ffffff;
     }
     .cyber-card-sub {
-        font-size: 0.72rem;
-        color: #8fa396;
+        font-size: 0.73rem;
+        color: #9cbcae;
         font-family: monospace;
         margin-top: 1px;
     }
 
-    .card-high { border-left: 4px solid #00FF66 !important; }
-    .card-medium { border-left: 4px solid #FF9900 !important; }
-    .card-low { border-left: 4px solid #FF0055 !important; }
-    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #141c00 0%, #090f0b 100%) !important; }
+    .card-high { border-left: 4px solid #00FF66 !important; box-shadow: -3px 0 8px rgba(0, 255, 102, 0.3); }
+    .card-medium { border-left: 4px solid #FF9900 !important; box-shadow: -3px 0 8px rgba(255, 153, 0, 0.3); }
+    .card-low { border-left: 4px solid #FF0055 !important; box-shadow: -3px 0 8px rgba(255, 0, 85, 0.3); }
+    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5) !important; }
 
     .cyber-badge {
-        font-weight: 800;
+        font-weight: 900;
         padding: 4px 8px;
         border-radius: 3px;
         font-size: 0.68rem;
@@ -136,20 +136,20 @@ st.markdown("""
         text-transform: uppercase;
         white-space: nowrap;
     }
-    .badge-high { background-color: #00FF66; color: #000000; }
-    .badge-medium { background-color: #FF9900; color: #000000; }
-    .badge-low { background-color: #FF0055; color: #ffffff; }
-    .badge-star { background-color: #FFD700; color: #000000; box-shadow: 0 0 8px rgba(255,215,0,0.4); }
+    .badge-high { background-color: #00FF66; color: #000000; box-shadow: 0 0 6px rgba(0,255,102,0.5); }
+    .badge-medium { background-color: #FF9900; color: #000000; box-shadow: 0 0 6px rgba(255,153,0,0.5); }
+    .badge-low { background-color: #FF0055; color: #ffffff; box-shadow: 0 0 6px rgba(255,0,85,0.5); }
+    .badge-star { background-color: #FFD700; color: #000000; box-shadow: 0 0 8px rgba(255,215,0,0.8); }
 
     .stButton>button {
-        background: linear-gradient(135deg, #00FF66 0%, #008833 100%) !important;
+        background: linear-gradient(135deg, #00FF66 0%, #009933 100%) !important;
         color: #000000 !important;
         font-weight: 900 !important;
-        font-size: 0.95rem !important;
+        font-size: 1rem !important;
         border: none !important;
         border-radius: 6px !important;
         padding: 10px 16px !important;
-        box-shadow: 0 0 10px rgba(0, 255, 102, 0.3) !important;
+        box-shadow: 0 0 12px rgba(0, 255, 102, 0.5) !important;
         width: 100% !important;
         text-transform: uppercase !important;
     }
@@ -244,7 +244,7 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO
+# ENCABEZADO CYBERPUNK
 st.markdown(f"""
 <div class="cyber-header">
     <img src="{PL_LOGO}" class="pl-logo-header">
@@ -256,10 +256,10 @@ st.markdown(f"""
 col_left_panel, col_right_panel = st.columns([5, 7])
 
 # ==============================================================================
-# COLUMNA DERECHA: DATOS DEL ENCUENTRO, HISTORIAL Y MOMIOS
+# COLUMNA DERECHA: DATOS DEL ENCUENTRO, EQUIPOS Y MOMIOS
 # ==============================================================================
 with col_right_panel:
-    st.markdown("<h3 style='color:#FFD700; font-size:1.1rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO</h3>", unsafe_allow_html=True)
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
@@ -278,7 +278,7 @@ with col_right_panel:
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
         rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
 
-    # CÁLCULOS
+    # CÁLCULOS MATEMÁTICOS DEL ENCUENTRO
     lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
     matriz_ft = generar_matriz(lam_h, lam_a)
 
@@ -292,14 +292,14 @@ with col_right_panel:
     
     col_head, col_opt = st.columns([2, 2])
     with col_head:
-        st.markdown("<h4 style='color:#00FF66; font-size:0.95rem; margin:0;'>⚡ INGRESO DE MOMIOS</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#00FF66; font-size:0.9rem; margin:0;'>⚡ INGRESO DE MOMIOS</h4>", unsafe_allow_html=True)
     with col_opt:
         tipo_momio = st.radio("Formato Momios:", ["Decimales", "Americanos"], horizontal=True)
 
     def default_val(prob): return format_odds_display(1/prob if prob > 0 else 2.0, tipo_momio)
 
     # 1 Y 2. 1X2 Y DOBLE OPORTUNIDAD
-    st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#FFD700; margin-bottom:2px;'>1. RESULTADO FINAL (1X2) & 2. DOBLE OPORTUNIDAD</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-bottom:2px;'>1. RESULTADO FINAL (1X2) & 2. DOBLE OPORTUNIDAD</p>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: m_1_ft = st.text_input(f"1X2 {home_team[:3]}", value=default_val(p_1_ft))
     with c2: m_x_ft = st.text_input("Empate X", value=default_val(p_x_ft))
@@ -308,7 +308,7 @@ with col_right_panel:
     with c5: m_x2 = st.text_input("DC X2", value=default_val(p_2_ft + p_x_ft))
 
     # 3. TOTAL DE GOLES (FT)
-    st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#FFD700; margin-top:8px; margin-bottom:2px;'>3. TOTAL DE GOLES (FT)</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>3. TOTAL DE GOLES (FT)</p>", unsafe_allow_html=True)
     cg1, cg2, cg3 = st.columns([2, 1, 1])
     with cg1:
         linea_goles_ft = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0)
@@ -318,7 +318,7 @@ with col_right_panel:
     with cg3: m_under_goles = st.text_input(f"Under {linea_goles_ft}", value=default_val(p_under_goles))
 
     # 4 Y 5. BTTS Y CÓRNERS FT
-    st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#FFD700; margin-top:8px; margin-bottom:2px;'>4. AMBOS ANOTAN & 5. TOTAL CÓRNERS (FT)</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>4. AMBOS ANOTAN & 5. TOTAL CÓRNERS (FT)</p>", unsafe_allow_html=True)
     p_btts_yes = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
     exp_corners_ft = TEAMS_DATA[home_team]["corners"] + TEAMS_DATA[away_team]["corners"]
 
@@ -333,21 +333,21 @@ with col_right_panel:
     with cm5: m_corners_ft_under = st.text_input(f"Córners <{linea_corners_ft}", value=default_val(p_under_corners_ft))
 
     # 6. HÁNDICAP ASIÁTICO
-    st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#FFD700; margin-top:8px; margin-bottom:2px;'>6. HÁNDICAP ASIÁTICO</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>6. HÁNDICAP ASIÁTICO</p>", unsafe_allow_html=True)
     ha_c1, ha_c2, ha_c3, ha_c4 = st.columns(4)
 
     with ha_c1:
         linea_ha_h = st.selectbox(f"AH {home_team[:3]}", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0, key="ha_h_select")
         p_ha_h = calcular_prob_ha(linea_ha_h, True, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
-    with ha_c2: m_ha_h = st.text_input("Momio AH Local", value=default_val(p_ha_h))
+    with ha_c2: m_ha_h = st.text_input("Momio Local", value=default_val(p_ha_h))
 
     with ha_c3:
         linea_ha_a = st.selectbox(f"AH {away_team[:3]}", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=1, key="ha_a_select")
         p_ha_a = calcular_prob_ha(linea_ha_a, False, p_1_ft, p_x_ft, p_2_ft, matriz_ft)
-    with ha_c4: m_ha_a = st.text_input("Momio AH Visita", value=default_val(p_ha_a))
+    with ha_c4: m_ha_a = st.text_input("Momio Visita", value=default_val(p_ha_a))
 
     # 7 Y 8. 1RA MITAD Y GOLES HT
-    st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#FFD700; margin-top:8px; margin-bottom:2px;'>7. 1RA MITAD 1X2 & 8. GOLES 1RA MITAD</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>7. 1RA MITAD 1X2 & 8. GOLES 1RA MITAD</p>", unsafe_allow_html=True)
     h1, h2, h3 = st.columns(3)
     with h1: m_1_ht = st.text_input(f"HT {home_team[:3]}", value=default_val(p_1_ht))
     with h2: m_x_ht = st.text_input("HT Empate", value=default_val(p_x_ht))
@@ -365,7 +365,7 @@ with col_right_panel:
     with hg4: m_ht_u15 = st.text_input("HT Under 1.5", value=default_val(p_under15_ht))
 
     # 9, 10 Y 11. CÓRNERS HT, DNB Y GANA MITAD
-    st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#FFD700; margin-top:8px; margin-bottom:2px;'>9. CÓRNERS HT | 10. DNB | 11. GANA CUALQ. MITAD</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:0.78rem; font-weight:700; color:#FFD700; margin-top:6px; margin-bottom:2px;'>9. CÓRNERS HT | 10. DNB | 11. GANA CUALQ. MITAD</p>", unsafe_allow_html=True)
     c_ht1, c_ht2, c_ht3, c_ht4, c_ht5, c_ht6, c_ht7 = st.columns([1.5, 1, 1, 1, 1, 1, 1])
 
     with c_ht1:
@@ -393,10 +393,10 @@ with col_right_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA IZQUIERDA: ANÁLISIS MATRIX DE OPORTUNIDADES (ALINEADO Y COMPACTO)
+# COLUMNA IZQUIERDA: ANÁLISIS MATRIX DE OPORTUNIDADES (PANTALLA PRINCIPAL)
 # ==============================================================================
 with col_left_panel:
-    st.markdown("<h3 style='color:#00FF66; font-size:1.1rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
 
     mercados_list = [
         {"tit": f"1. Resultado Final (1X2): Gana Local ({home_team})", "sub": "1X2 Local", "prob": p_1_ft, "odd": m_1_ft},
