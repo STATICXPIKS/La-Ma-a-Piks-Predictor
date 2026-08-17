@@ -8,95 +8,112 @@ import json
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Premier League - Predictor Avanzado & Trap Line Detector",
+    page_title="Premier League Predictor - Bet365 Edition",
     layout="wide",
     page_icon="⚽"
 )
 
-# Estilos CSS personalizados
+# Estilos CSS personalizados inspirados en Bet365
 st.markdown("""
 <style>
-    .main-header {
+    /* Estilo Global Bet365 */
+    .stApp {
+        background-color: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    /* Header Verde Bet365 */
+    .bet365-header {
+        background-color: #006341;
+        padding: 15px 25px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
-        gap: 15px;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .bet365-title {
+        color: #FFDF1B;
+        font-weight: 800;
+        font-size: 1.8rem;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .pl-logo-header {
+        width: 45px;
+        filter: brightness(0) invert(1);
+    }
+
+    /* Tarjetas de Apuesta Bet365 */
+    .bet365-card {
+        background-color: #282828;
+        border-left: 5px solid #006341;
+        border-radius: 6px;
+        padding: 14px 20px;
         margin-bottom: 10px;
-    }
-    .header-logo {
-        width: 55px;
-        height: auto;
-    }
-    .team-badge {
-        width: 35px;
-        height: 35px;
-        object-fit: contain;
-        vertical-align: middle;
-        margin-right: 8px;
-    }
-    .bet-card {
-        background-color: #ffffff;
-        border: 1px solid #e1e4e8;
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
-    .bet-title {
+    .bet365-card-title {
         font-weight: 700;
-        font-size: 1.1rem;
-        color: #1a1a1a;
-        margin-bottom: 4px;
+        font-size: 1.05rem;
+        color: #ffffff;
     }
-    .bet-subtitle {
-        font-size: 0.85rem;
-        color: #6c757d;
+    .bet365-card-sub {
+        font-size: 0.82rem;
+        color: #b0b0b0;
         font-family: monospace;
+        margin-top: 2px;
+    }
+
+    /* Badges de Veredicto Bet365 */
+    .b365-badge {
+        font-weight: bold;
+        padding: 6px 14px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
     }
     .badge-bet {
-        background-color: #e6f4ea;
-        color: #137333;
-        font-weight: bold;
-        padding: 6px 16px;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        border: 1px solid #ceead6;
+        background-color: #FFDF1B;
+        color: #000000;
     }
     .badge-skip {
-        background-color: #fce8e6;
-        color: #c5221f;
-        font-weight: bold;
-        padding: 6px 16px;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        border: 1px solid #fad2cf;
+        background-color: #3a3a3a;
+        color: #888888;
+        border: 1px solid #555555;
     }
     .badge-maybe {
-        background-color: #e8f0fe;
-        color: #1a73e8;
-        font-weight: bold;
-        padding: 6px 16px;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        border: 1px solid #d2e3fc;
+        background-color: #006341;
+        color: #ffffff;
     }
     .badge-trap {
-        background-color: #fef7e0;
-        color: #b06000;
+        background-color: #e74c3c;
+        color: #ffffff;
+    }
+
+    /* Selectores e Inputs */
+    div[data-baseweb="select"] > div, div[data-baseweb="input"] > div {
+        background-color: #333333 !important;
+        color: white !important;
+        border-color: #444444 !important;
+    }
+    .stTextInput input {
+        color: #FFDF1B !important;
         font-weight: bold;
-        padding: 6px 16px;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        border: 1px solid #feefc3;
+        background-color: #333333 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 PL_LOGO = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# Base de Datos Base Local (Fallback) con métricas avanzadas (2.5 años)
+# Base de Datos de Equipos de Premier League
 TEAMS_DATA_FALLBACK = {
     "Arsenal": {"logo": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55},
     "Aston Villa": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51},
@@ -117,7 +134,6 @@ TEAMS_DATA_FALLBACK = {
     "Wolves": {"logo": "https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg", "xg": 1.30, "xga": 1.55, "ppda": 12.0, "aereos": 49}
 }
 
-# CONEXIÓN A API GRATUITA (Football-Data.org)
 @st.cache_data(ttl=3600)
 def cargar_datos_api():
     url = "https://api.football-data.org/v4/competitions/PL/standings"
@@ -134,11 +150,7 @@ def cargar_datos_api():
                 gf = item['goalsFor'] / played
                 ga = item['goalsAgainst'] / played
                 logo = item['team']['crest']
-                
-                base_info = TEAMS_DATA_FALLBACK.get(name, {
-                    "ppda": 10.5, "aereos": 50, "logo": logo
-                })
-                
+                base_info = TEAMS_DATA_FALLBACK.get(name, {"ppda": 10.5, "aereos": 50, "logo": logo})
                 teams[name] = {
                     "logo": logo if logo else base_info["logo"],
                     "xg": round(gf * 1.05, 2),
@@ -153,55 +165,39 @@ def cargar_datos_api():
 
 TEAMS_DATA, api_conectada = cargar_datos_api()
 
-# CONVERSIÓN Y MANEJO DE MOMIOS
+# Funciones de Momios
 def parse_odds_to_decimal(val_str, format_type):
     try:
         val = float(val_str)
         if format_type == "Decimales":
             return val
-        else: # Americanos
-            if val > 0:
-                return (val / 100.0) + 1.0
-            else:
-                return (100.0 / abs(val)) + 1.0
+        else:
+            return (val / 100.0) + 1.0 if val > 0 else (100.0 / abs(val)) + 1.0
     except:
         return 2.00
 
 def format_odds_display(decimal_val, format_type):
     if format_type == "Decimales":
         return f"{decimal_val:.2f}"
-    else: # Americanos
-        if decimal_val <= 1.0:
-            return "+100"
-        if decimal_val >= 2.0:
-            amt = int(round((decimal_val - 1.0) * 100))
-            return f"+{amt}"
-        else:
-            amt = int(round(100.0 / (decimal_val - 1.0)))
-            return f"-{amt}"
+    else:
+        if decimal_val <= 1.0: return "+100"
+        if decimal_val >= 2.0: return f"+{int(round((decimal_val - 1.0) * 100))}"
+        return f"-{int(round(100.0 / (decimal_val - 1.0)))}"
 
 def calcular_ev(prob_modelo, cuota_decimal):
     return (prob_modelo * cuota_decimal) - 1.0
 
-# MOTOR ESTADÍSTICO DE PARTIDOS
 def calcular_lambdas(h_team, a_team, fatiga_h, rot_h, fatiga_a, rot_a, arb, clima):
-    dh = TEAMS_DATA[h_team]
-    da = TEAMS_DATA[a_team]
-    
-    avg_home_goals, avg_away_goals = 1.55, 1.25
-    
-    att_h, def_h = dh["xg"] / avg_home_goals, dh["xga"] / avg_away_goals
-    att_a, def_a = da["xg"] / avg_away_goals, da["xga"] / avg_home_goals
-    
+    dh, da = TEAMS_DATA[h_team], TEAMS_DATA[a_team]
+    avg_h, avg_a = 1.55, 1.25
+    att_h, def_h = dh["xg"] / avg_h, dh["xga"] / avg_a
+    att_a, def_a = da["xg"] / avg_a, da["xga"] / avg_h
     tactical_h = (12.0 / max(dh["ppda"], 5.0)) * (dh["aereos"] / 50.0)
     tactical_a = (12.0 / max(da["ppda"], 5.0)) * (da["aereos"] / 50.0)
-    
     fatigue_h = 1.0 - (fatiga_h * 0.12 + rot_h * 0.10)
     fatigue_a = 1.0 - (fatiga_a * 0.12 + rot_a * 0.10)
-    
-    lambda_h = avg_home_goals * att_h * def_a * tactical_h * fatigue_h * arb * clima
-    lambda_a = avg_away_goals * att_a * def_h * tactical_a * fatigue_a * (2.0 - arb) * clima
-    
+    lambda_h = avg_h * att_h * def_a * tactical_h * fatigue_h * arb * clima
+    lambda_a = avg_a * att_a * def_h * tactical_a * fatigue_a * (2.0 - arb) * clima
     return max(lambda_h, 0.2), max(lambda_a, 0.15)
 
 def generar_matriz(lambda_h, lambda_a, max_goles=7):
@@ -211,54 +207,40 @@ def generar_matriz(lambda_h, lambda_a, max_goles=7):
             mat[h, a] = poisson.pmf(h, lambda_h) * poisson.pmf(a, lambda_a)
     return mat / np.sum(mat)
 
-# ENCABEZADO CON LOGO DE PREMIER LEAGUE
+# ENCABEZADO ESTILO BET365
 st.markdown(f"""
-<div class="main-header">
-    <img src="{PL_LOGO}" class="header-logo">
-    <h1 style="margin:0; font-size: 2.2rem; display:inline;">Premier League Predictor & Trap Line Detector</h1>
+<div class="bet365-header">
+    <div style="display:flex; align-items:center; gap:15px;">
+        <img src="{PL_LOGO}" class="pl-logo-header">
+        <h1 class="bet365-title">Bet365 Premier League Predictor</h1>
+    </div>
+    <span style="color:#FFDF1B; font-weight:bold; font-size:0.9rem;">TRAP LINE DETECTOR V2.0</span>
 </div>
 """, unsafe_allow_html=True)
 
-st.caption("Calculador con Métricas Avanzadas (xG, PPDA, Fatiga UEFA, Árbitros) y Detector de Trampas de Casas de Apuestas")
-
-if api_conectada:
-    st.success("🟢 Conectado a la API pública de Football-Data.org (Métricas actualizadas automáticamente).")
-else:
-    st.info("ℹ️ Servidor en modo local (Métricas precargadas de 2.5 años de Premier League).")
-
-st.markdown("---")
-
-# SELECCIÓN DE EQUIPOS Y AJUSTES
+# SELECCIÓN DE EQUIPOS
 col_team1, col_team2 = st.columns(2)
 
 with col_team1:
     st.subheader("🏠 Local")
     home_team = st.selectbox("Selecciona Equipo Local", list(TEAMS_DATA.keys()), index=0)
-    st.image(TEAMS_DATA[home_team]["logo"], width=50)
-    
+    st.image(TEAMS_DATA[home_team]["logo"], width=45)
     c1, c2 = st.columns(2)
-    with c1:
-        fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
-    with c2:
-        rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
+    with c1: fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
+    with c2: rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
 with col_team2:
     st.subheader("✈️ Visitante")
     away_team = st.selectbox("Selecciona Equipo Visitante", list(TEAMS_DATA.keys()), index=9)
-    st.image(TEAMS_DATA[away_team]["logo"], width=50)
-    
+    st.image(TEAMS_DATA[away_team]["logo"], width=45)
     c3, c4 = st.columns(2)
-    with c3:
-        fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
-    with c4:
-        rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
+    with c3: fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
+    with c4: rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
 
-with st.expander("⚙️ Factor Árbitro y Clima (Opcional)"):
+with st.expander("⚙️ Factores Ambientales (Árbitro & Clima)"):
     ca, cc = st.columns(2)
-    with ca:
-        arbitro = st.slider("Factor Árbitro (1.0 = Neutral)", 0.85, 1.15, 1.00, step=0.01)
-    with cc:
-        clima = st.slider("Factor Clima (1.0 = Normal, <1.0 = Lluvia/Viento)", 0.80, 1.00, 0.95, step=0.01)
+    with ca: arbitro = st.slider("Factor Árbitro (1.0 = Neutral)", 0.85, 1.15, 1.00, step=0.01)
+    with cc: clima = st.slider("Factor Clima (1.0 = Normal)", 0.80, 1.00, 0.95, step=0.01)
 
 # CÁLCULOS DEL MODELO
 lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a, arbitro, clima)
@@ -276,42 +258,32 @@ p_btts_no = 1.0 - p_btts_yes
 
 st.markdown("---")
 
-# CONFIGURACIÓN DE FORMATO DE MOMIOS
+# METER MOMIOS DE LA CASA DE APUESTAS
 col_head, col_opt = st.columns([3, 2])
 with col_head:
-    st.markdown("### ⚙️ METER LOS MOMIOS DE MI CASA (OPCIONAL — ANÁLISIS MÁS PRECISO)")
+    st.markdown("<h3 style='color:#FFDF1B; margin:0;'>🟩 MOMIOS DE TU CASA DE APUESTAS</h3>", unsafe_allow_html=True)
 with col_opt:
     tipo_momio = st.radio("Formato de Momios:", ["Americanos", "Decimales"], horizontal=True)
-
-st.info(f"Escribe los momios en formato **{tipo_momio}** de tu casa de apuestas.")
 
 def default_val(prob):
     dec = 1/prob if prob > 0 else 2.0
     return format_odds_display(dec, tipo_momio)
 
 f_col1, f_col2, f_col3 = st.columns(3)
-with f_col1:
-    m_home = st.text_input(f"GANA {home_team.upper()}", value=default_val(p_home))
-with f_col2:
-    m_draw = st.text_input("EMPATE", value=default_val(p_draw))
-with f_col3:
-    m_away = st.text_input(f"GANA {away_team.upper()}", value=default_val(p_away))
+with f_col1: m_home = st.text_input(f"GANA {home_team.upper()}", value=default_val(p_home))
+with f_col2: m_draw = st.text_input("EMPATE", value=default_val(p_draw))
+with f_col3: m_away = st.text_input(f"GANA {away_team.upper()}", value=default_val(p_away))
 
 f_col4, f_col5, f_col6 = st.columns(3)
-with f_col4:
-    linea_goles = st.selectbox("LÍNEA DE GOLES", ["0/U 2.5", "0/U 1.5", "0/U 3.5"], index=0)
-with f_col5:
-    m_over = st.text_input("MÁS (OVER)", value=default_val(p_over25))
-with f_col6:
-    m_under = st.text_input("MENOS (UNDER)", value=default_val(p_under25))
+with f_col4: linea_goles = st.selectbox("LÍNEA DE GOLES", ["0/U 2.5", "0/U 1.5", "0/U 3.5"], index=0)
+with f_col5: m_over = st.text_input("MÁS (OVER)", value=default_val(p_over25))
+with f_col6: m_under = st.text_input("MENOS (UNDER)", value=default_val(p_under25))
 
 f_col7, f_col8 = st.columns(2)
-with f_col7:
-    m_btts_yes = st.text_input("AMBOS ANOTAN: SÍ", value=default_val(p_btts_yes))
-with f_col8:
-    m_btts_no = st.text_input("AMBOS ANOTAN: NO", value=default_val(p_btts_no))
+with f_col7: m_btts_yes = st.text_input("AMBOS ANOTAN: SÍ", value=default_val(p_btts_yes))
+with f_col8: m_btts_no = st.text_input("AMBOS ANOTAN: NO", value=default_val(p_btts_no))
 
-# CONVERSIÓN Y PROCESAMIENTO
+# EVALUACIÓN DE APUESTAS Y VEREDICTOS
 odd_h = parse_odds_to_decimal(m_home, tipo_momio)
 odd_under = parse_odds_to_decimal(m_under, tipo_momio)
 odd_btts_no = parse_odds_to_decimal(m_btts_no, tipo_momio)
@@ -323,14 +295,10 @@ ev_btts_no = calcular_ev(p_btts_no, odd_btts_no)
 trap_h = ((fatiga_h + rot_h) >= 0.8) and (odd_h > 2.0) and (ev_h > 0.10)
 
 def get_verdict(ev, is_trap=False):
-    if is_trap:
-        return "TRAP LINE", "badge-trap"
-    if ev > 0.05:
-        return "BET", "badge-bet"
-    elif ev > -0.03:
-        return "MAYBE", "badge-maybe"
-    else:
-        return "SKIP", "badge-skip"
+    if is_trap: return "TRAP LINE", "badge-trap"
+    if ev > 0.05: return "BET", "badge-bet"
+    elif ev > -0.03: return "MAYBE", "badge-maybe"
+    else: return "SKIP", "badge-skip"
 
 v_h, class_h = get_verdict(ev_h, trap_h)
 v_dc1x, class_dc1x = get_verdict(calcular_ev(p_dc_1x, 1.25))
@@ -338,35 +306,38 @@ v_under, class_under = get_verdict(ev_under)
 v_btts_no, class_btts_no = get_verdict(ev_btts_no)
 
 st.markdown("---")
-st.markdown("### 📊 OPCIONES DE APUESTA ANALIZADAS")
+st.markdown("<h3 style='color:#FFDF1B;'>📊 OPCIONES DE APUESTA DETECTADAS</h3>", unsafe_allow_html=True)
 
 st.markdown(f"""
-<div class="bet-card">
+<div class="bet365-card">
     <div>
-        <div class="bet-title">Gana {home_team}</div>
-        <div class="bet-subtitle">1X2 {home_team[:3].upper()} ({format_odds_display(odd_h, tipo_momio)}) · {p_home*100:.1f}% · EV {ev_h*100:+.1f}%</div>
+        <div class="bet365-card-title">Gana {home_team}</div>
+        <div class="bet365-card-sub">1X2 {home_team[:3].upper()} ({format_odds_display(odd_h, tipo_momio)}) · Probabilidad {p_home*100:.1f}% · EV {ev_h*100:+.1f}%</div>
     </div>
-    <div><span class="{class_h}">{v_h}</span></div>
+    <div><span class="b365-badge {class_h}">{v_h}</span></div>
 </div>
-<div class="bet-card">
+
+<div class="bet365-card">
     <div>
-        <div class="bet-title">{home_team} o empate (1X)</div>
-        <div class="bet-subtitle">DC 1X · modelo {format_odds_display(1/p_dc_1x, tipo_momio)} · {p_dc_1x*100:.1f}%</div>
+        <div class="bet365-card-title">{home_team} o Empate (1X)</div>
+        <div class="bet365-card-sub">Doble Oportunidad 1X · Modelo {format_odds_display(1/p_dc_1x, tipo_momio)} · Probabilidad {p_dc_1x*100:.1f}%</div>
     </div>
-    <div><span class="{class_dc1x}">{v_dc1x}</span></div>
+    <div><span class="b365-badge {class_dc1x}">{v_dc1x}</span></div>
 </div>
-<div class="bet-card">
+
+<div class="bet365-card">
     <div>
-        <div class="bet-title">Menos de 2.5 goles</div>
-        <div class="bet-subtitle">U 2.5 · modelo espera {(lam_h+lam_a):.1f} goles · {p_under25*100:.1f}% · EV {ev_under*100:+.1f}%</div>
+        <div class="bet365-card-title">Menos de 2.5 Goles</div>
+        <div class="bet365-card-sub">Under 2.5 · Goles esperados {(lam_h+lam_a):.1f} · Probabilidad {p_under25*100:.1f}% · EV {ev_under*100:+.1f}%</div>
     </div>
-    <div><span class="{class_under}">{v_under}</span></div>
+    <div><span class="b365-badge {class_under}">{v_under}</span></div>
 </div>
-<div class="bet-card">
+
+<div class="bet365-card">
     <div>
-        <div class="bet-title">Ambos equipos anotan: NO</div>
-        <div class="bet-subtitle">BTTS · modelo {format_odds_display(1/p_btts_no, tipo_momio)} · {p_btts_no*100:.1f}% · EV {ev_btts_no*100:+.1f}%</div>
+        <div class="bet365-card-title">Ambos Equipos Anotan: NO</div>
+        <div class="bet365-card-sub">BTTS NO · Modelo {format_odds_display(1/p_btts_no, tipo_momio)} · Probabilidad {p_btts_no*100:.1f}% · EV {ev_btts_no*100:+.1f}%</div>
     </div>
-    <div><span class="{class_btts_no}">{v_btts_no}</span></div>
+    <div><span class="b365-badge {class_btts_no}">{v_btts_no}</span></div>
 </div>
 """, unsafe_allow_html=True)
