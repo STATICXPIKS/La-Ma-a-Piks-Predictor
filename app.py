@@ -6,12 +6,12 @@ import plotly.graph_objects as go
 
 # Configuración de página
 st.set_page_config(
-    page_title="LA MAÑA PICKS - PREMIER LEAGUE PREDICTIONS",
+    page_title="LA MAÑA PICKS - FOOTBALL PREDICTIONS",
     layout="wide",
     page_icon="⚽"
 )
 
-# ESTILOS CSS CON CORRECCIONES DE VISIBILIDAD Y TÍTULO MASIVO
+# ESTILOS CSS REFORZADOS
 st.markdown("""
 <style>
     .stApp {
@@ -25,14 +25,12 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO: TÍTULO GIGANTE CENTRADO */
+    /* ENCABEZADO CON TÍTULO EXTREMADAMENTE GRANDE AL CENTRO */
     .header-layout {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
         width: 100%;
-        padding: 10px 0 20px 0;
+        padding: 15px 0 25px 0;
         border-bottom: 2px solid #00FF66;
         margin-bottom: 20px;
         background-color: #000000;
@@ -41,17 +39,17 @@ st.markdown("""
     .title-center-row {
         text-align: center;
         width: 100%;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
 
-    /* TÍTULO GIGANTE INYECTADO DIRECTAMENTE EN PIXELES MASIVOS */
-    .brand-title-massive {
+    /* TÍTULO GIGANTE */
+    .brand-title-colossal {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: 85px !important;
+        font-size: clamp(4rem, 7vw, 9rem) !important;
         text-transform: uppercase;
         letter-spacing: 6px;
-        text-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 0 50px rgba(255, 215, 0, 0.5), 3px 3px 6px #000;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6), 4px 4px 10px #000;
         margin: 0;
         line-height: 1.0;
         display: block !important;
@@ -63,24 +61,25 @@ st.markdown("""
         justify-content: flex-start;
         gap: 12px;
         width: 100%;
+        margin-top: 10px;
     }
 
-    .pl-logo-small {
+    .league-logo-small {
         width: 110px !important;
         height: auto !important;
         filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
     }
 
-    .pl-sub-title-left {
+    .league-sub-title-left {
         color: #FFFFFF !important;
         font-weight: 900;
-        font-size: 1rem !important;
+        font-size: 1.1rem !important;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.5px;
         margin: 0;
     }
 
-    /* SELECTBOX CAMPO PRINCIPAL: FONDO NEGRO Y TEXTO BLANCO */
+    /* SELECTBOX CON FONDO NEGRO Y TEXTO BLANCO NEGRITA */
     div[data-baseweb="select"] {
         background-color: #000000 !important;
         border: 2px solid #00FF66 !important;
@@ -98,23 +97,17 @@ st.markdown("""
         background-color: #000000 !important;
     }
 
-    /* LISTA DESPLEGABLE EN FONDO OSCURO CON TEXTO BLANCO VISIBLE */
+    /* DESPLEGABLES FLOTANTES */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     div[data-baseweb="menu"] *,
     ul[role="listbox"],
     ul[role="listbox"] * {
-        background-color: #0b140e !important;
+        background-color: #000000 !important;
         color: #ffffff !important;
         font-weight: 900 !important;
         text-transform: uppercase !important;
-    }
-
-    li[role="option"] {
-        background-color: #0b140e !important;
-        color: #ffffff !important;
-        font-weight: 900 !important;
     }
 
     li[role="option"]:hover,
@@ -245,15 +238,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
+LALIGA_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg"
 
 # FATIGA Y ROTACIÓN AUTOMÁTICA
-def obtener_fatiga_rotacion_auto(equipo_nombre):
-    equipos_europeos = ["ARSENAL", "LIVERPOOL", "MANCHESTER CITY", "CHELSEA", "TOTTENHAM", "ASTON VILLA"]
+def obtener_fatiga_rotacion_auto(equipo_nombre, liga):
+    if liga == "PREMIER LEAGUE":
+        equipos_europeos = ["ARSENAL", "LIVERPOOL", "MANCHESTER CITY", "CHELSEA", "TOTTENHAM", "ASTON VILLA"]
+    else:
+        equipos_europeos = ["REAL MADRID", "BARCELONA", "ATLETICO MADRID", "REAL SOCIEDAD", "ATHLETIC CLUB", "GIRONA", "BETIS"]
+        
     if equipo_nombre in equipos_europeos:
         return 65, 40
     return 15, 10
 
-TEAMS_DATA = {
+# BASE DE DATOS PREMIER LEAGUE
+PREMIER_LEAGUE_DATA = {
     "ARSENAL": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
     "ASTON VILLA": {"logo": "https://crests.football-data.org/58.png", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
     "BOURNEMOUTH": {"logo": "https://crests.football-data.org/1044.png", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
@@ -274,6 +273,30 @@ TEAMS_DATA = {
     "NOTTINGHAM FOREST": {"logo": "https://crests.football-data.org/351.png", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
     "SUNDERLAND AFC": {"logo": "https://crests.football-data.org/71.png", "xg": 1.28, "xga": 1.52, "ppda": 12.2, "aereos": 50, "corners": 4.4, "forma": ["G","P","E","P","G","P","E","P","G","E"], "l10_corners": [4, 5, 4, 6, 3, 5, 4, 5, 3, 4]},
     "TOTTENHAM": {"logo": "https://crests.football-data.org/73.png", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
+}
+
+# BASE DE DATOS LALIGA (LIGA ESPAÑOLA) 20 EQUIPOS
+LALIGA_DATA = {
+    "ATHLETIC CLUB": {"logo": "https://crests.football-data.org/77.png", "xg": 1.60, "xga": 1.10, "ppda": 9.0, "aereos": 54, "corners": 5.9, "forma": ["G","E","G","G","P","G","E","G","G","P"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
+    "ATLETICO MADRID": {"logo": "https://crests.football-data.org/78.png", "xg": 1.85, "xga": 0.90, "ppda": 10.2, "aereos": 53, "corners": 5.8, "forma": ["G","G","P","G","E","G","G","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 7, 5, 8, 6, 7]},
+    "BARCELONA": {"logo": "https://crests.football-data.org/81.png", "xg": 2.30, "xga": 0.95, "ppda": 8.0, "aereos": 50, "corners": 6.9, "forma": ["G","G","G","G","P","G","G","E","G","G"], "l10_corners": [7, 8, 6, 9, 7, 8, 10, 6, 5, 8]},
+    "BETIS": {"logo": "https://crests.football-data.org/90.png", "xg": 1.50, "xga": 1.30, "ppda": 11.0, "aereos": 49, "corners": 5.2, "forma": ["E","G","P","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
+    "CELTA VIGO": {"logo": "https://crests.football-data.org/558.png", "xg": 1.40, "xga": 1.45, "ppda": 10.8, "aereos": 47, "corners": 4.8, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [4, 5, 6, 4, 5, 4, 6, 5, 4, 5]},
+    "ESPANYOL": {"logo": "https://crests.football-data.org/80.png", "xg": 1.15, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.1, "forma": ["P","P","E","P","G","P","P","E","P","P"], "l10_corners": [3, 4, 5, 3, 4, 5, 3, 4, 3, 4]},
+    "GETAFE": {"logo": "https://crests.football-data.org/82.png", "xg": 1.10, "xga": 1.20, "ppda": 12.8, "aereos": 58, "corners": 4.0, "forma": ["E","E","P","G","E","P","E","P","G","E"], "l10_corners": [4, 3, 5, 4, 3, 5, 4, 3, 4, 5]},
+    "GIRONA": {"logo": "https://crests.football-data.org/298.png", "xg": 1.70, "xga": 1.25, "ppda": 9.8, "aereos": 48, "corners": 5.5, "forma": ["G","P","E","G","G","P","G","E","G","P"], "l10_corners": [5, 6, 5, 7, 6, 5, 7, 6, 5, 6]},
+    "LAS PALMAS": {"logo": "https://crests.football-data.org/275.png", "xg": 1.20, "xga": 1.55, "ppda": 12.0, "aereos": 46, "corners": 4.3, "forma": ["P","P","E","G","P","E","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 4]},
+    "LEGANES": {"logo": "https://crests.football-data.org/745.png", "xg": 1.15, "xga": 1.50, "ppda": 13.5, "aereos": 50, "corners": 4.0, "forma": ["E","P","G","P","E","P","P","E","G","P"], "l10_corners": [3, 4, 3, 5, 4, 3, 5, 4, 3, 4]},
+    "MALLORCA": {"logo": "https://crests.football-data.org/89.png", "xg": 1.25, "xga": 1.30, "ppda": 12.2, "aereos": 55, "corners": 4.5, "forma": ["G","E","P","G","E","P","G","P","E","P"], "l10_corners": [4, 5, 4, 6, 3, 5, 4, 5, 3, 4]},
+    "OSASUNA": {"logo": "https://crests.football-data.org/79.png", "xg": 1.35, "xga": 1.35, "ppda": 11.5, "aereos": 53, "corners": 4.7, "forma": ["E","G","P","G","E","P","G","E","P","G"], "l10_corners": [5, 4, 6, 4, 5, 4, 6, 5, 4, 5]},
+    "RAYO VALLECANO": {"logo": "https://crests.football-data.org/87.png", "xg": 1.30, "xga": 1.40, "ppda": 9.4, "aereos": 48, "corners": 5.0, "forma": ["P","E","G","E","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 6, 4, 5, 6]},
+    "REAL MADRID": {"logo": "https://crests.football-data.org/86.png", "xg": 2.35, "xga": 0.80, "ppda": 8.5, "aereos": 51, "corners": 7.2, "forma": ["G","G","G","E","G","G","P","G","G","G"], "l10_corners": [8, 9, 7, 10, 8, 9, 11, 7, 6, 8]},
+    "REAL SOCIEDAD": {"logo": "https://crests.football-data.org/92.png", "xg": 1.65, "xga": 1.15, "ppda": 9.1, "aereos": 52, "corners": 5.7, "forma": ["G","P","E","G","P","G","E","G","P","G"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
+    "SEVILLA": {"logo": "https://crests.football-data.org/559.png", "xg": 1.45, "xga": 1.40, "ppda": 10.5, "aereos": 51, "corners": 5.3, "forma": ["P","G","E","P","G","P","E","G","P","E"], "l10_corners": [5, 6, 4, 6, 5, 6, 5, 6, 4, 5]},
+    "VALENCIA": {"logo": "https://crests.football-data.org/95.png", "xg": 1.25, "xga": 1.45, "ppda": 11.8, "aereos": 50, "corners": 4.6, "forma": ["P","P","E","G","P","E","P","G","P","E"], "l10_corners": [4, 5, 4, 5, 3, 5, 4, 5, 3, 4]},
+    "VALLADOLID": {"logo": "https://crests.football-data.org/250.png", "xg": 1.10, "xga": 1.65, "ppda": 13.2, "aereos": 49, "corners": 3.9, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [3, 4, 3, 4, 3, 5, 4, 3, 3, 4]},
+    "VILLARREAL": {"logo": "https://crests.football-data.org/102.png", "xg": 1.80, "xga": 1.50, "ppda": 10.0, "aereos": 49, "corners": 5.6, "forma": ["G","P","G","G","E","P","G","E","G","P"], "l10_corners": [6, 5, 7, 6, 6, 7, 5, 6, 5, 7]},
+    "ALAVES": {"logo": "https://crests.football-data.org/263.png", "xg": 1.25, "xga": 1.45, "ppda": 12.0, "aereos": 56, "corners": 4.4, "forma": ["P","E","G","P","P","E","G","P","P","G"], "l10_corners": [4, 5, 4, 5, 4, 5, 4, 5, 3, 4]}
 }
 
 def parse_odds_to_decimal(val_str, format_type):
@@ -309,8 +332,8 @@ def generar_badges_forma(lista_forma):
     html += '</div>'
     return html
 
-def calcular_lambdas(h_team, a_team, fatiga_h, rot_h, fatiga_a, rot_a):
-    dh, da = TEAMS_DATA[h_team], TEAMS_DATA[a_team]
+def calcular_lambdas(h_team, a_team, fatiga_h, rot_h, fatiga_a, rot_a, dataset):
+    dh, da = dataset[h_team], dataset[a_team]
     avg_h, avg_a = 1.55, 1.25
     att_h, def_h = dh["xg"] / avg_h, dh["xga"] / avg_a
     att_a, def_a = da["xg"] / avg_a, da["xga"] / avg_h
@@ -339,20 +362,33 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO CON LA MAÑA PICKS CENTRADO Y GIGANTE
+# SELECTOR DE LIGA SUPERIOR
+st.sidebar.markdown("<h2 style='color:#00FF66; font-weight:900;'>🏆 SELECCIONAR LIGA</h2>", unsafe_allow_html=True)
+liga_seleccionada = st.sidebar.selectbox("LIGA AC TIVA:", ["PREMIER LEAGUE", "LALIGA (ESPAÑA)"])
+
+if liga_seleccionada == "PREMIER LEAGUE":
+    TEAMS_DATA = PREMIER_LEAGUE_DATA
+    LOGO_LIGA = PL_LOGO_URL
+    SUBTITULO_LIGA = "PREMIER LEAGUE PREDICTIONS"
+else:
+    TEAMS_DATA = LALIGA_DATA
+    LOGO_LIGA = LALIGA_LOGO_URL
+    SUBTITULO_LIGA = "LALIGA EA SPORTS PREDICTIONS"
+
+# ENCABEZADO
 st.markdown(f"""
 <div class="header-layout">
     <div class="title-center-row">
-        <span class="brand-title-massive">LA MAÑA PICKS</span>
+        <span class="brand-title-colossal">LA MAÑA PICKS</span>
     </div>
     <div class="sub-left-row">
-        <img src="{PL_LOGO_URL}" class="pl-logo-small">
-        <h2 class="pl-sub-title-left">PREMIER LEAGUE PREDICTIONS</h2>
+        <img src="{LOGO_LIGA}" class="league-logo-small">
+        <h2 class="league-sub-title-left">{SUBTITULO_LIGA}</h2>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS MATRIX)
+# COLUMNAS
 col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
@@ -363,27 +399,27 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3)
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=0)
         st.image(TEAMS_DATA[home_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
         
-        f_auto_h, r_auto_h = obtener_fatiga_rotacion_auto(home_team)
+        f_auto_h, r_auto_h = obtener_fatiga_rotacion_auto(home_team, liga_seleccionada)
         fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, f_auto_h) / 100.0
         rot_h = st.slider("Rotación Local (%)", 0, 100, r_auto_h) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=19)
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=1 if len(TEAMS_DATA)>1 else 0)
         st.image(TEAMS_DATA[away_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         
-        f_auto_a, r_auto_a = obtener_fatiga_rotacion_auto(away_team)
+        f_auto_a, r_auto_a = obtener_fatiga_rotacion_auto(away_team, liga_seleccionada)
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, f_auto_a) / 100.0
         rot_a = st.slider("Rotación Visitante (%)", 0, 100, r_auto_a) / 100.0
 
     # CÁLCULOS
-    lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
+    lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a, TEAMS_DATA)
     matriz_ft = generar_matriz(lam_h, lam_a)
 
     lam_h_ht, lam_a_ht = lam_h * 0.45, lam_a * 0.45
@@ -491,7 +527,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX FILTRADO (SOLO MEDIA Y ALTA PROBABILIDAD >= 60%)
+# COLUMNA DERECHA: ANÁLISIS MATRIX
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
@@ -523,7 +559,7 @@ with col_right_panel:
         {"tit": f"11. Gana Cualquier Mitad: {away_team}", "sub": "Win Either Half Visitante", "prob": p_win_any_a, "odd": m_win_any_a}
     ]
 
-    # FILTRADO EXCLUSIVO: DESCARTAR TODAS LAS APUESTAS LOW PROBABILITY (<60%)
+    # FILTRADO EXCLUSIVO >= 60%
     mercados_filtrados = [m for m in mercados_list if m['prob'] >= 0.60]
 
     for item in mercados_filtrados:
