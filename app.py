@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
-import urllib.parse
 
 # Configuración de página
 st.set_page_config(
@@ -12,48 +11,47 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ==============================================================================
-# ESTILOS CSS REFORZADOS - SOBREESCRITURA DIRECTA DE BASEWEB POPOVER
-# ==============================================================================
+# ESTILOS CSS REFORZADOS
 st.markdown("""
 <style>
-    /* Fondo principal cibernético */
     .stApp {
-        background-color: #030705 !important;
+        background-color: #000000 !important;
         color: #ffffff !important;
     }
     
     label, p, span, div, .stMarkdown, .stRadio label, .stSlider label {
         color: #e2f8eb !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO ALINEADO A LA IZQUIERDA */
-    .header-left-container {
+    /* ENCABEZADO CENTRADO CON LETRAS GRANDES */
+    .header-centered-container {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-start;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
         padding: 10px 0 20px 0;
-        background-color: #030705;
+        background-color: #000000;
         border-bottom: 2px solid #00FF66;
         margin-bottom: 20px;
     }
 
-    .brand-title-left {
+    .brand-title-center {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: 2.2rem !important;
+        font-size: 3rem !important; /* LETRAS GRANDES */
         text-transform: uppercase;
-        letter-spacing: 2px;
-        text-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 2px 2px 4px #000;
+        letter-spacing: 3px;
+        text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 2px 2px 4px #000;
         margin: 0 0 10px 0;
     }
 
-    .pl-row-left {
+    .pl-row-center {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 15px;
     }
 
@@ -63,51 +61,48 @@ st.markdown("""
         filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 10px #00FF66) !important;
     }
 
-    .pl-sub-title-left {
+    .pl-sub-title-center {
         color: #FFD700 !important;
         font-weight: 900;
-        font-size: 1.15rem !important;
+        font-size: 1.25rem !important;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
+        letter-spacing: 2px;
         margin: 0;
     }
 
-    /* ESTILO PRINCIPAL DEL CAMPO DE SELECCIÓN (SELECTBOX) */
-    div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
+    /* SELECTBOX CON FONDO NEGRO Y TEXTO BLANCO NEGRITA */
+    div[data-baseweb="select"] {
+        background-color: #000000 !important;
         border: 2px solid #00FF66 !important;
         border-radius: 6px !important;
     }
 
+    div[data-baseweb="select"] *, 
     div[data-baseweb="select"] span,
-    div[data-baseweb="select"] input {
-        color: #000000 !important;
+    div[data-baseweb="select"] input,
+    div[data-baseweb="select"] div {
+        color: #ffffff !important;
         font-weight: 900 !important;
         font-size: 0.95rem !important;
         text-transform: uppercase !important;
+        background-color: #000000 !important;
     }
 
-    /* FIX ABSOLUTO PARA EL MENÚ DESPLEGABLE FLOTANTE (POPOVER) */
-    div[data-baseweb="popover"],
+    /* POPUP/LISTBOX DE SELECTBOX EN FONDO NEGRO CON TEXTO BLANCO */
+    div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     div[data-baseweb="menu"] *,
     ul[role="listbox"],
-    ul[role="listbox"] *,
-    li[role="option"],
-    li[role="option"] * {
-        background-color: #ffffff !important;
-        color: #000000 !important;
+    ul[role="listbox"] * {
+        background-color: #000000 !important;
+        color: #ffffff !important;
         font-weight: 900 !important;
-        font-size: 0.95rem !important;
         text-transform: uppercase !important;
     }
 
-    /* HOVER EN OPCIONES DEL DESPLEGABLE (VERDE NEÓN CON TEXTO NEGRO) */
     li[role="option"]:hover,
-    li[role="option"]:hover *,
-    li[aria-selected="true"],
-    li[aria-selected="true"] * {
+    li[role="option"]:hover * {
         background-color: #00FF66 !important;
         color: #000000 !important;
         font-weight: 900 !important;
@@ -119,7 +114,7 @@ st.markdown("""
         color: #FFD700 !important;
         border: 1px solid #00FF66 !important;
         border-radius: 5px !important;
-        font-weight: 900 !important;
+        font-weight: bold !important;
         font-size: 0.85rem !important;
     }
 
@@ -181,34 +176,35 @@ st.markdown("""
 
     /* Matchup Card Banner */
     .matchup-card {
-        background: #09120c;
+        background: #000000;
         border: 1px solid #00FF66;
         border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 15px;
+        padding: 12px;
+        margin-top: 6px;
+        margin-bottom: 12px;
         box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
     }
     .matchup-odds-banner {
         background: rgba(0, 255, 102, 0.1);
         border: 1px solid #00FF66;
-        border-radius: 8px;
-        padding: 8px 12px;
+        border-radius: 6px;
+        padding: 6px 10px;
         text-align: center;
-        font-weight: 800;
-        font-size: 0.95rem;
+        font-weight: 900;
+        font-size: 0.88rem;
         color: #00FF66;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }
     .circle-metric {
-        width: 48px;
-        height: 48px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         border: 2px solid #00FF66;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 900;
-        font-size: 1rem;
+        font-size: 0.9rem;
         color: #ffffff;
         margin: 0 auto;
         box-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
@@ -229,41 +225,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# GENERADOR DE ESCUDOS VECTORIALES SVG PARA GARANTIZAR VISIBILIDAD SIN IMÁGENES ROTAS
-def get_team_badge_svg(team_name, color_bg, color_text, initial):
-    svg_code = f"""
-    <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="{color_bg}" stroke="#00FF66" stroke-width="4"/>
-        <text x="50" y="62" font-size="38" font-weight="900" font-family="Arial, sans-serif" fill="{color_text}" text-anchor="middle">{initial}</text>
-    </svg>
-    """
-    encoded = urllib.parse.quote(svg_code)
-    return f"data:image/svg+xml;utf8,{encoded}"
-
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# BASE DE DATOS DE EQUIPOS CON LOGOS GARANTIZADOS
+# BASE DE DATOS DE EQUIPOS CON ESCUDOS ORIGINALES EN PNG HD (CDN FOOTBALL-DATA)
 TEAMS_DATA = {
-    "ARSENAL": {"logo": get_team_badge_svg("ARSENAL", "#EF0107", "#FFFFFF", "A"), "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
-    "ASTON VILLA": {"logo": get_team_badge_svg("ASTON VILLA", "#95BFE5", "#670E36", "AV"), "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
-    "BOURNEMOUTH": {"logo": get_team_badge_svg("BOURNEMOUTH", "#DA291C", "#000000", "B"), "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
-    "BRENTFORD": {"logo": get_team_badge_svg("BRENTFORD", "#E30613", "#FFFFFF", "BF"), "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
-    "BRIGHTON": {"logo": get_team_badge_svg("BRIGHTON", "#0057B8", "#FFFFFF", "BH"), "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
-    "CHELSEA": {"logo": get_team_badge_svg("CHELSEA", "#034694", "#FFFFFF", "C"), "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
-    "COVENTRY CITY": {"logo": get_team_badge_svg("COVENTRY CITY", "#00A3E0", "#FFFFFF", "CC"), "xg": 1.30, "xga": 1.50, "ppda": 11.5, "aereos": 50, "corners": 4.8, "forma": ["G","E","P","G","E","P","G","P","E","G"], "l10_corners": [5, 4, 6, 5, 4, 6, 5, 4, 5, 4]},
-    "CRYSTAL PALACE": {"logo": get_team_badge_svg("CRYSTAL PALACE", "#1B458F", "#C41230", "CP"), "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"], "l10_corners": [4, 5, 4, 6, 3, 5, 6, 4, 5, 4]},
-    "EVERTON": {"logo": get_team_badge_svg("EVERTON", "#003399", "#FFFFFF", "E"), "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"], "l10_corners": [5, 4, 6, 3, 5, 4, 6, 5, 4, 5]},
-    "FULHAM": {"logo": get_team_badge_svg("FULHAM", "#000000", "#FFFFFF", "F"), "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
-    "HULL CITY": {"logo": get_team_badge_svg("HULL CITY", "#F5A623", "#000000", "HC"), "xg": 1.22, "xga": 1.58, "ppda": 12.0, "aereos": 47, "corners": 4.3, "forma": ["P","E","P","G","E","P","P","E","G","P"], "l10_corners": [4, 3, 5, 4, 5, 3, 4, 5, 3, 4]},
-    "IPSWICH": {"logo": get_team_badge_svg("IPSWICH", "#003399", "#FFFFFF", "I"), "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 3, 6, 4, 3, 5, 4]},
-    "LEEDS": {"logo": get_team_badge_svg("LEEDS", "#FFCD00", "#1D428A", "LU"), "xg": 1.45, "xga": 1.40, "ppda": 9.2, "aereos": 51, "corners": 5.5, "forma": ["G","E","G","P","E","G","P","G","E","P"], "l10_corners": [6, 5, 7, 5, 6, 4, 6, 7, 5, 6]},
-    "LIVERPOOL": {"logo": get_team_badge_svg("LIVERPOOL", "#C8102E", "#FFFFFF", "L"), "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
-    "MANCHESTER CITY": {"logo": get_team_badge_svg("MANCHESTER CITY", "#6CABDD", "#1C2C5B", "MC"), "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
-    "MANCHESTER UNITED": {"logo": get_team_badge_svg("MANCHESTER UNITED", "#DA291C", "#FFE500", "MU"), "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [6, 5, 7, 6, 8, 5, 6, 7, 5, 6]},
-    "NEWCASTLE": {"logo": get_team_badge_svg("NEWCASTLE", "#241F20", "#FFFFFF", "NC"), "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"], "l10_corners": [7, 6, 8, 5, 7, 6, 7, 6, 5, 7]},
-    "NOTTINGHAM FOREST": {"logo": get_team_badge_svg("NOTTINGHAM FOREST", "#DD0000", "#FFFFFF", "NF"), "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
-    "SUNDERLAND AFC": {"logo": get_team_badge_svg("SUNDERLAND AFC", "#EB172B", "#000000", "S"), "xg": 1.28, "xga": 1.52, "ppda": 12.2, "aereos": 50, "corners": 4.4, "forma": ["G","P","E","P","G","P","E","P","G","E"], "l10_corners": [4, 5, 4, 6, 3, 5, 4, 5, 3, 4]},
-    "TOTTENHAM": {"logo": get_team_badge_svg("TOTTENHAM", "#132257", "#FFFFFF", "T"), "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
+    "ARSENAL": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
+    "ASTON VILLA": {"logo": "https://crests.football-data.org/58.png", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
+    "BOURNEMOUTH": {"logo": "https://crests.football-data.org/1044.png", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
+    "BRENTFORD": {"logo": "https://crests.football-data.org/402.png", "xg": 1.50, "xga": 1.45, "ppda": 12.1, "aereos": 56, "corners": 4.6, "forma": ["G","P","E","P","G","E","P","G","P","G"], "l10_corners": [3, 5, 8, 6, 8, 6, 10, 8, 4, 4]},
+    "BRIGHTON": {"logo": "https://crests.football-data.org/397.png", "xg": 1.65, "xga": 1.40, "ppda": 9.5, "aereos": 47, "corners": 5.8, "forma": ["E","G","P","G","E","P","G","G","P","E"], "l10_corners": [6, 5, 7, 6, 5, 8, 6, 7, 5, 6]},
+    "CHELSEA": {"logo": "https://crests.football-data.org/61.png", "xg": 1.80, "xga": 1.25, "ppda": 9.8, "aereos": 52, "corners": 5.6, "forma": ["G","G","P","E","G","G","P","E","G","G"], "l10_corners": [6, 7, 5, 8, 6, 9, 4, 7, 5, 6]},
+    "COVENTRY CITY": {"logo": "https://crests.football-data.org/1070.png", "xg": 1.30, "xga": 1.50, "ppda": 11.5, "aereos": 50, "corners": 4.8, "forma": ["G","E","P","G","E","P","G","P","E","G"], "l10_corners": [5, 4, 6, 5, 4, 6, 5, 4, 5, 4]},
+    "CRYSTAL PALACE": {"logo": "https://crests.football-data.org/354.png", "xg": 1.35, "xga": 1.30, "ppda": 11.8, "aereos": 53, "corners": 4.8, "forma": ["E","P","G","E","P","P","G","E","P","G"], "l10_corners": [4, 5, 4, 6, 3, 5, 6, 4, 5, 4]},
+    "EVERTON": {"logo": "https://crests.football-data.org/62.png", "xg": 1.30, "xga": 1.40, "ppda": 12.5, "aereos": 58, "corners": 4.7, "forma": ["P","E","E","G","P","E","P","G","E","P"], "l10_corners": [5, 4, 6, 3, 5, 4, 6, 5, 4, 5]},
+    "FULHAM": {"logo": "https://crests.football-data.org/63.png", "xg": 1.40, "xga": 1.50, "ppda": 11.0, "aereos": 50, "corners": 5.1, "forma": ["G","P","E","G","P","G","E","P","P","G"], "l10_corners": [5, 6, 4, 5, 6, 5, 7, 4, 5, 6]},
+    "HULL CITY": {"logo": "https://crests.football-data.org/322.png", "xg": 1.22, "xga": 1.58, "ppda": 12.0, "aereos": 47, "corners": 4.3, "forma": ["P","E","P","G","E","P","P","E","G","P"], "l10_corners": [4, 3, 5, 4, 5, 3, 4, 5, 3, 4]},
+    "IPSWICH": {"logo": "https://crests.football-data.org/349.png", "xg": 1.20, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.2, "forma": ["P","P","E","P","E","G","P","P","E","P"], "l10_corners": [4, 3, 5, 4, 3, 6, 4, 3, 5, 4]},
+    "LEEDS": {"logo": "https://crests.football-data.org/341.png", "xg": 1.45, "xga": 1.40, "ppda": 9.2, "aereos": 51, "corners": 5.5, "forma": ["G","E","G","P","E","G","P","G","E","P"], "l10_corners": [6, 5, 7, 5, 6, 4, 6, 7, 5, 6]},
+    "LIVERPOOL": {"logo": "https://crests.football-data.org/64.png", "xg": 2.20, "xga": 1.00, "ppda": 8.5, "aereos": 54, "corners": 7.1, "forma": ["G","G","G","E","G","G","P","G","G","E"], "l10_corners": [8, 9, 7, 10, 6, 8, 11, 7, 5, 8]},
+    "MANCHESTER CITY": {"logo": "https://crests.football-data.org/65.png", "xg": 2.25, "xga": 0.80, "ppda": 8.2, "aereos": 52, "corners": 7.5, "forma": ["G","G","E","G","G","G","P","G","E","G"], "l10_corners": [9, 8, 10, 7, 11, 8, 6, 9, 7, 10]},
+    "MANCHESTER UNITED": {"logo": "https://crests.football-data.org/66.png", "xg": 1.60, "xga": 1.45, "ppda": 10.8, "aereos": 50, "corners": 5.9, "forma": ["P","G","E","P","G","E","P","G","P","E"], "l10_corners": [6, 5, 7, 6, 8, 5, 6, 7, 5, 6]},
+    "NEWCASTLE": {"logo": "https://crests.football-data.org/67.png", "xg": 1.70, "xga": 1.20, "ppda": 9.9, "aereos": 53, "corners": 6.1, "forma": ["G","P","G","E","G","P","G","G","E","P"], "l10_corners": [7, 6, 8, 5, 7, 6, 7, 6, 5, 7]},
+    "NOTTINGHAM FOREST": {"logo": "https://crests.football-data.org/351.png", "xg": 1.25, "xga": 1.50, "ppda": 13.2, "aereos": 51, "corners": 4.1, "forma": ["E","G","P","G","E","P","G","P","E","P"], "l10_corners": [4, 3, 5, 4, 4, 5, 3, 4, 3, 5]},
+    "SUNDERLAND AFC": {"logo": "https://crests.football-data.org/71.png", "xg": 1.28, "xga": 1.52, "ppda": 12.2, "aereos": 50, "corners": 4.4, "forma": ["G","P","E","P","G","P","E","P","G","E"], "l10_corners": [4, 5, 4, 6, 3, 5, 4, 5, 3, 4]},
+    "TOTTENHAM": {"logo": "https://crests.football-data.org/73.png", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
 }
 
 def parse_odds_to_decimal(val_str, format_type):
@@ -329,13 +314,13 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO ALINEADO A LA IZQUIERDA EXACTAMENTE COMO SE SOLICITÓ
+# ENCABEZADO CENTRADO
 st.markdown(f"""
-<div class="header-left-container">
-    <h1 class="brand-title-left">LA MAÑA PICKS</h1>
-    <div class="pl-row-left">
+<div class="header-centered-container">
+    <h1 class="brand-title-center">LA MAÑA PICKS</h1>
+    <div class="pl-row-center">
         <img src="{PL_LOGO_URL}" class="pl-logo-neon">
-        <h2 class="pl-sub-title-left">PREMIER LEAGUE PREDICTIONS</h2>
+        <h2 class="pl-sub-title-center">PREMIER LEAGUE PREDICTIONS</h2>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -351,7 +336,7 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=1) # ASTON VILLA
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=1)
         st.image(TEAMS_DATA[home_team]["logo"], width=45)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
@@ -359,7 +344,7 @@ with col_left_panel:
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=2) # BOURNEMOUTH
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=2)
         st.image(TEAMS_DATA[away_team]["logo"], width=45)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
@@ -478,75 +463,7 @@ with col_left_panel:
 # COLUMNA DERECHA: MATCHUP CARD BANNER, GRÁFICAS Y ANÁLISIS MATRIX
 # ==============================================================================
 with col_right_panel:
-    st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 DESTACADO DE APUESTA Y GRÁFICA DE TENDENCIA</h3>", unsafe_allow_html=True)
-
-    # MATCHUP CARD
-    l10_data = TEAMS_DATA[home_team].get("l10_corners", [5,6,7,8,6,7,5,8,6,7])
-    promedio_l10 = np.mean(l10_data)
-    proyeccion_val = (exp_corners_ft / 2) + 1.2
-    
-    st.markdown(f"""
-    <div class="matchup-card">
-        <div class="matchup-odds-banner">
-            🚩 Over {linea_corners_ft} Córners Totales @{parse_odds_to_decimal(m_corners_ft_over, tipo_momio):.2f}
-        </div>
-        <div style="display:flex; justify-shadow:space-around; align-items:center; text-align:center; margin-bottom:8px;">
-            <div>
-                <span style="font-size:0.75rem; color:#9cbcae;">PROYECCIÓN</span><br>
-                <b style="font-size:1.3rem; color:#00FF66;">{proyeccion_val:.1f} ↗</b>
-            </div>
-            <div>
-                <span style="font-size:0.75rem; color:#9cbcae;">PROMEDIO L10</span><br>
-                <b style="font-size:1.3rem; color:#ffffff;">{promedio_l10:.1f}</b>
-            </div>
-            <div>
-                <span style="font-size:0.75rem; color:#9cbcae;">SCORE</span><br>
-                <div class="circle-metric">85</div>
-            </div>
-            <div>
-                <span style="font-size:0.75rem; color:#9cbcae;">MATCHUP</span><br>
-                <div class="circle-metric">A+</div>
-            </div>
-        </div>
-        <div style="text-align:center; font-size:0.8rem; color:#a0b0a5;">
-            🛡️ {away_team} cede en promedio <b>5.2 Córners/partido</b> de visitante.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # GRÁFICA DE BARRAS DINÁMICA DE TENDENCIA
-    colors = ['#00FF66' if x >= linea_corners_ft else '#FF0055' for x in l10_data]
-    
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=[f"P{i+1}" for i in range(10)],
-        y=l10_data,
-        marker_color=colors,
-        text=l10_data,
-        textposition='auto',
-        hoverinfo='x+y'
-    ))
-    
-    fig.add_shape(
-        type="line",
-        x0=-0.5, y0=linea_corners_ft, x1=9.5, y1=linea_corners_ft,
-        line=dict(color="#FFD700", width=2, dash="dash"),
-    )
-    
-    fig.update_layout(
-        title=dict(text=f"Histórico L10 Partidos - Córners {home_team} (Línea: {linea_corners_ft})", font=dict(color="#00FF66", size=12)),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        height=220,
-        margin=dict(l=10, r=10, t=30, b=10),
-        xaxis=dict(showgrid=False, tickfont=dict(color='#8fa396')),
-        yaxis=dict(showgrid=True, gridcolor='#142218', tickfont=dict(color='#8fa396'))
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
-    # ANÁLISIS MATRIX COMPLETO DE LOS 11 MERCADOS
-    st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-top:15px; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
 
     mercados_list = [
         {"tit": f"1. Resultado Final (1X2): Gana Local ({home_team})", "sub": "1X2 Local", "prob": p_1_ft, "odd": m_1_ft},
@@ -589,3 +506,56 @@ with col_right_panel:
             <div><span class="cyber-badge {badge}">{lbl}</span></div>
         </div>
         """, unsafe_allow_html=True)
+
+        # DESPLIEGUE AUTOMÁTICO DE LA GRÁFICA Y BANNER PARA APUESTAS DE ALTA PROBABILIDAD (>= 75%)
+        if item['prob'] >= 0.75:
+            l10_data = TEAMS_DATA[home_team].get("l10_corners", [5,6,7,8,6,7,5,8,6,7])
+            promedio_l10 = np.mean(l10_data)
+            proyeccion_val = (exp_corners_ft / 2) + 1.2
+
+            st.markdown(f"""
+            <div class="matchup-card">
+                <div class="matchup-odds-banner">
+                    🚩 {item['tit']} @{dec_odd:.2f}
+                </div>
+                <div style="display:flex; justify-shadow:space-around; align-items:center; text-align:center; margin-bottom:8px;">
+                    <div>
+                        <span style="font-size:0.75rem; color:#9cbcae;">PROYECCIÓN</span><br>
+                        <b style="font-size:1.1rem; color:#00FF66;">{item['prob']*100:.1f}% ↗</b>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:#9cbcae;">PROMEDIO L10</span><br>
+                        <b style="font-size:1.1rem; color:#ffffff;">{promedio_l10:.1f}</b>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:#9cbcae;">SCORE</span><br>
+                        <div class="circle-metric">88</div>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:#9cbcae;">MATCHUP</span><br>
+                        <div class="circle-metric">A+</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            colors = ['#00FF66' if x >= 5 else '#FF0055' for x in l10_data]
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=[f"P{i+1}" for i in range(10)],
+                y=l10_data,
+                marker_color=colors,
+                text=l10_data,
+                textposition='auto',
+                hoverinfo='x+y'
+            ))
+            fig.update_layout(
+                title=dict(text=f"Tendencia Histórica L10 - {item['sub']}", font=dict(color="#00FF66", size=11)),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                height=180,
+                margin=dict(l=10, r=10, t=25, b=10),
+                xaxis=dict(showgrid=False, tickfont=dict(color='#8fa396')),
+                yaxis=dict(showgrid=True, gridcolor='#142218', tickfont=dict(color='#8fa396'))
+            )
+            st.plotly_chart(fig, use_container_width=True)
