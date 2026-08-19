@@ -11,7 +11,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS REFORZADOS
+# ESTILOS CSS CON CORRECCIONES DE VISIBILIDAD Y TÍTULO MASIVO
 st.markdown("""
 <style>
     .stApp {
@@ -25,10 +25,12 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* CONTENEDOR DEL ENCABEZADO CON TÍTULO EXTREMADAMENTE GIGANTE */
+    /* ENCABEZADO: TÍTULO GIGANTE CENTRADO */
     .header-layout {
         display: flex;
         flex-direction: column;
+        align-items: center;
+        justify-content: center;
         width: 100%;
         padding: 10px 0 20px 0;
         border-bottom: 2px solid #00FF66;
@@ -39,17 +41,17 @@ st.markdown("""
     .title-center-row {
         text-align: center;
         width: 100%;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
     }
 
-    /* TÍTULO FORZADO 10 VECES MÁS GRANDE */
-    .brand-title-colossal {
+    /* TÍTULO GIGANTE INYECTADO DIRECTAMENTE EN PIXELES MASIVOS */
+    .brand-title-massive {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: clamp(4rem, 7vw, 9rem) !important; /* TAMAÑO MASIVO 10X */
+        font-size: 85px !important;
         text-transform: uppercase;
         letter-spacing: 6px;
-        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6), 4px 4px 10px #000;
+        text-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 0 50px rgba(255, 215, 0, 0.5), 3px 3px 6px #000;
         margin: 0;
         line-height: 1.0;
         display: block !important;
@@ -61,7 +63,6 @@ st.markdown("""
         justify-content: flex-start;
         gap: 12px;
         width: 100%;
-        margin-top: 10px;
     }
 
     .pl-logo-small {
@@ -73,13 +74,13 @@ st.markdown("""
     .pl-sub-title-left {
         color: #FFFFFF !important;
         font-weight: 900;
-        font-size: 1.1rem !important;
+        font-size: 1rem !important;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
+        letter-spacing: 1px;
         margin: 0;
     }
 
-    /* SELECTBOX CON FONDO NEGRO Y TEXTO BLANCO NEGRITA */
+    /* SELECTBOX CAMPO PRINCIPAL: FONDO NEGRO Y TEXTO BLANCO */
     div[data-baseweb="select"] {
         background-color: #000000 !important;
         border: 2px solid #00FF66 !important;
@@ -97,17 +98,23 @@ st.markdown("""
         background-color: #000000 !important;
     }
 
-    /* DESPLEGABLES FLOTANTES */
+    /* LISTA DESPLEGABLE EN FONDO OSCURO CON TEXTO BLANCO VISIBLE */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     div[data-baseweb="menu"] *,
     ul[role="listbox"],
     ul[role="listbox"] * {
-        background-color: #000000 !important;
+        background-color: #0b140e !important;
         color: #ffffff !important;
         font-weight: 900 !important;
         text-transform: uppercase !important;
+    }
+
+    li[role="option"] {
+        background-color: #0b140e !important;
+        color: #ffffff !important;
+        font-weight: 900 !important;
     }
 
     li[role="option"]:hover,
@@ -239,7 +246,7 @@ st.markdown("""
 
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# FUNCIÓN PARA FATIGA AUTOMÁTICA
+# FATIGA Y ROTACIÓN AUTOMÁTICA
 def obtener_fatiga_rotacion_auto(equipo_nombre):
     equipos_europeos = ["ARSENAL", "LIVERPOOL", "MANCHESTER CITY", "CHELSEA", "TOTTENHAM", "ASTON VILLA"]
     if equipo_nombre in equipos_europeos:
@@ -332,11 +339,11 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO CON TÍTULO EXTREMADAMENTE GRANDE AL CENTRO
+# ENCABEZADO CON LA MAÑA PICKS CENTRADO Y GIGANTE
 st.markdown(f"""
 <div class="header-layout">
     <div class="title-center-row">
-        <h1 class="brand-title-colossal">LA MAÑA PICKS</h1>
+        <span class="brand-title-massive">LA MAÑA PICKS</span>
     </div>
     <div class="sub-left-row">
         <img src="{PL_LOGO_URL}" class="pl-logo-small">
@@ -356,7 +363,7 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3) # BRENTFORD
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3)
         st.image(TEAMS_DATA[home_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
@@ -366,7 +373,7 @@ with col_left_panel:
         rot_h = st.slider("Rotación Local (%)", 0, 100, r_auto_h) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=19) # TOTTENHAM
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=19)
         st.image(TEAMS_DATA[away_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
@@ -375,7 +382,7 @@ with col_left_panel:
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, f_auto_a) / 100.0
         rot_a = st.slider("Rotación Visitante (%)", 0, 100, r_auto_a) / 100.0
 
-    # CÁLCULOS MATEMÁTICOS DEL ENCUENTRO
+    # CÁLCULOS
     lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
     matriz_ft = generar_matriz(lam_h, lam_a)
 
@@ -484,7 +491,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX FILTRADO (SOLO MEDIA Y ALTA PROBABILIDAD)
+# COLUMNA DERECHA: ANÁLISIS MATRIX FILTRADO (SOLO MEDIA Y ALTA PROBABILIDAD >= 60%)
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
@@ -516,11 +523,8 @@ with col_right_panel:
         {"tit": f"11. Gana Cualquier Mitad: {away_team}", "sub": "Win Either Half Visitante", "prob": p_win_any_a, "odd": m_win_any_a}
     ]
 
-    # FILTRADO: SOLO MOSTRAR APUESTAS DE PROBABILIDAD MEDIA Y ALTA (EXCLUIR LOW PROBABILITY <60%)
+    # FILTRADO EXCLUSIVO: DESCARTAR TODAS LAS APUESTAS LOW PROBABILITY (<60%)
     mercados_filtrados = [m for m in mercados_list if m['prob'] >= 0.60]
-
-    if not mercados_filtrados:
-        st.info("No se detectaron apuestas con probabilidad superior al 60% para los parámetros actuales.")
 
     for item in mercados_filtrados:
         dec_odd = parse_odds_to_decimal(item['odd'], tipo_momio)
@@ -559,20 +563,18 @@ with col_right_panel:
                 colors = ['#00FF66' if x >= 5 else '#FF0055' for x in l10_data]
                 fig = go.Figure()
                 fig.add_trace(go.Bar(
-                    x=[f"P{i+1}" for i in range(10)],
+                    x=[f"Part. {i+1}" for i in range(10)],
                     y=l10_data,
                     marker_color=colors,
-                    text=l10_data,
-                    textposition='auto',
                     hoverinfo='x+y'
                 ))
                 fig.update_layout(
-                    title=dict(text=f"Tendencia L10 - {item['sub']}", font=dict(color="#00FF66", size=11)),
+                    title=dict(text=f"Histórico L10 Partidos - Métricas de {item['sub']}", font=dict(color="#00FF66", size=11)),
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     height=180,
                     margin=dict(l=10, r=10, t=25, b=10),
-                    xaxis=dict(showgrid=False, tickfont=dict(color='#8fa396')),
-                    yaxis=dict(showgrid=True, gridcolor='#142218', tickfont=dict(color='#8fa396'))
+                    xaxis=dict(title="Partidos Recientes (P1 a P10)", showgrid=False, tickfont=dict(color='#8fa396')),
+                    yaxis=dict(title="Métrica Registrada", showgrid=True, gridcolor='#142218', tickfont=dict(color='#8fa396'))
                 )
                 st.plotly_chart(fig, use_container_width=True)
