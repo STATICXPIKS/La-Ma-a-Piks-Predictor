@@ -25,12 +25,12 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO CON TÍTULO EXTREMADAMENTE GRANDE AL CENTRO */
+    /* CONTENEDOR DEL ENCABEZADO CON TÍTULO EXTREMADAMENTE GIGANTE */
     .header-layout {
         display: flex;
         flex-direction: column;
         width: 100%;
-        padding: 15px 0 25px 0;
+        padding: 10px 0 20px 0;
         border-bottom: 2px solid #00FF66;
         margin-bottom: 20px;
         background-color: #000000;
@@ -42,16 +42,17 @@ st.markdown("""
         margin-bottom: 10px;
     }
 
-    /* TÍTULO EXTREMADAMENTE GRANDE (8rem) */
+    /* TÍTULO FORZADO 10 VECES MÁS GRANDE */
     .brand-title-colossal {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: 8rem !important; /* TAMAÑO MASIVO */
+        font-size: clamp(4rem, 7vw, 9rem) !important; /* TAMAÑO MASIVO 10X */
         text-transform: uppercase;
         letter-spacing: 6px;
-        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6), 3px 3px 10px #000;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6), 4px 4px 10px #000;
         margin: 0;
         line-height: 1.0;
+        display: block !important;
     }
 
     .sub-left-row {
@@ -165,7 +166,6 @@ st.markdown("""
 
     .card-high { border-left: 4px solid #00FF66 !important; }
     .card-medium { border-left: 4px solid #FF9900 !important; }
-    .card-low { border-left: 4px solid #FF0055 !important; }
     .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; }
 
     .cyber-badge {
@@ -179,7 +179,6 @@ st.markdown("""
     }
     .badge-high { background-color: #00FF66; color: #000000; }
     .badge-medium { background-color: #FF9900; color: #000000; }
-    .badge-low { background-color: #FF0055; color: #ffffff; }
     .badge-star { background-color: #FFD700; color: #000000; box-shadow: 0 0 8px rgba(255,215,0,0.8); }
 
     /* Matchup Card Banner */
@@ -333,7 +332,7 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO CON TÍTULO EXTREMADAMENTE GRANDE AL CENTRO Y PREMIER LEAGUE A LA IZQUIERDA
+# ENCABEZADO CON TÍTULO EXTREMADAMENTE GRANDE AL CENTRO
 st.markdown(f"""
 <div class="header-layout">
     <div class="title-center-row">
@@ -485,7 +484,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX CON DESPLEGABLES OCULTABLES DE GRÁFICAS
+# COLUMNA DERECHA: ANÁLISIS MATRIX FILTRADO (SOLO MEDIA Y ALTA PROBABILIDAD)
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
@@ -517,7 +516,13 @@ with col_right_panel:
         {"tit": f"11. Gana Cualquier Mitad: {away_team}", "sub": "Win Either Half Visitante", "prob": p_win_any_a, "odd": m_win_any_a}
     ]
 
-    for item in mercados_list:
+    # FILTRADO: SOLO MOSTRAR APUESTAS DE PROBABILIDAD MEDIA Y ALTA (EXCLUIR LOW PROBABILITY <60%)
+    mercados_filtrados = [m for m in mercados_list if m['prob'] >= 0.60]
+
+    if not mercados_filtrados:
+        st.info("No se detectaron apuestas con probabilidad superior al 60% para los parámetros actuales.")
+
+    for item in mercados_filtrados:
         dec_odd = parse_odds_to_decimal(item['odd'], tipo_momio)
         ev = calcular_ev(item['prob'], dec_odd)
         lbl, card, badge = clasificar_opcion(item['prob'], ev)
