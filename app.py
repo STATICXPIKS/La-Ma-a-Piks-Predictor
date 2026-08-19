@@ -25,12 +25,12 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO EXACTO A LA IMAGEN ADJUNTA */
+    /* ENCABEZADO CON TÍTULO EXTREMADAMENTE GRANDE AL CENTRO */
     .header-layout {
         display: flex;
         flex-direction: column;
         width: 100%;
-        padding: 10px 0 15px 0;
+        padding: 15px 0 25px 0;
         border-bottom: 2px solid #00FF66;
         margin-bottom: 20px;
         background-color: #000000;
@@ -39,26 +39,28 @@ st.markdown("""
     .title-center-row {
         text-align: center;
         width: 100%;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
 
-    .brand-title-giant {
+    /* TÍTULO EXTREMADAMENTE GRANDE (8rem) */
+    .brand-title-colossal {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: 4rem !important; /* TAMAÑO MUY GRANDE CENTRADO */
+        font-size: 8rem !important; /* TAMAÑO MASIVO */
         text-transform: uppercase;
-        letter-spacing: 4px;
-        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 2px 2px 5px #000;
+        letter-spacing: 6px;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6), 3px 3px 10px #000;
         margin: 0;
-        line-height: 1.1;
+        line-height: 1.0;
     }
 
     .sub-left-row {
         display: flex;
         align-items: center;
-        justify-content: flex-start; /* ALINEADO A LA IZQUIERDA */
+        justify-content: flex-start;
         gap: 12px;
         width: 100%;
+        margin-top: 10px;
     }
 
     .pl-logo-small {
@@ -70,9 +72,9 @@ st.markdown("""
     .pl-sub-title-left {
         color: #FFFFFF !important;
         font-weight: 900;
-        font-size: 1rem !important;
+        font-size: 1.1rem !important;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.5px;
         margin: 0;
     }
 
@@ -331,11 +333,11 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO CORREGIDO: TÍTULO GIGANTE AL CENTRO, SUBTÍTULO A LA IZQUIERDA
+# ENCABEZADO CON TÍTULO EXTREMADAMENTE GRANDE AL CENTRO Y PREMIER LEAGUE A LA IZQUIERDA
 st.markdown(f"""
 <div class="header-layout">
     <div class="title-center-row">
-        <h1 class="brand-title-giant">LA MAÑA PICKS</h1>
+        <h1 class="brand-title-colossal">LA MAÑA PICKS</h1>
     </div>
     <div class="sub-left-row">
         <img src="{PL_LOGO_URL}" class="pl-logo-small">
@@ -483,7 +485,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX CON DESPLEGABLES OCULTABLES DE GRÁFICAS (EXPANDERS)
+# COLUMNA DERECHA: ANÁLISIS MATRIX CON DESPLEGABLES OCULTABLES DE GRÁFICAS
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
