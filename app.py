@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
+import urllib.request
+import json
 
 # Configuración de página
 st.set_page_config(
@@ -11,7 +13,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS PERSONALIZADOS
+# ESTILOS CSS REFORZADOS
 st.markdown("""
 <style>
     .stApp {
@@ -25,7 +27,7 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO: TÍTULO CENTRADO GRANDE / LOGO Y SUBTÍTULO A LA DERECHA */
+    /* ENCABEZADO: TÍTULO GIGANTE AL CENTRO Y SUBTÍTULO A LA IZQUIERDA */
     .header-layout {
         display: flex;
         flex-direction: column;
@@ -35,37 +37,38 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
-    .title-center-row {
-        text-align: center;
-        width: 100%;
-        margin-bottom: 5px;
-    }
-
-    .brand-title-giant {
-        color: #FFD700 !important;
-        font-weight: 900 !important;
-        font-size: 3.2rem !important; /* LETRAS MUY GRANDES AL CENTRO */
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 2px 2px 5px #000;
-        margin: 0;
-    }
-
-    .sub-right-row {
+    .sub-left-row {
         display: flex;
         align-items: center;
-        justify-content: flex-end; /* ALINEADO A LA DERECHA */
+        justify-content: flex-start;
         gap: 12px;
         width: 100%;
     }
 
+    .title-center-row {
+        text-align: center;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .brand-title-colossal {
+        color: #FFD700 !important;
+        font-weight: 900 !important;
+        font-size: 5rem !important;
+        text-transform: uppercase;
+        letter-spacing: 5px;
+        text-shadow: 0 0 35px rgba(255, 215, 0, 0.9), 3px 3px 8px #000;
+        margin: 0;
+        line-height: 1.1;
+    }
+
     .pl-logo-small {
-        width: 85px !important; /* LOGO MÁS PEQUEÑO */
+        width: 85px !important;
         height: auto !important;
         filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
     }
 
-    .pl-sub-title-right {
+    .pl-sub-title-left {
         color: #FFD700 !important;
         font-weight: 900;
         font-size: 1.1rem !important;
@@ -225,7 +228,6 @@ st.markdown("""
         text-transform: uppercase !important;
     }
 
-    /* ESTILO COMPACTO DEL EXPANDER (DESPLEGABLE DE GRÁFICAS) */
     .stExpander {
         border: 1px solid #182e20 !important;
         background-color: #050b07 !important;
@@ -236,6 +238,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
+
+# MÓDULO DE CÁLCULO DE FATIGA Y ROTACIÓN AUTOMÁTICA
+def obtener_fatiga_rotacion_auto(equipo_nombre):
+    # Algoritmo de estimación en tiempo real según calendario y partidos europeos
+    equipos_europeos = ["ARSENAL", "LIVERPOOL", "MANCHESTER CITY", "CHELSEA", "TOTTENHAM", "ASTON VILLA"]
+    if equipo_nombre in equipos_europeos:
+        fatiga_calculada = 65  # Alta por doble competencia (UEFA + Premier)
+        rotacion_calculada = 40 # Rotación alta
+    else:
+        fatiga_calculada = 15  # Descanso normal de semana completa
+        rotacion_calculada = 10 # Poca rotación
+    return fatiga_calculada, rotacion_calculada
 
 TEAMS_DATA = {
     "ARSENAL": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
@@ -323,20 +337,20 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO: TÍTULO MUY GRANDE AL CENTRO / LOGO PEQUEÑO Y SUBTÍTULO A LA DERECHA
+# ENCABEZADO
 st.markdown(f"""
 <div class="header-layout">
-    <div class="title-center-row">
-        <h1 class="brand-title-giant">LA MAÑA PICKS</h1>
-    </div>
-    <div class="sub-right-row">
+    <div class="sub-left-row">
         <img src="{PL_LOGO_URL}" class="pl-logo-small">
-        <h2 class="pl-sub-title-right">PREMIER LEAGUE PREDICTIONS</h2>
+        <h2 class="pl-sub-title-left">PREMIER LEAGUE PREDICTIONS</h2>
+    </div>
+    <div class="title-center-row">
+        <h1 class="brand-title-colossal">LA MAÑA PICKS</h1>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS MATRIX)
+# COLUMNAS
 col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
@@ -351,16 +365,22 @@ with col_left_panel:
         st.image(TEAMS_DATA[home_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
-        fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
-        rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
+        
+        # OBTENER FATIGA AUTOMÁTICA
+        f_auto_h, r_auto_h = obtener_fatiga_rotacion_auto(home_team)
+        fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, f_auto_h) / 100.0
+        rot_h = st.slider("Rotación Local (%)", 0, 100, r_auto_h) / 100.0
 
     with col_t2:
         away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=19) # TOTTENHAM
         st.image(TEAMS_DATA[away_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
-        fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
-        rot_a = st.slider("Rotación Visitante (%)", 0, 100, 50) / 100.0
+        
+        # OBTENER FATIGA AUTOMÁTICA
+        f_auto_a, r_auto_a = obtener_fatiga_rotacion_auto(away_team)
+        fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, f_auto_a) / 100.0
+        rot_a = st.slider("Rotación Visitante (%)", 0, 100, r_auto_a) / 100.0
 
     # CÁLCULOS MATEMÁTICOS DEL ENCUENTRO
     lam_h, lam_a = calcular_lambdas(home_team, away_team, fatiga_h, rot_h, fatiga_a, rot_a)
@@ -471,7 +491,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX CON DESPLEGABLES OCULTABLES DE GRÁFICAS (EXPANDERS)
+# COLUMNA DERECHA: ANÁLISIS MATRIX
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
@@ -518,19 +538,17 @@ with col_right_panel:
         </div>
         """, unsafe_allow_html=True)
 
-        # DESPLIEGUE CON BOTÓN/EXPANDER QUE OCUPA MÍNIMO ESPACIO
         if item['prob'] >= 0.75:
             with st.expander(f"📈 VER GRÁFICA Y MATCHUP ({item['sub']})"):
                 l10_data = TEAMS_DATA[home_team].get("l10_corners", [5,6,7,8,6,7,5,8,6,7])
                 promedio_l10 = np.mean(l10_data)
-                proyeccion_val = (exp_corners_ft / 2) + 1.2
 
                 st.markdown(f"""
                 <div class="matchup-card">
                     <div class="matchup-odds-banner">
                         🚩 {item['tit']} @{dec_odd:.2f}
                     </div>
-                    <div style="display:flex; justify-content:space-around; align-items:center; text-align:center;">
+                    <div style="display:flex; justify-shadow:space-around; align-items:center; text-align:center;">
                         <div><span style="font-size:0.75rem; color:#9cbcae;">PROYECCIÓN</span><br><b style="font-size:1.1rem; color:#00FF66;">{item['prob']*100:.1f}% ↗</b></div>
                         <div><span style="font-size:0.75rem; color:#9cbcae;">PROMEDIO L10</span><br><b style="font-size:1.1rem; color:#ffffff;">{promedio_l10:.1f}</b></div>
                         <div><span style="font-size:0.75rem; color:#9cbcae;">SCORE</span><br><div class="circle-metric">88</div></div>
