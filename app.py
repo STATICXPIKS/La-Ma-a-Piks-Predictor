@@ -11,7 +11,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS REFORZADOS
+# ESTILOS CSS PERSONALIZADOS
 st.markdown("""
 <style>
     .stApp {
@@ -25,48 +25,52 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO CENTRADO CON LETRAS GRANDES */
-    .header-centered-container {
+    /* ENCABEZADO: TÍTULO CENTRADO GRANDE / LOGO Y SUBTÍTULO A LA DERECHA */
+    .header-layout {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 10px 0 20px 0;
-        background-color: #000000;
+        width: 100%;
+        padding: 10px 0 15px 0;
         border-bottom: 2px solid #00FF66;
         margin-bottom: 20px;
     }
 
-    .brand-title-center {
+    .title-center-row {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .brand-title-giant {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: 3rem !important; /* LETRAS GRANDES */
+        font-size: 3.2rem !important; /* LETRAS MUY GRANDES AL CENTRO */
         text-transform: uppercase;
         letter-spacing: 3px;
-        text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 2px 2px 4px #000;
-        margin: 0 0 10px 0;
+        text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 2px 2px 5px #000;
+        margin: 0;
     }
 
-    .pl-row-center {
+    .sub-right-row {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 15px;
+        justify-content: flex-end; /* ALINEADO A LA DERECHA */
+        gap: 12px;
+        width: 100%;
     }
 
-    .pl-logo-neon {
-        width: 140px !important;
+    .pl-logo-small {
+        width: 85px !important; /* LOGO MÁS PEQUEÑO */
         height: auto !important;
-        filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 10px #00FF66) !important;
+        filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
     }
 
-    .pl-sub-title-center {
+    .pl-sub-title-right {
         color: #FFD700 !important;
         font-weight: 900;
-        font-size: 1.25rem !important;
+        font-size: 1.1rem !important;
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         margin: 0;
     }
 
@@ -88,7 +92,7 @@ st.markdown("""
         background-color: #000000 !important;
     }
 
-    /* POPUP/LISTBOX DE SELECTBOX EN FONDO NEGRO CON TEXTO BLANCO */
+    /* DESPLEGABLES FLOTANTES */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
@@ -108,17 +112,17 @@ st.markdown("""
         font-weight: 900 !important;
     }
 
-    /* Inputs de texto para momios */
+    /* Inputs para momios */
     .stTextInput input {
         background-color: #0a140d !important;
         color: #FFD700 !important;
         border: 1px solid #00FF66 !important;
         border-radius: 5px !important;
-        font-weight: bold !important;
+        font-weight: 900 !important;
         font-size: 0.85rem !important;
     }
 
-    /* Badges de Historial (G/E/P) */
+    /* Badges de Historial */
     .form-container {
         display: flex;
         gap: 4px;
@@ -136,11 +140,11 @@ st.markdown("""
         border-radius: 3px;
         color: #000000;
     }
-    .form-g { background-color: #00FF66; color: #000; box-shadow: 0 0 6px rgba(0,255,102,0.6); }
-    .form-e { background-color: #FFD700; color: #000; box-shadow: 0 0 6px rgba(255,215,0,0.6); }
-    .form-p { background-color: #FF0055; color: #FFF; box-shadow: 0 0 6px rgba(255,0,85,0.6); }
+    .form-g { background-color: #00FF66; color: #000; }
+    .form-e { background-color: #FFD700; color: #000; }
+    .form-p { background-color: #FF0055; color: #FFF; }
 
-    /* Tarjetas de Análisis Compactas */
+    /* Tarjetas de Análisis */
     .cyber-card {
         background: linear-gradient(90deg, rgba(13, 24, 17, 0.95) 0%, rgba(7, 14, 10, 0.95) 100%);
         border: 1px solid #182e20;
@@ -155,10 +159,10 @@ st.markdown("""
     .cyber-card-title { font-weight: 800; font-size: 0.85rem; color: #ffffff; }
     .cyber-card-sub { font-size: 0.73rem; color: #9cbcae; font-family: monospace; }
 
-    .card-high { border-left: 4px solid #00FF66 !important; box-shadow: -3px 0 8px rgba(0, 255, 102, 0.3); }
-    .card-medium { border-left: 4px solid #FF9900 !important; box-shadow: -3px 0 8px rgba(255, 153, 0, 0.3); }
-    .card-low { border-left: 4px solid #FF0055 !important; box-shadow: -3px 0 8px rgba(255, 0, 85, 0.3); }
-    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5) !important; }
+    .card-high { border-left: 4px solid #00FF66 !important; }
+    .card-medium { border-left: 4px solid #FF9900 !important; }
+    .card-low { border-left: 4px solid #FF0055 !important; }
+    .card-star { border: 1.5px solid #FFD700 !important; background: linear-gradient(135deg, #1c2600 0%, #0a140d 100%) !important; }
 
     .cyber-badge {
         font-weight: 900;
@@ -178,36 +182,34 @@ st.markdown("""
     .matchup-card {
         background: #000000;
         border: 1px solid #00FF66;
-        border-radius: 12px;
-        padding: 12px;
-        margin-top: 6px;
-        margin-bottom: 12px;
-        box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 5px;
+        margin-bottom: 8px;
     }
     .matchup-odds-banner {
         background: rgba(0, 255, 102, 0.1);
         border: 1px solid #00FF66;
         border-radius: 6px;
-        padding: 6px 10px;
+        padding: 4px 8px;
         text-align: center;
         font-weight: 900;
-        font-size: 0.88rem;
+        font-size: 0.82rem;
         color: #00FF66;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
     .circle-metric {
-        width: 42px;
-        height: 42px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         border: 2px solid #00FF66;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 900;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #ffffff;
         margin: 0 auto;
-        box-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
     }
 
     .stButton>button {
@@ -222,12 +224,19 @@ st.markdown("""
         width: 100% !important;
         text-transform: uppercase !important;
     }
+
+    /* ESTILO COMPACTO DEL EXPANDER (DESPLEGABLE DE GRÁFICAS) */
+    .stExpander {
+        border: 1px solid #182e20 !important;
+        background-color: #050b07 !important;
+        border-radius: 6px !important;
+        margin-bottom: 8px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# BASE DE DATOS DE EQUIPOS CON ESCUDOS ORIGINALES EN PNG HD (CDN FOOTBALL-DATA)
 TEAMS_DATA = {
     "ARSENAL": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
     "ASTON VILLA": {"logo": "https://crests.football-data.org/58.png", "xg": 1.75, "xga": 1.30, "ppda": 11.2, "aereos": 51, "corners": 5.4, "forma": ["G","P","G","E","G","P","G","E","G","P"], "l10_corners": [5, 6, 4, 7, 5, 6, 8, 5, 4, 6]},
@@ -314,18 +323,20 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO CENTRADO
+# ENCABEZADO: TÍTULO MUY GRANDE AL CENTRO / LOGO PEQUEÑO Y SUBTÍTULO A LA DERECHA
 st.markdown(f"""
-<div class="header-centered-container">
-    <h1 class="brand-title-center">LA MAÑA PICKS</h1>
-    <div class="pl-row-center">
-        <img src="{PL_LOGO_URL}" class="pl-logo-neon">
-        <h2 class="pl-sub-title-center">PREMIER LEAGUE PREDICTIONS</h2>
+<div class="header-layout">
+    <div class="title-center-row">
+        <h1 class="brand-title-giant">LA MAÑA PICKS</h1>
+    </div>
+    <div class="sub-right-row">
+        <img src="{PL_LOGO_URL}" class="pl-logo-small">
+        <h2 class="pl-sub-title-right">PREMIER LEAGUE PREDICTIONS</h2>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS Y GRÁFICAS)
+# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS MATRIX)
 col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
@@ -336,16 +347,16 @@ with col_left_panel:
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=1)
-        st.image(TEAMS_DATA[home_team]["logo"], width=45)
+        home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=3) # BRENTFORD
+        st.image(TEAMS_DATA[home_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
         fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, 15) / 100.0
         rot_h = st.slider("Rotación Local (%)", 0, 100, 10) / 100.0
 
     with col_t2:
-        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=2)
-        st.image(TEAMS_DATA[away_team]["logo"], width=45)
+        away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=19) # TOTTENHAM
+        st.image(TEAMS_DATA[away_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, 60) / 100.0
@@ -460,7 +471,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: MATCHUP CARD BANNER, GRÁFICAS Y ANÁLISIS MATRIX
+# COLUMNA DERECHA: ANÁLISIS MATRIX CON DESPLEGABLES OCULTABLES DE GRÁFICAS (EXPANDERS)
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
@@ -507,55 +518,44 @@ with col_right_panel:
         </div>
         """, unsafe_allow_html=True)
 
-        # DESPLIEGUE AUTOMÁTICO DE LA GRÁFICA Y BANNER PARA APUESTAS DE ALTA PROBABILIDAD (>= 75%)
+        # DESPLIEGUE CON BOTÓN/EXPANDER QUE OCUPA MÍNIMO ESPACIO
         if item['prob'] >= 0.75:
-            l10_data = TEAMS_DATA[home_team].get("l10_corners", [5,6,7,8,6,7,5,8,6,7])
-            promedio_l10 = np.mean(l10_data)
-            proyeccion_val = (exp_corners_ft / 2) + 1.2
+            with st.expander(f"📈 VER GRÁFICA Y MATCHUP ({item['sub']})"):
+                l10_data = TEAMS_DATA[home_team].get("l10_corners", [5,6,7,8,6,7,5,8,6,7])
+                promedio_l10 = np.mean(l10_data)
+                proyeccion_val = (exp_corners_ft / 2) + 1.2
 
-            st.markdown(f"""
-            <div class="matchup-card">
-                <div class="matchup-odds-banner">
-                    🚩 {item['tit']} @{dec_odd:.2f}
-                </div>
-                <div style="display:flex; justify-shadow:space-around; align-items:center; text-align:center; margin-bottom:8px;">
-                    <div>
-                        <span style="font-size:0.75rem; color:#9cbcae;">PROYECCIÓN</span><br>
-                        <b style="font-size:1.1rem; color:#00FF66;">{item['prob']*100:.1f}% ↗</b>
+                st.markdown(f"""
+                <div class="matchup-card">
+                    <div class="matchup-odds-banner">
+                        🚩 {item['tit']} @{dec_odd:.2f}
                     </div>
-                    <div>
-                        <span style="font-size:0.75rem; color:#9cbcae;">PROMEDIO L10</span><br>
-                        <b style="font-size:1.1rem; color:#ffffff;">{promedio_l10:.1f}</b>
-                    </div>
-                    <div>
-                        <span style="font-size:0.75rem; color:#9cbcae;">SCORE</span><br>
-                        <div class="circle-metric">88</div>
-                    </div>
-                    <div>
-                        <span style="font-size:0.75rem; color:#9cbcae;">MATCHUP</span><br>
-                        <div class="circle-metric">A+</div>
+                    <div style="display:flex; justify-content:space-around; align-items:center; text-align:center;">
+                        <div><span style="font-size:0.75rem; color:#9cbcae;">PROYECCIÓN</span><br><b style="font-size:1.1rem; color:#00FF66;">{item['prob']*100:.1f}% ↗</b></div>
+                        <div><span style="font-size:0.75rem; color:#9cbcae;">PROMEDIO L10</span><br><b style="font-size:1.1rem; color:#ffffff;">{promedio_l10:.1f}</b></div>
+                        <div><span style="font-size:0.75rem; color:#9cbcae;">SCORE</span><br><div class="circle-metric">88</div></div>
+                        <div><span style="font-size:0.75rem; color:#9cbcae;">MATCHUP</span><br><div class="circle-metric">A+</div></div>
                     </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-            colors = ['#00FF66' if x >= 5 else '#FF0055' for x in l10_data]
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=[f"P{i+1}" for i in range(10)],
-                y=l10_data,
-                marker_color=colors,
-                text=l10_data,
-                textposition='auto',
-                hoverinfo='x+y'
-            ))
-            fig.update_layout(
-                title=dict(text=f"Tendencia Histórica L10 - {item['sub']}", font=dict(color="#00FF66", size=11)),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                height=180,
-                margin=dict(l=10, r=10, t=25, b=10),
-                xaxis=dict(showgrid=False, tickfont=dict(color='#8fa396')),
-                yaxis=dict(showgrid=True, gridcolor='#142218', tickfont=dict(color='#8fa396'))
-            )
-            st.plotly_chart(fig, use_container_width=True)
+                colors = ['#00FF66' if x >= 5 else '#FF0055' for x in l10_data]
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=[f"P{i+1}" for i in range(10)],
+                    y=l10_data,
+                    marker_color=colors,
+                    text=l10_data,
+                    textposition='auto',
+                    hoverinfo='x+y'
+                ))
+                fig.update_layout(
+                    title=dict(text=f"Tendencia L10 - {item['sub']}", font=dict(color="#00FF66", size=11)),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    height=180,
+                    margin=dict(l=10, r=10, t=25, b=10),
+                    xaxis=dict(showgrid=False, tickfont=dict(color='#8fa396')),
+                    yaxis=dict(showgrid=True, gridcolor='#142218', tickfont=dict(color='#8fa396'))
+                )
+                st.plotly_chart(fig, use_container_width=True)
