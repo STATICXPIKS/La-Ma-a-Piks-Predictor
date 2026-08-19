@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
-import urllib.request
-import json
 
 # Configuración de página
 st.set_page_config(
@@ -27,7 +25,7 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO: TÍTULO GIGANTE AL CENTRO Y SUBTÍTULO A LA IZQUIERDA */
+    /* ENCABEZADO EXACTO A LA IMAGEN ADJUNTA */
     .header-layout {
         display: flex;
         flex-direction: column;
@@ -35,45 +33,46 @@ st.markdown("""
         padding: 10px 0 15px 0;
         border-bottom: 2px solid #00FF66;
         margin-bottom: 20px;
-    }
-
-    .sub-left-row {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 12px;
-        width: 100%;
+        background-color: #000000;
     }
 
     .title-center-row {
         text-align: center;
         width: 100%;
-        margin-top: 10px;
+        margin-bottom: 15px;
     }
 
-    .brand-title-colossal {
+    .brand-title-giant {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: 5rem !important;
+        font-size: 4rem !important; /* TAMAÑO MUY GRANDE CENTRADO */
         text-transform: uppercase;
-        letter-spacing: 5px;
-        text-shadow: 0 0 35px rgba(255, 215, 0, 0.9), 3px 3px 8px #000;
+        letter-spacing: 4px;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 2px 2px 5px #000;
         margin: 0;
         line-height: 1.1;
     }
 
+    .sub-left-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* ALINEADO A LA IZQUIERDA */
+        gap: 12px;
+        width: 100%;
+    }
+
     .pl-logo-small {
-        width: 85px !important;
+        width: 110px !important;
         height: auto !important;
         filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
     }
 
     .pl-sub-title-left {
-        color: #FFD700 !important;
+        color: #FFFFFF !important;
         font-weight: 900;
-        font-size: 1.1rem !important;
+        font-size: 1rem !important;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
+        letter-spacing: 1px;
         margin: 0;
     }
 
@@ -239,17 +238,12 @@ st.markdown("""
 
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# MÓDULO DE CÁLCULO DE FATIGA Y ROTACIÓN AUTOMÁTICA
+# FUNCIÓN PARA FATIGA AUTOMÁTICA
 def obtener_fatiga_rotacion_auto(equipo_nombre):
-    # Algoritmo de estimación en tiempo real según calendario y partidos europeos
     equipos_europeos = ["ARSENAL", "LIVERPOOL", "MANCHESTER CITY", "CHELSEA", "TOTTENHAM", "ASTON VILLA"]
     if equipo_nombre in equipos_europeos:
-        fatiga_calculada = 65  # Alta por doble competencia (UEFA + Premier)
-        rotacion_calculada = 40 # Rotación alta
-    else:
-        fatiga_calculada = 15  # Descanso normal de semana completa
-        rotacion_calculada = 10 # Poca rotación
-    return fatiga_calculada, rotacion_calculada
+        return 65, 40
+    return 15, 10
 
 TEAMS_DATA = {
     "ARSENAL": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
@@ -337,20 +331,20 @@ def calcular_prob_ha(linea_str, is_local, p_1, p_x, p_2, matriz):
         return float(sum(matriz[h, a] for h in range(8) for a in range(8) if h > (a + 1.0))) if is_local else float(sum(matriz[h, a] for h in range(8) for a in range(8) if a > (h + 1.0)))
     return 0.5
 
-# ENCABEZADO
+# ENCABEZADO CORREGIDO: TÍTULO GIGANTE AL CENTRO, SUBTÍTULO A LA IZQUIERDA
 st.markdown(f"""
 <div class="header-layout">
+    <div class="title-center-row">
+        <h1 class="brand-title-giant">LA MAÑA PICKS</h1>
+    </div>
     <div class="sub-left-row">
         <img src="{PL_LOGO_URL}" class="pl-logo-small">
         <h2 class="pl-sub-title-left">PREMIER LEAGUE PREDICTIONS</h2>
     </div>
-    <div class="title-center-row">
-        <h1 class="brand-title-colossal">LA MAÑA PICKS</h1>
-    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# COLUMNAS
+# ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS MATRIX)
 col_left_panel, col_right_panel = st.columns([7, 5])
 
 # ==============================================================================
@@ -366,7 +360,6 @@ with col_left_panel:
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
         
-        # OBTENER FATIGA AUTOMÁTICA
         f_auto_h, r_auto_h = obtener_fatiga_rotacion_auto(home_team)
         fatiga_h = st.slider("Fatiga UEFA Local (%)", 0, 100, f_auto_h) / 100.0
         rot_h = st.slider("Rotación Local (%)", 0, 100, r_auto_h) / 100.0
@@ -377,7 +370,6 @@ with col_left_panel:
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         
-        # OBTENER FATIGA AUTOMÁTICA
         f_auto_a, r_auto_a = obtener_fatiga_rotacion_auto(away_team)
         fatiga_a = st.slider("Fatiga UEFA Visitante (%)", 0, 100, f_auto_a) / 100.0
         rot_a = st.slider("Rotación Visitante (%)", 0, 100, r_auto_a) / 100.0
@@ -491,7 +483,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX
+# COLUMNA DERECHA: ANÁLISIS MATRIX CON DESPLEGABLES OCULTABLES DE GRÁFICAS (EXPANDERS)
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
