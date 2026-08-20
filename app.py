@@ -6,12 +6,12 @@ import plotly.graph_objects as go
 
 # Configuración de página
 st.set_page_config(
-    page_title="LA MAÑA PICKS - FOOTBALL PREDICTIONS",
+    page_title="LA MAÑA PICKS",
     layout="wide",
     page_icon="⚽"
 )
 
-# ESTILOS CSS REFORZADOS CON DUALIDAD DE LOGOS Y BOTONES
+# ESTILOS CSS CON TÍTULO GIGANTE INAMOVIBLE Y SELECTOR ALINEADO
 st.markdown("""
 <style>
     .stApp {
@@ -25,58 +25,47 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO CON TÍTULO GIGANTE CENTRADO */
-    .header-layout {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        padding: 10px 0 15px 0;
-        border-bottom: 2px solid #00FF66;
-        margin-bottom: 20px;
-        background-color: #000000;
-    }
-
-    .title-center-row {
-        text-align: center;
-        width: 100%;
-        margin-bottom: 10px;
-    }
-
-    .brand-title-colossal {
-        color: #FFD700 !important;
-        font-weight: 900 !important;
-        font-size: clamp(4rem, 7vw, 9rem) !important;
-        text-transform: uppercase;
-        letter-spacing: 6px;
-        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6), 4px 4px 10px #000;
-        margin: 0;
-        line-height: 1.0;
-        display: block !important;
-    }
-
-    /* FILA DE LIGAS CON LOGO Y BOTÓN A UN LADO CADA UNO */
-    .leagues-row {
+    /* FILA DE LIGAS: LOGO + SELECTOR + LOGO + SELECTOR */
+    .league-header-bar {
         display: flex;
         align-items: center;
         justify-content: flex-start;
-        gap: 25px;
-        width: 100%;
+        gap: 15px;
         margin-top: 15px;
+        margin-bottom: 10px;
     }
 
-    .league-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .league-logo-neon {
+    .league-logo-img {
         height: 45px !important;
         width: auto !important;
         filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
     }
 
-    /* SELECTBOX CON FONDO NEGRO Y TEXTO BLANCO NEGRITA */
+    /* SELECTOR RADIO ESTILO BOTÓN CIRCULAR */
+    div[data-testid="stRadio"] > div {
+        flex-direction: row !important;
+        gap: 30px !important;
+    }
+
+    div[data-testid="stRadio"] label {
+        background-color: #000000 !important;
+        border: 2px solid #00FF66 !important;
+        padding: 8px 16px !important;
+        border-radius: 20px !important;
+        color: #FFFFFF !important;
+        font-weight: 900 !important;
+        font-size: 0.95rem !important;
+        text-transform: uppercase !important;
+        cursor: pointer !important;
+        box-shadow: 0 0 10px rgba(0, 255, 102, 0.3) !important;
+    }
+
+    div[data-testid="stRadio"] label:hover {
+        background-color: #00FF66 !important;
+        color: #000000 !important;
+    }
+
+    /* SELECTBOX EN FONDO NEGRO #000000 */
     div[data-baseweb="select"] {
         background-color: #000000 !important;
         border: 2px solid #00FF66 !important;
@@ -94,14 +83,14 @@ st.markdown("""
         background-color: #000000 !important;
     }
 
-    /* DESPLEGABLES FLOTANTES */
+    /* DESPLEGABLE EN FONDO OSCURO */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     div[data-baseweb="menu"] *,
     ul[role="listbox"],
     ul[role="listbox"] * {
-        background-color: #000000 !important;
+        background-color: #0b140e !important;
         color: #ffffff !important;
         font-weight: 900 !important;
         text-transform: uppercase !important;
@@ -216,11 +205,12 @@ st.markdown("""
         background: linear-gradient(135deg, #00FF66 0%, #009933 100%) !important;
         color: #000000 !important;
         font-weight: 900 !important;
-        font-size: 0.95rem !important;
+        font-size: 1rem !important;
         border: none !important;
         border-radius: 6px !important;
-        padding: 8px 14px !important;
-        box-shadow: 0 0 10px rgba(0, 255, 102, 0.4) !important;
+        padding: 10px 16px !important;
+        box-shadow: 0 0 12px rgba(0, 255, 102, 0.5) !important;
+        width: 100% !important;
         text-transform: uppercase !important;
     }
 
@@ -236,9 +226,35 @@ st.markdown("""
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 LALIGA_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg"
 
-# ESTADO INICIAL DE LA LIGA SELECCIONADA
-if "liga_activa" not in st.session_state:
-    st.session_state["liga_activa"] = "PREMIER LEAGUE"
+# TÍTULO GIGANTE CENTRADO
+st.markdown("""
+<div style="text-align: center; width: 100%; padding: 10px 0 15px 0; background-color: #000000;">
+    <div style="color: #FFD700; font-weight: 900; font-size: 90px; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 0 35px rgba(255, 215, 0, 1), 0 0 70px rgba(255, 215, 0, 0.6), 4px 4px 8px #000; line-height: 1.0;">
+        LA MAÑA PICKS
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# FILA ALINEADA DE LOGOS Y BOTONES CIRCULARES DE SELECCIÓN
+c_logo1, c_logo2, c_space = st.columns([2, 5, 3])
+
+with c_logo1:
+    st.markdown(f'''
+    <div style="display:flex; align-items:center; gap:20px; padding-top:5px;">
+        <img src="{PL_LOGO_URL}" class="league-logo-img">
+        <img src="{LALIGA_LOGO_URL}" class="league-logo-img">
+    </div>
+    ''', unsafe_allow_html=True)
+
+with c_logo2:
+    liga_seleccionada = st.radio(
+        "",
+        ["PREMIER LEAGUE", "LALIGA (ESPAÑA)"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+
+st.markdown("<div style='border-bottom: 2px solid #00FF66; margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
 # BASE DE DATOS PREMIER LEAGUE (20 EQUIPOS)
 PREMIER_LEAGUE_DATA = {
@@ -288,8 +304,8 @@ LALIGA_DATA = {
     "ALAVES": {"logo": "https://crests.football-data.org/263.png", "xg": 1.25, "xga": 1.45, "ppda": 12.0, "aereos": 56, "corners": 4.4, "forma": ["P","E","G","P","P","E","G","P","P","G"], "l10_corners": [4, 5, 4, 5, 4, 5, 4, 5, 3, 4]}
 }
 
-# CAMBIO DE LIGA SEGÚN EL BOTÓN PRESIONADO
-if st.session_state["liga_activa"] == "PREMIER LEAGUE":
+# SELECCIÓN DINÁMICA DE DATASET
+if liga_seleccionada == "PREMIER LEAGUE":
     TEAMS_DATA = PREMIER_LEAGUE_DATA
 else:
     TEAMS_DATA = LALIGA_DATA
@@ -363,34 +379,6 @@ def obtener_fatiga_rotacion_auto(equipo_nombre):
         return 65, 40
     return 15, 10
 
-# ENCABEZADO CENTRADO CON TÍTULO GIGANTE
-st.markdown("""
-<div class="header-layout">
-    <div class="title-center-row">
-        <span class="brand-title-massive">LA MAÑA PICKS</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# FILA CON LOGOS DE AMBAS LIGAS Y BOTÓN SELECTOR A UN LADO DE CADA UNO
-col_pl_logo, col_pl_btn, col_laliga_logo, col_laliga_btn, col_blank = st.columns([1.5, 2.5, 1.5, 2.5, 2])
-
-with col_pl_logo:
-    st.markdown(f'<img src="{PL_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
-with col_pl_btn:
-    if st.button("GB PREMIER LEAGUE", use_container_width=True):
-        st.session_state["liga_activa"] = "PREMIER LEAGUE"
-        st.rerun()
-
-with col_laliga_logo:
-    st.markdown(f'<img src="{LALIGA_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
-with col_laliga_btn:
-    if st.button("ES LALIGA (ESPAÑA)", use_container_width=True):
-        st.session_state["liga_activa"] = "LALIGA"
-        st.rerun()
-
-st.markdown("---")
-
 # ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS MATRIX)
 col_left_panel, col_right_panel = st.columns([7, 5])
 
@@ -398,7 +386,7 @@ col_left_panel, col_right_panel = st.columns([7, 5])
 # COLUMNA IZQUIERDA: DATOS Y CONFIGURACIÓN DEL ENCUENTRO
 # ==============================================================================
 with col_left_panel:
-    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO ({st.session_state['liga_activa']})</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO ({liga_seleccionada})</h3>", unsafe_allow_html=True)
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
@@ -530,7 +518,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX FILTRADO
+# COLUMNA DERECHA: ANÁLISIS MATRIX FILTRADO (SOLO >=60%)
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
