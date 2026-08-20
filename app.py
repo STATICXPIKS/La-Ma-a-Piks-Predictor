@@ -8,11 +8,10 @@ import plotly.graph_objects as go
 st.set_page_config(
     page_title="LA MAÑA PICKS - PANEL DE APUESTAS",
     layout="wide",
-    initial_sidebar_state="expanded",
     page_icon="⚽"
 )
 
-# ESTILOS CSS CLAROS ANALÍTICOS
+# ESTILOS CSS CLAROS ANALÍTICOS CON SELECTOR DE LIGA VISIBLE
 st.markdown("""
 <style>
     .stApp {
@@ -30,7 +29,15 @@ st.markdown("""
         text-align: center;
         text-transform: uppercase;
         letter-spacing: 2px;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
+    }
+
+    .league-selector-box {
+        background-color: #ffffff;
+        border: 2px solid #10b981;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 15px;
     }
 
     .kpi-card {
@@ -41,8 +48,6 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         margin-bottom: 15px;
     }
-    .kpi-header { font-size: 0.78rem; font-weight: 800; color: #537065; text-transform: uppercase; }
-    .kpi-metric-main { font-size: 1.1rem; font-weight: 900; color: #0b4f30; text-align: center; margin-top: 8px; }
 
     .match-row-card {
         background-color: #ffffff;
@@ -85,11 +90,10 @@ st.markdown("""
         width: 100% !important;
         text-transform: uppercase !important;
     }
-    .stButton>button:hover { background-color: #047857 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 1. BASE DE DATOS EXACTA 20 EQUIPOS PREMIER LEAGUE
+# 1. BASE DE DATOS 20 EQUIPOS PREMIER LEAGUE
 PREMIER_LEAGUE_DATA = {
     "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg": 1.40, "xga": 1.55, "ppda": 10.5, "aereos": 48, "corners": 4.9, "tarjetas": 2.3, "forma": ["P","E","G","P","P","G","E","P","G","E"], "l10_corners": [4, 5, 6, 4, 3, 5, 6, 4, 5, 4]},
     "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg": 2.10, "xga": 0.85, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4, "forma": ["G","G","E","G","G","P","G","G","E","G"], "l10_corners": [7, 8, 6, 9, 5, 8, 10, 6, 4, 7]},
@@ -113,7 +117,7 @@ PREMIER_LEAGUE_DATA = {
     "Tottenham": {"logo": "https://crests.football-data.org/73.png", "xg": 1.85, "xga": 1.50, "ppda": 9.1, "aereos": 49, "corners": 6.3, "tarjetas": 2.1, "forma": ["G","P","G","G","E","P","G","P","G","E"], "l10_corners": [5, 7, 8, 6, 9, 5, 7, 8, 4, 6]}
 }
 
-# 2. BASE DE DATOS EXACTA 20 EQUIPOS LALIGA
+# 2. BASE DE DATOS 20 EQUIPOS LALIGA
 LALIGA_DATA = {
     "Deportivo Alavés": {"logo": "https://crests.football-data.org/263.png", "xg": 1.25, "xga": 1.45, "ppda": 12.0, "aereos": 56, "corners": 4.4, "tarjetas": 2.5, "forma": ["P","E","G","P","P","E","G","P","P","G"], "l10_corners": [4, 5, 4, 5, 4, 5, 4, 5, 3, 4]},
     "Espanyol": {"logo": "https://crests.football-data.org/80.png", "xg": 1.15, "xga": 1.60, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.6, "forma": ["P","P","E","P","G","P","P","E","P","P"], "l10_corners": [3, 4, 5, 3, 4, 5, 3, 4, 3, 4]},
@@ -174,35 +178,35 @@ def render_dots_forma(forma_list):
     return html
 
 # ==============================================================================
-# SIDEBAR IZQUIERDA: SELECCIÓN DE COMPETICIÓN
+# ENCABEZADO Y SELECTOR DIRECTO DE LIGA EN PANTALLA PRINCIPAL
 # ==============================================================================
-st.sidebar.markdown("<h3 style='color:#0b4f30; font-size:1.0rem; font-weight:900;'>🏆 NAVEGACIÓN DE COMPETICIÓN</h3>", unsafe_allow_html=True)
-
-competicion = st.sidebar.radio(
-    "Selecciona la Liga a Analizar:",
-    ["⚽ Premier League (Inglaterra)", "🔴 LaLiga EA Sports (España)"],
-    index=0
-)
-
-if "Premier League" in competicion:
-    TEAMS_DATA = PREMIER_LEAGUE_DATA
-    nombre_liga = "PREMIER LEAGUE"
-else:
-    TEAMS_DATA = LALIGA_DATA
-    nombre_liga = "LALIGA EA SPORTS"
-
 st.markdown("<h1 class='brand-title-top'>LA MAÑA PICKS - PANEL DE APUESTAS</h1>", unsafe_allow_html=True)
 
-# ==============================================================================
-# DISPOSICIÓN PRINCIPAL EN DOS COLUMNAS PARALELAS (50/50)
-# ==============================================================================
+# DISPOSICIÓN EN 2 COLUMNAS PARALELAS (50 / 50)
 col_panel_izq, col_panel_der = st.columns([1, 1])
 
 # ------------------------------------------------------------------------------
-# COLUMNA IZQUIERDA: CONFIGURACIÓN + CAPTURA COMPLETA DE MOMIOS
+# COLUMNA IZQUIERDA: SELECTOR DE LIGA + ENCUENTRO + MOMIOS
 # ------------------------------------------------------------------------------
 with col_panel_izq:
-    st.markdown(f"<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>⚙️ CONFIGURACIÓN Y MOMIOS ({nombre_liga})</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>🏆 SELECCIÓN DE COMPETICIÓN</h3>", unsafe_allow_html=True)
+    
+    competicion_sel = st.radio(
+        "Elige la Liga:",
+        ["⚽ Premier League (Inglaterra)", "🔴 LaLiga EA Sports (España)"],
+        index=0,
+        horizontal=True,
+        key="main_league_select"
+    )
+
+    if "Premier League" in competicion_sel:
+        TEAMS_DATA = PREMIER_LEAGUE_DATA
+        nombre_liga = "PREMIER LEAGUE"
+    else:
+        TEAMS_DATA = LALIGA_DATA
+        nombre_liga = "LALIGA EA SPORTS"
+
+    st.markdown(f"<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900; margin-top:10px;'>⚙️ CONFIGURACIÓN DEL PARTIDO ({nombre_liga})</h3>", unsafe_allow_html=True)
 
     col_loc, col_vis = st.columns(2)
     with col_loc: equipo_loc = st.selectbox("Equipo Local:", list(TEAMS_DATA.keys()), index=0, key="select_local")
@@ -213,7 +217,7 @@ with col_panel_izq:
 
     st.markdown(f"""
     <div class="match-row-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #edf4f0; padding-bottom:8px; margin-bottom:8px;">
+        <div style="display:flex; justify-between; align-items:center; border-bottom:1px solid #edf4f0; padding-bottom:8px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:8px;">
                 <img src="{d_loc['logo']}" width="28">
                 <span style="font-weight:900; font-size:0.95rem; color:#0b4f30;">{equipo_loc}</span>
@@ -224,7 +228,7 @@ with col_panel_izq:
                 <img src="{d_vis['logo']}" width="28">
             </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; text-align:center; font-size:0.8rem;">
+        <div style="display:flex; justify-between; align-items:center; text-align:center; font-size:0.8rem;">
             <div><b>Forma:</b> {render_dots_forma(d_loc['forma'])}</div>
             <div><b>xG:</b> {d_loc['xg']} / {d_vis['xg']}</div>
             <div><b>Córners:</b> {d_loc['corners']}</div>
@@ -236,7 +240,6 @@ with col_panel_izq:
     st.markdown("<h4 style='color:#0b4f30; font-size:0.95rem; font-weight:900;'>🎲 CAPTURA DE MOMIOS REALES</h4>", unsafe_allow_html=True)
     tipo_momio = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True, key="odds_fmt")
 
-    # Mercados 1 y 2
     m1_1, m1_x, m1_2 = st.columns(3)
     with m1_1: c_1x2_1 = st.text_input(f"1X2 {equipo_loc[:3]}", value="2.10")
     with m1_x: c_1x2_x = st.text_input("1X2 Empate", value="3.40")
@@ -247,13 +250,11 @@ with col_panel_izq:
     with m2_x2: c_dc_x2 = st.text_input("DC X2", value="1.70")
     with m2_12: c_dc_12 = st.text_input("DC 12", value="1.32")
 
-    # Mercado 3: Total Goles
     mg1, mg2, mg3 = st.columns([1.5, 1.25, 1.25])
     with mg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0, key="sl_g")
     with mg2: c_over_g = st.text_input(f"Over {line_goles}", value="1.90")
     with mg3: c_under_g = st.text_input(f"Under {line_goles}", value="1.90")
 
-    # Mercado 4 y 5: BTTS & Córners
     mb1, mb2, mc1, mc2, mc3 = st.columns([1, 1, 1.2, 1, 1])
     with mb1: c_btts_si = st.text_input("BTTS SÍ", value="1.75")
     with mb2: c_btts_no = st.text_input("BTTS NO", value="2.05")
@@ -261,13 +262,11 @@ with col_panel_izq:
     with mc2: c_over_c = st.text_input(f"Córners > {line_corners}", value="1.85")
     with mc3: c_under_c = st.text_input(f"Córners < {line_corners}", value="1.85")
 
-    # Mercado 6: Hándicap Asiático
     ha1, ha2, ha3 = st.columns([1.5, 1.25, 1.25])
     with ha1: line_ha = st.selectbox("Hándicap AH", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
     with ha2: c_ha_loc = st.text_input(f"AH {equipo_loc[:3]}", value="1.80")
     with ha3: c_ha_vis = st.text_input(f"AH {equipo_vis[:3]}", value="2.00")
 
-    # Mercado 7 y 8: 1ra Mitad
     mh1, mh2, mh3 = st.columns(3)
     with mh1: c_ht_1 = st.text_input(f"HT {equipo_loc[:3]}", value="2.70")
     with mh2: c_ht_x = st.text_input("HT Empate", value="2.10")
@@ -278,7 +277,6 @@ with col_panel_izq:
     with mh5: c_ht_over_g = st.text_input(f"HT Over {line_ht_g}", value="1.40")
     with mh6: c_ht_under_g = st.text_input(f"HT Under {line_ht_g}", value="2.70")
 
-    # Mercado 9 y 10: DNB & Gana Cualquier Mitad
     md1, md2, mw1, mw2 = st.columns(4)
     with md1: c_dnb_loc = st.text_input(f"DNB {equipo_loc[:3]}", value="1.50")
     with md2: c_dnb_vis = st.text_input(f"DNB {equipo_vis[:3]}", value="2.50")
@@ -286,12 +284,11 @@ with col_panel_izq:
     with mw2: c_winhalf_vis = st.text_input(f"Gana Mitad {equipo_vis[:3]}", value="2.20")
 
 # ------------------------------------------------------------------------------
-# COLUMNA DERECHA: ANÁLISIS MATRIX Y EVALUACIÓN DE OPORTUNIDADES (EV)
+# COLUMNA DERECHA: ANÁLISIS MATRIX
 # ------------------------------------------------------------------------------
 with col_panel_der:
     st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>📊 ANÁLISIS MATRIX Y EV DETECTADOS</h3>", unsafe_allow_html=True)
 
-    # CÁLCULOS MATEMÁTICOS DE POISSON
     lam_h, lam_a = d_loc['xg'], d_vis['xg']
     matriz_ft = generar_matriz(lam_h, lam_a)
     p_1_ft = float(np.sum(np.tril(matriz_ft, -1)))
@@ -305,7 +302,6 @@ with col_panel_der:
     p_under_goles = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h + a < line_goles))
     p_over_goles = 1.0 - p_under_goles
     p_btts_si = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
-    p_btts_no = 1.0 - p_btts_si
 
     exp_corners_ft = d_loc["corners"] + d_vis["corners"]
     p_under_corners = float(poisson.cdf(int(line_corners), exp_corners_ft))
@@ -316,7 +312,6 @@ with col_panel_der:
     p_ht_under15 = float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5))
     p_ht_over15 = 1.0 - p_ht_under15
     p_ht_over_g = p_ht_over05 if line_ht_g == "0.5" else p_ht_over15
-    p_ht_under_g = 1.0 - p_ht_over_g
 
     p_dnb_loc = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
     p_winhalf_loc = 1.0 - ((1.0 - p_1_ht) * (1.0 - p_1_ft))
@@ -328,7 +323,6 @@ with col_panel_der:
         {"mercado": "2. Doble Oportunidad: 1X", "prob": p_1_ft + p_x_ft, "cuota": parse_odds_to_decimal(c_dc_1x, tipo_momio)},
         {"mercado": "2. Doble Oportunidad: X2", "prob": p_2_ft + p_x_ft, "cuota": parse_odds_to_decimal(c_dc_x2, tipo_momio)},
         {"mercado": f"3. Total Goles: Over {line_goles}", "prob": p_over_goles, "cuota": parse_odds_to_decimal(c_over_g, tipo_momio)},
-        {"mercado": f"3. Total Goles: Under {line_goles}", "prob": p_under_goles, "cuota": parse_odds_to_decimal(c_under_g, tipo_momio)},
         {"mercado": "4. Ambos Equipos Anotan: SÍ", "prob": p_btts_si, "cuota": parse_odds_to_decimal(c_btts_si, tipo_momio)},
         {"mercado": f"5. Total Córners: Over {line_corners}", "prob": p_over_corners, "cuota": parse_odds_to_decimal(c_over_c, tipo_momio)},
         {"mercado": f"6. AH Local ({line_ha}): {equipo_loc}", "prob": p_1_ft + (p_x_ft if "+0.5" in line_ha else 0), "cuota": parse_odds_to_decimal(c_ha_loc, tipo_momio)},
@@ -338,7 +332,6 @@ with col_panel_der:
         {"mercado": f"10. Gana Cualquier Mitad: {equipo_loc}", "prob": p_winhalf_loc, "cuota": parse_odds_to_decimal(c_winhalf_loc, tipo_momio)}
     ]
 
-    # FILTRADO EXCLUSIVO PROBABILIDAD >= 60%
     mercados_filtrados = [m for m in mercados_list if m['prob'] >= 0.60]
 
     for idx, op in enumerate(mercados_filtrados):
@@ -364,4 +357,4 @@ with col_panel_der:
             fig = go.Figure()
             fig.add_trace(go.Bar(x=[f"P{i+1}" for i in range(10)], y=d_loc['l10_corners'], marker_color="#10b981"))
             fig.update_layout(title=f"Desglose L10 - {op['mercado']}", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=150, margin=dict(l=10, r=10, t=25, b=10))
-            st.plotly_chart(fig, use_container_width=True, key=f"chart_{idx}_{equipo_loc}_{equipo_vis}")
+            st.plotly_chart(fig, use_container_width=True, key=f"chart_{nombre_liga}_{idx}_{equipo_loc}_{equipo_vis}")
