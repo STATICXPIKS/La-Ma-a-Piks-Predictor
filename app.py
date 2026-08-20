@@ -4,14 +4,15 @@ import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
 
-# Configuración de página
+# Configuración de página con Sidebar visible por defecto
 st.set_page_config(
-    page_title="LA MAÑA PICKS - DASHBOARD DE ANÁLISIS",
+    page_title="LA MAÑA PICKS - PANEL DE APUESTAS",
     layout="wide",
+    initial_sidebar_state="expanded",
     page_icon="⚽"
 )
 
-# ESTILOS CSS ADAPTADOS AL DASHBOARD ANALÍTICO CLARO
+# ESTILOS CSS CLAROS / ANALÍTICOS
 st.markdown("""
 <style>
     .stApp {
@@ -76,6 +77,14 @@ st.markdown("""
         background-color: #ffffff !important;
         border: 1px solid #10b981 !important;
         border-radius: 6px !important;
+        color: #0b4f30 !important;
+        font-weight: 800 !important;
+    }
+
+    .stTextInput input {
+        background-color: #ffffff !important;
+        border: 1px solid #10b981 !important;
+        border-radius: 5px !important;
         color: #0b4f30 !important;
         font-weight: 800 !important;
     }
@@ -152,6 +161,25 @@ ARBITROS = {
     "Ricardo De Burgos": 4.1
 }
 
+def parse_odds_to_decimal(val_str, format_type):
+    try:
+        val = float(val_str)
+        if format_type == "Decimales": return val
+        return (val / 100.0) + 1.0 if val > 0 else (100.0 / abs(val)) + 1.0
+    except:
+        return 2.00
+
+def calcular_ev(prob, cuota_decimal):
+    return (prob * cuota_decimal) - 1.0
+
+def clasificar_opcion(prob, ev):
+    prob_pct = prob * 100.0
+    if prob_pct >= 75.0:
+        return ("💎 APUESTA ESTRELLA", "card-star", "badge-star") if ev > 0.0 else ("HIGH CONFIDENCE", "card-high", "badge-high")
+    elif 60.0 <= prob_pct < 75.0:
+        return "MEDIUM PROBABILITY", "card-medium", "badge-medium"
+    return "LOW PROBABILITY", "card-low", "badge-low"
+
 def render_dots_forma(forma_list):
     html = '<div class="dot-form-container">'
     for res in forma_list[-5:]:
@@ -161,13 +189,13 @@ def render_dots_forma(forma_list):
     return html
 
 # ==============================================================================
-# SIDEBAR: SELECCIÓN EXCLUSIVA DE COMPETICIÓN
+# SIDEBAR IZQUIERDA: SELECCIÓN DE COMPETICIÓN
 # ==============================================================================
-st.sidebar.markdown("<h3 style='color:#0b4f30; font-size:0.95rem; font-weight:900;'>FILTRAR POR COMPETICIÓN</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='color:#0b4f30; font-size:1.0rem; font-weight:900;'>🏆 NAVEGACIÓN DE COMPETICIÓN</h3>", unsafe_allow_html=True)
 
 competicion = st.sidebar.radio(
-    "Seleccionar Liga:",
-    ["⚽ Premier League", "🔴 LaLiga EA Sports"],
+    "Selecciona la Liga a Analizar:",
+    ["⚽ Premier League (Inglaterra)", "🔴 LaLiga EA Sports (España)"],
     index=0
 )
 
@@ -179,12 +207,12 @@ else:
     nombre_liga = "LALIGA EA SPORTS"
 
 # ==============================================================================
-# ENCABEZADO PRINCIPAL
+# ENCABEZADO
 # ==============================================================================
 st.markdown("<h1 class='brand-title-top'>LA MAÑA PICKS - PANEL DE APUESTAS</h1>", unsafe_allow_html=True)
 
 # ==============================================================================
-# SELECCIÓN DEL ENCUENTRO
+# ENCUENTRO SELECCIONADO
 # ==============================================================================
 st.markdown(f"<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>⚡ ENCUENTRO SELECCIONADO ({nombre_liga})</h3>", unsafe_allow_html=True)
 
@@ -200,7 +228,7 @@ with col_referee:
 d_loc = TEAMS_DATA[equipo_loc]
 d_vis = TEAMS_DATA[equipo_vis]
 
-# TARJETAS KPI DINÁMICAS SUPERIORES
+# TARJETAS KPI DINÁMICAS
 kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
 
 with kpi_col1:
@@ -250,7 +278,7 @@ with kpi_col4:
     </div>
     """, unsafe_allow_html=True)
 
-# FILA DESGLOSE DEL PARTIDO CON ESCUDOS CORRESPONDIENTES
+# FILA DESGLOSE DE ENCUENTRO CON LOGOS ORIGINALES
 st.markdown(f"""
 <div class="match-row-card">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #edf4f0; padding-bottom:10px; margin-bottom:10px;">
@@ -275,31 +303,59 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# TABLA DE OPORTUNIDADES
+# CAPTURA DE MOMIOS REALES DE TU CASA DE APUESTAS
 # ==============================================================================
-st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>📊 MEJORES OPORTUNIDADES DETECTADAS (PROBABILIDAD >= 60%)</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900; margin-top:15px;'>🎲 INGRESA LOS MOMIOS DE TU CASA DE APUESTAS</h3>", unsafe_allow_html=True)
 
+col_fm, col_m1, col_m2, col_m3 = st.columns([2, 2, 2, 2])
+
+with col_fm:
+    tipo_momio = st.radio("Formato de Cuota:", ["Decimales", "Americanos"], horizontal=True, key="format_odds")
+
+# CÁLCULOS MATEMÁTICOS DE POISSON
 lambda_h = d_loc['xg']
 lambda_a = d_vis['xg']
 prob_over25 = 1.0 - poisson.cdf(2, lambda_h + lambda_a)
 prob_btts = 0.68
 prob_corners = 0.76
 
+with col_m1:
+    cuota_corners_str = st.text_input("Cuota Córners > 9.5:", value="1.85", key="odd_c")
+with col_m2:
+    cuota_btts_str = st.text_input("Cuota BTTS (Sí):", value="1.72", key="odd_b")
+with col_m3:
+    cuota_goles_str = st.text_input("Cuota Over 2.5 Goles:", value="1.90", key="odd_g")
+
+c_corners_dec = parse_odds_to_decimal(cuota_corners_str, tipo_momio)
+c_btts_dec = parse_odds_to_decimal(cuota_btts_str, tipo_momio)
+c_goles_dec = parse_odds_to_decimal(cuota_goles_str, tipo_momio)
+
+# ==============================================================================
+# TABLA DE OPORTUNIDADES CON CÁLCULO DE VALOR ESPERADO (EV)
+# ==============================================================================
+st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900; margin-top:15px;'>📊 MEJORES OPORTUNIDADES Y VALOR ESPERADO (EV)</h3>", unsafe_allow_html=True)
+
 oportunidades = [
-    {"id": "op_corners", "mercado": "Córners Totales > 9.5", "prob": prob_corners, "cuota": "1.85", "badge": "💎 APUESTA ESTRELLA"},
-    {"id": "op_btts", "mercado": "Ambos Equipos Anotan (BTTS SÍ)", "prob": prob_btts, "cuota": "1.72", "badge": "HIGH CONFIDENCE"},
-    {"id": "op_goles", "mercado": "Total de Goles Over 2.5", "prob": prob_over25, "cuota": "1.90", "badge": "MEDIUM PROBABILITY"}
+    {"id": "op_corners", "mercado": f"Córners Totales > 9.5 ({equipo_loc})", "prob": prob_corners, "cuota": c_corners_dec},
+    {"id": "op_btts", "mercado": "Ambos Equipos Anotan (BTTS SÍ)", "prob": prob_btts, "cuota": c_btts_dec},
+    {"id": "op_goles", "mercado": "Total de Goles Over 2.5", "prob": prob_over25, "cuota": c_goles_dec}
 ]
 
 for op in oportunidades:
+    ev = calcular_ev(op['prob'], op['cuota'])
+    badge_label, _, _ = clasificar_opcion(op['prob'], ev)
+    cuota_minima = 1.0 / op['prob'] if op['prob'] > 0 else 2.0
+    
     st.markdown(f"""
     <div style="background-color:#ffffff; border:1px solid #d1e2da; border-radius:8px; padding:12px 18px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
         <div>
             <span style="font-weight:900; font-size:0.95rem; color:#0b4f30;">↗ {op['mercado']}</span>
-            <div style="font-size:0.78rem; color:#607d71;">Probabilidad Estimada: <b>{op['prob']*100:.1f}%</b> | Cuota Sugerida: <b>@{op['cuota']}</b></div>
+            <div style="font-size:0.78rem; color:#607d71;">
+                Probabilidad: <b>{op['prob']*100:.1f}%</b> | Cuota Tuya: <b>@{op['cuota']:.2f}</b> | EV: <b style="color:{'#059669' if ev > 0 else '#dc2626'};">{ev*100:+.1f}%</b> | Cuota Mínima Sugerida: <b>@{cuota_minima:.2f}</b>
+            </div>
         </div>
         <div style="display:flex; align-items:center; gap:15px;">
-            <span style="background-color:#059669; color:#ffffff; padding:4px 10px; border-radius:4px; font-weight:900; font-size:0.75rem;">{op['badge']}</span>
+            <span style="background-color:{'#059669' if ev > 0 else '#d97706'}; color:#ffffff; padding:4px 10px; border-radius:4px; font-weight:900; font-size:0.75rem;">{badge_label}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
