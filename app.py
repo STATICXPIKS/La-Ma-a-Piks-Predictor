@@ -6,12 +6,12 @@ import plotly.graph_objects as go
 
 # Configuración de página
 st.set_page_config(
-    page_title="LA MAÑA PICKS - PREDICTIONS",
+    page_title="LA MAÑA PICKS - FOOTBALL PREDICTIONS",
     layout="wide",
     page_icon="⚽"
 )
 
-# ESTILOS CSS CON BOTONES DE LIGA EN VERDE NEÓN Y ESTÉTICA CYBERPUNK
+# ESTILOS CSS REFORZADOS CON DUALIDAD DE LOGOS Y BOTONES
 st.markdown("""
 <style>
     .stApp {
@@ -25,12 +25,10 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* ENCABEZADO: TÍTULO GIGANTE CENTRADO */
+    /* ENCABEZADO CON TÍTULO GIGANTE CENTRADO */
     .header-layout {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
         width: 100%;
         padding: 10px 0 15px 0;
         border-bottom: 2px solid #00FF66;
@@ -44,42 +42,41 @@ st.markdown("""
         margin-bottom: 10px;
     }
 
-    .brand-title-massive {
+    .brand-title-colossal {
         color: #FFD700 !important;
         font-weight: 900 !important;
-        font-size: 85px !important;
+        font-size: clamp(4rem, 7vw, 9rem) !important;
         text-transform: uppercase;
         letter-spacing: 6px;
-        text-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 0 50px rgba(255, 215, 0, 0.5), 3px 3px 6px #000;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6), 4px 4px 10px #000;
         margin: 0;
         line-height: 1.0;
         display: block !important;
     }
 
-    .sub-left-row {
+    /* FILA DE LIGAS CON LOGO Y BOTÓN A UN LADO CADA UNO */
+    .leagues-row {
         display: flex;
         align-items: center;
         justify-content: flex-start;
-        gap: 12px;
+        gap: 25px;
         width: 100%;
+        margin-top: 15px;
     }
 
-    .pl-logo-small {
-        width: 110px !important;
-        height: auto !important;
+    .league-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .league-logo-neon {
+        height: 45px !important;
+        width: auto !important;
         filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
     }
 
-    .pl-sub-title-left {
-        color: #FFFFFF !important;
-        font-weight: 900;
-        font-size: 1.1rem !important;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        margin: 0;
-    }
-
-    /* SELECTBOX EN FONDO NEGRO #000000 */
+    /* SELECTBOX CON FONDO NEGRO Y TEXTO BLANCO NEGRITA */
     div[data-baseweb="select"] {
         background-color: #000000 !important;
         border: 2px solid #00FF66 !important;
@@ -97,23 +94,17 @@ st.markdown("""
         background-color: #000000 !important;
     }
 
-    /* DESPLEGABLE CON LISTA DE OPCIONES EN TRASFONDO OSCURO CON TEXTO LEIBLE */
+    /* DESPLEGABLES FLOTANTES */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     div[data-baseweb="menu"] *,
     ul[role="listbox"],
     ul[role="listbox"] * {
-        background-color: #0b140e !important;
+        background-color: #000000 !important;
         color: #ffffff !important;
         font-weight: 900 !important;
         text-transform: uppercase !important;
-    }
-
-    li[role="option"] {
-        background-color: #0b140e !important;
-        color: #ffffff !important;
-        font-weight: 900 !important;
     }
 
     li[role="option"]:hover,
@@ -225,12 +216,11 @@ st.markdown("""
         background: linear-gradient(135deg, #00FF66 0%, #009933 100%) !important;
         color: #000000 !important;
         font-weight: 900 !important;
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
         border: none !important;
         border-radius: 6px !important;
-        padding: 10px 16px !important;
-        box-shadow: 0 0 12px rgba(0, 255, 102, 0.5) !important;
-        width: 100% !important;
+        padding: 8px 14px !important;
+        box-shadow: 0 0 10px rgba(0, 255, 102, 0.4) !important;
         text-transform: uppercase !important;
     }
 
@@ -298,15 +288,11 @@ LALIGA_DATA = {
     "ALAVES": {"logo": "https://crests.football-data.org/263.png", "xg": 1.25, "xga": 1.45, "ppda": 12.0, "aereos": 56, "corners": 4.4, "forma": ["P","E","G","P","P","E","G","P","P","G"], "l10_corners": [4, 5, 4, 5, 4, 5, 4, 5, 3, 4]}
 }
 
-# CAMBIO DE LIGA MEDIANTE BOTONES INTERACTIVOS
+# CAMBIO DE LIGA SEGÚN EL BOTÓN PRESIONADO
 if st.session_state["liga_activa"] == "PREMIER LEAGUE":
     TEAMS_DATA = PREMIER_LEAGUE_DATA
-    LOGO_LIGA = PL_LOGO_URL
-    SUBTITULO_LIGA = "PREMIER LEAGUE PREDICTIONS"
 else:
     TEAMS_DATA = LALIGA_DATA
-    LOGO_LIGA = LALIGA_LOGO_URL
-    SUBTITULO_LIGA = "LALIGA EA SPORTS PREDICTIONS"
 
 def parse_odds_to_decimal(val_str, format_type):
     try:
@@ -377,32 +363,33 @@ def obtener_fatiga_rotacion_auto(equipo_nombre):
         return 65, 40
     return 15, 10
 
-# ENCABEZADO
-st.markdown(f"""
+# ENCABEZADO CENTRADO CON TÍTULO GIGANTE
+st.markdown("""
 <div class="header-layout">
     <div class="title-center-row">
         <span class="brand-title-massive">LA MAÑA PICKS</span>
     </div>
-    <div class="sub-left-row">
-        <img src="{LOGO_LIGA}" class="pl-logo-small">
-        <h2 class="pl-sub-title-left">{SUBTITULO_LIGA}</h2>
-    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# BOTONES DE CAMBIO DE LIGA INTERACTIVOS
-col_btn1, col_btn2, col_btn_blank = st.columns([2, 2, 4])
-with col_btn1:
-    if st.button("🇬🇧 PREMIER LEAGUE", use_container_width=True):
+# FILA CON LOGOS DE AMBAS LIGAS Y BOTÓN SELECTOR A UN LADO DE CADA UNO
+col_pl_logo, col_pl_btn, col_laliga_logo, col_laliga_btn, col_blank = st.columns([1.5, 2.5, 1.5, 2.5, 2])
+
+with col_pl_logo:
+    st.markdown(f'<img src="{PL_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
+with col_pl_btn:
+    if st.button("GB PREMIER LEAGUE", use_container_width=True):
         st.session_state["liga_activa"] = "PREMIER LEAGUE"
         st.rerun()
 
-with col_btn2:
-    if st.button("🇪🇸 LALIGA (ESPAÑA)", use_container_width=True):
+with col_laliga_logo:
+    st.markdown(f'<img src="{LALIGA_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
+with col_laliga_btn:
+    if st.button("ES LALIGA (ESPAÑA)", use_container_width=True):
         st.session_state["liga_activa"] = "LALIGA"
         st.rerun()
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("---")
 
 # ESTRUCTURA DE COLUMNAS: IZQUIERDA (DATOS Y MOMIOS) / DERECHA (ANÁLISIS MATRIX)
 col_left_panel, col_right_panel = st.columns([7, 5])
@@ -411,12 +398,12 @@ col_left_panel, col_right_panel = st.columns([7, 5])
 # COLUMNA IZQUIERDA: DATOS Y CONFIGURACIÓN DEL ENCUENTRO
 # ==============================================================================
 with col_left_panel:
-    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN ({st.session_state['liga_activa']})</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO ({st.session_state['liga_activa']})</h3>", unsafe_allow_html=True)
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         home_team = st.selectbox("Equipo Local", list(TEAMS_DATA.keys()), index=0)
-        st.image(TEAMS_DATA[home_team]["logo"], width=45)
+        st.image(TEAMS_DATA[home_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[home_team]["forma"]), unsafe_allow_html=True)
         
@@ -426,7 +413,7 @@ with col_left_panel:
 
     with col_t2:
         away_team = st.selectbox("Equipo Visitante", list(TEAMS_DATA.keys()), index=1 if len(TEAMS_DATA)>1 else 0)
-        st.image(TEAMS_DATA[away_team]["logo"], width=45)
+        st.image(TEAMS_DATA[away_team]["logo"], width=40)
         st.caption("Últimos 10 partidos:")
         st.markdown(generar_badges_forma(TEAMS_DATA[away_team]["forma"]), unsafe_allow_html=True)
         
@@ -543,7 +530,7 @@ with col_left_panel:
     recalcular = st.button("⚡ RECALCULAR OPORTUNIDADES DE APUESTA", use_container_width=True)
 
 # ==============================================================================
-# COLUMNA DERECHA: ANÁLISIS MATRIX
+# COLUMNA DERECHA: ANÁLISIS MATRIX FILTRADO
 # ==============================================================================
 with col_right_panel:
     st.markdown("<h3 style='color:#00FF66; font-size:1.05rem; margin-bottom:10px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES</h3>", unsafe_allow_html=True)
