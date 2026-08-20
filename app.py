@@ -191,184 +191,177 @@ else:
     TEAMS_DATA = LALIGA_DATA
     nombre_liga = "LALIGA EA SPORTS"
 
-# ==============================================================================
-# ENCABEZADO Y SELECCIÓN DEL PARTIDO
-# ==============================================================================
 st.markdown("<h1 class='brand-title-top'>LA MAÑA PICKS - PANEL DE APUESTAS</h1>", unsafe_allow_html=True)
-st.markdown(f"<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>⚡ ENCUENTRO SELECCIONADO ({nombre_liga})</h3>", unsafe_allow_html=True)
-
-col_local, col_visita, col_referee = st.columns([3, 3, 2])
-with col_local: equipo_loc = st.selectbox("Equipo Local:", list(TEAMS_DATA.keys()), index=0, key="select_local")
-with col_visita: equipo_vis = st.selectbox("Equipo Visitante:", list(TEAMS_DATA.keys()), index=1 if len(TEAMS_DATA) > 1 else 0, key="select_visita")
-with col_referee: arbitro_sel = st.selectbox("Árbitro Asignado:", list(ARBITROS.keys()), index=0, key="select_arbitro")
-
-d_loc, d_vis = TEAMS_DATA[equipo_loc], TEAMS_DATA[equipo_vis]
-
-# FILA DESGLOSE DE ENCUENTRO
-st.markdown(f"""
-<div class="match-row-card">
-    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #edf4f0; padding-bottom:10px; margin-bottom:10px;">
-        <div style="display:flex; align-items:center; gap:12px;">
-            <img src="{d_loc['logo']}" width="35">
-            <span style="font-weight:900; font-size:1.1rem; color:#0b4f30;">{equipo_loc}</span>
-        </div>
-        <div style="font-weight:900; font-size:1rem; color:#059669;">VS</div>
-        <div style="display:flex; align-items:center; gap:12px;">
-            <span style="font-weight:900; font-size:1.1rem; color:#0b4f30;">{equipo_vis}</span>
-            <img src="{d_vis['logo']}" width="35">
-        </div>
-    </div>
-    <div style="display:flex; justify-content:space-between; align-items:center; text-align:center;">
-        <div><b>Forma:</b> {render_dots_forma(d_loc['forma'])}</div>
-        <div><b>xG / xGA:</b> {d_loc['xg']} / {d_loc['xga']}</div>
-        <div><b>Córners L10:</b> {d_loc['corners']}</div>
-        <div><b>Tarjetas:</b> {d_loc['tarjetas']}</div>
-        <div><b>Árbitro Promedio:</b> <span style="background-color:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-weight:800;">🟨 {ARBITROS[arbitro_sel]}</span></div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# CÁLCULOS POISSON
-lam_h, lam_a = d_loc['xg'], d_vis['xg']
-matriz_ft = generar_matriz(lam_h, lam_a)
-p_1_ft = float(np.sum(np.tril(matriz_ft, -1)))
-p_x_ft = float(np.sum(np.diag(matriz_ft)))
-p_2_ft = float(np.sum(np.triu(matriz_ft, 1)))
-
-lam_h_ht, lam_a_ht = lam_h * 0.45, lam_a * 0.45
-matriz_ht = generar_matriz(lam_h_ht, lam_a_ht)
-p_1_ht = float(np.sum(np.tril(matriz_ht, -1)))
-p_x_ht = float(np.sum(np.diag(matriz_ht)))
-p_2_ht = float(np.sum(np.triu(matriz_ht, 1)))
 
 # ==============================================================================
-# CAPTURA DE MOMIOS PARA LOS 10 MERCADOS SOLICITADOS
+# DISPOSICIÓN PRINCIPAL EN DOS COLUMNAS PARALELAS (50/50)
 # ==============================================================================
-st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900; margin-top:15px;'>🎲 CONFIGURA Y CAPTURA LOS MOMIOS DE TU CASA DE APUESTAS</h3>", unsafe_allow_html=True)
+col_panel_izq, col_panel_der = st.columns([1, 1])
 
-tipo_momio = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True, key="odds_fmt")
+# ------------------------------------------------------------------------------
+# COLUMNA IZQUIERDA: CONFIGURACIÓN + CAPTURA COMPLETA DE MOMIOS
+# ------------------------------------------------------------------------------
+with col_panel_izq:
+    st.markdown(f"<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>⚙️ CONFIGURACIÓN Y MOMIOS ({nombre_liga})</h3>", unsafe_allow_html=True)
 
-# Mercados 1 y 2: 1X2 y Doble Chance
-m1_1, m1_x, m1_2, m2_1x, m2_x2, m2_12 = st.columns(6)
-with m1_1: c_1x2_1 = st.text_input(f"1X2 Gana {equipo_loc[:3]}", value="2.10")
-with m1_x: c_1x2_x = st.text_input("1X2 Empate", value=3.40)
-with m1_2: c_1x2_2 = st.text_input(f"1X2 Gana {equipo_vis[:3]}", value="3.50")
-with m2_1x: c_dc_1x = st.text_input("DC 1X", value="1.30")
-with m2_x2: c_dc_x2 = st.text_input("DC X2", value="1.70")
-with m2_12: c_dc_12 = st.text_input("DC 12", value="1.32")
+    col_loc, col_vis = st.columns(2)
+    with col_loc: equipo_loc = st.selectbox("Equipo Local:", list(TEAMS_DATA.keys()), index=0, key="select_local")
+    with col_vis: equipo_vis = st.selectbox("Equipo Visitante:", list(TEAMS_DATA.keys()), index=1 if len(TEAMS_DATA) > 1 else 0, key="select_visita")
+    arbitro_sel = st.selectbox("Árbitro Asignado:", list(ARBITROS.keys()), index=0, key="select_arbitro")
 
-# Mercado 3: Total Goles (Ajustable de 1.5 a 4.5)
-st.markdown("<b>3. Total Goles FT (Over/Under)</b>", unsafe_allow_html=True)
-mg1, mg2, mg3 = st.columns([2, 2, 2])
-with mg1: line_goles = st.slider("Ajustar Línea Goles", 1.5, 4.5, 2.5, step=1.0, key="sl_g")
-with mg2: c_over_g = st.text_input(f"Over {line_goles} Goles", value="1.90")
-with mg3: c_under_g = st.text_input(f"Under {line_goles} Goles", value="1.90")
+    d_loc, d_vis = TEAMS_DATA[equipo_loc], TEAMS_DATA[equipo_vis]
 
-# Mercado 4 y 5: BTTS y Córners (Ajustables 8.5 a 12.5)
-st.markdown("<b>4. Ambos Anotan (BTTS) & 5. Total Córners</b>", unsafe_allow_html=True)
-mb1, mb2, mc1, mc2, mc3 = st.columns([1.5, 1.5, 2, 1.5, 1.5])
-with mb1: c_btts_si = st.text_input("BTTS SÍ", value="1.75")
-with mb2: c_btts_no = st.text_input("BTTS NO", value="2.05")
-with mc1: line_corners = st.slider("Ajustar Línea Córners", 8.5, 12.5, 9.5, step=1.0, key="sl_c")
-with mc2: c_over_c = st.text_input(f"Córners > {line_corners}", value="1.85")
-with mc3: c_under_c = st.text_input(f"Córners < {line_corners}", value="1.85")
-
-# Mercado 6: Hándicap Asiático (Ajustable +0.5, -0.5, 0, +1.0, -1.0)
-st.markdown("<b>6. Hándicap Asiático (AH)</b>", unsafe_allow_html=True)
-ha1, ha2, ha3 = st.columns([2, 2, 2])
-with ha1: line_ha = st.selectbox("Ajustar Hándicap Local", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
-with ha2: c_ha_loc = st.text_input(f"Cuota AH Local ({line_ha})", value="1.80")
-with ha3: c_ha_vis = st.text_input("Cuota AH Visitante", value="2.00")
-
-# Mercado 7 y 8: 1ra Mitad 1X2 & Over/Under 1ra Mitad (+0.5, -0.5, +1.5, -1.5)
-st.markdown("<b>7. 1ra Mitad 1X2 & 8. Goles 1ra Mitad</b>", unsafe_allow_html=True)
-mh1, mh2, mh3, mh4, mh5, mh6 = st.columns(6)
-with mh1: c_ht_1 = st.text_input(f"HT Gana {equipo_loc[:3]}", value="2.70")
-with mh2: c_ht_x = st.text_input("HT Empate", value="2.10")
-with mh3: c_ht_2 = st.text_input(f"HT Gana {equipo_vis[:3]}", value="4.00")
-with mh4: line_ht_g = st.selectbox("Ajustar Línea Goles HT", ["0.5", "1.5"], index=0)
-with mh5: c_ht_over_g = st.text_input(f"HT Over {line_ht_g}", value="1.40")
-with mh6: c_ht_under_g = st.text_input(f"HT Under {line_ht_g}", value="2.70")
-
-# Mercado 9 y 10: Empate No Acción (DNB) & Gana Cualquier Mitad
-st.markdown("<b>9. Empate No Acción (DNB) & 10. Gana Cualquier Mitad</b>", unsafe_allow_html=True)
-md1, md2, mw1, mw2 = st.columns(4)
-with md1: c_dnb_loc = st.text_input(f"DNB {equipo_loc[:3]}", value="1.50")
-with md2: c_dnb_vis = st.text_input(f"DNB {equipo_vis[:3]}", value="2.50")
-with mw1: c_winhalf_loc = st.text_input(f"Gana CUALQ. Mitad {equipo_loc[:3]}", value="1.60")
-with mw2: c_winhalf_vis = st.text_input(f"Gana CUALQ. Mitad {equipo_vis[:3]}", value="2.20")
-
-# ==============================================================================
-# CÁLCULO PROBABILÍSTICO Y MATRIZ EVALUADORA DE EV
-# ==============================================================================
-st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900; margin-top:20px;'>📊 ANÁLISIS MATRIX DE OPORTUNIDADES (VALOR ESPERADO EV)</h3>", unsafe_allow_html=True)
-
-# Cálculo Probabilidades por Poisson
-p_under_goles = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h + a < line_goles))
-p_over_goles = 1.0 - p_under_goles
-p_btts_si = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
-p_btts_no = 1.0 - p_btts_si
-
-exp_corners_ft = d_loc["corners"] + d_vis["corners"]
-p_under_corners = float(poisson.cdf(int(line_corners), exp_corners_ft))
-p_over_corners = 1.0 - p_under_corners
-
-p_ht_over05 = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
-p_ht_under05 = 1.0 - p_ht_over05
-p_ht_under15 = float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5))
-p_ht_over15 = 1.0 - p_ht_under15
-p_ht_over_g = p_ht_over05 if line_ht_g == "0.5" else p_ht_over15
-p_ht_under_g = 1.0 - p_ht_over_g
-
-p_dnb_loc = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
-p_dnb_vis = 1.0 - p_dnb_loc
-p_winhalf_loc = 1.0 - ((1.0 - p_1_ht) * (1.0 - p_1_ft))
-p_winhalf_vis = 1.0 - ((1.0 - p_2_ht) * (1.0 - p_2_ft))
-
-mercados_list = [
-    {"mercado": f"1. Resultado Final (1X2): Gana {equipo_loc}", "prob": p_1_ft, "cuota": parse_odds_to_decimal(c_1x2_1, tipo_momio)},
-    {"mercado": f"1. Resultado Final (1X2): Empate", "prob": p_x_ft, "cuota": parse_odds_to_decimal(c_1x2_x, tipo_momio)},
-    {"mercado": f"1. Resultado Final (1X2): Gana {equipo_vis}", "prob": p_2_ft, "cuota": parse_odds_to_decimal(c_1x2_2, tipo_momio)},
-    {"mercado": "2. Doble Oportunidad: 1X", "prob": p_1_ft + p_x_ft, "cuota": parse_odds_to_decimal(c_dc_1x, tipo_momio)},
-    {"mercado": "2. Doble Oportunidad: X2", "prob": p_2_ft + p_x_ft, "cuota": parse_odds_to_decimal(c_dc_x2, tipo_momio)},
-    {"mercado": "2. Doble Oportunidad: 12", "prob": p_1_ft + p_2_ft, "cuota": parse_odds_to_decimal(c_dc_12, tipo_momio)},
-    {"mercado": f"3. Total Goles: Over {line_goles}", "prob": p_over_goles, "cuota": parse_odds_to_decimal(c_over_g, tipo_momio)},
-    {"mercado": f"3. Total Goles: Under {line_goles}", "prob": p_under_goles, "cuota": parse_odds_to_decimal(c_under_g, tipo_momio)},
-    {"mercado": "4. Ambos Equipos Anotan: SÍ", "prob": p_btts_si, "cuota": parse_odds_to_decimal(c_btts_si, tipo_momio)},
-    {"mercado": "4. Ambos Equipos Anotan: NO", "prob": p_btts_no, "cuota": parse_odds_to_decimal(c_btts_no, tipo_momio)},
-    {"mercado": f"5. Total Córners: Over {line_corners}", "prob": p_over_corners, "cuota": parse_odds_to_decimal(c_over_c, tipo_momio)},
-    {"mercado": f"5. Total Córners: Under {line_corners}", "prob": p_under_corners, "cuota": parse_odds_to_decimal(c_under_c, tipo_momio)},
-    {"mercado": f"6. Hándicap Asiático: {equipo_loc} ({line_ha})", "prob": p_1_ft + (p_x_ft if "+0.5" in line_ha else 0), "cuota": parse_odds_to_decimal(c_ha_loc, tipo_momio)},
-    {"mercado": f"7. 1ra Mitad (1X2): Gana {equipo_loc}", "prob": p_1_ht, "cuota": parse_odds_to_decimal(c_ht_1, tipo_momio)},
-    {"mercado": f"8. Goles 1ra Mitad: Over {line_ht_g}", "prob": p_ht_over_g, "cuota": parse_odds_to_decimal(c_ht_over_g, tipo_momio)},
-    {"mercado": f"9. Empate No Acción (DNB): {equipo_loc}", "prob": p_dnb_loc, "cuota": parse_odds_to_decimal(c_dnb_loc, tipo_momio)},
-    {"mercado": f"10. Gana Cualquier Mitad: {equipo_loc}", "prob": p_winhalf_loc, "cuota": parse_odds_to_decimal(c_winhalf_loc, tipo_momio)}
-]
-
-# MOSTRAR SOLO OPORTUNIDADES CON PROBABILIDAD >= 60%
-mercados_filtrados = [m for m in mercados_list if m['prob'] >= 0.60]
-
-for idx, op in enumerate(mercados_filtrados):
-    ev = calcular_ev(op['prob'], op['cuota'])
-    badge_label, _, _ = clasificar_opcion(op['prob'], ev)
-    cuota_minima = 1.0 / op['prob'] if op['prob'] > 0 else 2.0
-    
     st.markdown(f"""
-    <div style="background-color:#ffffff; border:1px solid #d1e2da; border-radius:8px; padding:12px 18px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <span style="font-weight:900; font-size:0.95rem; color:#0b4f30;">↗ {op['mercado']}</span>
-            <div style="font-size:0.78rem; color:#607d71;">
-                Probabilidad: <b>{op['prob']*100:.1f}%</b> | Cuota Tuya: <b>@{op['cuota']:.2f}</b> | EV: <b style="color:{'#059669' if ev > 0 else '#dc2626'};">{ev*100:+.1f}%</b> | Cuota Mínima Sugerida: <b>@{cuota_minima:.2f}</b>
+    <div class="match-row-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #edf4f0; padding-bottom:8px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <img src="{d_loc['logo']}" width="28">
+                <span style="font-weight:900; font-size:0.95rem; color:#0b4f30;">{equipo_loc}</span>
+            </div>
+            <div style="font-weight:900; font-size:0.9rem; color:#059669;">VS</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-weight:900; font-size:0.95rem; color:#0b4f30;">{equipo_vis}</span>
+                <img src="{d_vis['logo']}" width="28">
             </div>
         </div>
-        <div style="display:flex; align-items:center; gap:15px;">
-            <span style="background-color:{'#059669' if ev > 0 else '#d97706'}; color:#ffffff; padding:4px 10px; border-radius:4px; font-weight:900; font-size:0.75rem;">{badge_label}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; text-align:center; font-size:0.8rem;">
+            <div><b>Forma:</b> {render_dots_forma(d_loc['forma'])}</div>
+            <div><b>xG:</b> {d_loc['xg']} / {d_vis['xg']}</div>
+            <div><b>Córners:</b> {d_loc['corners']}</div>
+            <div><b>Árbitro:</b> 🟨 {ARBITROS[arbitro_sel]}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander(f"📈 Ver Análisis Estadístico para {op['mercado']}"):
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=[f"P{i+1}" for i in range(10)], y=d_loc['l10_corners'], marker_color="#10b981"))
-        fig.update_layout(title=f"Desglose L10 - {op['mercado']}", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=160, margin=dict(l=10, r=10, t=25, b=10))
-        st.plotly_chart(fig, use_container_width=True, key=f"chart_{idx}_{equipo_loc}_{equipo_vis}")
+    st.markdown("<h4 style='color:#0b4f30; font-size:0.95rem; font-weight:900;'>🎲 CAPTURA DE MOMIOS REALES</h4>", unsafe_allow_html=True)
+    tipo_momio = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True, key="odds_fmt")
+
+    # Mercados 1 y 2
+    m1_1, m1_x, m1_2 = st.columns(3)
+    with m1_1: c_1x2_1 = st.text_input(f"1X2 {equipo_loc[:3]}", value="2.10")
+    with m1_x: c_1x2_x = st.text_input("1X2 Empate", value="3.40")
+    with m1_2: c_1x2_2 = st.text_input(f"1X2 {equipo_vis[:3]}", value="3.50")
+
+    m2_1x, m2_x2, m2_12 = st.columns(3)
+    with m2_1x: c_dc_1x = st.text_input("DC 1X", value="1.30")
+    with m2_x2: c_dc_x2 = st.text_input("DC X2", value="1.70")
+    with m2_12: c_dc_12 = st.text_input("DC 12", value="1.32")
+
+    # Mercado 3: Total Goles
+    mg1, mg2, mg3 = st.columns([1.5, 1.25, 1.25])
+    with mg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0, key="sl_g")
+    with mg2: c_over_g = st.text_input(f"Over {line_goles}", value="1.90")
+    with mg3: c_under_g = st.text_input(f"Under {line_goles}", value="1.90")
+
+    # Mercado 4 y 5: BTTS & Córners
+    mb1, mb2, mc1, mc2, mc3 = st.columns([1, 1, 1.2, 1, 1])
+    with mb1: c_btts_si = st.text_input("BTTS SÍ", value="1.75")
+    with mb2: c_btts_no = st.text_input("BTTS NO", value="2.05")
+    with mc1: line_corners = st.slider("Línea Córners", 8.5, 12.5, 9.5, step=1.0, key="sl_c")
+    with mc2: c_over_c = st.text_input(f"Córners > {line_corners}", value="1.85")
+    with mc3: c_under_c = st.text_input(f"Córners < {line_corners}", value="1.85")
+
+    # Mercado 6: Hándicap Asiático
+    ha1, ha2, ha3 = st.columns([1.5, 1.25, 1.25])
+    with ha1: line_ha = st.selectbox("Hándicap AH", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
+    with ha2: c_ha_loc = st.text_input(f"AH {equipo_loc[:3]}", value="1.80")
+    with ha3: c_ha_vis = st.text_input(f"AH {equipo_vis[:3]}", value="2.00")
+
+    # Mercado 7 y 8: 1ra Mitad
+    mh1, mh2, mh3 = st.columns(3)
+    with mh1: c_ht_1 = st.text_input(f"HT {equipo_loc[:3]}", value="2.70")
+    with mh2: c_ht_x = st.text_input("HT Empate", value="2.10")
+    with mh3: c_ht_2 = st.text_input(f"HT {equipo_vis[:3]}", value="4.00")
+
+    mh4, mh5, mh6 = st.columns([1.5, 1.25, 1.25])
+    with mh4: line_ht_g = st.selectbox("Línea Goles HT", ["0.5", "1.5"], index=0)
+    with mh5: c_ht_over_g = st.text_input(f"HT Over {line_ht_g}", value="1.40")
+    with mh6: c_ht_under_g = st.text_input(f"HT Under {line_ht_g}", value="2.70")
+
+    # Mercado 9 y 10: DNB & Gana Cualquier Mitad
+    md1, md2, mw1, mw2 = st.columns(4)
+    with md1: c_dnb_loc = st.text_input(f"DNB {equipo_loc[:3]}", value="1.50")
+    with md2: c_dnb_vis = st.text_input(f"DNB {equipo_vis[:3]}", value="2.50")
+    with mw1: c_winhalf_loc = st.text_input(f"Gana Mitad {equipo_loc[:3]}", value="1.60")
+    with mw2: c_winhalf_vis = st.text_input(f"Gana Mitad {equipo_vis[:3]}", value="2.20")
+
+# ------------------------------------------------------------------------------
+# COLUMNA DERECHA: ANÁLISIS MATRIX Y EVALUACIÓN DE OPORTUNIDADES (EV)
+# ------------------------------------------------------------------------------
+with col_panel_der:
+    st.markdown("<h3 style='color:#0b4f30; font-size:1.1rem; font-weight:900;'>📊 ANÁLISIS MATRIX Y EV DETECTADOS</h3>", unsafe_allow_html=True)
+
+    # CÁLCULOS MATEMÁTICOS DE POISSON
+    lam_h, lam_a = d_loc['xg'], d_vis['xg']
+    matriz_ft = generar_matriz(lam_h, lam_a)
+    p_1_ft = float(np.sum(np.tril(matriz_ft, -1)))
+    p_x_ft = float(np.sum(np.diag(matriz_ft)))
+    p_2_ft = float(np.sum(np.triu(matriz_ft, 1)))
+
+    lam_h_ht, lam_a_ht = lam_h * 0.45, lam_a * 0.45
+    matriz_ht = generar_matriz(lam_h_ht, lam_a_ht)
+    p_1_ht = float(np.sum(np.tril(matriz_ht, -1)))
+
+    p_under_goles = float(sum(matriz_ft[h, a] for h in range(8) for a in range(8) if h + a < line_goles))
+    p_over_goles = 1.0 - p_under_goles
+    p_btts_si = float(sum(matriz_ft[h, a] for h in range(1, 8) for a in range(1, 8)))
+    p_btts_no = 1.0 - p_btts_si
+
+    exp_corners_ft = d_loc["corners"] + d_vis["corners"]
+    p_under_corners = float(poisson.cdf(int(line_corners), exp_corners_ft))
+    p_over_corners = 1.0 - p_under_corners
+
+    p_ht_over05 = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
+    p_ht_under05 = 1.0 - p_ht_over05
+    p_ht_under15 = float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5))
+    p_ht_over15 = 1.0 - p_ht_under15
+    p_ht_over_g = p_ht_over05 if line_ht_g == "0.5" else p_ht_over15
+    p_ht_under_g = 1.0 - p_ht_over_g
+
+    p_dnb_loc = p_1_ft / (p_1_ft + p_2_ft) if (p_1_ft + p_2_ft) > 0 else 0.5
+    p_winhalf_loc = 1.0 - ((1.0 - p_1_ht) * (1.0 - p_1_ft))
+
+    mercados_list = [
+        {"mercado": f"1. Resultado (1X2): Gana {equipo_loc}", "prob": p_1_ft, "cuota": parse_odds_to_decimal(c_1x2_1, tipo_momio)},
+        {"mercado": f"1. Resultado (1X2): Empate", "prob": p_x_ft, "cuota": parse_odds_to_decimal(c_1x2_x, tipo_momio)},
+        {"mercado": f"1. Resultado (1X2): Gana {equipo_vis}", "prob": p_2_ft, "cuota": parse_odds_to_decimal(c_1x2_2, tipo_momio)},
+        {"mercado": "2. Doble Oportunidad: 1X", "prob": p_1_ft + p_x_ft, "cuota": parse_odds_to_decimal(c_dc_1x, tipo_momio)},
+        {"mercado": "2. Doble Oportunidad: X2", "prob": p_2_ft + p_x_ft, "cuota": parse_odds_to_decimal(c_dc_x2, tipo_momio)},
+        {"mercado": f"3. Total Goles: Over {line_goles}", "prob": p_over_goles, "cuota": parse_odds_to_decimal(c_over_g, tipo_momio)},
+        {"mercado": f"3. Total Goles: Under {line_goles}", "prob": p_under_goles, "cuota": parse_odds_to_decimal(c_under_g, tipo_momio)},
+        {"mercado": "4. Ambos Equipos Anotan: SÍ", "prob": p_btts_si, "cuota": parse_odds_to_decimal(c_btts_si, tipo_momio)},
+        {"mercado": f"5. Total Córners: Over {line_corners}", "prob": p_over_corners, "cuota": parse_odds_to_decimal(c_over_c, tipo_momio)},
+        {"mercado": f"6. AH Local ({line_ha}): {equipo_loc}", "prob": p_1_ft + (p_x_ft if "+0.5" in line_ha else 0), "cuota": parse_odds_to_decimal(c_ha_loc, tipo_momio)},
+        {"mercado": f"7. 1ra Mitad Gana {equipo_loc}", "prob": p_1_ht, "cuota": parse_odds_to_decimal(c_ht_1, tipo_momio)},
+        {"mercado": f"8. Goles 1ra Mitad: Over {line_ht_g}", "prob": p_ht_over_g, "cuota": parse_odds_to_decimal(c_ht_over_g, tipo_momio)},
+        {"mercado": f"9. DNB Local: {equipo_loc}", "prob": p_dnb_loc, "cuota": parse_odds_to_decimal(c_dnb_loc, tipo_momio)},
+        {"mercado": f"10. Gana Cualquier Mitad: {equipo_loc}", "prob": p_winhalf_loc, "cuota": parse_odds_to_decimal(c_winhalf_loc, tipo_momio)}
+    ]
+
+    # FILTRADO EXCLUSIVO PROBABILIDAD >= 60%
+    mercados_filtrados = [m for m in mercados_list if m['prob'] >= 0.60]
+
+    for idx, op in enumerate(mercados_filtrados):
+        ev = calcular_ev(op['prob'], op['cuota'])
+        badge_label, _, _ = clasificar_opcion(op['prob'], ev)
+        cuota_minima = 1.0 / op['prob'] if op['prob'] > 0 else 2.0
+        
+        st.markdown(f"""
+        <div style="background-color:#ffffff; border:1px solid #d1e2da; border-radius:8px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <span style="font-weight:900; font-size:0.9rem; color:#0b4f30;">↗ {op['mercado']}</span>
+                <div style="font-size:0.75rem; color:#607d71;">
+                    Prob: <b>{op['prob']*100:.1f}%</b> | Tu Cuota: <b>@{op['cuota']:.2f}</b> | EV: <b style="color:{'#059669' if ev > 0 else '#dc2626'};">{ev*100:+.1f}%</b> | Cuota Mín: <b>@{cuota_minima:.2f}</b>
+                </div>
+            </div>
+            <div>
+                <span style="background-color:{'#059669' if ev > 0 else '#d97706'}; color:#ffffff; padding:4px 8px; border-radius:4px; font-weight:900; font-size:0.7rem;">{badge_label}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.expander(f"📈 Ver Gráfica L10 - {op['mercado']}"):
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=[f"P{i+1}" for i in range(10)], y=d_loc['l10_corners'], marker_color="#10b981"))
+            fig.update_layout(title=f"Desglose L10 - {op['mercado']}", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=150, margin=dict(l=10, r=10, t=25, b=10))
+            st.plotly_chart(fig, use_container_width=True, key=f"chart_{idx}_{equipo_loc}_{equipo_vis}")
