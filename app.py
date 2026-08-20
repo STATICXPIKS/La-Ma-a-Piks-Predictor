@@ -12,7 +12,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# GENERADOR DE LOGO SVG DE LALIGA EN VERDE NEÓN PARA EVITAR IMÁGENES ROTAS
+# GENERADOR DE LOGO SVG DE LALIGA EN VERDE NEÓN
 def get_laliga_svg():
     svg_code = """
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="45" height="45">
@@ -26,7 +26,7 @@ def get_laliga_svg():
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 LALIGA_LOGO_SVG = get_laliga_svg()
 
-# ESTILOS CSS REFORZADOS
+# ESTILOS CSS CON TÍTULO EN VERDE NEÓN Y CORRECCIÓN DE CONTRASTE
 st.markdown("""
 <style>
     .stApp {
@@ -40,7 +40,7 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
 
-    /* FILA DE LIGAS: UNIFICADA CON RADIO BUTTONS EXCLUSIVOS */
+    /* FILA DE LIGAS: RADIO BUTTONS */
     div[data-testid="stRadio"] {
         background-color: transparent !important;
     }
@@ -229,10 +229,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# TÍTULO GIGANTE CENTRADO EN HTML/SVG DIRECTO (INAMOVIBLE E INMUNIZADO)
+# TÍTULO GIGANTE CENTRADO EN VERDE NEÓN
 st.markdown("""
 <div style="width: 100%; text-align: center; padding: 10px 0 15px 0; background-color: #000000;">
-    <span style="color: #FFD700; font-weight: 900; font-size: 85px; font-family: Arial Black, sans-serif; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 0 30px #FFD700, 0 0 60px rgba(255,215,0,0.6); display: inline-block;">
+    <span style="color: #00FF66; font-weight: 900; font-size: 85px; font-family: Arial Black, sans-serif; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 0 30px #00FF66, 0 0 60px rgba(0,255,102,0.6); display: inline-block;">
         LA MAÑA PICKS
     </span>
 </div>
@@ -484,7 +484,7 @@ with col_left_panel:
     p_over05_ht = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
     p_under05_ht = 1.0 - p_over05_ht
     p_under15_ht = float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5))
-    p_over15_ht = 1.0 - p_over15_ht
+    p_over15_ht = 1.0 - p_under15_ht
 
     hg1, hg2, hg3, hg4 = st.columns(4)
     with hg1: m_ht_o05 = st.text_input("HT Over 0.5", value=default_val(p_over05_ht))
