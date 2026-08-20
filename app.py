@@ -11,7 +11,7 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS CON TÍTULO GIGANTE INAMOVIBLE Y SELECTOR ALINEADO
+# ESTILOS CSS CON ESTRUCTURA IDÉNTICA A LA IMAGEN
 st.markdown("""
 <style>
     .stApp {
@@ -25,39 +25,33 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
     
-    /* FILA DE LIGAS: LOGO + SELECTOR + LOGO + SELECTOR */
-    .league-header-bar {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 15px;
-        margin-top: 15px;
-        margin-bottom: 10px;
-    }
-
-    .league-logo-img {
-        height: 45px !important;
+    /* LOGOS Y FILTROS NEÓN */
+    .league-logo-neon {
+        height: 42px !important;
         width: auto !important;
         filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
     }
 
-    /* SELECTOR RADIO ESTILO BOTÓN CIRCULAR */
+    /* ESTILO DE BOTONES CIRCULARES (RADIO BUTTONS) SEGÚN LA IMAGEN */
     div[data-testid="stRadio"] > div {
+        display: flex !important;
         flex-direction: row !important;
-        gap: 30px !important;
+        align-items: center !important;
+        gap: 8px !important;
     }
 
     div[data-testid="stRadio"] label {
         background-color: #000000 !important;
         border: 2px solid #00FF66 !important;
-        padding: 8px 16px !important;
+        padding: 6px 16px !important;
         border-radius: 20px !important;
         color: #FFFFFF !important;
         font-weight: 900 !important;
-        font-size: 0.95rem !important;
+        font-size: 0.82rem !important;
         text-transform: uppercase !important;
         cursor: pointer !important;
         box-shadow: 0 0 10px rgba(0, 255, 102, 0.3) !important;
+        margin: 0 !important;
     }
 
     div[data-testid="stRadio"] label:hover {
@@ -83,7 +77,7 @@ st.markdown("""
         background-color: #000000 !important;
     }
 
-    /* DESPLEGABLE EN FONDO OSCURO */
+    /* DESPLEGABLES FLOTANTES */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
@@ -224,7 +218,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
-LALIGA_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg"
+LALIGA_LOGO_URL = "https://raw.githubusercontent.com/football-data-org/football-data-api/master/logo/laliga.png"
 
 # TÍTULO GIGANTE CENTRADO
 st.markdown("""
@@ -235,24 +229,26 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# FILA ALINEADA DE LOGOS Y BOTONES CIRCULARES DE SELECCIÓN
-c_logo1, c_logo2, c_space = st.columns([2, 5, 3])
+# FILA DE LIGAS: LOGO PREMIER + BOTÓN PREMIER + LOGO LALIGA + BOTÓN LALIGA
+col_pl_logo, col_pl_radio, col_laliga_logo, col_laliga_radio, col_blank = st.columns([1.2, 2.2, 1.0, 2.2, 3.4])
 
-with c_logo1:
-    st.markdown(f'''
-    <div style="display:flex; align-items:center; gap:20px; padding-top:5px;">
-        <img src="{PL_LOGO_URL}" class="league-logo-img">
-        <img src="{LALIGA_LOGO_URL}" class="league-logo-img">
-    </div>
-    ''', unsafe_allow_html=True)
+with col_pl_logo:
+    st.markdown(f'<img src="{PL_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
 
-with c_logo2:
-    liga_seleccionada = st.radio(
-        "",
-        ["PREMIER LEAGUE", "LALIGA (ESPAÑA)"],
-        horizontal=True,
-        label_visibility="collapsed"
-    )
+with col_pl_radio:
+    sel_pl = st.radio("PL", ["PREMIER LEAGUE"], key="radio_pl", label_visibility="collapsed")
+
+with col_laliga_logo:
+    st.markdown(f'<img src="{LALIGA_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
+
+with col_laliga_radio:
+    sel_laliga = st.radio("LL", ["LALIGA (ESPAÑA)"], key="radio_ll", label_visibility="collapsed")
+
+# LÓGICA DE ACTIVACIÓN DE LIGA
+if "radio_ll" in st.session_state and st.session_state.radio_ll == "LALIGA (ESPAÑA)":
+    liga_seleccionada = "LALIGA"
+else:
+    liga_seleccionada = "PREMIER LEAGUE"
 
 st.markdown("<div style='border-bottom: 2px solid #00FF66; margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
@@ -304,11 +300,10 @@ LALIGA_DATA = {
     "ALAVES": {"logo": "https://crests.football-data.org/263.png", "xg": 1.25, "xga": 1.45, "ppda": 12.0, "aereos": 56, "corners": 4.4, "forma": ["P","E","G","P","P","E","G","P","P","G"], "l10_corners": [4, 5, 4, 5, 4, 5, 4, 5, 3, 4]}
 }
 
-# SELECCIÓN DINÁMICA DE DATASET
-if liga_seleccionada == "PREMIER LEAGUE":
-    TEAMS_DATA = PREMIER_LEAGUE_DATA
-else:
+if liga_seleccionada == "LALIGA":
     TEAMS_DATA = LALIGA_DATA
+else:
+    TEAMS_DATA = PREMIER_LEAGUE_DATA
 
 def parse_odds_to_decimal(val_str, format_type):
     try:
@@ -386,7 +381,7 @@ col_left_panel, col_right_panel = st.columns([7, 5])
 # COLUMNA IZQUIERDA: DATOS Y CONFIGURACIÓN DEL ENCUENTRO
 # ==============================================================================
 with col_left_panel:
-    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO ({liga_seleccionada})</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN ({liga_seleccionada})</h3>", unsafe_allow_html=True)
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
