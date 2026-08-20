@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
+import urllib.parse
 
 # Configuración de página
 st.set_page_config(
@@ -11,7 +12,21 @@ st.set_page_config(
     page_icon="⚽"
 )
 
-# ESTILOS CSS CON ESTRUCTURA IDÉNTICA A LA IMAGEN
+# GENERADOR DE LOGO SVG DE LALIGA EN VERDE NEÓN PARA EVITAR IMÁGENES ROTAS
+def get_laliga_svg():
+    svg_code = """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="45" height="45">
+        <path d="M20 10 L45 50 L20 90 L35 90 L60 50 L35 10 Z" fill="#00FF66"/>
+        <path d="M50 10 L75 50 L50 90 L65 90 L90 50 L65 10 Z" fill="#00FF66"/>
+    </svg>
+    """
+    encoded = urllib.parse.quote(svg_code)
+    return f"data:image/svg+xml;utf8,{encoded}"
+
+PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
+LALIGA_LOGO_SVG = get_laliga_svg()
+
+# ESTILOS CSS REFORZADOS
 st.markdown("""
 <style>
     .stApp {
@@ -24,34 +39,31 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 0.85rem !important;
     }
-    
-    /* LOGOS Y FILTROS NEÓN */
-    .league-logo-neon {
-        height: 42px !important;
-        width: auto !important;
-        filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%) drop-shadow(0 0 8px #00FF66) !important;
+
+    /* FILA DE LIGAS: UNIFICADA CON RADIO BUTTONS EXCLUSIVOS */
+    div[data-testid="stRadio"] {
+        background-color: transparent !important;
     }
 
-    /* ESTILO DE BOTONES CIRCULARES (RADIO BUTTONS) SEGÚN LA IMAGEN */
     div[data-testid="stRadio"] > div {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
-        gap: 8px !important;
+        justify-content: flex-start !important;
+        gap: 15px !important;
     }
 
     div[data-testid="stRadio"] label {
         background-color: #000000 !important;
         border: 2px solid #00FF66 !important;
-        padding: 6px 16px !important;
+        padding: 8px 18px !important;
         border-radius: 20px !important;
         color: #FFFFFF !important;
         font-weight: 900 !important;
-        font-size: 0.82rem !important;
+        font-size: 0.9rem !important;
         text-transform: uppercase !important;
         cursor: pointer !important;
         box-shadow: 0 0 10px rgba(0, 255, 102, 0.3) !important;
-        margin: 0 !important;
     }
 
     div[data-testid="stRadio"] label:hover {
@@ -77,7 +89,7 @@ st.markdown("""
         background-color: #000000 !important;
     }
 
-    /* DESPLEGABLES FLOTANTES */
+    /* DESPLEGABLES FLOTANTES EN FONDO OSCURO */
     div[data-baseweb="popover"], 
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
@@ -217,40 +229,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
-LALIGA_LOGO_URL = "https://raw.githubusercontent.com/football-data-org/football-data-api/master/logo/laliga.png"
-
-# TÍTULO GIGANTE CENTRADO
+# TÍTULO GIGANTE CENTRADO EN HTML/SVG DIRECTO (INAMOVIBLE E INMUNIZADO)
 st.markdown("""
-<div style="text-align: center; width: 100%; padding: 10px 0 15px 0; background-color: #000000;">
-    <div style="color: #FFD700; font-weight: 900; font-size: 90px; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 0 35px rgba(255, 215, 0, 1), 0 0 70px rgba(255, 215, 0, 0.6), 4px 4px 8px #000; line-height: 1.0;">
+<div style="width: 100%; text-align: center; padding: 10px 0 15px 0; background-color: #000000;">
+    <span style="color: #FFD700; font-weight: 900; font-size: 85px; font-family: Arial Black, sans-serif; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 0 30px #FFD700, 0 0 60px rgba(255,215,0,0.6); display: inline-block;">
         LA MAÑA PICKS
-    </div>
+    </span>
 </div>
 """, unsafe_allow_html=True)
 
-# FILA DE LIGAS: LOGO PREMIER + BOTÓN PREMIER + LOGO LALIGA + BOTÓN LALIGA
-col_pl_logo, col_pl_radio, col_laliga_logo, col_laliga_radio, col_blank = st.columns([1.2, 2.2, 1.0, 2.2, 3.4])
+# FILA DE LOGOS Y SELECTOR DE LIGA UNIFICADO
+c_pl_img, c_radio_sel, c_ll_img, c_blank = st.columns([0.8, 4.0, 0.8, 4.4])
 
-with col_pl_logo:
-    st.markdown(f'<img src="{PL_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
+with c_pl_img:
+    st.markdown(f'<img src="{PL_LOGO_URL}" style="height:42px; filter: invert(53%) sepia(93%) saturate(1831%) hue-rotate(93deg) brightness(121%) contrast(118%);">', unsafe_allow_html=True)
 
-with col_pl_radio:
-    sel_pl = st.radio("PL", ["PREMIER LEAGUE"], key="radio_pl", label_visibility="collapsed")
+with c_ll_img:
+    st.markdown(f'<img src="{LALIGA_LOGO_SVG}" style="height:42px;">', unsafe_allow_html=True)
 
-with col_laliga_logo:
-    st.markdown(f'<img src="{LALIGA_LOGO_URL}" class="league-logo-neon">', unsafe_allow_html=True)
+with c_radio_sel:
+    liga_seleccionada = st.radio(
+        "Liga",
+        ["PREMIER LEAGUE", "LALIGA (ESPAÑA)"],
+        index=0,
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
-with col_laliga_radio:
-    sel_laliga = st.radio("LL", ["LALIGA (ESPAÑA)"], key="radio_ll", label_visibility="collapsed")
-
-# LÓGICA DE ACTIVACIÓN DE LIGA
-if "radio_ll" in st.session_state and st.session_state.radio_ll == "LALIGA (ESPAÑA)":
-    liga_seleccionada = "LALIGA"
-else:
-    liga_seleccionada = "PREMIER LEAGUE"
-
-st.markdown("<div style='border-bottom: 2px solid #00FF66; margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='border-bottom: 2px solid #00FF66; margin-bottom: 20px; margin-top: 10px;'></div>", unsafe_allow_html=True)
 
 # BASE DE DATOS PREMIER LEAGUE (20 EQUIPOS)
 PREMIER_LEAGUE_DATA = {
@@ -300,7 +306,8 @@ LALIGA_DATA = {
     "ALAVES": {"logo": "https://crests.football-data.org/263.png", "xg": 1.25, "xga": 1.45, "ppda": 12.0, "aereos": 56, "corners": 4.4, "forma": ["P","E","G","P","P","E","G","P","P","G"], "l10_corners": [4, 5, 4, 5, 4, 5, 4, 5, 3, 4]}
 }
 
-if liga_seleccionada == "LALIGA":
+# CAMBIO DE DATASET SEGÚN LA LIGA SELECCIONADA
+if liga_seleccionada == "LALIGA (ESPAÑA)":
     TEAMS_DATA = LALIGA_DATA
 else:
     TEAMS_DATA = PREMIER_LEAGUE_DATA
@@ -381,7 +388,7 @@ col_left_panel, col_right_panel = st.columns([7, 5])
 # COLUMNA IZQUIERDA: DATOS Y CONFIGURACIÓN DEL ENCUENTRO
 # ==============================================================================
 with col_left_panel:
-    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN ({liga_seleccionada})</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#FFD700; font-size:1.05rem; margin-bottom:10px;'>⚡ DATOS Y CONFIGURACIÓN DEL ENCUENTRO ({liga_seleccionada})</h3>", unsafe_allow_html=True)
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
@@ -477,7 +484,7 @@ with col_left_panel:
     p_over05_ht = 1.0 - (poisson.pmf(0, lam_h_ht) * poisson.pmf(0, lam_a_ht))
     p_under05_ht = 1.0 - p_over05_ht
     p_under15_ht = float(sum(matriz_ht[h, a] for h in range(8) for a in range(8) if h + a < 1.5))
-    p_over15_ht = 1.0 - p_under15_ht
+    p_over15_ht = 1.0 - p_over15_ht
 
     hg1, hg2, hg3, hg4 = st.columns(4)
     with hg1: m_ht_o05 = st.text_input("HT Over 0.5", value=default_val(p_over05_ht))
