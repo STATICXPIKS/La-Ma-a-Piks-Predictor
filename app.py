@@ -139,7 +139,7 @@ def calcular_fatiga_rotacion_automatica(equipo):
     return 20, 15
 
 # ------------------------------------------------------------------------------
-# 1. CHAMPIONS LEAGUE (LOS 36 CLUBES EXACTOS DE TUS CAPTURAS)
+# 1. CHAMPIONS LEAGUE (36 CLUBES COMPLETOS)
 # ------------------------------------------------------------------------------
 CHAMPIONS_DATA = {
     "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
@@ -181,12 +181,12 @@ CHAMPIONS_DATA = {
 }
 
 # ------------------------------------------------------------------------------
-# 2. PREMIER LEAGUE (20 EQUIPOS)
+# 2. PREMIER LEAGUE (20 EQUIPOS COMPLETOS)
 # ------------------------------------------------------------------------------
 PREMIER_LEAGUE_DATA = {
-    "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg_loc": 1.40, "xga_loc": 1.55, "xg_vis": 1.15, "xga_vis": 1.70, "ppda": 10.5, "aereos": 48, "corners": 4.9, "tarjetas": 2.3},
     "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
+    "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg_loc": 1.40, "xga_loc": 1.55, "xg_vis": 1.15, "xga_vis": 1.70, "ppda": 10.5, "aereos": 48, "corners": 4.9, "tarjetas": 2.3},
     "Brentford": {"logo": "https://crests.football-data.org/402.png", "xg_loc": 1.50, "xga_loc": 1.45, "xg_vis": 1.20, "xga_vis": 1.65, "ppda": 12.1, "aereos": 56, "corners": 4.6, "tarjetas": 1.8},
     "Brighton": {"logo": "https://crests.football-data.org/397.png", "xg_loc": 1.65, "xga_loc": 1.40, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 9.5, "aereos": 47, "corners": 5.8, "tarjetas": 2.0},
     "Chelsea": {"logo": "https://crests.football-data.org/61.png", "xg_loc": 1.80, "xga_loc": 1.25, "xg_vis": 1.60, "xga_vis": 1.40, "ppda": 9.8, "aereos": 52, "corners": 5.6, "tarjetas": 2.6},
@@ -207,7 +207,7 @@ PREMIER_LEAGUE_DATA = {
 }
 
 # ------------------------------------------------------------------------------
-# 3. LALIGA EA SPORTS (20 EQUIPOS)
+# 3. LALIGA EA SPORTS (20 EQUIPOS COMPLETOS)
 # ------------------------------------------------------------------------------
 LALIGA_DATA = {
     "Deportivo Alavés": {"logo": "https://crests.football-data.org/263.png", "xg_loc": 1.25, "xga_loc": 1.45, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 12.0, "aereos": 56, "corners": 4.4, "tarjetas": 2.5},
@@ -394,7 +394,7 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-        # Banner Matchup con escudos dinámicos
+        # Banner Matchup
         st.markdown(f"""
         <div class="analysis-card" style="border:1px solid #bfdbfe;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
