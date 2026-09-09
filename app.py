@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 
 # Configuración de Página - Estilo RickyPicks Light Mode con Acentos Verde Dinero
 st.set_page_config(
-    page_title="LA MAÑA PICKS - IA QUANT MULTI-SPORT",
+    page_title="LA MAÑA PICKS - IA QUANT & TRACKER",
     layout="wide",
     page_icon="💸"
 )
@@ -19,7 +19,7 @@ LOGOS_COMPETENCIA = {
     "NFL": "https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png"
 }
 
-# ESTILOS CSS REFORZADOS (TIPOGRAFÍA EXCLUSIVA 'SYNE' & VERDE DINERO)
+# ESTILOS CSS REFORZADOS (TIPOGRAFÍA SYNE Y VERDE DINERO)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
@@ -59,7 +59,7 @@ st.markdown("""
         margin-bottom: 12px;
         text-transform: uppercase;
     }
-    .hero-highlight { color: #059669 !important; } /* Verde Dinero */
+    .hero-highlight { color: #059669 !important; }
     .hero-subtitle { 
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         font-size: 1.15rem; 
@@ -74,17 +74,17 @@ st.markdown("""
         background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
         border: 2px solid #a7f3d0;
         border-radius: 20px;
-        padding: 40px 24px;
+        padding: 24px;
         text-align: center;
         box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.15);
     }
     .sim-card-title {
         font-family: 'Syne', sans-serif !important;
-        font-size: 2.8rem;
+        font-size: 2.2rem;
         font-weight: 900;
         color: #064e3b;
         line-height: 1.1;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
     }
 
     .badge-high { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
@@ -145,7 +145,7 @@ st.markdown("""
         border-radius: 12px !important;
         font-weight: 800 !important;
         font-size: 1.05rem !important;
-        padding: 14px 20px !important;
+        padding: 12px 18px !important;
         text-align: left !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
         transition: all 0.2s ease !important;
@@ -159,7 +159,27 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# FUNCIONES DE AUTOMATIZACIÓN DE FATIGA Y ROTACIÓN
+# INICIALIZACIÓN DEL SESSION STATE (TRACKING DE APUESTAS)
+# ------------------------------------------------------------------------------
+if "record_apuestas" not in st.session_state:
+    st.session_state["record_apuestas"] = {
+        "PREMIER LEAGUE": {"win": 14, "loose": 4},
+        "LALIGA": {"win": 12, "loose": 5},
+        "CHAMPIONS LEAGUE": {"win": 18, "loose": 3},
+        "NFL": {"win": 15, "loose": 6}
+    }
+
+if "liga_activa" not in st.session_state:
+    st.session_state["liga_activa"] = None
+
+def registrar_pick(liga, resultado):
+    st.session_state["record_apuestas"][liga][resultado] += 1
+
+def reiniciar_record_liga(liga):
+    st.session_state["record_apuestas"][liga] = {"win": 0, "loose": 0}
+
+# ------------------------------------------------------------------------------
+# FUNCIONES DE AUTOMATIZACIÓN Y BASES DE DATOS MULTI-DEPORTE
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
@@ -170,9 +190,6 @@ def calcular_fatiga_rotacion_automatica(equipo):
         return 65, 40
     return 20, 15
 
-# ------------------------------------------------------------------------------
-# BASES DE DATOS MULTI-DEPORTE
-# ------------------------------------------------------------------------------
 CHAMPIONS_DATA = {
     "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
@@ -301,7 +318,7 @@ ARBITROS = {
 }
 
 # ------------------------------------------------------------------------------
-# FUNCIONES AUXILIARES & MOTOR MONTE CARLO
+# MOTORES MONTE CARLO & GRÁFICA CÁPSULAS 3D (EFECTIVIDAD)
 # ------------------------------------------------------------------------------
 def parse_odds(val_str, fmt_type):
     try:
@@ -388,15 +405,56 @@ def generar_grafica_mini_15_partidos(prob_exito):
     fig.add_trace(go.Bar(x=labels, y=[1]*15, marker_color=colors, hoverinfo='x'))
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        height=130, margin=dict(l=5, r=5, t=10, b=20),
+        height=120, margin=dict(l=5, r=5, t=10, b=20),
         xaxis=dict(showgrid=False, tickfont=dict(size=9, color='#64748b')),
         yaxis=dict(showgrid=False, showticklabels=False, range=[0, 1.2])
     )
     return fig
 
-# ESTADO DE SESIÓN NAVEGACIÓN
-if "liga_activa" not in st.session_state:
-    st.session_state["liga_activa"] = None
+def generar_grafica_efectividad_capsulas(totales_records):
+    """
+    Genera la gráfica tipo tubo/cápsula 3D con barras Verdes (WIN) y Rojas (LOOSE)
+    inspirada en la imagen de referencia.
+    """
+    competencias = list(totales_records.keys())
+    wins = [totales_records[c]["win"] for c in competencias]
+    looses = [totales_records[c]["loose"] for c in competencias]
+
+    fig = go.Figure()
+
+    # Barras de Ganados (Verde Dinero)
+    fig.add_trace(go.Bar(
+        name='WIN (Ganados)',
+        x=competencias,
+        y=wins,
+        marker_color='#10b981',
+        marker_line_color='#059669',
+        marker_line_width=1.5,
+        opacity=0.9
+    ))
+
+    # Barras de Perdidos (Rojo Alert)
+    fig.add_trace(go.Bar(
+        name='LOOSE (Perdidos)',
+        x=competencias,
+        y=looses,
+        marker_color='#ef4444',
+        marker_line_color='#dc2626',
+        marker_line_width=1.5,
+        opacity=0.9
+    ))
+
+    fig.update_layout(
+        barmode='group',
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        height=220,
+        margin=dict(l=10, r=10, t=25, b=10),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10, color='#0f172a')),
+        xaxis=dict(showgrid=False, tickfont=dict(size=10, color='#0f172a', family='Syne')),
+        yaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=10, color='#64748b'))
+    )
+    return fig
 
 # HEADER BRAND CON TIPOGRAFÍA Y ESTILO DE MARCA
 st.markdown("""
@@ -407,7 +465,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# VISTA 1: HOME LANDING PAGE (COPYWRITING DE MARCA Y FUENTES SYNE)
+# VISTA 1: HOME LANDING PAGE CON GRÁFICA DE EFECTIVIDAD CÁPSULAS 3D
 # ==============================================================================
 if st.session_state["liga_activa"] is None:
     col_hero_left, col_hero_right = st.columns([6, 6])
@@ -447,31 +505,54 @@ if st.session_state["liga_activa"] is None:
         with col_b4_img: st.image(LOGOS_COMPETENCIA["NFL"], width=40)
 
     with col_hero_right:
-        st.markdown("""
+        # CÁLCULO DE EFECTIVIDAD GLOBAL E HISTÓRICA
+        total_wins = sum(st.session_state["record_apuestas"][c]["win"] for c in st.session_state["record_apuestas"])
+        total_looses = sum(st.session_state["record_apuestas"][c]["loose"] for c in st.session_state["record_apuestas"])
+        total_picks = total_wins + total_looses
+        efectividad_global = (total_wins / total_picks * 100.0) if total_picks > 0 else 0.0
+
+        st.markdown(f"""
         <div class="sim-card-home">
-            <div class="sim-card-title">Cada juego <br>simulado <br><span style="color:#059669;">10,000 veces</span></div>
-            <p style="color:#475569; font-size:0.95rem; margin-top:15px; font-weight:600;">
-                Calculamos automáticamente rendimiento Local/Visitante, xG, PPDA, Trincheras, Clima Extremo y Spreads Gancho con Teasers.
+            <div class="sim-card-title">Efectividad Global: <span style="color:#059669;">{efectividad_global:.1f}%</span></div>
+            <p style="color:#475569; font-size:0.88rem; font-weight:700; margin-bottom:10px;">
+                Récord Registrado: <b>{total_wins} WINS</b> / <b>{total_looses} LOOSES</b> (Total: {total_picks} Picks)
             </p>
         </div>
         """, unsafe_allow_html=True)
 
+        # RENDERIZADO DE LA GRÁFICA TIPO CÁPSULA / TUBO 3D
+        fig_capsulas = generar_grafica_efectividad_capsulas(st.session_state["record_apuestas"])
+        st.plotly_chart(fig_capsulas, use_container_width=True, key="chart_efectividad_home")
+
 # ==============================================================================
-# VISTA 2: PANEL DE ANÁLISIS A) NFL
+# VISTA 2: PANEL DE ANÁLISIS A) NFL (CON REGISTRO DE WIN / LOOSE)
 # ==============================================================================
 elif st.session_state["liga_activa"] == "NFL":
-    c_head_title, c_head_back = st.columns([9, 3])
+    rec = st.session_state["record_apuestas"]["NFL"]
+    tot = rec["win"] + rec["loose"]
+    pct = (rec["win"] / tot * 100.0) if tot > 0 else 0.0
+
+    c_head_title, c_head_back = st.columns([8, 4])
     with c_head_title:
         st.markdown(f"""
         <div style="display:flex; align-items:center; gap:15px;">
             <img src="{LOGOS_COMPETENCIA['NFL']}" width="50">
-            <div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>(NFL - 32 Equipos)</span></div>
+            <div>
+                <div class='hero-title' style='font-size:2.0rem;'>Escaneo de Valor <span class='hero-highlight'>(NFL)</span></div>
+                <div style="font-size:0.85rem; font-weight:800; color:#059669;">Récord NFL: {rec['win']} WIN / {rec['loose']} LOOSE ({pct:.1f}% Efectividad)</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     with c_head_back:
-        if st.button("← Cambiar Deporte", use_container_width=True):
-            st.session_state["liga_activa"] = None
-            st.rerun()
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("🔄 Reset Récord", use_container_width=True):
+                reiniciar_record_liga("NFL")
+                st.rerun()
+        with col_btn2:
+            if st.button("← Inicio", use_container_width=True):
+                st.session_state["liga_activa"] = None
+                st.rerun()
 
     col_izq_inputs, col_der_analysis = st.columns([1, 1])
 
@@ -525,7 +606,7 @@ elif st.session_state["liga_activa"] == "NFL":
         if abs(spread_loc) in [3.5, 7.5]:
             st.markdown(f"""
             <div class="trap-alert">
-                ⚠️ <b>TRAP LINE DETECTOR (-3.5 / -7.5):</b> Spread en número gancho estratégico. Sugerimos mutación a Teaser (+6.0 pts) para asegurar el cruce clave de 3 o 7.
+                ⚠️ <b>TRAP LINE DETECTOR (-3.5 / -7.5):</b> Spread en número gancho estratégico. Sugerimos mutación a Teaser (+6.0 pts).
             </div>
             """, unsafe_allow_html=True)
 
@@ -554,16 +635,16 @@ elif st.session_state["liga_activa"] == "NFL":
         )
 
         mercados_nfl = [
-            {"mercado": f"1. Moneyline: Gana {eq_loc}", "prob": sim_nfl['p_ml_loc'], "cuota": parse_odds(q_ml_loc, fmt_odds)},
-            {"mercado": f"1. Moneyline: Gana {eq_vis}", "prob": sim_nfl['p_ml_vis'], "cuota": parse_odds(q_ml_vis, fmt_odds)},
-            {"mercado": f"2. Spread: {eq_loc} ({spread_loc:+} pts)", "prob": sim_nfl['p_spread_loc'], "cuota": parse_odds(q_spread_loc, fmt_odds)},
-            {"mercado": f"2. Spread: {eq_vis} ({spread_vis:+} pts)", "prob": sim_nfl['p_spread_vis'], "cuota": parse_odds(q_spread_vis, fmt_odds)},
-            {"mercado": f"3. Total Puntos: Over {line_pts}", "prob": sim_nfl['p_over_pts'], "cuota": parse_odds(q_over_pts, fmt_odds)},
-            {"mercado": f"3. Total Puntos: Under {line_pts}", "prob": sim_nfl['p_under_pts'], "cuota": parse_odds(q_under_pts, fmt_odds)},
-            {"mercado": f"4. Goles de Campo: Over {line_fg}", "prob": sim_nfl['p_over_fg'], "cuota": parse_odds(q_over_fg, fmt_odds)},
-            {"mercado": f"4. Goles de Campo: Under {line_fg}", "prob": sim_nfl['p_under_fg'], "cuota": parse_odds(q_under_fg, fmt_odds)},
-            {"mercado": f"5. Touchdowns Totales: Over {line_td}", "prob": sim_nfl['p_over_td'], "cuota": parse_odds(q_over_td, fmt_odds)},
-            {"mercado": f"5. Touchdowns Totales: Under {line_td}", "prob": sim_nfl['p_under_td'], "cuota": parse_odds(q_under_td, fmt_odds)}
+            {"id": "ml_loc", "mercado": f"1. Moneyline: Gana {eq_loc}", "prob": sim_nfl['p_ml_loc'], "cuota": parse_odds(q_ml_loc, fmt_odds)},
+            {"id": "ml_vis", "mercado": f"1. Moneyline: Gana {eq_vis}", "prob": sim_nfl['p_ml_vis'], "cuota": parse_odds(q_ml_vis, fmt_odds)},
+            {"id": "sp_loc", "mercado": f"2. Spread: {eq_loc} ({spread_loc:+} pts)", "prob": sim_nfl['p_spread_loc'], "cuota": parse_odds(q_spread_loc, fmt_odds)},
+            {"id": "sp_vis", "mercado": f"2. Spread: {eq_vis} ({spread_vis:+} pts)", "prob": sim_nfl['p_spread_vis'], "cuota": parse_odds(q_spread_vis, fmt_odds)},
+            {"id": "pts_o", "mercado": f"3. Total Puntos: Over {line_pts}", "prob": sim_nfl['p_over_pts'], "cuota": parse_odds(q_over_pts, fmt_odds)},
+            {"id": "pts_u", "mercado": f"3. Total Puntos: Under {line_pts}", "prob": sim_nfl['p_under_pts'], "cuota": parse_odds(q_under_pts, fmt_odds)},
+            {"id": "fg_o", "mercado": f"4. Goles de Campo: Over {line_fg}", "prob": sim_nfl['p_over_fg'], "cuota": parse_odds(q_over_fg, fmt_odds)},
+            {"id": "fg_u", "mercado": f"4. Goles de Campo: Under {line_fg}", "prob": sim_nfl['p_under_fg'], "cuota": parse_odds(q_under_fg, fmt_odds)},
+            {"id": "td_o", "mercado": f"5. Touchdowns Totales: Over {line_td}", "prob": sim_nfl['p_over_td'], "cuota": parse_odds(q_over_td, fmt_odds)},
+            {"id": "td_u", "mercado": f"5. Touchdowns Totales: Under {line_td}", "prob": sim_nfl['p_under_td'], "cuota": parse_odds(q_under_td, fmt_odds)}
         ]
 
         for idx, item in enumerate(mercados_nfl):
@@ -593,6 +674,17 @@ elif st.session_state["liga_activa"] == "NFL":
             </div>
             """, unsafe_allow_html=True)
 
+            # BOTONES REGISTRO WIN / LOOSE
+            col_w, col_l, col_space = st.columns([2, 2, 8])
+            with col_w:
+                if st.button(f"✅ WIN", key=f"win_nfl_{item['id']}"):
+                    registrar_pick("NFL", "win")
+                    st.rerun()
+            with col_l:
+                if st.button(f"❌ LOOSE", key=f"loose_nfl_{item['id']}"):
+                    registrar_pick("NFL", "loose")
+                    st.rerun()
+
             with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (NFL 15 Partidos)"):
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_nfl_{idx}")
@@ -601,25 +693,36 @@ elif st.session_state["liga_activa"] == "NFL":
 # VISTA 2: PANEL DE ANÁLISIS B) FÚTBOL (PREMIER, LALIGA, CHAMPIONS)
 # ==============================================================================
 else:
-    c_head_title, c_head_back = st.columns([9, 3])
+    liga = st.session_state["liga_activa"]
+    rec = st.session_state["record_apuestas"][liga]
+    tot = rec["win"] + rec["loose"]
+    pct = (rec["win"] / tot * 100.0) if tot > 0 else 0.0
+
+    c_head_title, c_head_back = st.columns([8, 4])
     with c_head_title:
         st.markdown(f"""
         <div style="display:flex; align-items:center; gap:15px;">
-            <img src="{LOGOS_COMPETENCIA[st.session_state['liga_activa']]}" width="45">
-            <div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>({st.session_state['liga_activa']})</span></div>
+            <img src="{LOGOS_COMPETENCIA[liga]}" width="45">
+            <div>
+                <div class='hero-title' style='font-size:2.0rem;'>Escaneo de Valor <span class='hero-highlight'>({liga})</span></div>
+                <div style="font-size:0.85rem; font-weight:800; color:#059669;">Récord {liga}: {rec['win']} WIN / {rec['loose']} LOOSE ({pct:.1f}% Efectividad)</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     with c_head_back:
-        if st.button("← Cambiar Competición", use_container_width=True):
-            st.session_state["liga_activa"] = None
-            st.rerun()
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("🔄 Reset Récord", use_container_width=True):
+                reiniciar_record_liga(liga)
+                st.rerun()
+        with col_btn2:
+            if st.button("← Inicio", use_container_width=True):
+                st.session_state["liga_activa"] = None
+                st.rerun()
 
-    if st.session_state["liga_activa"] == "PREMIER LEAGUE":
-        TEAMS_DATA = PREMIER_LEAGUE_DATA
-    elif st.session_state["liga_activa"] == "LALIGA":
-        TEAMS_DATA = LALIGA_DATA
-    else:
-        TEAMS_DATA = CHAMPIONS_DATA
+    if liga == "PREMIER LEAGUE": TEAMS_DATA = PREMIER_LEAGUE_DATA
+    elif liga == "LALIGA": TEAMS_DATA = LALIGA_DATA
+    else: TEAMS_DATA = CHAMPIONS_DATA
 
     col_izq_inputs, col_der_analysis = st.columns([1, 1])
 
@@ -724,20 +827,20 @@ else:
         )
 
         mercados_evaluados = [
-            {"mercado": f"1. Resultado: Gana {eq_loc}", "prob": sim_results['p_1_ft'], "cuota": parse_odds(q_1, fmt_odds)},
-            {"mercado": f"1. Resultado: Empate", "prob": sim_results['p_x_ft'], "cuota": parse_odds(q_x, fmt_odds)},
-            {"mercado": f"1. Resultado: Gana {eq_vis}", "prob": sim_results['p_2_ft'], "cuota": parse_odds(q_2, fmt_odds)},
-            {"mercado": f"2. Doble Chance: {eq_loc} o Empate (1X)", "prob": sim_results['p_1_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_1x, fmt_odds)},
-            {"mercado": f"2. Doble Chance: {eq_vis} o Empate (X2)", "prob": sim_results['p_2_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_x2, fmt_odds)},
-            {"mercado": f"3. Total Goles: Over {line_goles}", "prob": sim_results['p_over_goles'], "cuota": parse_odds(q_over_g, fmt_odds)},
-            {"mercado": f"3. Total Goles: Under {line_goles}", "prob": sim_results['p_under_goles'], "cuota": parse_odds(q_under_g, fmt_odds)},
-            {"mercado": "4. Ambos Equipos Anotan: SÍ", "prob": sim_results['p_btts_si'], "cuota": parse_odds(q_btts_si, fmt_odds)},
-            {"mercado": "4. Ambos Equipos Anotan: NO", "prob": sim_results['p_btts_no'], "cuota": parse_odds(q_btts_no, fmt_odds)},
-            {"mercado": f"5. Hándicap Asiático: {eq_loc} ({line_ha})", "prob": sim_results['p_1_ft'] + (sim_results['p_x_ft'] if "+0.5" in line_ha else 0), "cuota": parse_odds(q_ha_loc, fmt_odds)},
-            {"mercado": f"6. Total Córners: Over {line_corners}", "prob": sim_results['p_over_corners'], "cuota": parse_odds(q_over_c, fmt_odds)},
-            {"mercado": f"6. Total Córners: Under {line_corners}", "prob": sim_results['p_under_corners'], "cuota": parse_odds(q_under_c, fmt_odds)},
-            {"mercado": f"7. Total Tarjetas: Over {line_cards}", "prob": sim_results['p_over_cards'], "cuota": parse_odds(q_over_t, fmt_odds)},
-            {"mercado": f"7. Total Tarjetas: Under {line_cards}", "prob": sim_results['p_under_cards'], "cuota": parse_odds(q_under_t, fmt_odds)}
+            {"id": "1x2_loc", "mercado": f"1. Resultado: Gana {eq_loc}", "prob": sim_results['p_1_ft'], "cuota": parse_odds(q_1, fmt_odds)},
+            {"id": "1x2_emp", "mercado": f"1. Resultado: Empate", "prob": sim_results['p_x_ft'], "cuota": parse_odds(q_x, fmt_odds)},
+            {"id": "1x2_vis", "mercado": f"1. Resultado: Gana {eq_vis}", "prob": sim_results['p_2_ft'], "cuota": parse_odds(q_2, fmt_odds)},
+            {"id": "dc_1x", "mercado": f"2. Doble Chance: {eq_loc} o Empate (1X)", "prob": sim_results['p_1_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_1x, fmt_odds)},
+            {"id": "dc_x2", "mercado": f"2. Doble Chance: {eq_vis} o Empate (X2)", "prob": sim_results['p_2_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_x2, fmt_odds)},
+            {"id": "gol_o", "mercado": f"3. Total Goles: Over {line_goles}", "prob": sim_results['p_over_goles'], "cuota": parse_odds(q_over_g, fmt_odds)},
+            {"id": "gol_u", "mercado": f"3. Total Goles: Under {line_goles}", "prob": sim_results['p_under_goles'], "cuota": parse_odds(q_under_g, fmt_odds)},
+            {"id": "btts_s", "mercado": "4. Ambos Equipos Anotan: SÍ", "prob": sim_results['p_btts_si'], "cuota": parse_odds(q_btts_si, fmt_odds)},
+            {"id": "btts_n", "mercado": "4. Ambos Equipos Anotan: NO", "prob": sim_results['p_btts_no'], "cuota": parse_odds(q_btts_no, fmt_odds)},
+            {"id": "ha_loc", "mercado": f"5. Hándicap Asiático: {eq_loc} ({line_ha})", "prob": sim_results['p_1_ft'] + (sim_results['p_x_ft'] if "+0.5" in line_ha else 0), "cuota": parse_odds(q_ha_loc, fmt_odds)},
+            {"id": "cor_o", "mercado": f"6. Total Córners: Over {line_corners}", "prob": sim_results['p_over_corners'], "cuota": parse_odds(q_over_c, fmt_odds)},
+            {"id": "cor_u", "mercado": f"6. Total Córners: Under {line_corners}", "prob": sim_results['p_under_corners'], "cuota": parse_odds(q_under_c, fmt_odds)},
+            {"id": "car_o", "mercado": f"7. Total Tarjetas: Over {line_cards}", "prob": sim_results['p_over_cards'], "cuota": parse_odds(q_over_t, fmt_odds)},
+            {"id": "car_u", "mercado": f"7. Total Tarjetas: Under {line_cards}", "prob": sim_results['p_under_cards'], "cuota": parse_odds(q_under_t, fmt_odds)}
         ]
 
         for idx, item in enumerate(mercados_evaluados):
@@ -767,6 +870,17 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
+            # BOTONES REGISTRO WIN / LOOSE
+            col_w, col_l, col_space = st.columns([2, 2, 8])
+            with col_w:
+                if st.button(f"✅ WIN", key=f"win_{liga}_{item['id']}"):
+                    registrar_pick(liga, "win")
+                    st.rerun()
+            with col_l:
+                if st.button(f"❌ LOOSE", key=f"loose_{liga}_{item['id']}"):
+                    registrar_pick(liga, "loose")
+                    st.rerun()
+
             with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
-                st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_{st.session_state['liga_activa']}_{idx}")
+                st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_{liga}_{idx}")
