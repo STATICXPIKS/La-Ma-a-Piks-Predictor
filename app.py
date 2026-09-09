@@ -16,18 +16,18 @@ LOGOS_COMPETENCIA = {
     "PREMIER LEAGUE": "https://crests.football-data.org/PL.png",
     "LALIGA": "https://crests.football-data.org/PD.png",
     "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
-    "NFL": "https://a.espncdn.com/i/league-logos/soccer/500/nfl.png"
+    "NFL": "https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png"
 }
 
-# ESTILOS CSS REFORZADOS (TIPOGRAFÍA MONTSERRAT & VERDE DINERO)
+# ESTILOS CSS REFORZADOS (TIPOGRAFÍA EXCLUSIVA 'SYNE' & VERDE DINERO)
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
 
     .stApp {
         background-color: #f8fafc !important;
         color: #0f172a !important;
-        font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif !important;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
     }
 
     header {visibility: hidden;}
@@ -41,22 +41,34 @@ st.markdown("""
         margin-bottom: 25px;
     }
     .brand-logo {
-        font-size: 2.2rem;
+        font-family: 'Syne', sans-serif !important;
+        font-size: 2.4rem;
         font-weight: 900;
         color: #059669 !important; /* Verde Dinero */
-        letter-spacing: -1px;
+        letter-spacing: -1.5px;
+        text-transform: uppercase;
     }
 
     .hero-title {
-        font-size: 3.4rem;
+        font-family: 'Syne', sans-serif !important;
+        font-size: 3.2rem;
         font-weight: 900;
         color: #0f172a;
         line-height: 1.05;
-        letter-spacing: -1.5px;
-        margin-bottom: 10px;
+        letter-spacing: -1.8px;
+        margin-bottom: 12px;
+        text-transform: uppercase;
     }
     .hero-highlight { color: #059669 !important; } /* Verde Dinero */
-    .hero-subtitle { font-size: 1.1rem; color: #475569; font-weight: 600; margin-bottom: 25px; }
+    .hero-subtitle { 
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 1.15rem; 
+        color: #047857; 
+        font-weight: 800; 
+        letter-spacing: 0.5px;
+        margin-bottom: 25px; 
+        text-transform: uppercase;
+    }
 
     .sim-card-home {
         background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
@@ -67,6 +79,7 @@ st.markdown("""
         box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.15);
     }
     .sim-card-title {
+        font-family: 'Syne', sans-serif !important;
         font-size: 2.8rem;
         font-weight: 900;
         color: #064e3b;
@@ -125,12 +138,13 @@ st.markdown("""
     }
 
     .stButton>button {
+        font-family: 'Syne', sans-serif !important;
         background-color: #ffffff !important;
         color: #0f172a !important;
         border: 1.5px solid #e2e8f0 !important;
         border-radius: 12px !important;
         font-weight: 800 !important;
-        font-size: 1rem !important;
+        font-size: 1.05rem !important;
         padding: 14px 20px !important;
         text-align: left !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
@@ -384,7 +398,7 @@ def generar_grafica_mini_15_partidos(prob_exito):
 if "liga_activa" not in st.session_state:
     st.session_state["liga_activa"] = None
 
-# HEADER BRAND
+# HEADER BRAND CON TIPOGRAFÍA Y ESTILO DE MARCA
 st.markdown("""
 <div class="nav-bar">
     <div class="brand-logo">LA MAÑA <span style="color:#059669;">PICKS</span></div>
@@ -393,18 +407,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# VISTA 1: HOME LANDING PAGE (4 COMPETICIONES CON LOGOS OFICIALES)
+# VISTA 1: HOME LANDING PAGE (COPYWRITING DE MARCA Y FUENTES SYNE)
 # ==============================================================================
 if st.session_state["liga_activa"] is None:
     col_hero_left, col_hero_right = st.columns([6, 6])
 
     with col_hero_left:
         st.markdown("""
-        <div class="hero-title">La IA que te <br><span class="hero-highlight">hará ganar</span></div>
-        <div class="hero-subtitle">Deja de inventar parlays. Juega con cabeza y modelos estocásticos.</div>
+        <div class="hero-title">ANALIZANDO CON LA MAÑA <br><span class="hero-highlight">QUE NOS HACE GANAR</span></div>
+        <div class="hero-subtitle">JUEGA CON ESTADÍSTICAS Y CON MAÑA.</div>
         """, unsafe_allow_html=True)
 
-        # BOTONES DE SELECCIÓN CON LOGOS OFICIALES Y ESTILO VERDE DINERO
         col_b1, col_b1_img = st.columns([10, 2])
         with col_b1:
             if st.button("PREMIER LEAGUE (20 Equipos) ➔", use_container_width=True):
