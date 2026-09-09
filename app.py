@@ -185,7 +185,7 @@ def guardar_apuesta_seleccionada(liga, partido, mercado, cuota, prob_calculada):
     })
 
 # ------------------------------------------------------------------------------
-# DATOS COMPLETOS DE EQUIPOS Y TORNEOS (SIN RECORTES)
+# DATOS DE EQUIPOS Y TORNEOS
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
@@ -194,7 +194,6 @@ def calcular_fatiga_rotacion_automatica(equipo):
     ]
     return (65, 40) if equipo in equipos_top else (20, 15)
 
-# 1. CHAMPIONS LEAGUE (36 CLUBES)
 CHAMPIONS_DATA = {
     "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
@@ -234,7 +233,6 @@ CHAMPIONS_DATA = {
     "Porto": {"logo": "https://crests.football-data.org/503.png", "xg_loc": 1.75, "xga_loc": 1.10, "xg_vis": 1.45, "xga_vis": 1.30, "ppda": 9.3, "aereos": 52, "corners": 6.0, "tarjetas": 2.2}
 }
 
-# 2. PREMIER LEAGUE (20 EQUIPOS)
 PREMIER_LEAGUE_DATA = {
     "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
@@ -258,7 +256,6 @@ PREMIER_LEAGUE_DATA = {
     "Tottenham": {"logo": "https://crests.football-data.org/73.png", "xg_loc": 1.85, "xga_loc": 1.50, "xg_vis": 1.50, "xga_vis": 1.65, "ppda": 9.1, "aereos": 49, "corners": 6.3, "tarjetas": 2.1}
 }
 
-# 3. LALIGA EA SPORTS (20 EQUIPOS)
 LALIGA_DATA = {
     "Deportivo Alavés": {"logo": "https://crests.football-data.org/263.png", "xg_loc": 1.25, "xga_loc": 1.45, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 12.0, "aereos": 56, "corners": 4.4, "tarjetas": 2.5},
     "Espanyol": {"logo": "https://crests.football-data.org/80.png", "xg_loc": 1.15, "xga_loc": 1.60, "xg_vis": 0.90, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.6},
@@ -282,7 +279,6 @@ LALIGA_DATA = {
     "Levante": {"logo": "https://crests.football-data.org/88.png", "xg_loc": 1.22, "xga_loc": 1.55, "xg_vis": 0.95, "xga_vis": 1.70, "ppda": 12.1, "aereos": 49, "corners": 4.2, "tarjetas": 2.4}
 }
 
-# 4. NFL (32 EQUIPOS - AFC / NFC)
 NFL_DATA = {
     "Miami Dolphins": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png", "td_exp": 3.2, "fg_exp": 1.5},
     "New York Jets": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png", "td_exp": 2.5, "fg_exp": 2.1},
@@ -318,7 +314,27 @@ NFL_DATA = {
     "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "td_exp": 3.6, "fg_exp": 1.5}
 }
 
-ARBITROS = {"Chris Kavanagh": {"prom_tarjetas": 3.9}, "Anthony Taylor": {"prom_tarjetas": 4.5}}
+# ÁRBITROS ESPECÍFICOS E INDEPENDIENTES POR COMPETICIÓN
+ARBITROS_PREMIER = {
+    "Anthony Taylor": {"prom_tarjetas": 4.5},
+    "Michael Oliver": {"prom_tarjetas": 3.6},
+    "Paul Tierney": {"prom_tarjetas": 4.8},
+    "Chris Kavanagh": {"prom_tarjetas": 3.9}
+}
+
+ARBITROS_LALIGA = {
+    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
+    "José María Sánchez Martínez": {"prom_tarjetas": 4.9},
+    "Alejandro Hernández Hernández": {"prom_tarjetas": 5.8},
+    "Ricardo De Burgos Bengoetxea": {"prom_tarjetas": 4.1}
+}
+
+ARBITROS_CHAMPIONS = {
+    "Szymon Marciniak": {"prom_tarjetas": 4.1},
+    "Daniele Orsato": {"prom_tarjetas": 4.7},
+    "Clément Turpin": {"prom_tarjetas": 3.8},
+    "Slavko Vinčić": {"prom_tarjetas": 3.9}
+}
 
 # ------------------------------------------------------------------------------
 # MOTORES DE SIMULACIÓN Y GENERACIÓN GRÁFICA
@@ -647,9 +663,16 @@ else:
             st.session_state["liga_activa"] = None
             st.rerun()
 
-    if liga == "PREMIER LEAGUE": TEAMS_DATA = PREMIER_LEAGUE_DATA
-    elif liga == "LALIGA": TEAMS_DATA = LALIGA_DATA
-    else: TEAMS_DATA = CHAMPIONS_DATA
+    # Selección de datos de equipo y árbitros específicos por competición
+    if liga == "PREMIER LEAGUE":
+        TEAMS_DATA = PREMIER_LEAGUE_DATA
+        ARBITROS_LIGA = ARBITROS_PREMIER
+    elif liga == "LALIGA":
+        TEAMS_DATA = LALIGA_DATA
+        ARBITROS_LIGA = ARBITROS_LALIGA
+    else:
+        TEAMS_DATA = CHAMPIONS_DATA
+        ARBITROS_LIGA = ARBITROS_CHAMPIONS
 
     col_izq_inputs, col_der_analysis = st.columns([1, 1])
 
@@ -659,10 +682,10 @@ else:
         c_loc, c_vis, c_ref = st.columns([3, 3, 2])
         with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(TEAMS_DATA.keys())), index=0)
         with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(TEAMS_DATA.keys())), index=1 if len(TEAMS_DATA)>1 else 0)
-        with c_ref: arbitro_sel = st.selectbox("Árbitro:", list(ARBITROS.keys()), index=0)
+        with c_ref: arbitro_sel = st.selectbox("Árbitro:", list(ARBITROS_LIGA.keys()), index=0)
 
         d_loc, d_vis = TEAMS_DATA[eq_loc], TEAMS_DATA[eq_vis]
-        arbitro_data = ARBITROS[arbitro_sel]
+        arbitro_data = ARBITROS_LIGA[arbitro_sel]
 
         fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
         fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
