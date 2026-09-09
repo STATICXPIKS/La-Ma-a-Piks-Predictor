@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson
-import datetime
 
 # Configuración de Página - Estilo RickyPicks Light Mode
 st.set_page_config(
@@ -130,57 +129,107 @@ st.markdown("""
 # ------------------------------------------------------------------------------
 # ALGORITMO DINÁMICO DE FATIGA Y ROTACIÓN AUTOMÁTICA
 # ------------------------------------------------------------------------------
-def calcular_fatiga_rotacion_automatica(equipo, liga):
-    """
-    Calcula automáticamente el nivel de fatiga y rotación estimado
-    según la participación en torneos internacionales y densidad de partidos.
-    """
-    equipos_top_europeos = [
-        "Real Madrid", "Manchester City", "Bayern München", "PSG", "Barcelona", 
-        "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Chelsea", "Tottenham", "Aston Villa"
+def calcular_fatiga_rotacion_automatica(equipo):
+    equipos_top = [
+        "Real Madrid", "Manchester City", "Bayern", "PSG", "Barcelona", 
+        "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Chelsea", "Tottenham", "Aston Villa", "Napoli"
     ]
-    
-    # Si el equipo juega Champions / Europa League y liga local
-    if equipo in equipos_top_europeos:
-        fatiga_estimada = 65  # Alta carga de partidos intersemanales
-        rotacion_estimada = 40 # Alta necesidad de rotación en plantilla
-    else:
-        fatiga_estimada = 15  # Descanso normal de semana completa
-        rotacion_estimada = 10 # Plantilla base titular
-        
-    return fatiga_estimada, rotacion_estimada
+    if equipo in equipos_top:
+        return 65, 40
+    return 20, 15
 
 # ------------------------------------------------------------------------------
-# BASES DE DATOS DE EQUIPOS (MÉTRICAS AUTO-ACTUALIZABLES)
+# 1. CHAMPIONS LEAGUE (LOS 36 CLUBES EXACTOS DE TUS CAPTURAS)
+# ------------------------------------------------------------------------------
+CHAMPIONS_DATA = {
+    "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
+    "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
+    "Real Betis": {"logo": "https://crests.football-data.org/90.png", "xg_loc": 1.50, "xga_loc": 1.30, "xg_vis": 1.35, "xga_vis": 1.45, "ppda": 11.0, "aereos": 49, "corners": 5.2, "tarjetas": 2.4},
+    "Dortmund": {"logo": "https://crests.football-data.org/4.png", "xg_loc": 1.90, "xga_loc": 1.20, "xg_vis": 1.65, "xga_vis": 1.35, "ppda": 9.2, "aereos": 52, "corners": 6.1, "tarjetas": 1.8},
+    "Real Madrid": {"logo": "https://crests.football-data.org/86.png", "xg_loc": 2.35, "xga_loc": 0.80, "xg_vis": 2.15, "xga_vis": 0.90, "ppda": 8.5, "aereos": 51, "corners": 7.2, "tarjetas": 1.6},
+    "AEK": {"logo": "https://crests.football-data.org/1075.png", "xg_loc": 1.30, "xga_loc": 1.40, "xg_vis": 1.10, "xga_vis": 1.60, "ppda": 11.5, "aereos": 48, "corners": 4.5, "tarjetas": 2.2},
+    "Fenerbahçe": {"logo": "https://crests.football-data.org/613.png", "xg_loc": 1.65, "xga_loc": 1.25, "xg_vis": 1.40, "xga_vis": 1.45, "ppda": 10.1, "aereos": 50, "corners": 5.5, "tarjetas": 2.5},
+    "Napoli": {"logo": "https://crests.football-data.org/113.png", "xg_loc": 1.80, "xga_loc": 1.10, "xg_vis": 1.55, "xga_vis": 1.30, "ppda": 9.4, "aereos": 49, "corners": 5.8, "tarjetas": 1.9},
+    "Slovan Bratislava": {"logo": "https://crests.football-data.org/1816.png", "xg_loc": 1.10, "xga_loc": 1.85, "xg_vis": 0.90, "xga_vis": 2.10, "ppda": 14.0, "aereos": 46, "corners": 3.8, "tarjetas": 2.6},
+    "Shakhtar": {"logo": "https://crests.football-data.org/588.png", "xg_loc": 1.40, "xga_loc": 1.50, "xg_vis": 1.20, "xga_vis": 1.70, "ppda": 11.8, "aereos": 47, "corners": 4.6, "tarjetas": 2.1},
+    "Sporting Lisboa": {"logo": "https://crests.football-data.org/498.png", "xg_loc": 1.95, "xga_loc": 0.90, "xg_vis": 1.70, "xga_vis": 1.10, "ppda": 8.9, "aereos": 53, "corners": 6.4, "tarjetas": 1.7},
+    "Como": {"logo": "https://crests.football-data.org/1072.png", "xg_loc": 1.25, "xga_loc": 1.55, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.2, "aereos": 48, "corners": 4.2, "tarjetas": 2.3},
+    "Feyenoord": {"logo": "https://crests.football-data.org/675.png", "xg_loc": 1.70, "xga_loc": 1.20, "xg_vis": 1.45, "xga_vis": 1.40, "ppda": 9.6, "aereos": 51, "corners": 5.9, "tarjetas": 1.8},
+    "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
+    "Stuttgart": {"logo": "https://crests.football-data.org/10.png", "xg_loc": 1.60, "xga_loc": 1.35, "xg_vis": 1.35, "xga_vis": 1.50, "ppda": 10.4, "aereos": 50, "corners": 5.1, "tarjetas": 2.0},
+    "PSV": {"logo": "https://crests.football-data.org/674.png", "xg_loc": 1.85, "xga_loc": 1.15, "xg_vis": 1.55, "xga_vis": 1.35, "ppda": 9.0, "aereos": 49, "corners": 6.2, "tarjetas": 1.6},
+    "Bayern": {"logo": "https://crests.football-data.org/5.png", "xg_loc": 2.40, "xga_loc": 0.90, "xg_vis": 2.20, "xga_vis": 1.05, "ppda": 7.8, "aereos": 53, "corners": 7.0, "tarjetas": 1.5},
+    "Lens": {"logo": "https://crests.football-data.org/523.png", "xg_loc": 1.35, "xga_loc": 1.30, "xg_vis": 1.15, "xga_vis": 1.50, "ppda": 10.8, "aereos": 52, "corners": 4.8, "tarjetas": 2.2},
+    "Liverpool": {"logo": "https://crests.football-data.org/64.png", "xg_loc": 2.20, "xga_loc": 1.00, "xg_vis": 2.05, "xga_vis": 1.10, "ppda": 8.5, "aereos": 54, "corners": 7.1, "tarjetas": 1.5},
+    "Barcelona": {"logo": "https://crests.football-data.org/81.png", "xg_loc": 2.30, "xga_loc": 0.95, "xg_vis": 2.10, "xga_vis": 1.05, "ppda": 8.0, "aereos": 50, "corners": 6.9, "tarjetas": 1.9},
+    "PSG": {"logo": "https://crests.football-data.org/524.png", "xg_loc": 2.15, "xga_loc": 1.05, "xg_vis": 1.80, "xga_vis": 1.20, "ppda": 8.9, "aereos": 49, "corners": 6.5, "tarjetas": 2.0},
+    "Bodø/Glimt": {"logo": "https://crests.football-data.org/1149.png", "xg_loc": 1.30, "xga_loc": 1.60, "xg_vis": 1.10, "xga_vis": 1.80, "ppda": 11.0, "aereos": 47, "corners": 4.5, "tarjetas": 1.9},
+    "Sabah Futbol": {"logo": "https://crests.football-data.org/8157.png", "xg_loc": 1.05, "xga_loc": 1.90, "xg_vis": 0.85, "xga_vis": 2.20, "ppda": 13.5, "aereos": 45, "corners": 3.6, "tarjetas": 2.7},
+    "Viking": {"logo": "https://crests.football-data.org/1148.png", "xg_loc": 1.20, "xga_loc": 1.65, "xg_vis": 1.00, "xga_vis": 1.85, "ppda": 12.0, "aereos": 49, "corners": 4.1, "tarjetas": 2.1},
+    "Galatasaray": {"logo": "https://crests.football-data.org/610.png", "xg_loc": 1.60, "xga_loc": 1.35, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 10.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.4},
+    "RB Leipzig": {"logo": "https://crests.football-data.org/721.png", "xg_loc": 1.85, "xga_loc": 1.15, "xg_vis": 1.60, "xga_vis": 1.35, "ppda": 9.1, "aereos": 50, "corners": 6.0, "tarjetas": 1.8},
+    "Atlético Madrid": {"logo": "https://crests.football-data.org/78.png", "xg_loc": 1.85, "xga_loc": 0.90, "xg_vis": 1.55, "xga_vis": 1.10, "ppda": 10.2, "aereos": 53, "corners": 5.8, "tarjetas": 2.4},
+    "Slavia Praga": {"logo": "https://crests.football-data.org/583.png", "xg_loc": 1.35, "xga_loc": 1.30, "xg_vis": 1.15, "xga_vis": 1.50, "ppda": 10.6, "aereos": 52, "corners": 4.7, "tarjetas": 2.0},
+    "Roma": {"logo": "https://crests.football-data.org/100.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 11.1, "aereos": 51, "corners": 5.2, "tarjetas": 2.3},
+    "Manchester United": {"logo": "https://crests.football-data.org/66.png", "xg_loc": 1.60, "xga_loc": 1.45, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 10.8, "aereos": 50, "corners": 5.9, "tarjetas": 2.2},
+    "Villarreal": {"logo": "https://crests.football-data.org/102.png", "xg_loc": 1.80, "xga_loc": 1.50, "xg_vis": 1.40, "xga_vis": 1.60, "ppda": 10.0, "aereos": 49, "corners": 5.6, "tarjetas": 2.2},
+    "Club Brujas": {"logo": "https://crests.football-data.org/551.png", "xg_loc": 1.45, "xga_loc": 1.40, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 11.3, "aereos": 48, "corners": 4.9, "tarjetas": 2.1},
+    "LOSC": {"logo": "https://crests.football-data.org/521.png", "xg_loc": 1.50, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.0, "aereos": 50, "corners": 5.2, "tarjetas": 1.9},
+    "Inter": {"logo": "https://crests.football-data.org/108.png", "xg_loc": 1.95, "xga_loc": 0.85, "xg_vis": 1.65, "xga_vis": 1.00, "ppda": 10.1, "aereos": 56, "corners": 6.2, "tarjetas": 1.8},
+    "LASK": {"logo": "https://crests.football-data.org/151.png", "xg_loc": 1.20, "xga_loc": 1.50, "xg_vis": 1.00, "xga_vis": 1.75, "ppda": 12.5, "aereos": 47, "corners": 4.0, "tarjetas": 2.5},
+    "Porto": {"logo": "https://crests.football-data.org/503.png", "xg_loc": 1.75, "xga_loc": 1.10, "xg_vis": 1.45, "xga_vis": 1.30, "ppda": 9.3, "aereos": 52, "corners": 6.0, "tarjetas": 2.2}
+}
+
+# ------------------------------------------------------------------------------
+# 2. PREMIER LEAGUE (20 EQUIPOS)
 # ------------------------------------------------------------------------------
 PREMIER_LEAGUE_DATA = {
+    "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg_loc": 1.40, "xga_loc": 1.55, "xg_vis": 1.15, "xga_vis": 1.70, "ppda": 10.5, "aereos": 48, "corners": 4.9, "tarjetas": 2.3},
     "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
-    "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg_loc": 1.40, "xga_loc": 1.55, "xg_vis": 1.15, "xga_vis": 1.70, "ppda": 10.5, "aereos": 48, "corners": 4.9, "tarjetas": 2.3},
     "Brentford": {"logo": "https://crests.football-data.org/402.png", "xg_loc": 1.50, "xga_loc": 1.45, "xg_vis": 1.20, "xga_vis": 1.65, "ppda": 12.1, "aereos": 56, "corners": 4.6, "tarjetas": 1.8},
+    "Brighton": {"logo": "https://crests.football-data.org/397.png", "xg_loc": 1.65, "xga_loc": 1.40, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 9.5, "aereos": 47, "corners": 5.8, "tarjetas": 2.0},
     "Chelsea": {"logo": "https://crests.football-data.org/61.png", "xg_loc": 1.80, "xga_loc": 1.25, "xg_vis": 1.60, "xga_vis": 1.40, "ppda": 9.8, "aereos": 52, "corners": 5.6, "tarjetas": 2.6},
+    "Coventry City": {"logo": "https://crests.football-data.org/1070.png", "xg_loc": 1.30, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 11.5, "aereos": 50, "corners": 4.8, "tarjetas": 1.9},
+    "Crystal Palace": {"logo": "https://crests.football-data.org/354.png", "xg_loc": 1.35, "xga_loc": 1.30, "xg_vis": 1.15, "xga_vis": 1.50, "ppda": 11.8, "aereos": 53, "corners": 4.8, "tarjetas": 2.2},
+    "Everton": {"logo": "https://crests.football-data.org/62.png", "xg_loc": 1.30, "xga_loc": 1.40, "xg_vis": 1.10, "xga_vis": 1.60, "ppda": 12.5, "aereos": 58, "corners": 4.7, "tarjetas": 2.1},
+    "Fulham": {"logo": "https://crests.football-data.org/63.png", "xg_loc": 1.40, "xga_loc": 1.50, "xg_vis": 1.20, "xga_vis": 1.65, "ppda": 11.0, "aereos": 50, "corners": 5.1, "tarjetas": 2.0},
+    "Hull City": {"logo": "https://crests.football-data.org/322.png", "xg_loc": 1.22, "xga_loc": 1.58, "xg_vis": 1.00, "xga_vis": 1.75, "ppda": 12.0, "aereos": 47, "corners": 4.3, "tarjetas": 1.7},
+    "Ipswich Town": {"logo": "https://crests.football-data.org/349.png", "xg_loc": 1.20, "xga_loc": 1.60, "xg_vis": 0.95, "xga_vis": 1.85, "ppda": 13.0, "aereos": 48, "corners": 4.2, "tarjetas": 2.4},
+    "Leeds": {"logo": "https://crests.football-data.org/341.png", "xg_loc": 1.45, "xga_loc": 1.40, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 9.2, "aereos": 51, "corners": 5.5, "tarjetas": 2.1},
     "Liverpool": {"logo": "https://crests.football-data.org/64.png", "xg_loc": 2.20, "xga_loc": 1.00, "xg_vis": 2.05, "xga_vis": 1.10, "ppda": 8.5, "aereos": 54, "corners": 7.1, "tarjetas": 1.5},
     "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
     "Manchester United": {"logo": "https://crests.football-data.org/66.png", "xg_loc": 1.60, "xga_loc": 1.45, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 10.8, "aereos": 50, "corners": 5.9, "tarjetas": 2.2},
+    "Newcastle": {"logo": "https://crests.football-data.org/67.png", "xg_loc": 1.70, "xga_loc": 1.20, "xg_vis": 1.40, "xga_vis": 1.45, "ppda": 9.9, "aereos": 53, "corners": 6.1, "tarjetas": 1.9},
+    "Nottingham Forest": {"logo": "https://crests.football-data.org/351.png", "xg_loc": 1.25, "xga_loc": 1.50, "xg_vis": 1.05, "xga_vis": 1.70, "ppda": 13.2, "aereos": 51, "corners": 4.1, "tarjetas": 2.3},
+    "Sunderland": {"logo": "https://crests.football-data.org/71.png", "xg_loc": 1.28, "xga_loc": 1.52, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.2, "aereos": 50, "corners": 4.4, "tarjetas": 2.0},
     "Tottenham": {"logo": "https://crests.football-data.org/73.png", "xg_loc": 1.85, "xga_loc": 1.50, "xg_vis": 1.50, "xga_vis": 1.65, "ppda": 9.1, "aereos": 49, "corners": 6.3, "tarjetas": 2.1}
 }
 
+# ------------------------------------------------------------------------------
+# 3. LALIGA EA SPORTS (20 EQUIPOS)
+# ------------------------------------------------------------------------------
 LALIGA_DATA = {
-    "Barcelona": {"logo": "https://crests.football-data.org/81.png", "xg_loc": 2.30, "xga_loc": 0.95, "xg_vis": 2.10, "xga_vis": 1.05, "ppda": 8.0, "aereos": 50, "corners": 6.9, "tarjetas": 1.9},
-    "Real Madrid": {"logo": "https://crests.football-data.org/86.png", "xg_loc": 2.35, "xga_loc": 0.80, "xg_vis": 2.15, "xga_vis": 0.90, "ppda": 8.5, "aereos": 51, "corners": 7.2, "tarjetas": 1.6},
-    "Atlético de Madrid": {"logo": "https://crests.football-data.org/78.png", "xg_loc": 1.85, "xga_loc": 0.90, "xg_vis": 1.55, "xga_vis": 1.10, "ppda": 10.2, "aereos": 53, "corners": 5.8, "tarjetas": 2.4},
+    "Deportivo Alavés": {"logo": "https://crests.football-data.org/263.png", "xg_loc": 1.25, "xga_loc": 1.45, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 12.0, "aereos": 56, "corners": 4.4, "tarjetas": 2.5},
+    "Espanyol": {"logo": "https://crests.football-data.org/80.png", "xg_loc": 1.15, "xga_loc": 1.60, "xg_vis": 0.90, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.6},
+    "Sevilla": {"logo": "https://crests.football-data.org/559.png", "xg_loc": 1.45, "xga_loc": 1.40, "xg_vis": 1.25, "xga_vis": 1.55, "ppda": 10.5, "aereos": 51, "corners": 5.3, "tarjetas": 2.7},
+    "Deportivo La Coruña": {"logo": "https://crests.football-data.org/560.png", "xg_loc": 1.20, "xga_loc": 1.45, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 11.8, "aereos": 49, "corners": 4.2, "tarjetas": 2.2},
+    "Elche CF": {"logo": "https://crests.football-data.org/285.png", "xg_loc": 1.18, "xga_loc": 1.50, "xg_vis": 0.95, "xga_vis": 1.70, "ppda": 12.4, "aereos": 47, "corners": 4.0, "tarjetas": 2.3},
+    "Racing Santander": {"logo": "https://crests.football-data.org/457.png", "xg_loc": 1.22, "xga_loc": 1.40, "xg_vis": 1.05, "xga_vis": 1.60, "ppda": 11.2, "aereos": 50, "corners": 4.5, "tarjetas": 2.1},
+    "Villarreal": {"logo": "https://crests.football-data.org/102.png", "xg_loc": 1.80, "xga_loc": 1.50, "xg_vis": 1.40, "xga_vis": 1.60, "ppda": 10.0, "aereos": 49, "corners": 5.6, "tarjetas": 2.2},
     "Athletic": {"logo": "https://crests.football-data.org/77.png", "xg_loc": 1.60, "xga_loc": 1.10, "xg_vis": 1.30, "xga_vis": 1.25, "ppda": 9.0, "aereos": 54, "corners": 5.9, "tarjetas": 2.0},
-    "Villarreal": {"logo": "https://crests.football-data.org/102.png", "xg_loc": 1.80, "xga_loc": 1.50, "xg_vis": 1.40, "xga_vis": 1.60, "ppda": 10.0, "aereos": 49, "corners": 5.6, "tarjetas": 2.2}
-}
-
-CHAMPIONS_DATA = {
+    "Atlético de Madrid": {"logo": "https://crests.football-data.org/78.png", "xg_loc": 1.85, "xga_loc": 0.90, "xg_vis": 1.55, "xga_vis": 1.10, "ppda": 10.2, "aereos": 53, "corners": 5.8, "tarjetas": 2.4},
+    "Osasuna": {"logo": "https://crests.football-data.org/79.png", "xg_loc": 1.35, "xga_loc": 1.35, "xg_vis": 1.10, "xga_vis": 1.50, "ppda": 11.5, "aereos": 53, "corners": 4.7, "tarjetas": 2.3},
+    "Celta de Vigo": {"logo": "https://crests.football-data.org/558.png", "xg_loc": 1.40, "xga_loc": 1.45, "xg_vis": 1.15, "xga_vis": 1.60, "ppda": 10.8, "aereos": 47, "corners": 4.8, "tarjetas": 2.1},
+    "Barcelona": {"logo": "https://crests.football-data.org/81.png", "xg_loc": 2.30, "xga_loc": 0.95, "xg_vis": 2.10, "xga_vis": 1.05, "ppda": 8.0, "aereos": 50, "corners": 6.9, "tarjetas": 1.9},
+    "Málaga": {"logo": "https://crests.football-data.org/84.png", "xg_loc": 1.25, "xga_loc": 1.42, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 11.6, "aereos": 48, "corners": 4.3, "tarjetas": 2.2},
+    "Betis": {"logo": "https://crests.football-data.org/90.png", "xg_loc": 1.50, "xga_loc": 1.30, "xg_vis": 1.25, "xga_vis": 1.45, "ppda": 11.0, "aereos": 49, "corners": 5.2, "tarjetas": 2.4},
     "Real Madrid": {"logo": "https://crests.football-data.org/86.png", "xg_loc": 2.35, "xga_loc": 0.80, "xg_vis": 2.15, "xga_vis": 0.90, "ppda": 8.5, "aereos": 51, "corners": 7.2, "tarjetas": 1.6},
-    "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
-    "Bayern München": {"logo": "https://crests.football-data.org/5.png", "xg_loc": 2.40, "xga_loc": 0.90, "xg_vis": 2.20, "xga_vis": 1.05, "ppda": 7.8, "aereos": 53, "corners": 7.0, "tarjetas": 1.5},
-    "PSG": {"logo": "https://crests.football-data.org/524.png", "xg_loc": 2.15, "xga_loc": 1.05, "xg_vis": 1.80, "xga_vis": 1.20, "ppda": 8.9, "aereos": 49, "corners": 6.5, "tarjetas": 2.0},
-    "Inter": {"logo": "https://crests.football-data.org/108.png", "xg_loc": 1.95, "xga_loc": 0.85, "xg_vis": 1.65, "xga_vis": 1.00, "ppda": 10.1, "aereos": 56, "corners": 6.2, "tarjetas": 1.8},
-    "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
-    "Barcelona": {"logo": "https://crests.football-data.org/81.png", "xg_loc": 2.30, "xga_loc": 0.95, "xg_vis": 2.10, "xga_vis": 1.05, "ppda": 8.0, "aereos": 50, "corners": 6.9, "tarjetas": 1.9}
+    "Real Sociedad": {"logo": "https://crests.football-data.org/92.png", "xg_loc": 1.65, "xga_loc": 1.15, "xg_vis": 1.35, "xga_vis": 1.30, "ppda": 9.1, "aereos": 52, "corners": 5.7, "tarjetas": 2.0},
+    "Valencia CF": {"logo": "https://crests.football-data.org/95.png", "xg_loc": 1.25, "xga_loc": 1.45, "xg_vis": 1.05, "xga_vis": 1.60, "ppda": 11.8, "aereos": 50, "corners": 4.6, "tarjetas": 2.5},
+    "Rayo Vallecano": {"logo": "https://crests.football-data.org/87.png", "xg_loc": 1.30, "xga_loc": 1.40, "xg_vis": 1.10, "xga_vis": 1.55, "ppda": 9.4, "aereos": 48, "corners": 5.0, "tarjetas": 2.6},
+    "Getafe": {"logo": "https://crests.football-data.org/82.png", "xg_loc": 1.10, "xga_loc": 1.20, "xg_vis": 0.85, "xga_vis": 1.45, "ppda": 12.8, "aereos": 58, "corners": 4.0, "tarjetas": 3.1},
+    "Levante": {"logo": "https://crests.football-data.org/88.png", "xg_loc": 1.22, "xga_loc": 1.55, "xg_vis": 0.95, "xga_vis": 1.70, "ppda": 12.1, "aereos": 49, "corners": 4.2, "tarjetas": 2.4}
 }
 
 ARBITROS = {
@@ -208,7 +257,6 @@ def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, r
     tactical_h = (12.0 / max(d_loc["ppda"], 5.0)) * (d_loc["aereos"] / 50.0)
     tactical_a = (12.0 / max(d_vis["ppda"], 5.0)) * (d_vis["aereos"] / 50.0)
 
-    # Usa xG de Local para d_loc y xG de Visitante para d_vis
     lambda_h = max(1.55 * (d_loc["xg_loc"] / 1.55) * (d_vis["xga_vis"] / 1.25) * tactical_h * fatiga_factor_loc, 0.2)
     lambda_a = max(1.25 * (d_vis["xg_vis"] / 1.25) * (d_loc["xga_loc"] / 1.55) * tactical_a * fatiga_factor_vis, 0.15)
 
@@ -306,7 +354,7 @@ else:
     col_izq_inputs, col_der_analysis = st.columns([1, 1])
 
     # --------------------------------------------------------------------------
-    # COLUMNA IZQUIERDA: CONFIGURACIÓN Y MOMIOS CON AVISO DE AUTO-CÁLCULO
+    # COLUMNA IZQUIERDA: CONFIGURACIÓN Y MOMIOS
     # --------------------------------------------------------------------------
     with col_izq_inputs:
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>⚙️ Configuración y Métricas Automáticas</h3>", unsafe_allow_html=True)
@@ -321,8 +369,8 @@ else:
         arbitro_data = ARBITROS[arbitro_sel]
 
         # OBTENCIÓN AUTOMÁTICA DE FATIGA Y ROTACIÓN PREDICHA
-        fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc, st.session_state["liga_activa"])
-        fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis, st.session_state["liga_activa"])
+        fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
+        fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
 
         st.markdown("""
         <div style="margin-bottom:8px;">
@@ -346,7 +394,7 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-        # Banner Matchup con rendimiento Local / Visitante específico
+        # Banner Matchup con escudos dinámicos
         st.markdown(f"""
         <div class="analysis-card" style="border:1px solid #bfdbfe;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
