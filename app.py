@@ -11,12 +11,12 @@ st.set_page_config(
     page_icon="💸"
 )
 
-# LOGOS OFICIALES DE COMPETENCIAS
+# LOGOS OFICIALES DE COMPETENCIAS (URL DE NFL CORREGIDA)
 LOGOS_COMPETENCIA = {
     "PREMIER LEAGUE": "https://crests.football-data.org/PL.png",
     "LALIGA": "https://crests.football-data.org/PD.png",
     "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
-    "NFL": "https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png"
+    "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg"
 }
 
 # ESTILOS CSS REFORZADOS
@@ -288,9 +288,6 @@ def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, 
     }
 
 def generar_grafica_mini_15_partidos(prob_exito):
-    """
-    Gráfica compacta de los últimos 15 partidos mostrando cobertura de la línea.
-    """
     data = np.random.choice([1, 0], size=15, p=[prob_exito, 1 - prob_exito])
     colors = ['#10b981' if x == 1 else '#ef4444' for x in data]
     labels = [f"L{i+1}" for i in range(5)] + [f"V{i+1}" for i in range(5)] + [f"H{i+1}" for i in range(5)]
@@ -522,7 +519,6 @@ elif st.session_state["liga_activa"] == "NFL":
                 guardar_apuesta_seleccionada("NFL", f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'], prob_val)
                 st.rerun()
 
-            # DESPLEGABLE CON GRÁFICA MINI DE COBERTURA (ÚLTIMOS 15 PARTIDOS)
             with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_nfl_{idx}")
@@ -668,7 +664,6 @@ else:
                 guardar_apuesta_seleccionada(liga, f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'], prob_val)
                 st.rerun()
 
-            # DESPLEGABLE CON GRÁFICA MINI DE COBERTURA (ÚLTIMOS 15 PARTIDOS)
             with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_{liga}_{idx}")
