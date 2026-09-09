@@ -4,20 +4,30 @@ import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
 
-# Configuración de Página - Estilo RickyPicks Light Mode
+# Configuración de Página - Estilo RickyPicks Light Mode con Acentos Verde Dinero
 st.set_page_config(
     page_title="LA MAÑA PICKS - IA QUANT MULTI-SPORT",
     layout="wide",
-    page_icon="⚽"
+    page_icon="💸"
 )
 
-# ESTILOS CSS REFORZADOS
+# LOGOS OFICIALES DE COMPETENCIAS
+LOGOS_COMPETENCIA = {
+    "PREMIER LEAGUE": "https://crests.football-data.org/PL.png",
+    "LALIGA": "https://crests.football-data.org/PD.png",
+    "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
+    "NFL": "https://a.espncdn.com/i/league-logos/soccer/500/nfl.png"
+}
+
+# ESTILOS CSS REFORZADOS (TIPOGRAFÍA MONTSERRAT & VERDE DINERO)
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&display=swap');
+
     .stApp {
         background-color: #f8fafc !important;
         color: #0f172a !important;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+        font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif !important;
     }
 
     header {visibility: hidden;}
@@ -27,39 +37,39 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         padding: 10px 0 20px 0;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 2px solid #e2e8f0;
         margin-bottom: 25px;
     }
     .brand-logo {
-        font-size: 2rem;
+        font-size: 2.2rem;
         font-weight: 900;
-        color: #1e40af !important;
+        color: #059669 !important; /* Verde Dinero */
         letter-spacing: -1px;
     }
 
     .hero-title {
-        font-size: 3.5rem;
+        font-size: 3.4rem;
         font-weight: 900;
         color: #0f172a;
         line-height: 1.05;
-        letter-spacing: -1.8px;
+        letter-spacing: -1.5px;
         margin-bottom: 10px;
     }
-    .hero-highlight { color: #2563eb !important; }
-    .hero-subtitle { font-size: 1.1rem; color: #64748b; font-weight: 500; margin-bottom: 25px; }
+    .hero-highlight { color: #059669 !important; } /* Verde Dinero */
+    .hero-subtitle { font-size: 1.1rem; color: #475569; font-weight: 600; margin-bottom: 25px; }
 
     .sim-card-home {
-        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-        border: 1px solid #bfdbfe;
+        background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
+        border: 2px solid #a7f3d0;
         border-radius: 20px;
         padding: 40px 24px;
         text-align: center;
-        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.12);
+        box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.15);
     }
     .sim-card-title {
         font-size: 2.8rem;
         font-weight: 900;
-        color: #0f172a;
+        color: #064e3b;
         line-height: 1.1;
         margin-bottom: 10px;
     }
@@ -67,7 +77,7 @@ st.markdown("""
     .badge-high { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
     .badge-medium { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
     .badge-low { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
-    .badge-star { background-color: #fef9c3; color: #a16207; border: 1.5px solid #fde047; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.80rem; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); }
+    .badge-star { background-color: #fef9c3; color: #854d0e; border: 1.5px solid #fde047; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.80rem; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); }
 
     .trap-alert {
         background-color: #fef2f2;
@@ -76,26 +86,26 @@ st.markdown("""
         padding: 10px 14px;
         border-radius: 8px;
         font-size: 0.82rem;
-        font-weight: 700;
+        font-weight: 800;
         margin-bottom: 15px;
     }
 
     .auto-badge {
-        background-color: #e0f2fe;
-        color: #0369a1;
-        border: 1px solid #bae6fd;
-        padding: 2px 8px;
+        background-color: #d1fae5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+        padding: 3px 8px;
         border-radius: 4px;
         font-size: 0.72rem;
-        font-weight: 800;
+        font-weight: 900;
     }
 
     .analysis-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 12px 16px;
-        margin-bottom: 6px;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 8px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
 
@@ -108,17 +118,17 @@ st.markdown("""
 
     .stTextInput input, div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
+        border: 1px solid #a7f3d0 !important;
         border-radius: 8px !important;
-        color: #0f172a !important;
-        font-weight: 700 !important;
+        color: #064e3b !important;
+        font-weight: 800 !important;
     }
 
     .stButton>button {
         background-color: #ffffff !important;
         color: #0f172a !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 10px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 12px !important;
         font-weight: 800 !important;
         font-size: 1rem !important;
         padding: 14px 20px !important;
@@ -127,9 +137,9 @@ st.markdown("""
         transition: all 0.2s ease !important;
     }
     .stButton>button:hover {
-        border-color: #2563eb !important;
-        color: #2563eb !important;
-        background-color: #f8fafc !important;
+        border-color: #059669 !important;
+        color: #059669 !important;
+        background-color: #ecfdf5 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -147,7 +157,7 @@ def calcular_fatiga_rotacion_automatica(equipo):
     return 20, 15
 
 # ------------------------------------------------------------------------------
-# BASES DE DATOS COMPLETAS: CHAMPIONS (36), PREMIER (20), LALIGA (20), NFL (32)
+# BASES DE DATOS MULTI-DEPORTE
 # ------------------------------------------------------------------------------
 CHAMPIONS_DATA = {
     "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
@@ -377,13 +387,13 @@ if "liga_activa" not in st.session_state:
 # HEADER BRAND
 st.markdown("""
 <div class="nav-bar">
-    <div class="brand-logo">LA MAÑA <span style="color:#2563eb;">PICKS</span></div>
-    <div style="font-weight:700; color:#475569; font-size:0.9rem;">MODELO QUANT MULTI-SPORT</div>
+    <div class="brand-logo">LA MAÑA <span style="color:#059669;">PICKS</span></div>
+    <div style="font-weight:800; color:#475569; font-size:0.9rem;">MODELO QUANT MULTI-SPORT</div>
 </div>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# VISTA 1: HOME LANDING PAGE (4 COMPETICIONES COMPLETAS)
+# VISTA 1: HOME LANDING PAGE (4 COMPETICIONES CON LOGOS OFICIALES)
 # ==============================================================================
 if st.session_state["liga_activa"] is None:
     col_hero_left, col_hero_right = st.columns([6, 6])
@@ -394,28 +404,41 @@ if st.session_state["liga_activa"] is None:
         <div class="hero-subtitle">Deja de inventar parlays. Juega con cabeza y modelos estocásticos.</div>
         """, unsafe_allow_html=True)
 
-        if st.button("⚽ PREMIER LEAGUE (20 Equipos) ➔", use_container_width=True):
-            st.session_state["liga_activa"] = "PREMIER LEAGUE"
-            st.rerun()
+        # BOTONES DE SELECCIÓN CON LOGOS OFICIALES Y ESTILO VERDE DINERO
+        col_b1, col_b1_img = st.columns([10, 2])
+        with col_b1:
+            if st.button("PREMIER LEAGUE (20 Equipos) ➔", use_container_width=True):
+                st.session_state["liga_activa"] = "PREMIER LEAGUE"
+                st.rerun()
+        with col_b1_img: st.image(LOGOS_COMPETENCIA["PREMIER LEAGUE"], width=40)
 
-        if st.button("🔴 LALIGA EA SPORTS (20 Equipos) ➔", use_container_width=True):
-            st.session_state["liga_activa"] = "LALIGA"
-            st.rerun()
+        col_b2, col_b2_img = st.columns([10, 2])
+        with col_b2:
+            if st.button("LALIGA EA SPORTS (20 Equipos) ➔", use_container_width=True):
+                st.session_state["liga_activa"] = "LALIGA"
+                st.rerun()
+        with col_b2_img: st.image(LOGOS_COMPETENCIA["LALIGA"], width=40)
 
-        if st.button("🏆 CHAMPIONS LEAGUE (36 Equipos) ➔", use_container_width=True):
-            st.session_state["liga_activa"] = "CHAMPIONS LEAGUE"
-            st.rerun()
+        col_b3, col_b3_img = st.columns([10, 2])
+        with col_b3:
+            if st.button("CHAMPIONS LEAGUE (36 Equipos) ➔", use_container_width=True):
+                st.session_state["liga_activa"] = "CHAMPIONS LEAGUE"
+                st.rerun()
+        with col_b3_img: st.image(LOGOS_COMPETENCIA["CHAMPIONS LEAGUE"], width=40)
 
-        if st.button("🏈 NFL (32 Equipos AFC/NFC) ➔", use_container_width=True):
-            st.session_state["liga_activa"] = "NFL"
-            st.rerun()
+        col_b4, col_b4_img = st.columns([10, 2])
+        with col_b4:
+            if st.button("NFL (32 Equipos AFC/NFC) ➔", use_container_width=True):
+                st.session_state["liga_activa"] = "NFL"
+                st.rerun()
+        with col_b4_img: st.image(LOGOS_COMPETENCIA["NFL"], width=40)
 
     with col_hero_right:
         st.markdown("""
         <div class="sim-card-home">
-            <div class="sim-card-title">Cada juego <br>simulado <br><span style="color:#2563eb;">10,000 veces</span></div>
-            <p style="color:#64748b; font-size:0.95rem; margin-top:15px; font-weight:500;">
-                Fútbol y NFL: Evaluamos rendimiento Local/Visitante, xG, PPDA, Trincheras, Clima Extremo y Spreads Gancho con Teasers.
+            <div class="sim-card-title">Cada juego <br>simulado <br><span style="color:#059669;">10,000 veces</span></div>
+            <p style="color:#475569; font-size:0.95rem; margin-top:15px; font-weight:600;">
+                Calculamos automáticamente rendimiento Local/Visitante, xG, PPDA, Trincheras, Clima Extremo y Spreads Gancho con Teasers.
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -426,7 +449,12 @@ if st.session_state["liga_activa"] is None:
 elif st.session_state["liga_activa"] == "NFL":
     c_head_title, c_head_back = st.columns([9, 3])
     with c_head_title:
-        st.markdown("<div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>(NFL - 32 Equipos)</span></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="display:flex; align-items:center; gap:15px;">
+            <img src="{LOGOS_COMPETENCIA['NFL']}" width="50">
+            <div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>(NFL - 32 Equipos)</span></div>
+        </div>
+        """, unsafe_allow_html=True)
     with c_head_back:
         if st.button("← Cambiar Deporte", use_container_width=True):
             st.session_state["liga_activa"] = None
@@ -438,19 +466,19 @@ elif st.session_state["liga_activa"] == "NFL":
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>🏈 1. Ingeniería Deportiva & Trincheras</h3>", unsafe_allow_html=True)
 
         c_loc, c_vis = st.columns(2)
-        with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(NFL_DATA.keys())), index=13) # Kansas City Chiefs
-        with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(NFL_DATA.keys())), index=26) # San Francisco 49ers
+        with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(NFL_DATA.keys())), index=13)
+        with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(NFL_DATA.keys())), index=26)
 
         d_loc, d_vis = NFL_DATA[eq_loc], NFL_DATA[eq_vis]
 
         st.markdown(f"""
-        <div class="analysis-card" style="border:1px solid #bfdbfe;">
+        <div class="analysis-card" style="border:1px solid #a7f3d0;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <img src="{d_loc['logo']}" width="32">
                     <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_loc}</span>
                 </div>
-                <div style="font-weight:900; color:#2563eb;">VS</div>
+                <div style="font-weight:900; color:#059669;">VS</div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_vis}</span>
                     <img src="{d_vis['logo']}" width="32">
@@ -544,7 +572,7 @@ elif st.session_state["liga_activa"] == "NFL":
                     <div>
                         <span style="font-weight:900; font-size:0.9rem; color:#0f172a;">↗ {item['mercado']}</span>
                         <div style="font-size:0.78rem; color:#607d71; margin-top:4px;">
-                            Prob. IA: <b>{prob_val*100:.1f}%</b> | Cuota Real: <b style="color:#059669;">@{cuota_real:.2f}</b> | Tu Casa: <b style="color:#2563eb;">@{cuota_casa:.2f}</b> | EV: <b>{ev*100:+.1f}%</b>
+                            Prob. IA: <b>{prob_val*100:.1f}%</b> | Cuota Real: <b style="color:#059669;">@{cuota_real:.2f}</b> | Tu Casa: <b style="color:#059669;">@{cuota_casa:.2f}</b> | EV: <b>{ev*100:+.1f}%</b>
                         </div>
                     </div>
                     <div>{badge_html}</div>
@@ -562,7 +590,12 @@ elif st.session_state["liga_activa"] == "NFL":
 else:
     c_head_title, c_head_back = st.columns([9, 3])
     with c_head_title:
-        st.markdown(f"<div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>({st.session_state['liga_activa']})</span></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="display:flex; align-items:center; gap:15px;">
+            <img src="{LOGOS_COMPETENCIA[st.session_state['liga_activa']]}" width="45">
+            <div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>({st.session_state['liga_activa']})</span></div>
+        </div>
+        """, unsafe_allow_html=True)
     with c_head_back:
         if st.button("← Cambiar Competición", use_container_width=True):
             st.session_state["liga_activa"] = None
@@ -615,13 +648,13 @@ else:
             """, unsafe_allow_html=True)
 
         st.markdown(f"""
-        <div class="analysis-card" style="border:1px solid #bfdbfe;">
+        <div class="analysis-card" style="border:1px solid #a7f3d0;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <img src="{d_loc['logo']}" width="28">
                     <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_loc} (Local)</span>
                 </div>
-                <div style="font-weight:900; color:#2563eb;">VS</div>
+                <div style="font-weight:900; color:#059669;">VS</div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_vis} (Visita)</span>
                     <img src="{d_vis['logo']}" width="28">
@@ -713,7 +746,7 @@ else:
                     <div>
                         <span style="font-weight:900; font-size:0.9rem; color:#0f172a;">↗ {item['mercado']}</span>
                         <div style="font-size:0.78rem; color:#607d71; margin-top:4px;">
-                            Prob. IA: <b>{prob_val*100:.1f}%</b> | Cuota Real: <b style="color:#059669;">@{cuota_real:.2f}</b> | Tu Casa: <b style="color:#2563eb;">@{cuota_casa:.2f}</b> | EV: <b>{ev*100:+.1f}%</b>
+                            Prob. IA: <b>{prob_val*100:.1f}%</b> | Cuota Real: <b style="color:#059669;">@{cuota_real:.2f}</b> | Tu Casa: <b style="color:#059669;">@{cuota_casa:.2f}</b> | EV: <b>{ev*100:+.1f}%</b>
                         </div>
                     </div>
                     <div>{badge_html}</div>
