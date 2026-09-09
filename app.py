@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 
 # Configuración de Página - Estilo RickyPicks Light Mode
 st.set_page_config(
-    page_title="LA MAÑA PICKS - IA QUANT & NFL",
+    page_title="LA MAÑA PICKS - IA QUANT & NFL 32 TEAMS",
     layout="wide",
     page_icon="⚽"
 )
@@ -80,16 +80,6 @@ st.markdown("""
         margin-bottom: 15px;
     }
 
-    .auto-badge {
-        background-color: #e0f2fe;
-        color: #0369a1;
-        border: 1px solid #bae6fd;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.72rem;
-        font-weight: 800;
-    }
-
     .analysis-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -135,53 +125,71 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# BASE DE DATOS NFL (EQUIPOS CON MÉTRICAS DE TRINCHERAS Y EFICIENCIA)
+# BASE DE DATOS COMPLETA DE LA NFL (LOS 32 EQUIPOS - AFC & NFC)
 # ------------------------------------------------------------------------------
 NFL_DATA = {
-    "Kansas City Chiefs": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png", "ypa_off": 7.8, "press_rate_off": 21.0, "redzone_eff": 68.5, "turnover_margin": +6, "td_exp": 3.4, "fg_exp": 1.8},
-    "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "ypa_off": 8.2, "press_rate_off": 19.5, "redzone_eff": 67.0, "turnover_margin": +8, "td_exp": 3.6, "fg_exp": 1.5},
-    "Baltimore Ravens": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png", "ypa_off": 7.6, "press_rate_off": 23.0, "redzone_eff": 64.0, "turnover_margin": +5, "td_exp": 3.3, "fg_exp": 1.9},
-    "Philadelphia Eagles": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png", "xg_loc": 7.4, "press_rate_off": 24.5, "redzone_eff": 62.5, "turnover_margin": +3, "td_exp": 3.1, "fg_exp": 1.7},
-    "Buffalo Bills": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png", "ypa_off": 7.5, "press_rate_off": 22.0, "redzone_eff": 63.0, "turnover_margin": +4, "td_exp": 3.2, "fg_exp": 1.6},
-    "Dallas Cowboys": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png", "ypa_off": 7.3, "press_rate_off": 25.0, "redzone_eff": 60.0, "turnover_margin": +2, "td_exp": 3.0, "fg_exp": 2.0},
-    "Detroit Lions": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png", "ypa_off": 7.7, "press_rate_off": 20.5, "redzone_eff": 65.5, "turnover_margin": +4, "td_exp": 3.3, "fg_exp": 1.6},
-    "Cincinnati Bengals": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png", "ypa_off": 7.4, "press_rate_off": 26.0, "redzone_eff": 61.0, "turnover_margin": +1, "td_exp": 2.9, "fg_exp": 1.8},
-    "Miami Dolphins": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png", "ypa_off": 8.0, "press_rate_off": 22.5, "redzone_eff": 62.0, "turnover_margin": 0, "td_exp": 3.2, "fg_exp": 1.5},
-    "Green Bay Packers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png", "ypa_off": 7.2, "press_rate_off": 23.5, "redzone_eff": 59.0, "turnover_margin": +2, "td_exp": 2.8, "fg_exp": 1.7}
-}
+    # --- CONFERENCIA AMERICANA (AFC) ---
+    # AFC Este
+    "Miami Dolphins": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png", "td_exp": 3.2, "fg_exp": 1.5},
+    "New York Jets": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png", "td_exp": 2.5, "fg_exp": 2.1},
+    "Buffalo Bills": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png", "td_exp": 3.4, "fg_exp": 1.6},
+    "New England Patriots": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png", "td_exp": 2.2, "fg_exp": 1.9},
+    
+    # AFC Norte
+    "Cincinnati Bengals": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png", "td_exp": 3.1, "fg_exp": 1.8},
+    "Pittsburgh Steelers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png", "td_exp": 2.4, "fg_exp": 2.2},
+    "Cleveland Browns": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png", "td_exp": 2.5, "fg_exp": 2.0},
+    "Baltimore Ravens": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png", "td_exp": 3.5, "fg_exp": 1.7},
 
-# BASES DE DATOS FÚTBOL YA EXISTENTES
-PREMIER_LEAGUE_DATA = {
-    "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
-    "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
-    "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
-    "Liverpool": {"logo": "https://crests.football-data.org/64.png", "xg_loc": 2.20, "xga_loc": 1.00, "xg_vis": 2.05, "xga_vis": 1.10, "ppda": 8.5, "aereos": 54, "corners": 7.1, "tarjetas": 1.5}
-}
+    # AFC Sur
+    "Indianapolis Colts": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png", "td_exp": 2.8, "fg_exp": 1.8},
+    "Houston Texans": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png", "td_exp": 2.9, "fg_exp": 1.9},
+    "Tennessee Titans": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png", "td_exp": 2.3, "fg_exp": 2.0},
+    "Jacksonville Jaguars": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png", "td_exp": 2.7, "fg_exp": 1.8},
 
-LALIGA_DATA = {
-    "Barcelona": {"logo": "https://crests.football-data.org/81.png", "xg_loc": 2.30, "xga_loc": 0.95, "xg_vis": 2.10, "xga_vis": 1.05, "ppda": 8.0, "aereos": 50, "corners": 6.9, "tarjetas": 1.9},
-    "Real Madrid": {"logo": "https://crests.football-data.org/86.png", "xg_loc": 2.35, "xga_loc": 0.80, "xg_vis": 2.15, "xga_vis": 0.90, "ppda": 8.5, "aereos": 51, "corners": 7.2, "tarjetas": 1.6}
-}
+    # AFC Oeste
+    "Los Angeles Chargers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png", "td_exp": 2.8, "fg_exp": 1.9},
+    "Kansas City Chiefs": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png", "td_exp": 3.5, "fg_exp": 1.7},
+    "Las Vegas Raiders": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png", "td_exp": 2.3, "fg_exp": 2.1},
+    "Denver Broncos": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png", "td_exp": 2.4, "fg_exp": 2.0},
 
-CHAMPIONS_DATA = {
-    "Real Madrid": {"logo": "https://crests.football-data.org/86.png", "xg_loc": 2.35, "xga_loc": 0.80, "xg_vis": 2.15, "xga_vis": 0.90, "ppda": 8.5, "aereos": 51, "corners": 7.2, "tarjetas": 1.6},
-    "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3}
+    # --- CONFERENCIA NACIONAL (NFC) ---
+    # NFC Este
+    "New York Giants": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png", "td_exp": 2.1, "fg_exp": 2.0},
+    "Washington Commanders": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png", "td_exp": 2.7, "fg_exp": 1.8},
+    "Philadelphia Eagles": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png", "td_exp": 3.3, "fg_exp": 1.6},
+    "Dallas Cowboys": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png", "td_exp": 3.2, "fg_exp": 1.9},
+
+    # NFC Norte
+    "Minnesota Vikings": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png", "td_exp": 2.9, "fg_exp": 1.8},
+    "Chicago Bears": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png", "td_exp": 2.5, "fg_exp": 1.9},
+    "Green Bay Packers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png", "td_exp": 3.0, "fg_exp": 1.7},
+    "Detroit Lions": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png", "td_exp": 3.4, "fg_exp": 1.6},
+
+    # NFC Sur
+    "New Orleans Saints": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/no.png", "td_exp": 2.6, "fg_exp": 2.0},
+    "Tampa Bay Buccaneers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png", "td_exp": 2.8, "fg_exp": 1.8},
+    "Atlanta Falcons": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png", "td_exp": 2.7, "fg_exp": 1.9},
+    "Carolina Panthers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/car.png", "td_exp": 2.0, "fg_exp": 2.1},
+
+    # NFC Oeste
+    "Los Angeles Rams": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png", "td_exp": 3.0, "fg_exp": 1.7},
+    "Seattle Seahawks": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png", "td_exp": 2.7, "fg_exp": 1.9},
+    "Arizona Cardinals": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png", "td_exp": 2.5, "fg_exp": 2.0},
+    "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "td_exp": 3.6, "fg_exp": 1.5}
 }
 
 # ------------------------------------------------------------------------------
-# MOTOR DE SIMULACIÓN MONTE CARLO ESPECÍFICO PARA NFL
+# MOTOR MONTE CARLO Y FUNCIONES AUXILIARES
 # ------------------------------------------------------------------------------
 def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, baja_qb_vis, spread_loc, spread_vis, line_pts, line_fg, line_td, n_sim=10000):
-    # Capa 3: Penalización Climática
     factor_clima = 1.0
-    if clima_viento: factor_clima -= 0.15 # Reduce juego aéreo y Kicking
+    if clima_viento: factor_clima -= 0.15
     if clima_frio: factor_clima -= 0.10
 
-    # Capa 2: Penalización por Bajas Críticas de QB
     factor_qb_loc = 0.75 if baja_qb_loc else 1.0
     factor_qb_vis = 0.75 if baja_qb_vis else 1.0
 
-    # Proyección de Touchdowns y Field Goals
     exp_td_loc = d_loc.get("td_exp", 3.0) * factor_qb_loc * factor_clima
     exp_td_vis = d_vis.get("td_exp", 2.8) * factor_qb_vis * factor_clima
 
@@ -193,7 +201,6 @@ def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, 
     sim_fg_loc = np.random.poisson(exp_fg_loc, n_sim)
     sim_fg_vis = np.random.poisson(exp_fg_vis, n_sim)
 
-    # Cálculo de Puntos Totales por Simulación (TD = 7 pts, FG = 3 pts)
     pts_loc = (sim_td_loc * 7) + (sim_fg_loc * 3)
     pts_vis = (sim_td_vis * 7) + (sim_fg_vis * 3)
 
@@ -241,7 +248,7 @@ if "liga_activa" not in st.session_state:
 st.markdown("""
 <div class="nav-bar">
     <div class="brand-logo">LA MAÑA <span style="color:#2563eb;">PICKS</span></div>
-    <div style="font-weight:700; color:#475569; font-size:0.9rem;">MODELO QUANT & INGENIERÍA NFL</div>
+    <div style="font-weight:700; color:#475569; font-size:0.9rem;">MODELO QUANT & INGENIERÍA NFL (32 EQUIPOS)</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -257,20 +264,8 @@ if st.session_state["liga_activa"] is None:
         <div class="hero-subtitle">Deja de inventar parlays. Juega con cabeza y modelos estocásticos.</div>
         """, unsafe_allow_html=True)
 
-        if st.button("🏈 NFL (USA) ➔", use_container_width=True):
+        if st.button("🏈 NFL (32 Equipos AFC/NFC) ➔", use_container_width=True):
             st.session_state["liga_activa"] = "NFL"
-            st.rerun()
-
-        if st.button("⚽ PREMIER LEAGUE ➔", use_container_width=True):
-            st.session_state["liga_activa"] = "PREMIER LEAGUE"
-            st.rerun()
-
-        if st.button("🔴 LALIGA ➔", use_container_width=True):
-            st.session_state["liga_activa"] = "LALIGA"
-            st.rerun()
-
-        if st.button("🏆 CHAMPIONS LEAGUE ➔", use_container_width=True):
-            st.session_state["liga_activa"] = "CHAMPIONS LEAGUE"
             st.rerun()
 
     with col_hero_right:
@@ -278,18 +273,18 @@ if st.session_state["liga_activa"] is None:
         <div class="sim-card-home">
             <div class="sim-card-title">Cada juego <br>simulado <br><span style="color:#2563eb;">10,000 veces</span></div>
             <p style="color:#64748b; font-size:0.95rem; margin-top:15px; font-weight:500;">
-                NFL: Evaluamos Trincheras, Pressure Rate, Clima Extremo y Spreads Gancho con Teasers.
+                NFL: Evaluamos los 32 equipos de AFC y NFC, Trincheras, Clima Extremo y Spreads Gancho con Teasers.
             </p>
         </div>
         """, unsafe_allow_html=True)
 
 # ==============================================================================
-# VISTA 2: PANEL DE ANÁLISIS 50/50 (SI ES NFL)
+# VISTA 2: PANEL DE ANÁLISIS NFL (50/50)
 # ==============================================================================
 elif st.session_state["liga_activa"] == "NFL":
     c_head_title, c_head_back = st.columns([9, 3])
     with c_head_title:
-        st.markdown("<div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>(NFL USA)</span></div>", unsafe_allow_html=True)
+        st.markdown("<div class='hero-title' style='font-size:2.2rem;'>Escaneo de Valor <span class='hero-highlight'>(NFL - 32 Equipos)</span></div>", unsafe_allow_html=True)
     with c_head_back:
         if st.button("← Cambiar Deporte", use_container_width=True):
             st.session_state["liga_activa"] = None
@@ -301,40 +296,56 @@ elif st.session_state["liga_activa"] == "NFL":
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>🏈 1. Ingeniería Deportiva & Trincheras</h3>", unsafe_allow_html=True)
 
         c_loc, c_vis = st.columns(2)
-        with c_loc: eq_loc = st.selectbox("Equipo Local:", list(NFL_DATA.keys()), index=0)
-        with c_vis: eq_vis = st.selectbox("Equipo Visitante:", list(NFL_DATA.keys()), index=1)
+        with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(NFL_DATA.keys())), index=13) # Kansas City Chiefs
+        with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(NFL_DATA.keys())), index=26) # San Francisco 49ers
 
         d_loc, d_vis = NFL_DATA[eq_loc], NFL_DATA[eq_vis]
 
-        # CAPA 3: PARÁMETROS CLIMÁTICOS EXTREMOS
+        # BANNER CON ESCUDOS DE LOS CLUBES ELEGIDOS
+        st.markdown(f"""
+        <div class="analysis-card" style="border:1px solid #bfdbfe;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <img src="{d_loc['logo']}" width="32">
+                    <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_loc}</span>
+                </div>
+                <div style="font-weight:900; color:#2563eb;">VS</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_vis}</span>
+                    <img src="{d_vis['logo']}" width="32">
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # PARÁMETROS CLIMÁTICOS EXTREMOS Y BAJAS
         st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#475569;'>Capa 3: Estadios & Clima Extremo:</p>", unsafe_allow_html=True)
         col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         with col_c1: clima_viento = st.checkbox("Viento > 25km/h")
         with col_c2: clima_frio = st.checkbox("Nieve / < 0°C")
-        with col_c3: baja_qb_loc = st.checkbox(f"Baja QB {eq_loc[:3]}")
-        with col_c4: baja_qb_vis = st.checkbox(f"Baja QB {eq_vis[:3]}")
+        with col_c3: baja_qb_loc = st.checkbox(f"Baja QB Local")
+        with col_c4: baja_qb_vis = st.checkbox(f"Baja QB Visita")
 
-        # CAPA 4: TRAP LINE DETECTOR PARA NUMEROS GANCHO (-3.5 / -7.5)
+        # CAPTURA DE SPREADS Y CUOTAS
         st.markdown("<h4 style='color:#0f172a; font-size:0.95rem; font-weight:800;'>🎲 Captura de Spreads y Cuotas de tu Casa</h4>", unsafe_allow_html=True)
         fmt_odds = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
         st.markdown("<b>1. Money Line (Ganador Directo)</b>", unsafe_allow_html=True)
         c_ml1, c_ml2 = st.columns(2)
-        with c_ml1: q_ml_loc = st.text_input(f"ML {eq_loc[:3]}", value="1.80")
-        with c_ml2: q_ml_vis = st.text_input(f"ML {eq_vis[:3]}", value="2.05")
+        with c_ml1: q_ml_loc = st.text_input(f"ML {eq_loc[:12]}", value="1.80")
+        with c_ml2: q_ml_vis = st.text_input(f"ML {eq_vis[:12]}", value="2.05")
 
         st.markdown("<b>2. Hándicap de Puntos Independiente (-16.5 a +16.5)</b>", unsafe_allow_html=True)
         ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
-        with ch1: spread_loc = st.slider(f"Spread {eq_loc[:3]}", -16.5, 16.5, -3.5, step=0.5)
+        with ch1: spread_loc = st.slider(f"Spread Local", -16.5, 16.5, -3.5, step=0.5)
         with ch2: q_spread_loc = st.text_input(f"Cuota {spread_loc}", value="1.90")
-        with ch3: spread_vis = st.slider(f"Spread {eq_vis[:3]}", -16.5, 16.5, +3.5, step=0.5)
+        with ch3: spread_vis = st.slider(f"Spread Visita", -16.5, 16.5, +3.5, step=0.5)
         with ch4: q_spread_vis = st.text_input(f"Cuota {spread_vis}", value="1.90")
 
-        # Alerta de Número Gancho
         if abs(spread_loc) in [3.5, 7.5]:
             st.markdown(f"""
             <div class="trap-alert">
-                ⚠️ <b>TRAP LINE DETECTOR (-3.5 / -7.5):</b> Spread en número gancho estratégico del casino. Se sugiere mutación a Teaser (+6.0 pts) para asegurar el cruce clave de 3 o 7.
+                ⚠️ <b>TRAP LINE DETECTOR (-3.5 / -7.5):</b> Spread en número gancho estratégico. Sugerimos mutación a Teaser (+6.0 pts) para asegurar el cruce clave de 3 o 7.
             </div>
             """, unsafe_allow_html=True)
 
@@ -405,9 +416,3 @@ elif st.session_state["liga_activa"] == "NFL":
             with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (NFL 15 Partidos)"):
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_nfl_{idx}")
-
-# ==============================================================================
-# VISTA FÚTBOL YA EXISTENTE
-# ==============================================================================
-else:
-    st.info("Regresando a ligas de Fútbol (Premier League, LaLiga, Champions)...")
