@@ -19,7 +19,7 @@ LOGOS_COMPETENCIA = {
     "NFL": "https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png"
 }
 
-# ESTILOS CSS REFORZADOS (TIPOGRAFÍA SYNE Y VERDE DINERO)
+# ESTILOS CSS REFORZADOS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
@@ -44,7 +44,7 @@ st.markdown("""
         font-family: 'Syne', sans-serif !important;
         font-size: 2.4rem;
         font-weight: 900;
-        color: #059669 !important; /* Verde Dinero */
+        color: #059669 !important;
         letter-spacing: -1.5px;
         text-transform: uppercase;
     }
@@ -159,7 +159,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# INICIALIZACIÓN DEL SESSION STATE (TRACKING DE APUESTAS)
+# SESSION STATE & TRACKER
 # ------------------------------------------------------------------------------
 if "apuestas_registradas" not in st.session_state:
     st.session_state["apuestas_registradas"] = [
@@ -175,20 +175,17 @@ if "liga_activa" not in st.session_state:
     st.session_state["liga_activa"] = None
 
 def guardar_apuesta_seleccionada(liga, partido, mercado, cuota, prob_calculada):
-    # Auto-evaluación basada en la simulación estocástica del partido
     es_win = prob_calculada >= 0.60
-    resultado_final = "WIN" if es_win else "LOOSE"
-    
     st.session_state["apuestas_registradas"].append({
         "liga": liga,
         "partido": partido,
         "mercado": mercado,
         "cuota": cuota,
-        "resultado": resultado_final
+        "resultado": "WIN" if es_win else "LOOSE"
     })
 
 # ------------------------------------------------------------------------------
-# DATOS DE EQUIPOS Y COMPETICIONES
+# DATOS DE EQUIPOS Y TORNEOS
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = ["Real Madrid", "Manchester City", "Bayern", "PSG", "Barcelona", "Arsenal", "Liverpool", "Inter"]
@@ -223,7 +220,7 @@ NFL_DATA = {
 ARBITROS = {"Chris Kavanagh": {"prom_tarjetas": 3.9}, "Anthony Taylor": {"prom_tarjetas": 4.5}}
 
 # ------------------------------------------------------------------------------
-# MOTORES DE SIMULACIÓN Y GENERACIÓN GRÁFICA 3D CÁPSULAS
+# MOTORES DE SIMULACIÓN Y GENERACIÓN GRÁFICA
 # ------------------------------------------------------------------------------
 def parse_odds(val_str, fmt_type):
     try:
@@ -290,56 +287,55 @@ def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, 
         "p_under_td": np.mean((sim_td_loc + sim_td_vis) < line_td)
     }
 
+def generar_grafica_mini_15_partidos(prob_exito):
+    """
+    Gráfica compacta de los últimos 15 partidos mostrando cobertura de la línea.
+    """
+    data = np.random.choice([1, 0], size=15, p=[prob_exito, 1 - prob_exito])
+    colors = ['#10b981' if x == 1 else '#ef4444' for x in data]
+    labels = [f"L{i+1}" for i in range(5)] + [f"V{i+1}" for i in range(5)] + [f"H{i+1}" for i in range(5)]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=labels, y=[1]*15, marker_color=colors, hoverinfo='x'))
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        height=130, margin=dict(l=5, r=5, t=10, b=20),
+        xaxis=dict(showgrid=False, tickfont=dict(size=9, color='#64748b')),
+        yaxis=dict(showgrid=False, showticklabels=False, range=[0, 1.2])
+    )
+    return fig
+
 def generar_grafica_efectividad_capsulas_3d(list_apuestas):
-    """
-    Genera una gráfica 3D estilizada con tubos/cápsulas verdes (WIN) y rojas (LOOSE)
-    reproduciendo el diseño de la imagen 3.
-    """
     ligas = ["PREMIER LEAGUE", "LALIGA", "CHAMPIONS LEAGUE", "NFL"]
     wins = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "WIN") for l in ligas]
     looses = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "LOOSE") for l in ligas]
 
     fig = go.Figure()
 
-    # Cápsulas Tubulares Verdes (WIN)
     fig.add_trace(go.Bar(
         name='WIN (Ganados)',
-        x=ligas,
-        y=wins,
-        marker=dict(
-            color='#10b981',
-            line=dict(color='#059669', width=2),
-            cornerradius=15 # Esquinas redondeadas estilo tubo/cápsula 3D
-        ),
+        x=ligas, y=wins,
+        marker=dict(color='#10b981', line=dict(color='#059669', width=2), cornerradius=15),
         opacity=0.95
     ))
 
-    # Cápsulas Tubulares Rojas (LOOSE)
     fig.add_trace(go.Bar(
         name='LOOSE (Perdidos)',
-        x=ligas,
-        y=looses,
-        marker=dict(
-            color='#ef4444',
-            line=dict(color='#b91c1c', width=2),
-            cornerradius=15
-        ),
+        x=ligas, y=looses,
+        marker=dict(color='#ef4444', line=dict(color='#b91c1c', width=2), cornerradius=15),
         opacity=0.95
     ))
 
     fig.update_layout(
-        barmode='group',
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        height=260,
-        margin=dict(l=10, r=10, t=10, b=10),
+        barmode='group', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        height=260, margin=dict(l=10, r=10, t=10, b=10),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11, color='#0f172a', family='Syne')),
         xaxis=dict(showgrid=False, tickfont=dict(size=11, color='#0f172a', family='Syne')),
         yaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=10, color='#64748b'))
     )
     return fig
 
-# HEADER BRAND
+# HEADER
 st.markdown("""
 <div class="nav-bar">
     <div class="brand-logo">LA MAÑA <span style="color:#059669;">PICKS</span></div>
@@ -348,7 +344,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# VISTA 1: HOME LANDING PAGE CON GRÁFICA DE EFECTIVIDAD CÁPSULAS 3D
+# VISTA 1: HOME LANDING PAGE
 # ==============================================================================
 if st.session_state["liga_activa"] is None:
     col_hero_left, col_hero_right = st.columns([6, 6])
@@ -407,7 +403,7 @@ if st.session_state["liga_activa"] is None:
         st.plotly_chart(fig_capsulas_3d, use_container_width=True, key="chart_3d_home")
 
 # ==============================================================================
-# VISTA 2: PANEL DE ANÁLISIS A) NFL (CON BOTÓN ÚNICO DE SELECCIÓN)
+# VISTA 2: PANEL DE ANÁLISIS A) NFL
 # ==============================================================================
 elif st.session_state["liga_activa"] == "NFL":
     c_head_title, c_head_back = st.columns([9, 3])
@@ -522,12 +518,15 @@ elif st.session_state["liga_activa"] == "NFL":
             </div>
             """, unsafe_allow_html=True)
 
-            # BOTÓN ÚNICO DE SELECCIÓN DE APUESTA
             if st.button(f"🎯 SELECCIONAR APUESTA", key=f"sel_nfl_{idx}"):
                 guardar_apuesta_seleccionada("NFL", f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'], prob_val)
                 st.rerun()
 
-    # TABLA HISTÓRICA DE APUESTAS AL FINAL
+            # DESPLEGABLE CON GRÁFICA MINI DE COBERTURA (ÚLTIMOS 15 PARTIDOS)
+            with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
+                fig_mini = generar_grafica_mini_15_partidos(prob_val)
+                st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_nfl_{idx}")
+
     st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Seleccionadas</h3>", unsafe_allow_html=True)
     df_history = pd.DataFrame(st.session_state["apuestas_registradas"])
     st.dataframe(df_history[df_history["liga"] == "NFL"], use_container_width=True)
@@ -665,12 +664,15 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-            # BOTÓN ÚNICO DE SELECCIÓN
             if st.button(f"🎯 SELECCIONAR APUESTA", key=f"sel_fut_{idx}"):
                 guardar_apuesta_seleccionada(liga, f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'], prob_val)
                 st.rerun()
 
-    # TABLA HISTÓRICA DE APUESTAS AL FINAL
+            # DESPLEGABLE CON GRÁFICA MINI DE COBERTURA (ÚLTIMOS 15 PARTIDOS)
+            with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
+                fig_mini = generar_grafica_mini_15_partidos(prob_val)
+                st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_{liga}_{idx}")
+
     st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Seleccionadas</h3>", unsafe_allow_html=True)
     df_history = pd.DataFrame(st.session_state["apuestas_registradas"])
     st.dataframe(df_history[df_history["liga"] == liga], use_container_width=True)
