@@ -3,10 +3,11 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
+import requests
 
 # Configuración de Página - Estilo RickyPicks Light Mode con Acentos Verde Dinero
 st.set_page_config(
-    page_title="LA MAÑA PICKS - IA QUANT & TRACKER REAL",
+    page_title="LA MAÑA PICKS - IA QUANT MULTI-SPORT",
     layout="wide",
     page_icon="💸"
 )
@@ -17,6 +18,14 @@ LOGOS_COMPETENCIA = {
     "LALIGA": "https://crests.football-data.org/PD.png",
     "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg"
+}
+
+# MAPEO DE COMPETICIONES PARA THE ODDS API
+SPORT_KEYS_ODDS_API = {
+    "PREMIER LEAGUE": "soccer_epl",
+    "LALIGA": "soccer_spain_la_liga",
+    "CHAMPIONS LEAGUE": "soccer_uefa_champs_league",
+    "NFL": "americanfootball_nfl"
 }
 
 # ESTILOS CSS REFORZADOS
@@ -161,6 +170,41 @@ def guardar_apuesta_seleccionada(liga, partido, mercado, cuota):
 
 def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
+
+# ------------------------------------------------------------------------------
+# FUNCIÓN DE CONSULTA HÍBRIDA A THE ODDS API
+# ------------------------------------------------------------------------------
+def obtener_momios_api(api_key, sport_key, eq_loc, eq_vis):
+    if not api_key or api_key.strip() == "":
+        return None, "Por favor ingresa tu API Key gratuita de The Odds API."
+    
+    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={api_key.strip()}&regions=us,uk,eu&markets=h2h"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            events = response.json()
+            for event in events:
+                home_team = event.get("home_team", "").lower()
+                away_team = event.get("away_team", "").lower()
+                if eq_loc.lower() in home_team and eq_vis.lower() in away_team:
+                    bookmakers = event.get("bookmakers", [])
+                    if bookmakers:
+                        markets = bookmakers[0].get("markets", [])
+                        momios = {}
+                        for m in markets:
+                            if m["key"] == "h2h":
+                                for outcome in m["outcomes"]:
+                                    if outcome["name"].lower() == home_team: momios["q1"] = outcome["price"]
+                                    elif outcome["name"].lower() == away_team: momios["q2"] = outcome["price"]
+                                    else: momios["qx"] = outcome["price"]
+                        return momios, "¡Momios cargados con éxito de la API!"
+            return None, "No se encontraron eventos activos en vivo para este partido específico."
+        elif response.status_code == 401:
+            return None, "API Key inválida. Revisa tu clave registrada."
+        else:
+            return None, f"Error en la respuesta del servidor: Código {response.status_code}"
+    except Exception as e:
+        return None, f"Error de conexión: {str(e)}"
 
 # ------------------------------------------------------------------------------
 # DATOS COMPLETOS DE EQUIPOS Y ARBITROS
