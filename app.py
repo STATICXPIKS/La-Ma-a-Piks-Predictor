@@ -138,213 +138,41 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# FUNCIONES AUXILIARES Y DE CÁLCULO (DECLARADAS AL INICIO)
+# DATOS GLOBALES Y COMPLETOS DE EQUIPOS (DECLARADOS AL PRINCIPIO)
 # ------------------------------------------------------------------------------
-def calcular_fatiga_rotacion_automatica(equipo):
-    equipos_top = [
-        "Real Madrid", "Manchester City", "Bayern", "PSG", "Barcelona", 
-        "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Chelsea", "Tottenham", "Aston Villa", "Napoli"
-    ]
-    return (65, 40) if equipo in equipos_top else (20, 15)
+MLB_DATA = {
+    "New York Yankees": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png", "sp_name": "Gerrit Cole", "sp_xera": 3.20, "sp_fip": 3.35, "sp_whip": 1.08, "sp_k_pct": 0.28, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 118, "ops": 0.780, "iso": 0.190, "park_factor": 1.02},
+    "Los Angeles Dodgers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/lad.png", "sp_name": "Tyler Glasnow", "sp_xera": 3.10, "sp_fip": 3.25, "sp_whip": 1.05, "sp_k_pct": 0.29, "sp_bb_pct": 0.06, "bp_rating": 1.1, "wrc_plus": 122, "ops": 0.795, "iso": 0.200, "park_factor": 1.01},
+    "Atlanta Braves": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/atl.png", "sp_name": "Spencer Strider", "sp_xera": 3.45, "sp_fip": 3.50, "sp_whip": 1.15, "sp_k_pct": 0.31, "sp_bb_pct": 0.07, "bp_rating": 1.3, "wrc_plus": 115, "ops": 0.770, "iso": 0.185, "park_factor": 1.03},
+    "Houston Astros": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/hou.png", "sp_name": "Framber Valdez", "sp_xera": 3.55, "sp_fip": 3.60, "sp_whip": 1.18, "sp_k_pct": 0.25, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 112, "ops": 0.760, "iso": 0.175, "park_factor": 0.99},
+    "Philadelphia Phillies": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/phi.png", "sp_name": "Zack Wheeler", "sp_xera": 3.30, "sp_fip": 3.40, "sp_whip": 1.12, "sp_k_pct": 0.27, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 114, "ops": 0.765, "iso": 0.180, "park_factor": 1.04},
+    "Baltimore Orioles": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/bal.png", "sp_name": "Corbin Burnes", "sp_xera": 3.60, "sp_fip": 3.70, "sp_whip": 1.20, "sp_k_pct": 0.26, "sp_bb_pct": 0.08, "bp_rating": 1.3, "wrc_plus": 110, "ops": 0.750, "iso": 0.170, "park_factor": 0.98},
+    "San Diego Padres": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/sd.png", "sp_name": "Dylan Cease", "sp_xera": 3.50, "sp_fip": 3.55, "sp_whip": 1.16, "sp_k_pct": 0.28, "sp_bb_pct": 0.08, "bp_rating": 1.2, "wrc_plus": 108, "ops": 0.745, "iso": 0.165, "park_factor": 0.95},
+    "Boston Red Sox": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/bos.png", "sp_name": "Brayan Bello", "sp_xera": 4.10, "sp_fip": 4.15, "sp_whip": 1.28, "sp_k_pct": 0.23, "sp_bb_pct": 0.08, "bp_rating": 1.5, "wrc_plus": 106, "ops": 0.740, "iso": 0.165, "park_factor": 1.08},
+    "New York Mets": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/nym.png", "sp_name": "Kodai Senga", "sp_xera": 3.80, "sp_fip": 3.85, "sp_whip": 1.22, "sp_k_pct": 0.26, "sp_bb_pct": 0.09, "bp_rating": 1.4, "wrc_plus": 107, "ops": 0.742, "iso": 0.168, "park_factor": 0.97},
+    "Texas Rangers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/tex.png", "sp_name": "Nathan Eovaldi", "sp_xera": 3.90, "sp_fip": 3.95, "sp_whip": 1.24, "sp_k_pct": 0.23, "sp_bb_pct": 0.08, "bp_rating": 1.4, "wrc_plus": 105, "ops": 0.735, "iso": 0.162, "park_factor": 1.02},
+    "Cleveland Guardians": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/cle.png", "sp_name": "Tanner Bibee", "sp_xera": 3.65, "sp_fip": 3.75, "sp_whip": 1.19, "sp_k_pct": 0.24, "sp_bb_pct": 0.07, "bp_rating": 1.1, "wrc_plus": 102, "ops": 0.720, "iso": 0.145, "park_factor": 0.99},
+    "Seattle Mariners": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/sea.png", "sp_name": "George Kirby", "sp_xera": 3.15, "sp_fip": 3.20, "sp_whip": 1.06, "sp_k_pct": 0.27, "sp_bb_pct": 0.04, "bp_rating": 1.2, "wrc_plus": 99, "ops": 0.705, "iso": 0.155, "park_factor": 0.92},
+    "Minnesota Twins": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/min.png", "sp_name": "Pablo López", "sp_xera": 3.85, "sp_fip": 3.90, "sp_whip": 1.21, "sp_k_pct": 0.27, "sp_bb_pct": 0.07, "bp_rating": 1.3, "wrc_plus": 106, "ops": 0.738, "iso": 0.170, "park_factor": 1.01},
+    "Arizona Cardinals / Diamondbacks": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/ari.png", "sp_name": "Zac Gallen", "sp_xera": 4.05, "sp_fip": 4.10, "sp_whip": 1.26, "sp_k_pct": 0.25, "sp_bb_pct": 0.08, "bp_rating": 1.4, "wrc_plus": 109, "ops": 0.748, "iso": 0.165, "park_factor": 1.03},
+    "Chicago Cubs": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/chc.png", "sp_name": "Shota Imanaga", "sp_xera": 3.75, "sp_fip": 3.80, "sp_whip": 1.20, "sp_k_pct": 0.26, "sp_bb_pct": 0.05, "bp_rating": 1.3, "wrc_plus": 103, "ops": 0.725, "iso": 0.158, "park_factor": 1.01},
+    "Tampa Bay Rays": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/tb.png", "sp_name": "Shane Baz", "sp_xera": 3.50, "sp_fip": 3.60, "sp_whip": 1.15, "sp_k_pct": 0.25, "sp_bb_pct": 0.08, "bp_rating": 1.2, "wrc_plus": 101, "ops": 0.715, "iso": 0.150, "park_factor": 0.96},
+    "Toronto Blue Jays": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/tor.png", "sp_name": "Kevin Gausman", "sp_xera": 3.95, "sp_fip": 4.00, "sp_whip": 1.25, "sp_k_pct": 0.24, "sp_bb_pct": 0.07, "bp_rating": 1.4, "wrc_plus": 102, "ops": 0.722, "iso": 0.152, "park_factor": 1.00},
+    "San Francisco Giants": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/sf.png", "sp_name": "Logan Webb", "sp_xera": 3.70, "sp_fip": 3.75, "sp_whip": 1.18, "sp_k_pct": 0.23, "sp_bb_pct": 0.06, "bp_rating": 1.3, "wrc_plus": 98, "ops": 0.700, "iso": 0.142, "park_factor": 0.94},
+    "Kansas City Royals": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/kc.png", "sp_name": "Cole Ragans", "sp_xera": 3.60, "sp_fip": 3.65, "sp_whip": 1.17, "sp_k_pct": 0.29, "sp_bb_pct": 0.08, "bp_rating": 1.3, "wrc_plus": 104, "ops": 0.728, "iso": 0.160, "park_factor": 1.02},
+    "Milwaukee Brewers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/mil.png", "sp_name": "Freddy Peralta", "sp_xera": 3.65, "sp_fip": 3.70, "sp_whip": 1.18, "sp_k_pct": 0.28, "sp_bb_pct": 0.09, "bp_rating": 1.1, "wrc_plus": 100, "ops": 0.710, "iso": 0.148, "park_factor": 1.00},
+    "Cincinnati Reds": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/cin.png", "sp_name": "Hunter Greene", "sp_xera": 4.20, "sp_fip": 4.25, "sp_whip": 1.30, "sp_k_pct": 0.30, "sp_bb_pct": 0.09, "bp_rating": 1.5, "wrc_plus": 97, "ops": 0.698, "iso": 0.155, "park_factor": 1.07},
+    "St. Louis Cardinals": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/stl.png", "sp_name": "Sonny Gray", "sp_xera": 4.15, "sp_fip": 4.20, "sp_whip": 1.29, "sp_k_pct": 0.26, "sp_bb_pct": 0.07, "bp_rating": 1.4, "wrc_plus": 98, "ops": 0.702, "iso": 0.145, "park_factor": 0.98},
+    "Detroit Tigers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/det.png", "sp_name": "Tarik Skubal", "sp_xera": 3.55, "sp_fip": 3.60, "sp_whip": 1.15, "sp_k_pct": 0.31, "sp_bb_pct": 0.05, "bp_rating": 1.2, "wrc_plus": 96, "ops": 0.690, "iso": 0.140, "park_factor": 0.97},
+    "Pittsburgh Pirates": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/pit.png", "sp_name": "Paul Skenes", "sp_xera": 3.75, "sp_fip": 3.80, "sp_whip": 1.21, "sp_k_pct": 0.32, "sp_bb_pct": 0.06, "bp_rating": 1.4, "wrc_plus": 92, "ops": 0.675, "iso": 0.135, "park_factor": 0.97},
+    "Washington Nationals": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/wsh.png", "sp_name": "Mackenzie Gore", "sp_xera": 4.35, "sp_fip": 4.40, "sp_whip": 1.34, "sp_k_pct": 0.24, "sp_bb_pct": 0.09, "bp_rating": 1.6, "wrc_plus": 94, "ops": 0.685, "iso": 0.138, "park_factor": 1.01},
+    "Los Angeles Angels": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/laa.png", "sp_name": "Tyler Anderson", "sp_xera": 4.45, "sp_fip": 4.50, "sp_whip": 1.36, "sp_k_pct": 0.20, "sp_bb_pct": 0.09, "bp_rating": 1.6, "wrc_plus": 93, "ops": 0.680, "iso": 0.142, "park_factor": 1.00},
+    "Athletics": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/oak.png", "sp_name": "JP Sears", "sp_xera": 4.30, "sp_fip": 4.35, "sp_whip": 1.32, "sp_k_pct": 0.21, "sp_bb_pct": 0.08, "bp_rating": 1.5, "wrc_plus": 96, "ops": 0.695, "iso": 0.150, "park_factor": 0.95},
+    "Colorado Rockies": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/col.png", "sp_name": "Kyle Freeland", "sp_xera": 5.10, "sp_fip": 5.15, "sp_whip": 1.48, "sp_k_pct": 0.18, "sp_bb_pct": 0.08, "bp_rating": 1.8, "wrc_plus": 88, "ops": 0.710, "iso": 0.145, "park_factor": 1.35},
+    "Miami Marlins": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/mia.png", "sp_name": "Sandy Alcantara", "sp_xera": 4.25, "sp_fip": 4.30, "sp_whip": 1.31, "sp_k_pct": 0.22, "sp_bb_pct": 0.08, "bp_rating": 1.5, "wrc_plus": 89, "ops": 0.665, "iso": 0.125, "park_factor": 0.96},
+    "Chicago White Sox": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/chw.png", "sp_name": "Garrett Crochet", "sp_xera": 4.80, "sp_fip": 4.85, "sp_whip": 1.42, "sp_k_pct": 0.33, "sp_bb_pct": 0.06, "bp_rating": 1.7, "wrc_plus": 84, "ops": 0.640, "iso": 0.120, "park_factor": 1.01}
+}
 
-def parse_odds(val_str, fmt_type="Decimales"):
-    try:
-        val = float(val_str)
-        if fmt_type == "Decimales": return val if val > 1.0 else 2.00
-        return (val / 100.0) + 1.0 if val > 0 else (100.0 / abs(val)) + 1.0
-    except:
-        return 2.00
-
-def obtener_pitcher_confirmado_mlb(equipo_nombre):
-    url = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=probablePitcher"
-    try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            dates = data.get("dates", [])
-            if dates:
-                games = dates[0].get("games", [])
-                for g in games:
-                    teams = g.get("teams", {})
-                    home_name = teams.get("home", {}).get("team", {}).get("name", "")
-                    away_name = teams.get("away", {}).get("team", {}).get("name", "")
-                    
-                    if equipo_nombre.lower() in home_name.lower():
-                        p = teams.get("home", {}).get("probablePitcher", {})
-                        return p.get("fullName", "Pitcher Abridor Confirmado")
-                    elif equipo_nombre.lower() in away_name.lower():
-                        p = teams.get("away", {}).get("probablePitcher", {})
-                        return p.get("fullName", "Pitcher Abridor Confirmado")
-    except Exception:
-        pass
-    return "Pitcher Proyectado"
-
-def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, arbitro_card, line_goles, line_corners, line_cards, n_sim=10000):
-    fatiga_factor_loc = 1.0 - (fatiga_loc * 0.12 + rot_loc * 0.10)
-    fatiga_factor_vis = 1.0 - (fatiga_vis * 0.12 + rot_vis * 0.10)
-
-    tactical_h = (12.0 / max(d_loc["ppda"], 5.0)) * (d_loc["aereos"] / 50.0)
-    tactical_a = (12.0 / max(d_vis["ppda"], 5.0)) * (d_vis["aereos"] / 50.0)
-
-    lambda_h = max(1.55 * (d_loc["xg_loc"] / 1.55) * (d_vis["xga_vis"] / 1.25) * tactical_h * fatiga_factor_loc, 0.2)
-    lambda_a = max(1.25 * (d_vis["xg_vis"] / 1.25) * (d_loc["xga_loc"] / 1.55) * tactical_a * fatiga_factor_vis, 0.15)
-
-    goles_h = np.random.poisson(lambda_h, n_sim)
-    goles_a = np.random.poisson(lambda_a, n_sim)
-
-    exp_c = (d_loc["corners"] + d_vis["corners"]) * 0.95
-    corners_totales = np.random.poisson(exp_c, n_sim)
-    tarjetas_totales = np.random.poisson((d_loc["tarjetas"] + d_vis["tarjetas"]) * (arbitro_card / 4.0), n_sim)
-
-    return {
-        "p_1_ft": np.mean(goles_h > goles_a),
-        "p_x_ft": np.mean(goles_h == goles_a),
-        "p_2_ft": np.mean(goles_h < goles_a),
-        "p_over_goles": np.mean((goles_h + goles_a) > line_goles),
-        "p_under_goles": np.mean((goles_h + goles_a) < line_goles),
-        "p_btts_si": np.mean((goles_h > 0) & (goles_a > 0)),
-        "p_btts_no": np.mean((goles_h == 0) | (goles_a == 0)),
-        "p_over_corners": np.mean(corners_totales > line_corners),
-        "p_under_corners": np.mean(corners_totales < line_corners),
-        "p_over_cards": np.mean(tarjetas_totales > line_cards),
-        "p_under_cards": np.mean(tarjetas_totales < line_cards)
-    }
-
-def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, baja_qb_vis, spread_loc, spread_vis, line_pts, line_fg, line_td, n_sim=10000):
-    factor_clima = 1.0 - (0.15 if clima_viento else 0.0) - (0.10 if clima_frio else 0.0)
-    exp_td_loc = d_loc.get("td_exp", 3.0) * (0.75 if baja_qb_loc else 1.0) * factor_clima
-    exp_td_vis = d_vis.get("td_exp", 2.8) * (0.75 if baja_qb_vis else 1.0) * factor_clima
-
-    sim_td_loc = np.random.poisson(exp_td_loc, n_sim)
-    sim_td_vis = np.random.poisson(exp_td_vis, n_sim)
-    sim_fg_loc = np.random.poisson(d_loc.get("fg_exp", 1.8), n_sim)
-    sim_fg_vis = np.random.poisson(d_vis.get("fg_exp", 1.7), n_sim)
-
-    pts_loc = (sim_td_loc * 7) + (sim_fg_loc * 3)
-    pts_vis = (sim_td_vis * 7) + (sim_fg_vis * 3)
-
-    return {
-        "p_ml_loc": np.mean(pts_loc > pts_vis),
-        "p_ml_vis": np.mean(pts_vis > pts_loc),
-        "p_spread_loc": np.mean((pts_loc + spread_loc) > pts_vis),
-        "p_spread_vis": np.mean((pts_vis + spread_vis) > pts_loc),
-        "p_over_pts": np.mean((pts_loc + pts_vis) > line_pts),
-        "p_under_pts": np.mean((pts_loc + pts_vis) < line_pts),
-        "p_over_fg": np.mean((sim_fg_loc + sim_fg_vis) > line_fg),
-        "p_under_fg": np.mean((sim_fg_loc + sim_fg_vis) < line_fg),
-        "p_over_td": np.mean((sim_td_loc + sim_td_vis) > line_td),
-        "p_under_td": np.mean((sim_td_loc + sim_td_vis) < line_td)
-    }
-
-def simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis, n_sim=10000):
-    env_factor = d_loc["park_factor"] * (1.08 if viento_out else 1.0) * (0.95 if humedad_alta else 1.0)
-    
-    off_loc = (d_loc["wrc_plus"] / 100.0) * (1.12 if bvp_favor_loc else 1.0)
-    off_vis = (d_vis["wrc_plus"] / 100.0) * (1.12 if bvp_favor_vis else 1.0)
-    
-    exp_f5_loc = max(2.2 * (off_loc / (d_vis["sp_xera"] / 3.80)) * (env_factor / 1.0), 0.3)
-    exp_f5_vis = max(1.9 * (off_vis / (d_loc["sp_xera"] / 3.80)) * (env_factor / 1.0), 0.3)
-    
-    exp_ft_loc = exp_f5_loc + max(1.8 * (off_loc / d_vis["bp_rating"]), 0.2)
-    exp_ft_vis = exp_f5_vis + max(1.6 * (off_vis / d_loc["bp_rating"]), 0.2)
-    
-    runs_f5_loc = np.random.poisson(exp_f5_loc, n_sim)
-    runs_f5_vis = np.random.poisson(exp_f5_vis, n_sim)
-    runs_ft_loc = np.random.poisson(exp_ft_loc, n_sim)
-    runs_ft_vis = np.random.poisson(exp_ft_vis, n_sim)
-    
-    exp_k_loc = max(5.5 * (d_loc["sp_k_pct"] / 0.23) * (1.1 if not bvp_favor_vis else 0.9), 1.0)
-    exp_k_vis = max(5.2 * (d_vis["sp_k_pct"] / 0.23) * (1.1 if not bvp_favor_loc else 0.9), 1.0)
-    sim_k_loc = np.random.poisson(exp_k_loc, n_sim)
-    sim_k_vis = np.random.poisson(exp_k_vis, n_sim)
-    
-    mean_outs_loc = min(16.5 * (3.80 / d_loc["sp_xera"]), limit_outs_loc)
-    mean_outs_vis = min(15.8 * (3.80 / d_vis["sp_xera"]), limit_outs_vis)
-    sim_outs_loc = np.random.poisson(mean_outs_loc, n_sim)
-    sim_outs_vis = np.random.poisson(mean_outs_vis, n_sim)
-    
-    prob_nrfi = np.exp(-(exp_f5_loc * 0.22 + exp_f5_vis * 0.22))
-    sim_nrfi = np.random.choice([1, 0], size=n_sim, p=[prob_nrfi, 1.0 - prob_nrfi])
-
-    return {
-        "p_ml_loc": np.mean(runs_ft_loc > runs_ft_vis),
-        "p_ml_vis": np.mean(runs_ft_vis > runs_ft_loc),
-        "p_over_runs": np.mean((runs_ft_loc + runs_ft_vis) > line_runs),
-        "p_under_runs": np.mean((runs_ft_loc + runs_ft_vis) < line_runs),
-        "p_rl_loc": np.mean((runs_ft_loc - 1.5) > runs_ft_vis),
-        "p_rl_vis": np.mean((runs_ft_vis + 1.5) > runs_ft_loc),
-        "p_over_k_loc": np.mean(sim_k_loc > line_k_loc),
-        "p_under_k_loc": np.mean(sim_k_loc < line_k_loc),
-        "p_over_k_vis": np.mean(sim_k_vis > line_k_vis),
-        "p_under_k_vis": np.mean(sim_k_vis < line_k_vis),
-        "p_over_outs_loc": np.mean(sim_outs_loc > line_outs_loc),
-        "p_over_outs_vis": np.mean(sim_outs_vis > line_outs_vis),
-        "p_f5_loc": np.mean(runs_f5_loc > runs_f5_vis),
-        "p_f5_vis": np.mean(runs_f5_vis > runs_f5_loc),
-        "p_nrfi": np.mean(sim_nrfi == 1),
-        "p_yrfi": np.mean(sim_nrfi == 0)
-    }
-
-def generar_grafica_mini_15_partidos(prob_exito):
-    data = np.random.choice([1, 0], size=15, p=[prob_exito, 1 - prob_exito])
-    colors = ['#10b981' if x == 1 else '#ef4444' for x in data]
-    labels = [f"L{i+1}" for i in range(5)] + [f"V{i+1}" for i in range(5)] + [f"H{i+1}" for i in range(5)]
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=labels, y=[1]*15, marker_color=colors, hoverinfo='x'))
-    fig.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        height=130, margin=dict(l=5, r=5, t=10, b=20),
-        xaxis=dict(showgrid=False, tickfont=dict(size=9, color='#64748b')),
-        yaxis=dict(showgrid=False, showticklabels=False, range=[0, 1.2])
-    )
-    return fig
-
-def generar_grafica_efectividad_capsulas_3d(list_apuestas):
-    ligas = ["PREMIER LEAGUE", "LALIGA", "CHAMPIONS LEAGUE", "NFL", "MLB"]
-    wins = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "WIN") for l in ligas]
-    looses = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "LOOSE") for l in ligas]
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(name='WIN (Ganados)', x=ligas, y=wins, marker=dict(color='#10b981', line=dict(color='#059669', width=2), cornerradius=15), opacity=0.95))
-    fig.add_trace(go.Bar(name='LOOSE (Perdidos)', x=ligas, y=looses, marker=dict(color='#ef4444', line=dict(color='#b91c1c', width=2), cornerradius=15), opacity=0.95))
-    fig.update_layout(
-        barmode='group', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        height=260, margin=dict(l=10, r=10, t=10, b=10),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11, color='#0f172a', family='Syne')),
-        xaxis=dict(showgrid=False, tickfont=dict(size=11, color='#0f172a', family='Syne')),
-        yaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=10, color='#64748b'))
-    )
-    return fig
-
-# ------------------------------------------------------------------------------
-# SESSION STATE & TRACKER
-# ------------------------------------------------------------------------------
-OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
-
-if "apuestas_registradas" not in st.session_state:
-    st.session_state["apuestas_registradas"] = []
-
-if "liga_activa" not in st.session_state:
-    st.session_state["liga_activa"] = None
-
-def guardar_apuesta_seleccionada(liga, partido, mercado, cuota):
-    nuevo_id = max([a["id"] for a in st.session_state["apuestas_registradas"]], default=0) + 1
-    st.session_state["apuestas_registradas"].append({
-        "id": nuevo_id,
-        "liga": liga,
-        "partido": partido,
-        "mercado": mercado,
-        "cuota": cuota,
-        "resultado": "⏳ PENDIENTE"
-    })
-
-def eliminar_apuesta(apuesta_id):
-    st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
-
-# ------------------------------------------------------------------------------
-# DATOS COMPLETOS DE EQUIPOS Y ARBITROS (SIN RECORTES)
-# ------------------------------------------------------------------------------
 CHAMPIONS_DATA = {
     "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
