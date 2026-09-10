@@ -138,7 +138,212 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# DATOS GLOBALES Y COMPLETOS DE EQUIPOS (DECLARADOS AL PRINCIPIO)
+# 1. DECLARACIÓN DE TODAS LAS FUNCIONES AUXILIARES (AL PRINCIPIO DEL SCRIPT)
+# ------------------------------------------------------------------------------
+def calcular_fatiga_rotacion_automatica(equipo):
+    equipos_top = [
+        "Real Madrid", "Manchester City", "Bayern", "PSG", "Barcelona", 
+        "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Chelsea", "Tottenham", "Aston Villa", "Napoli"
+    ]
+    return (65, 40) if equipo in equipos_top else (20, 15)
+
+def parse_odds(val_str, fmt_type="Decimales"):
+    try:
+        val = float(val_str)
+        if fmt_type == "Decimales": return val if val > 1.0 else 2.00
+        return (val / 100.0) + 1.0 if val > 0 else (100.0 / abs(val)) + 1.0
+    except:
+        return 2.00
+
+def obtener_pitcher_confirmado_mlb(equipo_nombre):
+    url = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=probablePitcher"
+    try:
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            dates = data.get("dates", [])
+            if dates:
+                games = dates[0].get("games", [])
+                for g in games:
+                    teams = g.get("teams", {})
+                    home_name = teams.get("home", {}).get("team", {}).get("name", "")
+                    away_name = teams.get("away", {}).get("team", {}).get("name", "")
+                    
+                    if equipo_nombre.lower() in home_name.lower():
+                        p = teams.get("home", {}).get("probablePitcher", {})
+                        return p.get("fullName", "Pitcher Abridor Confirmado")
+                    elif equipo_nombre.lower() in away_name.lower():
+                        p = teams.get("away", {}).get("probablePitcher", {})
+                        return p.get("fullName", "Pitcher Abridor Confirmado")
+    except Exception:
+        pass
+    return "Pitcher Proyectado"
+
+def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, arbitro_card, line_goles, line_corners, line_cards, n_sim=10000):
+    fatiga_factor_loc = 1.0 - (fatiga_loc * 0.12 + rot_loc * 0.10)
+    fatiga_factor_vis = 1.0 - (fatiga_vis * 0.12 + rot_vis * 0.10)
+
+    tactical_h = (12.0 / max(d_loc["ppda"], 5.0)) * (d_loc["aereos"] / 50.0)
+    tactical_a = (12.0 / max(d_vis["ppda"], 5.0)) * (d_vis["aereos"] / 50.0)
+
+    lambda_h = max(1.55 * (d_loc["xg_loc"] / 1.55) * (d_vis["xga_vis"] / 1.25) * tactical_h * fatiga_factor_loc, 0.2)
+    lambda_a = max(1.25 * (d_vis["xg_vis"] / 1.25) * (d_loc["xga_loc"] / 1.55) * tactical_a * fatiga_factor_vis, 0.15)
+
+    goles_h = np.random.poisson(lambda_h, n_sim)
+    goles_a = np.random.poisson(lambda_a, n_sim)
+
+    exp_c = (d_loc["corners"] + d_vis["corners"]) * 0.95
+    corners_totales = np.random.poisson(exp_c, n_sim)
+    tarjetas_totales = np.random.poisson((d_loc["tarjetas"] + d_vis["tarjetas"]) * (arbitro_card / 4.0), n_sim)
+
+    return {
+        "p_1_ft": np.mean(goles_h > goles_a),
+        "p_x_ft": np.mean(goles_h == goles_a),
+        "p_2_ft": np.mean(goles_h < goles_a),
+        "p_over_goles": np.mean((goles_h + goles_a) > line_goles),
+        "p_under_goles": np.mean((goles_h + goles_a) < line_goles),
+        "p_btts_si": np.mean((goles_h > 0) & (goles_a > 0)),
+        "p_btts_no": np.mean((goles_h == 0) | (goles_a == 0)),
+        "p_over_corners": np.mean(corners_totales > line_corners),
+        "p_under_corners": np.mean(corners_totales < line_corners),
+        "p_over_cards": np.mean(tarjetas_totales > line_cards),
+        "p_under_cards": np.mean(tarjetas_totales < line_cards)
+    }
+
+def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, baja_qb_vis, spread_loc, spread_vis, line_pts, line_fg, line_td, n_sim=10000):
+    factor_clima = 1.0 - (0.15 if clima_viento else 0.0) - (0.10 if clima_frio else 0.0)
+    exp_td_loc = d_loc.get("td_exp", 3.0) * (0.75 if baja_qb_loc else 1.0) * factor_clima
+    exp_td_vis = d_vis.get("td_exp", 2.8) * (0.75 if baja_qb_vis else 1.0) * factor_clima
+
+    sim_td_loc = np.random.poisson(exp_td_loc, n_sim)
+    sim_td_vis = np.random.poisson(exp_td_vis, n_sim)
+    sim_fg_loc = np.random.poisson(d_loc.get("fg_exp", 1.8), n_sim)
+    sim_fg_vis = np.random.poisson(d_vis.get("fg_exp", 1.7), n_sim)
+
+    pts_loc = (sim_td_loc * 7) + (sim_fg_loc * 3)
+    pts_vis = (sim_td_vis * 7) + (sim_fg_vis * 3)
+
+    return {
+        "p_ml_loc": np.mean(pts_loc > pts_vis),
+        "p_ml_vis": np.mean(pts_vis > pts_loc),
+        "p_spread_loc": np.mean((pts_loc + spread_loc) > pts_vis),
+        "p_spread_vis": np.mean((pts_vis + spread_vis) > pts_loc),
+        "p_over_pts": np.mean((pts_loc + pts_vis) > line_pts),
+        "p_under_pts": np.mean((pts_loc + pts_vis) < line_pts),
+        "p_over_fg": np.mean((sim_fg_loc + sim_fg_vis) > line_fg),
+        "p_under_fg": np.mean((sim_fg_loc + sim_fg_vis) < line_fg),
+        "p_over_td": np.mean((sim_td_loc + sim_td_vis) > line_td),
+        "p_under_td": np.mean((sim_td_loc + sim_td_vis) < line_td)
+    }
+
+def simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis, n_sim=10000):
+    env_factor = d_loc["park_factor"] * (1.08 if viento_out else 1.0) * (0.95 if humedad_alta else 1.0)
+    
+    off_loc = (d_loc["wrc_plus"] / 100.0) * (1.12 if bvp_favor_loc else 1.0)
+    off_vis = (d_vis["wrc_plus"] / 100.0) * (1.12 if bvp_favor_vis else 1.0)
+    
+    exp_f5_loc = max(2.2 * (off_loc / (d_vis["sp_xera"] / 3.80)) * (env_factor / 1.0), 0.3)
+    exp_f5_vis = max(1.9 * (off_vis / (d_loc["sp_xera"] / 3.80)) * (env_factor / 1.0), 0.3)
+    
+    exp_ft_loc = exp_f5_loc + max(1.8 * (off_loc / d_vis["bp_rating"]), 0.2)
+    exp_ft_vis = exp_f5_vis + max(1.6 * (off_vis / d_loc["bp_rating"]), 0.2)
+    
+    runs_f5_loc = np.random.poisson(exp_f5_loc, n_sim)
+    runs_f5_vis = np.random.poisson(exp_f5_vis, n_sim)
+    runs_ft_loc = np.random.poisson(exp_ft_loc, n_sim)
+    runs_ft_vis = np.random.poisson(exp_ft_vis, n_sim)
+    
+    exp_k_loc = max(5.5 * (d_loc["sp_k_pct"] / 0.23) * (1.1 if not bvp_favor_vis else 0.9), 1.0)
+    exp_k_vis = max(5.2 * (d_vis["sp_k_pct"] / 0.23) * (1.1 if not bvp_favor_loc else 0.9), 1.0)
+    sim_k_loc = np.random.poisson(exp_k_loc, n_sim)
+    sim_k_vis = np.random.poisson(exp_k_vis, n_sim)
+    
+    mean_outs_loc = min(16.5 * (3.80 / d_loc["sp_xera"]), limit_outs_loc)
+    mean_outs_vis = min(15.8 * (3.80 / d_vis["sp_xera"]), limit_outs_vis)
+    sim_outs_loc = np.random.poisson(mean_outs_loc, n_sim)
+    sim_outs_vis = np.random.poisson(mean_outs_vis, n_sim)
+    
+    prob_nrfi = np.exp(-(exp_f5_loc * 0.22 + exp_f5_vis * 0.22))
+    sim_nrfi = np.random.choice([1, 0], size=n_sim, p=[prob_nrfi, 1.0 - prob_nrfi])
+
+    return {
+        "p_ml_loc": np.mean(runs_ft_loc > runs_ft_vis),
+        "p_ml_vis": np.mean(runs_ft_vis > runs_ft_loc),
+        "p_over_runs": np.mean((runs_ft_loc + runs_ft_vis) > line_runs),
+        "p_under_runs": np.mean((runs_ft_loc + runs_ft_vis) < line_runs),
+        "p_rl_loc": np.mean((runs_ft_loc - 1.5) > runs_ft_vis),
+        "p_rl_vis": np.mean((runs_ft_vis + 1.5) > runs_ft_loc),
+        "p_over_k_loc": np.mean(sim_k_loc > line_k_loc),
+        "p_under_k_loc": np.mean(sim_k_loc < line_k_loc),
+        "p_over_k_vis": np.mean(sim_k_vis > line_k_vis),
+        "p_under_k_vis": np.mean(sim_k_vis < line_k_vis),
+        "p_over_outs_loc": np.mean(sim_outs_loc > line_outs_loc),
+        "p_over_outs_vis": np.mean(sim_outs_vis > line_outs_vis),
+        "p_f5_loc": np.mean(runs_f5_loc > runs_f5_vis),
+        "p_f5_vis": np.mean(runs_f5_vis > runs_f5_loc),
+        "p_nrfi": np.mean(sim_nrfi == 1),
+        "p_yrfi": np.mean(sim_nrfi == 0)
+    }
+
+def generar_grafica_mini_15_partidos(prob_exito):
+    data = np.random.choice([1, 0], size=15, p=[prob_exito, 1 - prob_exito])
+    colors = ['#10b981' if x == 1 else '#ef4444' for x in data]
+    labels = [f"L{i+1}" for i in range(5)] + [f"V{i+1}" for i in range(5)] + [f"H{i+1}" for i in range(5)]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=labels, y=[1]*15, marker_color=colors, hoverinfo='x'))
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        height=130, margin=dict(l=5, r=5, t=10, b=20),
+        xaxis=dict(showgrid=False, tickfont=dict(size=9, color='#64748b')),
+        yaxis=dict(showgrid=False, showticklabels=False, range=[0, 1.2])
+    )
+    return fig
+
+def generar_grafica_efectividad_capsulas_3d(list_apuestas):
+    ligas = ["PREMIER LEAGUE", "LALIGA", "CHAMPIONS LEAGUE", "NFL", "MLB"]
+    wins = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "WIN") for l in ligas]
+    looses = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "LOOSE") for l in ligas]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(name='WIN (Ganados)', x=ligas, y=wins, marker=dict(color='#10b981', line=dict(color='#059669', width=2), cornerradius=15), opacity=0.95))
+    fig.add_trace(go.Bar(name='LOOSE (Perdidos)', x=ligas, y=looses, marker=dict(color='#ef4444', line=dict(color='#b91c1c', width=2), cornerradius=15), opacity=0.95))
+    fig.update_layout(
+        barmode='group', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        height=260, margin=dict(l=10, r=10, t=10, b=10),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11, color='#0f172a', family='Syne')),
+        xaxis=dict(showgrid=False, tickfont=dict(size=11, color='#0f172a', family='Syne')),
+        yaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=10, color='#64748b'))
+    )
+    return fig
+
+# ------------------------------------------------------------------------------
+# 2. SESSION STATE & TRACKER
+# ------------------------------------------------------------------------------
+OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
+
+if "apuestas_registradas" not in st.session_state:
+    st.session_state["apuestas_registradas"] = []
+
+if "liga_activa" not in st.session_state:
+    st.session_state["liga_activa"] = None
+
+def guardar_apuesta_seleccionada(liga, partido, mercado, cuota):
+    nuevo_id = max([a["id"] for a in st.session_state["apuestas_registradas"]], default=0) + 1
+    st.session_state["apuestas_registradas"].append({
+        "id": nuevo_id,
+        "liga": liga,
+        "partido": partido,
+        "mercado": mercado,
+        "cuota": cuota,
+        "resultado": "⏳ PENDIENTE"
+    })
+
+def eliminar_apuesta(apuesta_id):
+    st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
+
+# ------------------------------------------------------------------------------
+# 3. BASES DE DATOS DE EQUIPOS (DECLARADAS ANTES DE LA INTERFAZ)
 # ------------------------------------------------------------------------------
 MLB_DATA = {
     "New York Yankees": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png", "sp_name": "Gerrit Cole", "sp_xera": 3.20, "sp_fip": 3.35, "sp_whip": 1.08, "sp_k_pct": 0.28, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 118, "ops": 0.780, "iso": 0.190, "park_factor": 1.02},
@@ -297,7 +502,9 @@ ARBITROS_PREMIER = {"Anthony Taylor": {"prom_tarjetas": 4.5}, "Chris Kavanagh": 
 ARBITROS_LALIGA = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Ricardo De Burgos": {"prom_tarjetas": 4.1}}
 ARBITROS_CHAMPIONS = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Szymon Marciniak": {"prom_tarjetas": 4.1}}
 
-# HEADER
+# ------------------------------------------------------------------------------
+# 4. HEADER PRINCIPAL
+# ------------------------------------------------------------------------------
 st.markdown("""
 <div class="nav-bar">
     <div class="brand-logo">LA MAÑA <span style="color:#059669;">PICKS</span></div>
