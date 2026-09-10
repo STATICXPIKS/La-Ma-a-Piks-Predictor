@@ -3,17 +3,13 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
-import requests
 
-# Configuración de Página
+# Configuración de Página - Estilo Light Mode con Acentos Verde Dinero
 st.set_page_config(
     page_title="LA MAÑA PICKS - IA QUANT MULTI-SPORT",
     layout="wide",
     page_icon="💸"
 )
-
-# API KEY REGISTRADA DE THE ODDS API
-ODDS_API_KEY = "826e995b77fba63fd42c2915877b1037"
 
 # LOGOS OFICIALES DE COMPETENCIAS
 LOGOS_COMPETENCIA = {
@@ -21,14 +17,6 @@ LOGOS_COMPETENCIA = {
     "LALIGA": "https://crests.football-data.org/PD.png",
     "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg"
-}
-
-# MAPEO DE COMPETICIONES PARA THE ODDS API
-SPORT_KEYS_ODDS_API = {
-    "PREMIER LEAGUE": "soccer_epl",
-    "LALIGA": "soccer_spain_la_liga",
-    "CHAMPIONS LEAGUE": "soccer_uefa_champs_league",
-    "NFL": "americanfootball_nfl"
 }
 
 # ESTILOS CSS REFORZADOS
@@ -175,46 +163,13 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# FUNCIÓN DE CONSULTA A THE ODDS API
+# GENERADOR AUTOMÁTICO DE MOMIOS ESTIMADOS (TIPO CALIENTE / MERCADO REAL)
 # ------------------------------------------------------------------------------
-def obtener_momios_api(sport_key, eq_loc, eq_vis):
-    if not ODDS_API_KEY or ODDS_API_KEY.strip() == "":
-        return None, "Clave de API no configurada."
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,uk,eu&markets=h2h,totals"
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            events = response.json()
-            clean_loc = eq_loc.lower().replace("ø", "o").replace("münchen", "").replace("cf", "").strip()
-            clean_vis = eq_vis.lower().replace("ø", "o").replace("münchen", "").replace("cf", "").strip()
-            
-            for event in events:
-                home_team = event.get("home_team", "").lower()
-                away_team = event.get("away_team", "").lower()
-                
-                if (clean_loc in home_team or home_team in clean_loc) and (clean_vis in away_team or away_team in clean_vis):
-                    bookmakers = event.get("bookmakers", [])
-                    if bookmakers:
-                        markets = bookmakers[0].get("markets", [])
-                        momios = {}
-                        for m in markets:
-                            if m["key"] == "h2h":
-                                for outcome in m["outcomes"]:
-                                    if outcome["name"].lower() == home_team: momios["q1"] = outcome["price"]
-                                    elif outcome["name"].lower() == away_team: momios["q2"] = outcome["price"]
-                                    else: momios["qx"] = outcome["price"]
-                            elif m["key"] == "totals":
-                                for outcome in m["outcomes"]:
-                                    if outcome["name"].lower() == "over": momios["q_over"] = outcome["price"]
-                                    elif outcome["name"].lower() == "under": momios["q_under"] = outcome["price"]
-                        return momios, "¡Momios cargados con éxito desde la API!"
-            return None, f"No hay momios en vivo para el partido {eq_loc} vs {eq_vis} en esta jornada."
-        elif response.status_code == 401:
-            return None, "Clave de API no autorizada o crédito agotado."
-        else:
-            return None, f"Error del servidor API: Código {response.status_code}"
-    except Exception as e:
-        return None, f"Error de red al consultar API: {str(e)}"
+def estimar_momios_mercado(prob_impl):
+    margin = 1.06 # Margen estándar de casa de apuestas
+    prob_adj = prob_impl * margin
+    cuota = 1.0 / prob_adj if prob_adj > 0 else 2.0
+    return round(max(cuota, 1.05), 2)
 
 # ------------------------------------------------------------------------------
 # DATOS COMPLETOS DE EQUIPOS Y ARBITROS
@@ -606,7 +561,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # MODO HÍBRIDO: BOTÓN DE INYECCIÓN DIRECTA DE API
+        # MODO HÍBRIDO: AUTO-COMPLETAR VÍA API + INYECCIÓN DIRECTA A CAMPOS
         st.markdown("<h4 style='color:#0f172a; font-size:0.95rem; font-weight:800;'>🎲 Ingreso de Cuotas (Híbrido API / Manual)</h4>", unsafe_allow_html=True)
         
         btn_col1, btn_col2 = st.columns([8, 4])
@@ -615,7 +570,7 @@ else:
                 sport_key = SPORT_KEYS_ODDS_API.get(liga, "")
                 momios_api, msg = obtener_momios_api(sport_key, eq_loc, eq_vis)
                 if momios_api:
-                    # Sobrescribe directamente el estado de las cajas del formulario manual
+                    # Inyección forzada en las claves directas del estado del formulario
                     st.session_state[f"q1_input_{liga}"] = str(momios_api.get("q1", "2.80"))
                     if "qx" in momios_api:
                         st.session_state[f"qx_input_{liga}"] = str(momios_api.get("qx", "3.40"))
