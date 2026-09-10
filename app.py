@@ -159,19 +159,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# SESSION STATE & TRACKER
+# SESSION STATE & TRACKER (HISTORIAL VACÍO Y PERSISTENTE POR SESIÓN)
 # ------------------------------------------------------------------------------
 OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
 
+# Inicialización totalmente limpia sin picks falsos
 if "apuestas_registradas" not in st.session_state:
-    st.session_state["apuestas_registradas"] = [
-        {"id": 1, "liga": "PREMIER LEAGUE", "partido": "Arsenal vs Chelsea", "mercado": "Doble Chance: 1X", "cuota": 1.55, "resultado": "WIN"},
-        {"id": 2, "liga": "PREMIER LEAGUE", "partido": "Liverpool vs Everton", "mercado": "Total Goles Over 2.5", "cuota": 1.90, "resultado": "WIN"},
-        {"id": 3, "liga": "LALIGA", "partido": "Real Madrid vs Barcelona", "mercado": "Ambos Equipos Anotan: SÍ", "cuota": 1.75, "resultado": "WIN"},
-        {"id": 4, "liga": "LALIGA", "partido": "Atlético de Madrid vs Sevilla", "mercado": "Resultado: Gana Atlético", "cuota": 1.85, "resultado": "LOOSE"},
-        {"id": 5, "liga": "CHAMPIONS LEAGUE", "partido": "Bayern vs Inter", "mercado": "Total Goles Over 2.5", "cuota": 1.80, "resultado": "WIN"},
-        {"id": 6, "liga": "NFL", "partido": "Chiefs vs 49ers", "mercado": "Spread: Chiefs -3.5", "cuota": 1.90, "resultado": "WIN"}
-    ]
+    st.session_state["apuestas_registradas"] = []
 
 if "liga_activa" not in st.session_state:
     st.session_state["liga_activa"] = None
@@ -191,7 +185,7 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# DATOS DE EQUIPOS Y ARBITROS
+# DATOS COMPLETOS DE EQUIPOS Y ARBITROS (32 NFL, 20 PREMIER, 20 LALIGA, 36 CHAMPIONS)
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
@@ -320,7 +314,6 @@ NFL_DATA = {
     "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "td_exp": 3.6, "fg_exp": 1.5}
 }
 
-# ARBITROS ESPECÍFICOS E INDEPENDIENTES POR COMPETICIÓN
 ARBITROS_PREMIER = {
     "Anthony Taylor": {"prom_tarjetas": 4.5},
     "Michael Oliver": {"prom_tarjetas": 3.6},
