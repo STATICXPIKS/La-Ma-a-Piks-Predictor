@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 
 # Configuración de Página - Estilo RickyPicks Light Mode con Acentos Verde Dinero
 st.set_page_config(
-    page_title="LA MAÑA PICKS - IA QUANT & TRACKER AUTOMÁTICO",
+    page_title="LA MAÑA PICKS - IA QUANT & TRACKER REAL",
     layout="wide",
     page_icon="💸"
 )
@@ -92,27 +92,6 @@ st.markdown("""
     .badge-low { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
     .badge-star { background-color: #fef9c3; color: #854d0e; border: 1.5px solid #fde047; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.80rem; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); }
 
-    .trap-alert {
-        background-color: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #991b1b;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-size: 0.82rem;
-        font-weight: 800;
-        margin-bottom: 15px;
-    }
-
-    .auto-badge {
-        background-color: #d1fae5;
-        color: #047857;
-        border: 1px solid #a7f3d0;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 0.72rem;
-        font-weight: 900;
-    }
-
     .analysis-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -163,29 +142,33 @@ st.markdown("""
 # ------------------------------------------------------------------------------
 if "apuestas_registradas" not in st.session_state:
     st.session_state["apuestas_registradas"] = [
-        {"liga": "PREMIER LEAGUE", "partido": "Arsenal vs Chelsea", "mercado": "Doble Chance: 1X", "cuota": 1.55, "resultado": "WIN"},
-        {"liga": "PREMIER LEAGUE", "partido": "Liverpool vs Everton", "mercado": "Total Goles Over 2.5", "cuota": 1.90, "resultado": "WIN"},
-        {"liga": "LALIGA", "partido": "Real Madrid vs Barcelona", "mercado": "Ambos Equipos Anotan: SÍ", "cuota": 1.75, "resultado": "WIN"},
-        {"liga": "LALIGA", "partido": "Atlético de Madrid vs Sevilla", "mercado": "Resultado: Gana Atlético", "cuota": 1.85, "resultado": "LOOSE"},
-        {"liga": "CHAMPIONS LEAGUE", "partido": "Bayern vs Inter", "mercado": "Total Goles Over 2.5", "cuota": 1.80, "resultado": "WIN"},
-        {"liga": "NFL", "partido": "Chiefs vs 49ers", "mercado": "Spread: Chiefs -3.5", "cuota": 1.90, "resultado": "WIN"}
+        {"id": 1, "liga": "PREMIER LEAGUE", "partido": "Arsenal vs Chelsea", "mercado": "Doble Chance: 1X", "cuota": 1.55, "resultado": "WIN"},
+        {"id": 2, "liga": "PREMIER LEAGUE", "partido": "Liverpool vs Everton", "mercado": "Total Goles Over 2.5", "cuota": 1.90, "resultado": "WIN"},
+        {"id": 3, "liga": "LALIGA", "partido": "Real Madrid vs Barcelona", "mercado": "Ambos Equipos Anotan: SÍ", "cuota": 1.75, "resultado": "WIN"},
+        {"id": 4, "liga": "LALIGA", "partido": "Atlético de Madrid vs Sevilla", "mercado": "Resultado: Gana Atlético", "cuota": 1.85, "resultado": "LOOSE"},
+        {"id": 5, "liga": "CHAMPIONS LEAGUE", "partido": "Bayern vs Inter", "mercado": "Total Goles Over 2.5", "cuota": 1.80, "resultado": "WIN"},
+        {"id": 6, "liga": "NFL", "partido": "Chiefs vs 49ers", "mercado": "Spread: Chiefs -3.5", "cuota": 1.90, "resultado": "WIN"}
     ]
 
 if "liga_activa" not in st.session_state:
     st.session_state["liga_activa"] = None
 
-def guardar_apuesta_seleccionada(liga, partido, mercado, cuota, prob_calculada):
-    es_win = prob_calculada >= 0.60
+def guardar_apuesta_seleccionada(liga, partido, mercado, cuota):
+    nuevo_id = max([a["id"] for a in st.session_state["apuestas_registradas"]], default=0) + 1
     st.session_state["apuestas_registradas"].append({
+        "id": nuevo_id,
         "liga": liga,
         "partido": partido,
         "mercado": mercado,
         "cuota": cuota,
-        "resultado": "WIN" if es_win else "LOOSE"
+        "resultado": "⏳ PENDIENTE"
     })
 
+def eliminar_apuesta(apuesta_id):
+    st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
+
 # ------------------------------------------------------------------------------
-# DATOS DE EQUIPOS Y TORNEOS
+# DATOS DE EQUIPOS Y ARBITROS
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
@@ -314,7 +297,6 @@ NFL_DATA = {
     "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "td_exp": 3.6, "fg_exp": 1.5}
 }
 
-# ÁRBITROS ESPECÍFICOS E INDEPENDIENTES POR COMPETICIÓN
 ARBITROS_PREMIER = {
     "Anthony Taylor": {"prom_tarjetas": 4.5},
     "Michael Oliver": {"prom_tarjetas": 3.6},
@@ -329,9 +311,11 @@ ARBITROS_LALIGA = {
     "Ricardo De Burgos Bengoetxea": {"prom_tarjetas": 4.1}
 }
 
+# SE AGREGÓ A JESÚS GIL MANZANO A CHAMPIONS
 ARBITROS_CHAMPIONS = {
     "Szymon Marciniak": {"prom_tarjetas": 4.1},
     "Daniele Orsato": {"prom_tarjetas": 4.7},
+    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
     "Clément Turpin": {"prom_tarjetas": 3.8},
     "Slavko Vinčić": {"prom_tarjetas": 3.9}
 }
@@ -604,10 +588,15 @@ elif st.session_state["liga_activa"] == "NFL":
 
         mercados_nfl = [
             {"mercado": f"1. Moneyline: Gana {eq_loc}", "prob": sim_nfl['p_ml_loc'], "cuota": parse_odds(q_ml_loc, fmt_odds)},
+            {"mercado": f"1. Moneyline: Gana {eq_vis}", "prob": sim_nfl['p_ml_vis'], "cuota": parse_odds(q_ml_vis, fmt_odds)},
             {"mercado": f"2. Spread: {eq_loc} ({spread_loc:+} pts)", "prob": sim_nfl['p_spread_loc'], "cuota": parse_odds(q_spread_loc, fmt_odds)},
+            {"mercado": f"2. Spread: {eq_vis} ({spread_vis:+} pts)", "prob": sim_nfl['p_spread_vis'], "cuota": parse_odds(q_spread_vis, fmt_odds)},
             {"mercado": f"3. Total Puntos: Over {line_pts}", "prob": sim_nfl['p_over_pts'], "cuota": parse_odds(q_over_pts, fmt_odds)},
+            {"mercado": f"3. Total Puntos: Under {line_pts}", "prob": sim_nfl['p_under_pts'], "cuota": parse_odds(q_under_pts, fmt_odds)},
             {"mercado": f"4. Goles de Campo: Over {line_fg}", "prob": sim_nfl['p_over_fg'], "cuota": parse_odds(q_over_fg, fmt_odds)},
-            {"mercado": f"5. Touchdowns Totales: Over {line_td}", "prob": sim_nfl['p_over_td'], "cuota": parse_odds(q_over_td, fmt_odds)}
+            {"mercado": f"4. Goles de Campo: Under {line_fg}", "prob": sim_nfl['p_under_fg'], "cuota": parse_odds(q_under_fg, fmt_odds)},
+            {"mercado": f"5. Touchdowns Totales: Over {line_td}", "prob": sim_nfl['p_over_td'], "cuota": parse_odds(q_over_td, fmt_odds)},
+            {"mercado": f"5. Touchdowns Totales: Under {line_td}", "prob": sim_nfl['p_under_td'], "cuota": parse_odds(q_under_td, fmt_odds)}
         ]
 
         for idx, item in enumerate(mercados_nfl):
@@ -633,16 +622,31 @@ elif st.session_state["liga_activa"] == "NFL":
             """, unsafe_allow_html=True)
 
             if st.button(f"🎯 SELECCIONAR APUESTA", key=f"sel_nfl_{idx}"):
-                guardar_apuesta_seleccionada("NFL", f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'], prob_val)
+                guardar_apuesta_seleccionada("NFL", f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'])
                 st.rerun()
 
             with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_nfl_{idx}")
 
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Seleccionadas</h3>", unsafe_allow_html=True)
-    df_history = pd.DataFrame(st.session_state["apuestas_registradas"])
-    st.dataframe(df_history[df_history["liga"] == "NFL"], use_container_width=True)
+    # GESTIÓN E HISTORIAL INTERACTIVO (ELIMINAR Y CAMBIAR ESTADO REAL)
+    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico e Inspección de Apuestas (NFL)</h3>", unsafe_allow_html=True)
+    
+    nfl_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == "NFL"]
+    if not nfl_apuestas:
+        st.info("No hay apuestas seleccionadas aún para la NFL.")
+    else:
+        for a in nfl_apuestas:
+            col_info, col_estado, col_del = st.columns([7, 3, 2])
+            with col_info:
+                st.write(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})")
+            with col_estado:
+                nuevo_res = st.selectbox("Estado Real", ["⏳ PENDIENTE", "WIN", "LOOSE"], index=["⏳ PENDIENTE", "WIN", "LOOSE"].index(a["resultado"]), key=f"res_{a['id']}")
+                a["resultado"] = nuevo_res
+            with col_del:
+                if st.button("🗑️ Eliminar", key=f"del_{a['id']}"):
+                    eliminar_apuesta(a["id"])
+                    st.rerun()
 
 # ==============================================================================
 # VISTA 2: PANEL DE ANÁLISIS B) FÚTBOL
@@ -663,7 +667,6 @@ else:
             st.session_state["liga_activa"] = None
             st.rerun()
 
-    # Selección de datos de equipo y árbitros específicos por competición
     if liga == "PREMIER LEAGUE":
         TEAMS_DATA = PREMIER_LEAGUE_DATA
         ARBITROS_LIGA = ARBITROS_PREMIER
@@ -752,12 +755,19 @@ else:
 
         sim_results = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, arbitro_data["prom_tarjetas"], line_goles, line_corners, line_cards)
 
+        # SE INCLUYERON TODOS LOS MERCADOS TANTO DEL LOCAL COMO DEL VISITANTE (ROMA / VISITA HABILITADO)
         mercados_evaluados = [
             {"mercado": f"1. Resultado: Gana {eq_loc}", "prob": sim_results['p_1_ft'], "cuota": parse_odds(q_1, fmt_odds)},
+            {"mercado": f"1. Resultado: Empate", "prob": sim_results['p_x_ft'], "cuota": parse_odds(q_x, fmt_odds)},
+            {"mercado": f"1. Resultado: Gana {eq_vis}", "prob": sim_results['p_2_ft'], "cuota": parse_odds(q_2, fmt_odds)},
             {"mercado": f"2. Doble Chance: {eq_loc} o Empate (1X)", "prob": sim_results['p_1_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_1x, fmt_odds)},
+            {"mercado": f"2. Doble Chance: {eq_vis} o Empate (X2)", "prob": sim_results['p_2_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_x2, fmt_odds)},
             {"mercado": f"3. Total Goles: Over {line_goles}", "prob": sim_results['p_over_goles'], "cuota": parse_odds(q_over_g, fmt_odds)},
+            {"mercado": f"3. Total Goles: Under {line_goles}", "prob": sim_results['p_under_goles'], "cuota": parse_odds(q_under_g, fmt_odds)},
             {"mercado": "4. Ambos Equipos Anotan: SÍ", "prob": sim_results['p_btts_si'], "cuota": parse_odds(q_btts_si, fmt_odds)},
+            {"mercado": "4. Ambos Equipos Anotan: NO", "prob": sim_results['p_btts_no'], "cuota": parse_odds(q_btts_no, fmt_odds)},
             {"mercado": f"5. Hándicap Asiático: {eq_loc} ({line_ha})", "prob": sim_results['p_1_ft'] + (sim_results['p_x_ft'] if "+0.5" in line_ha else 0), "cuota": parse_odds(q_ha_loc, fmt_odds)},
+            {"mercado": f"5. Hándicap Asiático: {eq_vis} ({line_ha})", "prob": sim_results['p_2_ft'] + (sim_results['p_x_ft'] if "+0.5" in line_ha else 0), "cuota": parse_odds(q_ha_vis, fmt_odds)},
             {"mercado": f"6. Total Córners: Over {line_corners}", "prob": sim_results['p_over_corners'], "cuota": parse_odds(q_over_c, fmt_odds)},
             {"mercado": f"7. Total Tarjetas: Over {line_cards}", "prob": sim_results['p_over_cards'], "cuota": parse_odds(q_over_t, fmt_odds)}
         ]
@@ -785,13 +795,28 @@ else:
             """, unsafe_allow_html=True)
 
             if st.button(f"🎯 SELECCIONAR APUESTA", key=f"sel_fut_{idx}"):
-                guardar_apuesta_seleccionada(liga, f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'], prob_val)
+                guardar_apuesta_seleccionada(liga, f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'])
                 st.rerun()
 
             with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_{liga}_{idx}")
 
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Seleccionadas</h3>", unsafe_allow_html=True)
-    df_history = pd.DataFrame(st.session_state["apuestas_registradas"])
-    st.dataframe(df_history[df_history["liga"] == liga], use_container_width=True)
+    # GESTIÓN E HISTORIAL INTERACTIVO
+    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico e Inspección de Apuestas</h3>", unsafe_allow_html=True)
+    
+    liga_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == liga]
+    if not liga_apuestas:
+        st.info("No hay apuestas seleccionadas aún para esta competición.")
+    else:
+        for a in liga_apuestas:
+            col_info, col_estado, col_del = st.columns([7, 3, 2])
+            with col_info:
+                st.write(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})")
+            with col_estado:
+                nuevo_res = st.selectbox("Estado Real", ["⏳ PENDIENTE", "WIN", "LOOSE"], index=["⏳ PENDIENTE", "WIN", "LOOSE"].index(a["resultado"]), key=f"res_{a['id']}")
+                a["resultado"] = nuevo_res
+            with col_del:
+                if st.button("🗑️ Eliminar", key=f"del_{a['id']}"):
+                    eliminar_apuesta(a["id"])
+                    st.rerun()
