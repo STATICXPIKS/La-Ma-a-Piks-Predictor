@@ -92,6 +92,27 @@ st.markdown("""
     .badge-low { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
     .badge-star { background-color: #fef9c3; color: #854d0e; border: 1.5px solid #fde047; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.80rem; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); }
 
+    .trap-alert {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 800;
+        margin-bottom: 15px;
+    }
+
+    .auto-badge {
+        background-color: #d1fae5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 900;
+    }
+
     .analysis-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -140,6 +161,8 @@ st.markdown("""
 # ------------------------------------------------------------------------------
 # SESSION STATE & TRACKER
 # ------------------------------------------------------------------------------
+OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
+
 if "apuestas_registradas" not in st.session_state:
     st.session_state["apuestas_registradas"] = [
         {"id": 1, "liga": "PREMIER LEAGUE", "partido": "Arsenal vs Chelsea", "mercado": "Doble Chance: 1X", "cuota": 1.55, "resultado": "WIN"},
@@ -297,6 +320,7 @@ NFL_DATA = {
     "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "td_exp": 3.6, "fg_exp": 1.5}
 }
 
+# ARBITROS ESPECÍFICOS E INDEPENDIENTES POR COMPETICIÓN
 ARBITROS_PREMIER = {
     "Anthony Taylor": {"prom_tarjetas": 4.5},
     "Michael Oliver": {"prom_tarjetas": 3.6},
@@ -311,11 +335,10 @@ ARBITROS_LALIGA = {
     "Ricardo De Burgos Bengoetxea": {"prom_tarjetas": 4.1}
 }
 
-# SE AGREGÓ A JESÚS GIL MANZANO A CHAMPIONS
 ARBITROS_CHAMPIONS = {
+    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
     "Szymon Marciniak": {"prom_tarjetas": 4.1},
     "Daniele Orsato": {"prom_tarjetas": 4.7},
-    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
     "Clément Turpin": {"prom_tarjetas": 3.8},
     "Slavko Vinčić": {"prom_tarjetas": 3.9}
 }
@@ -629,7 +652,7 @@ elif st.session_state["liga_activa"] == "NFL":
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_nfl_{idx}")
 
-    # GESTIÓN E HISTORIAL INTERACTIVO (ELIMINAR Y CAMBIAR ESTADO REAL)
+    # GESTIÓN E HISTORIAL INTERACTIVO CON MANEJO SEGURO DE ESTADO Y MARKDOWN
     st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico e Inspección de Apuestas (NFL)</h3>", unsafe_allow_html=True)
     
     nfl_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == "NFL"]
@@ -639,9 +662,11 @@ elif st.session_state["liga_activa"] == "NFL":
         for a in nfl_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
-                st.write(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})")
+                st.markdown(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
             with col_estado:
-                nuevo_res = st.selectbox("Estado Real", ["⏳ PENDIENTE", "WIN", "LOOSE"], index=["⏳ PENDIENTE", "WIN", "LOOSE"].index(a["resultado"]), key=f"res_{a['id']}")
+                estado_actual = a.get("resultado", "⏳ PENDIENTE")
+                idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
+                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_{a['id']}")
                 a["resultado"] = nuevo_res
             with col_del:
                 if st.button("🗑️ Eliminar", key=f"del_{a['id']}"):
@@ -755,7 +780,6 @@ else:
 
         sim_results = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, arbitro_data["prom_tarjetas"], line_goles, line_corners, line_cards)
 
-        # SE INCLUYERON TODOS LOS MERCADOS TANTO DEL LOCAL COMO DEL VISITANTE (ROMA / VISITA HABILITADO)
         mercados_evaluados = [
             {"mercado": f"1. Resultado: Gana {eq_loc}", "prob": sim_results['p_1_ft'], "cuota": parse_odds(q_1, fmt_odds)},
             {"mercado": f"1. Resultado: Empate", "prob": sim_results['p_x_ft'], "cuota": parse_odds(q_x, fmt_odds)},
@@ -802,7 +826,7 @@ else:
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_{liga}_{idx}")
 
-    # GESTIÓN E HISTORIAL INTERACTIVO
+    # GESTIÓN E HISTORIAL INTERACTIVO CON MANEJO SEGURO DE ESTADO Y MARKDOWN
     st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico e Inspección de Apuestas</h3>", unsafe_allow_html=True)
     
     liga_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == liga]
@@ -812,9 +836,11 @@ else:
         for a in liga_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
-                st.write(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})")
+                st.markdown(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
             with col_estado:
-                nuevo_res = st.selectbox("Estado Real", ["⏳ PENDIENTE", "WIN", "LOOSE"], index=["⏳ PENDIENTE", "WIN", "LOOSE"].index(a["resultado"]), key=f"res_{a['id']}")
+                estado_actual = a.get("resultado", "⏳ PENDIENTE")
+                idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
+                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_{a['id']}")
                 a["resultado"] = nuevo_res
             with col_del:
                 if st.button("🗑️ Eliminar", key=f"del_{a['id']}"):
