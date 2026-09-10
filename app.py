@@ -3,17 +3,13 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import plotly.graph_objects as go
-import requests
 
 # Configuración de Página - Estilo RickyPicks Light Mode con Acentos Verde Dinero
 st.set_page_config(
-    page_title="LA MAÑA PICKS - IA QUANT MULTI-SPORT",
+    page_title="LA MAÑA PICKS - IA QUANT & TRACKER REAL",
     layout="wide",
     page_icon="💸"
 )
-
-# API KEY DE THE ODDS API
-ODDS_API_KEY = "TU_API_KEY_AQUI"
 
 # LOGOS OFICIALES DE COMPETENCIAS
 LOGOS_COMPETENCIA = {
@@ -21,14 +17,6 @@ LOGOS_COMPETENCIA = {
     "LALIGA": "https://crests.football-data.org/PD.png",
     "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg"
-}
-
-# MAPEO DE COMPETICIONES PARA THE ODDS API
-SPORT_KEYS_ODDS_API = {
-    "PREMIER LEAGUE": "soccer_epl",
-    "LALIGA": "soccer_spain_la_liga",
-    "CHAMPIONS LEAGUE": "soccer_uefa_champs_league",
-    "NFL": "americanfootball_nfl"
 }
 
 # ESTILOS CSS REFORZADOS
@@ -104,17 +92,6 @@ st.markdown("""
     .badge-low { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
     .badge-star { background-color: #fef9c3; color: #854d0e; border: 1.5px solid #fde047; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.80rem; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); }
 
-    .trap-alert {
-        background-color: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #991b1b;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-size: 0.82rem;
-        font-weight: 800;
-        margin-bottom: 15px;
-    }
-
     .analysis-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -186,36 +163,6 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# API HÍBRIDA (THE ODDS API)
-# ------------------------------------------------------------------------------
-def obtener_momios_api(sport_key, eq_loc, eq_vis):
-    if ODDS_API_KEY == "TU_API_KEY_AQUI":
-        return None
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,uk,eu&markets=h2h,totals,spreads"
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            events = response.json()
-            for event in events:
-                home_team = event.get("home_team", "").lower()
-                away_team = event.get("away_team", "").lower()
-                if eq_loc.lower() in home_team and eq_vis.lower() in away_team:
-                    bookmakers = event.get("bookmakers", [])
-                    if bookmakers:
-                        markets = bookmakers[0].get("markets", [])
-                        momios = {}
-                        for m in markets:
-                            if m["key"] == "h2h":
-                                for outcome in m["outcomes"]:
-                                    if outcome["name"].lower() == home_team: momios["q1"] = outcome["price"]
-                                    elif outcome["name"].lower() == away_team: momios["q2"] = outcome["price"]
-                                    else: momios["qx"] = outcome["price"]
-                        return momios
-    except Exception:
-        return None
-    return None
-
-# ------------------------------------------------------------------------------
 # DATOS COMPLETOS DE EQUIPOS Y ARBITROS
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
@@ -225,7 +172,6 @@ def calcular_fatiga_rotacion_automatica(equipo):
     ]
     return (65, 40) if equipo in equipos_top else (20, 15)
 
-# 1. CHAMPIONS LEAGUE (36 CLUBES COMPLETOS)
 CHAMPIONS_DATA = {
     "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
@@ -265,7 +211,6 @@ CHAMPIONS_DATA = {
     "Porto": {"logo": "https://crests.football-data.org/503.png", "xg_loc": 1.75, "xga_loc": 1.10, "xg_vis": 1.45, "xga_vis": 1.30, "ppda": 9.3, "aereos": 52, "corners": 6.0, "tarjetas": 2.2}
 }
 
-# 2. PREMIER LEAGUE (20 EQUIPOS COMPLETOS)
 PREMIER_LEAGUE_DATA = {
     "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
     "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
@@ -289,7 +234,6 @@ PREMIER_LEAGUE_DATA = {
     "Tottenham": {"logo": "https://crests.football-data.org/73.png", "xg_loc": 1.85, "xga_loc": 1.50, "xg_vis": 1.50, "xga_vis": 1.65, "ppda": 9.1, "aereos": 49, "corners": 6.3, "tarjetas": 2.1}
 }
 
-# 3. LALIGA EA SPORTS (20 EQUIPOS COMPLETOS)
 LALIGA_DATA = {
     "Deportivo Alavés": {"logo": "https://crests.football-data.org/263.png", "xg_loc": 1.25, "xga_loc": 1.45, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 12.0, "aereos": 56, "corners": 4.4, "tarjetas": 2.5},
     "Espanyol": {"logo": "https://crests.football-data.org/80.png", "xg_loc": 1.15, "xga_loc": 1.60, "xg_vis": 0.90, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.6},
@@ -313,7 +257,6 @@ LALIGA_DATA = {
     "Levante": {"logo": "https://crests.football-data.org/88.png", "xg_loc": 1.22, "xga_loc": 1.55, "xg_vis": 0.95, "xga_vis": 1.70, "ppda": 12.1, "aereos": 49, "corners": 4.2, "tarjetas": 2.4}
 }
 
-# 4. NFL (32 EQUIPOS COMPLETOS AFC / NFC)
 NFL_DATA = {
     "Miami Dolphins": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png", "td_exp": 3.2, "fg_exp": 1.5},
     "New York Jets": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png", "td_exp": 2.5, "fg_exp": 2.1},
@@ -604,49 +547,34 @@ elif st.session_state["liga_activa"] == "NFL":
         with col_c3: baja_qb_loc = st.checkbox(f"Baja QB Local")
         with col_c4: baja_qb_vis = st.checkbox(f"Baja QB Visita")
 
-        st.markdown("<h4 style='color:#0f172a; font-size:0.95rem; font-weight:800;'>🎲 Captura de Spreads y Cuotas de tu Casa</h4>", unsafe_allow_html=True)
-        
-        btn_col1, btn_col2 = st.columns([6, 6])
-        with btn_col1:
-            if st.button("⚡ Cargar Momios En Vivo (API)", use_container_width=True):
-                sport_key = SPORT_KEYS_ODDS_API.get("NFL", "")
-                momios_api = obtener_momios_api(sport_key, eq_loc, eq_vis)
-                if momios_api:
-                    st.session_state["q1_nfl"] = str(momios_api.get("q1", "1.80"))
-                    st.session_state["q2_nfl"] = str(momios_api.get("q2", "2.05"))
-                    st.success("¡Momios de la API cargados!")
-                else:
-                    st.warning("No se encontraron momios en vivo para este evento. Ingresa las cuotas manualmente.")
-
         fmt_odds = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
-        val_q1_nfl = st.session_state.get("q1_nfl", "1.80")
-        val_q2_nfl = st.session_state.get("q2_nfl", "2.05")
+        # DESPLEGABLE DE INGRESO DE MOMIOS MANUALES
+        with st.expander("⚙️ Ajustar Momios Manualmente (Todas las Opciones)", expanded=True):
+            c_ml1, c_ml2 = st.columns(2)
+            with c_ml1: q_ml_loc = st.text_input(f"ML {eq_loc[:12]}", value="1.80")
+            with c_ml2: q_ml_vis = st.text_input(f"ML {eq_vis[:12]}", value="2.05")
 
-        c_ml1, c_ml2 = st.columns(2)
-        with c_ml1: q_ml_loc = st.text_input(f"ML {eq_loc[:12]}", value=val_q1_nfl, key="q1_nfl_input")
-        with c_ml2: q_ml_vis = st.text_input(f"ML {eq_vis[:12]}", value=val_q2_nfl, key="q2_nfl_input")
+            ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
+            with ch1: spread_loc = st.slider(f"Spread Local", -16.5, 16.5, -3.5, step=0.5)
+            with ch2: q_spread_loc = st.text_input(f"Cuota {spread_loc}", value="1.90")
+            with ch3: spread_vis = st.slider(f"Spread Visita", -16.5, 16.5, +3.5, step=0.5)
+            with ch4: q_spread_vis = st.text_input(f"Cuota {spread_vis}", value="1.90")
 
-        ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
-        with ch1: spread_loc = st.slider(f"Spread Local", -16.5, 16.5, -3.5, step=0.5)
-        with ch2: q_spread_loc = st.text_input(f"Cuota {spread_loc}", value="1.90")
-        with ch3: spread_vis = st.slider(f"Spread Visita", -16.5, 16.5, +3.5, step=0.5)
-        with ch4: q_spread_vis = st.text_input(f"Cuota {spread_vis}", value="1.90")
+            ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
+            with ct1: line_pts = st.slider("Línea Puntos Totales", 20.5, 80.5, 47.5, step=1.0)
+            with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value="1.90")
+            with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value="1.90")
 
-        ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
-        with ct1: line_pts = st.slider("Línea Puntos Totales", 20.5, 80.5, 47.5, step=1.0)
-        with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value="1.90")
-        with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value="1.90")
+            cfg1, cfg2, cfg3 = st.columns([1.5, 1.25, 1.25])
+            with cfg1: line_fg = st.slider("Línea Goles de Campo", 2.5, 6.5, 3.5, step=1.0)
+            with cfg2: q_over_fg = st.text_input(f"FG Over {line_fg}", value="1.85")
+            with cfg3: q_under_fg = st.text_input(f"FG Under {line_fg}", value="1.85")
 
-        cfg1, cfg2, cfg3 = st.columns([1.5, 1.25, 1.25])
-        with cfg1: line_fg = st.slider("Línea Goles de Campo", 2.5, 6.5, 3.5, step=1.0)
-        with cfg2: q_over_fg = st.text_input(f"FG Over {line_fg}", value="1.85")
-        with cfg3: q_under_fg = st.text_input(f"FG Under {line_fg}", value="1.85")
-
-        ctd1, ctd2, ctd3 = st.columns([1.5, 1.25, 1.25])
-        with ctd1: line_td = st.slider("Línea Touchdowns", 2.5, 6.5, 5.5, step=1.0)
-        with ctd2: q_over_td = st.text_input(f"TD Over {line_td}", value="1.95")
-        with ctd3: q_under_td = st.text_input(f"TD Under {line_td}", value="1.80")
+            ctd1, ctd2, ctd3 = st.columns([1.5, 1.25, 1.25])
+            with ctd1: line_td = st.slider("Línea Touchdowns", 2.5, 6.5, 5.5, step=1.0)
+            with ctd2: q_over_td = st.text_input(f"TD Over {line_td}", value="1.95")
+            with ctd3: q_under_td = st.text_input(f"TD Under {line_td}", value="1.80")
 
     with col_der_analysis:
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>📊 Matriz de Riesgo y Escaneo NFL (+EV)</h3>", unsafe_allow_html=True)
@@ -784,58 +712,41 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<h4 style='color:#0f172a; font-size:0.95rem; font-weight:800;'>🎲 Ingreso de Cuotas (Híbrido API / Manual)</h4>", unsafe_allow_html=True)
-        
-        btn_col1, btn_col2 = st.columns([6, 6])
-        with btn_col1:
-            if st.button("⚡ Cargar Momios En Vivo (API)", use_container_width=True):
-                sport_key = SPORT_KEYS_ODDS_API.get(liga, "")
-                momios_api = obtener_momios_api(sport_key, eq_loc, eq_vis)
-                if momios_api:
-                    st.session_state[f"q1_{liga}"] = str(momios_api.get("q1", "2.80"))
-                    st.session_state[f"qx_{liga}"] = str(momios_api.get("qx", "3.40"))
-                    st.session_state[f"q2_{liga}"] = str(momios_api.get("q2", "2.40"))
-                    st.success("¡Momios de la API cargados!")
-                else:
-                    st.warning("No se encontraron momios en vivo para este evento. Ingresa las cuotas manualmente.")
-
         fmt_odds = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
-        val_q1 = st.session_state.get(f"q1_{liga}", "2.80")
-        val_qx = st.session_state.get(f"qx_{liga}", "3.40")
-        val_q2 = st.session_state.get(f"q2_{liga}", "2.40")
+        # DESPLEGABLE DE INGRESO DE MOMIOS MANUALES
+        with st.expander("⚙️ Ajustar Momios Manualmente (Todas las Opciones)", expanded=True):
+            c1, c2, c3 = st.columns(3)
+            with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value="2.80")
+            with c2: q_x = st.text_input("1X2 Empate", value="3.40")
+            with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value="2.40")
 
-        c1, c2, c3 = st.columns(3)
-        with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=val_q1, key=f"q1_input_{liga}")
-        with c2: q_x = st.text_input("1X2 Empate", value=val_qx, key=f"qx_input_{liga}")
-        with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=val_q2, key=f"q2_input_{liga}")
+            c4, c5, c6 = st.columns(3)
+            with c4: q_1x = st.text_input("DC 1X", value="1.55")
+            with c5: q_x2 = st.text_input("DC X2", value="1.42")
+            with c6: q_12 = st.text_input("DC 12", value="1.30")
 
-        c4, c5, c6 = st.columns(3)
-        with c4: q_1x = st.text_input("DC 1X", value="1.55")
-        with c5: q_x2 = st.text_input("DC X2", value="1.42")
-        with c6: q_12 = st.text_input("DC 12", value="1.30")
+            cg1, cg2, cg3 = st.columns([1.5, 1.25, 1.25])
+            with cg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0)
+            with cg2: q_over_g = st.text_input(f"Over {line_goles}", value="1.90")
+            with cg3: q_under_g = st.text_input(f"Under {line_goles}", value="1.90")
 
-        cg1, cg2, cg3 = st.columns([1.5, 1.25, 1.25])
-        with cg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0)
-        with cg2: q_over_g = st.text_input(f"Over {line_goles}", value="1.90")
-        with cg3: q_under_g = st.text_input(f"Under {line_goles}", value="1.90")
+            cb1, cb2, cha1, cha2, cha3 = st.columns([1, 1, 1.2, 1, 1])
+            with cb1: q_btts_si = st.text_input("BTTS SÍ", value="1.75")
+            with cb2: q_btts_no = st.text_input("BTTS NO", value="2.05")
+            with cha1: line_ha = st.selectbox("Hándicap AH", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
+            with cha2: q_ha_loc = st.text_input(f"AH {eq_loc[:3]}", value="1.55")
+            with cha3: q_ha_vis = st.text_input(f"AH {eq_vis[:3]}", value="2.35")
 
-        cb1, cb2, cha1, cha2, cha3 = st.columns([1, 1, 1.2, 1, 1])
-        with cb1: q_btts_si = st.text_input("BTTS SÍ", value="1.75")
-        with cb2: q_btts_no = st.text_input("BTTS NO", value="2.05")
-        with cha1: line_ha = st.selectbox("Hándicap AH", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
-        with cha2: q_ha_loc = st.text_input(f"AH {eq_loc[:3]}", value="1.55")
-        with cha3: q_ha_vis = st.text_input(f"AH {eq_vis[:3]}", value="2.35")
+            cc1, cc2, cc3 = st.columns([1.5, 1.25, 1.25])
+            with cc1: line_corners = st.slider("Línea Córners", 8.5, 12.5, 9.5, step=1.0)
+            with cc2: q_over_c = st.text_input(f"Córners > {line_corners}", value="1.85")
+            with cc3: q_under_c = st.text_input(f"Córners < {line_corners}", value="1.85")
 
-        cc1, cc2, cc3 = st.columns([1.5, 1.25, 1.25])
-        with cc1: line_corners = st.slider("Línea Córners", 8.5, 12.5, 9.5, step=1.0)
-        with cc2: q_over_c = st.text_input(f"Córners > {line_corners}", value="1.85")
-        with cc3: q_under_c = st.text_input(f"Córners < {line_corners}", value="1.85")
-
-        ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
-        with ct1: line_cards = st.slider("Línea Tarjetas", 3.5, 5.5, 4.5, step=1.0)
-        with ct2: q_over_t = st.text_input(f"Tarjetas > {line_cards}", value="1.95")
-        with ct3: q_under_t = st.text_input(f"Tarjetas < {line_cards}", value="1.80")
+            ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
+            with ct1: line_cards = st.slider("Línea Tarjetas", 3.5, 5.5, 4.5, step=1.0)
+            with ct2: q_over_t = st.text_input(f"Tarjetas > {line_cards}", value="1.95")
+            with ct3: q_under_t = st.text_input(f"Tarjetas < {line_cards}", value="1.80")
 
     with col_der_analysis:
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>📊 Matriz de Riesgo y Escaneo (+EV)</h3>", unsafe_allow_html=True)
