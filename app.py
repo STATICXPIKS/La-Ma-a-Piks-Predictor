@@ -104,17 +104,6 @@ st.markdown("""
     .badge-low { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
     .badge-star { background-color: #fef9c3; color: #854d0e; border: 1.5px solid #fde047; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.80rem; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); }
 
-    .trap-alert {
-        background-color: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #991b1b;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-size: 0.82rem;
-        font-weight: 800;
-        margin-bottom: 15px;
-    }
-
     .analysis-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -186,10 +175,12 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# FUNCIÓN DE CONSULTA A THE ODDS API
+# FUNCIÓN CORREGIDA DE CONSULTA A THE ODDS API (ACEPTA API KEY COMO PARÁMETRO)
 # ------------------------------------------------------------------------------
-def obtener_momios_api(sport_key, eq_loc, eq_vis):
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,uk,eu&markets=h2h"
+def obtener_momios_api(api_key, sport_key, eq_loc, eq_vis):
+    if not api_key or api_key.strip() == "":
+        return None, "API Key no ingresada."
+    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={api_key.strip()}&regions=us,uk,eu&markets=h2h"
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
@@ -209,13 +200,13 @@ def obtener_momios_api(sport_key, eq_loc, eq_vis):
                                     elif outcome["name"].lower() == away_team: momios["q2"] = outcome["price"]
                                     else: momios["qx"] = outcome["price"]
                         return momios, "¡Momios cargados con éxito desde la API!"
-            return None, "No hay momios activos publicados por las casas para este evento en particular."
+            return None, "No hay momios en vivo publicados para este evento específico actualmente."
         elif response.status_code == 401:
-            return None, "Clave de API inválida."
+            return None, "Clave de API inválida o cuota mensual excedida."
         else:
-            return None, f"Respuesta de servidor: Código {response.status_code}"
+            return None, f"Respuesta del servidor de Odds API: Código {response.status_code}"
     except Exception as e:
-        return None, f"Error de red: {str(e)}"
+        return None, f"Error de conexión: {str(e)}"
 
 # ------------------------------------------------------------------------------
 # DATOS COMPLETOS DE EQUIPOS Y ARBITROS
