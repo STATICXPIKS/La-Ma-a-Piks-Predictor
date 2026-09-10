@@ -163,15 +163,6 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# GENERADOR AUTOMÁTICO DE MOMIOS ESTIMADOS (TIPO CALIENTE / MERCADO REAL)
-# ------------------------------------------------------------------------------
-def estimar_momios_mercado(prob_impl):
-    margin = 1.06 # Margen estándar de casa de apuestas
-    prob_adj = prob_impl * margin
-    cuota = 1.0 / prob_adj if prob_adj > 0 else 2.0
-    return round(max(cuota, 1.05), 2)
-
-# ------------------------------------------------------------------------------
 # DATOS COMPLETOS DE EQUIPOS Y ARBITROS
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
@@ -504,7 +495,7 @@ if st.session_state["liga_activa"] is None:
         st.plotly_chart(fig_capsulas_3d, use_container_width=True, key="chart_3d_home")
 
 # ==============================================================================
-# VISTA 2: PANEL DE ANÁLISIS HÍBRIDO (FÚTBOL Y NFL)
+# VISTA 2: PANEL DE ANÁLISIS (FÚTBOL Y NFL)
 # ==============================================================================
 else:
     liga = st.session_state["liga_activa"]
@@ -561,37 +552,37 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # MODO HÍBRIDO: AUTO-COMPLETAR VÍA API + INYECCIÓN DIRECTA A CAMPOS
-        st.markdown("<h4 style='color:#0f172a; font-size:0.95rem; font-weight:800;'>🎲 Ingreso de Cuotas (Híbrido API / Manual)</h4>", unsafe_allow_html=True)
-        
-        btn_col1, btn_col2 = st.columns([8, 4])
-        with btn_col1:
-            if st.button("⚡ Cargar Momios En Vivo (API)", use_container_width=True):
-                sport_key = SPORT_KEYS_ODDS_API.get(liga, "")
-                momios_api, msg = obtener_momios_api(sport_key, eq_loc, eq_vis)
-                if momios_api:
-                    # Inyección forzada en las claves directas del estado del formulario
-                    st.session_state[f"q1_input_{liga}"] = str(momios_api.get("q1", "2.80"))
-                    if "qx" in momios_api:
-                        st.session_state[f"qx_input_{liga}"] = str(momios_api.get("qx", "3.40"))
-                    st.session_state[f"q2_input_{liga}"] = str(momios_api.get("q2", "2.40"))
-                    if "q_over" in momios_api:
-                        st.session_state[f"qover_input_{liga}"] = str(momios_api["q_over"])
-                    if "q_under" in momios_api:
-                        st.session_state[f"qunder_input_{liga}"] = str(momios_api["q_under"])
-                    st.success(msg)
-                    st.rerun()
-                else:
-                    st.warning(msg)
+        # CÁLCULO ESTIMADO DE MOMIOS BASE ESTILO CALIENTE PARA AUTO-COMPLETAR
+        if liga == "NFL":
+            sim_init = simular_montecarlo_nfl(d_loc, d_vis, False, False, False, False, -3.5, 3.5, 47.5, 3.5, 5.5)
+            q1_calc = str(round(1.0 / (sim_init['p_ml_loc'] * 1.06), 2))
+            q2_calc = str(round(1.0 / (sim_init['p_ml_vis'] * 1.06), 2))
+            qx_calc = "15.0"
+        else:
+            fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
+            fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
+            sim_init = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, arbitro_data["prom_tarjetas"], 2.5, 9.5, 4.5)
+            q1_calc = str(round(1.0 / (sim_init['p_1_ft'] * 1.06), 2))
+            qx_calc = str(round(1.0 / (sim_init['p_x_ft'] * 1.06), 2))
+            q2_calc = str(round(1.0 / (sim_init['p_2_ft'] * 1.06), 2))
+
+        # BOTÓN AUTO-COMPLETAR AUTO-ESTIMADO
+        st.markdown("<h4 style='color:#0f172a; font-size:0.95rem; font-weight:800;'>🎲 Ingreso de Cuotas Estimadas / Manuales</h4>", unsafe_allow_html=True)
+        if st.button("⚡ Cargar Momios Estimados de Mercado (Caliente/Bet365)", use_container_width=True):
+            st.session_state[f"q1_input_{liga}"] = q1_calc
+            st.session_state[f"qx_input_{liga}"] = qx_calc
+            st.session_state[f"q2_input_{liga}"] = q2_calc
+            st.success("¡Momios estimados de mercado cargados!")
+            st.rerun()
 
         fmt_odds = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
-        # DESPLEGABLE CON FORMULARIO MANUAL CONECTADO AL SESSION_STATE DE LA API
+        # FORMULARIO CONTEXTUAL AJUSTABLE
         with st.expander("⚙️ Ajustar Momios Manualmente (Todas las Opciones)", expanded=True):
             if liga == "NFL":
                 c_ml1, c_ml2 = st.columns(2)
-                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=st.session_state.get(f"q1_input_{liga}", "1.80"), key=f"q1_input_{liga}")
-                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=st.session_state.get(f"q2_input_{liga}", "2.05"), key=f"q2_input_{liga}")
+                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=st.session_state.get(f"q1_input_{liga}", q1_calc), key=f"q1_input_{liga}")
+                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=st.session_state.get(f"q2_input_{liga}", q2_calc), key=f"q2_input_{liga}")
                 q_x = "15.0"
 
                 ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
@@ -602,13 +593,13 @@ else:
 
                 ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
                 with ct1: line_pts = st.slider("Línea Puntos Totales", 20.5, 80.5, 47.5, step=1.0)
-                with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value=st.session_state.get(f"qover_input_{liga}", "1.90"), key=f"qover_input_{liga}")
-                with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value=st.session_state.get(f"qunder_input_{liga}", "1.90"), key=f"qunder_input_{liga}")
+                with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value="1.90")
+                with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value="1.90")
             else:
                 c1, c2, c3 = st.columns(3)
-                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=st.session_state.get(f"q1_input_{liga}", "2.80"), key=f"q1_input_{liga}")
-                with c2: q_x = st.text_input("1X2 Empate", value=st.session_state.get(f"qx_input_{liga}", "3.40"), key=f"qx_input_{liga}")
-                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=st.session_state.get(f"q2_input_{liga}", "2.40"), key=f"q2_input_{liga}")
+                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=st.session_state.get(f"q1_input_{liga}", q1_calc), key=f"q1_input_{liga}")
+                with c2: q_x = st.text_input("1X2 Empate", value=st.session_state.get(f"qx_input_{liga}", qx_calc), key=f"qx_input_{liga}")
+                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=st.session_state.get(f"q2_input_{liga}", q2_calc), key=f"q2_input_{liga}")
 
                 c4, c5, c6 = st.columns(3)
                 with c4: q_1x = st.text_input("DC 1X", value="1.55")
@@ -617,8 +608,8 @@ else:
 
                 cg1, cg2, cg3 = st.columns([1.5, 1.25, 1.25])
                 with cg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0)
-                with cg2: q_over_g = st.text_input(f"Over {line_goles}", value=st.session_state.get(f"qover_input_{liga}", "1.90"), key=f"qover_input_{liga}")
-                with cg3: q_under_g = st.text_input(f"Under {line_goles}", value=st.session_state.get(f"qunder_input_{liga}", "1.90"), key=f"qunder_input_{liga}")
+                with cg2: q_over_g = st.text_input(f"Over {line_goles}", value="1.90")
+                with cg3: q_under_g = st.text_input(f"Under {line_goles}", value="1.90")
 
                 cb1, cb2, cha1, cha2, cha3 = st.columns([1, 1, 1.2, 1, 1])
                 with cb1: q_btts_si = st.text_input("BTTS SÍ", value="1.75")
@@ -651,7 +642,9 @@ else:
                 {"mercado": f"3. Total Puntos: Under {line_pts}", "prob": sim_results['p_under_pts'], "cuota": parse_odds(q_under_pts, fmt_odds)}
             ]
         else:
-            sim_results = simular_montecarlo_avanzado(d_loc, d_vis, 0.2, 0.15, 0.2, 0.15, arbitro_data["prom_tarjetas"], line_goles, line_corners, line_cards)
+            fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
+            fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
+            sim_results = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, arbitro_data["prom_tarjetas"], line_goles, line_corners, line_cards)
             mercados_evaluados = [
                 {"mercado": f"1. Resultado: Gana {eq_loc}", "prob": sim_results['p_1_ft'], "cuota": parse_odds(q_1, fmt_odds)},
                 {"mercado": f"1. Resultado: Empate", "prob": sim_results['p_x_ft'], "cuota": parse_odds(q_x, fmt_odds)},
