@@ -5,7 +5,7 @@ from scipy.stats import poisson
 import plotly.graph_objects as go
 import requests
 
-# Configuración de Página - Estilo Light Mode con Acentos Verde Dinero
+# Configuración de Página
 st.set_page_config(
     page_title="LA MAÑA PICKS - IA QUANT MULTI-SPORT",
     layout="wide",
@@ -175,20 +175,24 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# FUNCIÓN DE CONSULTA A THE ODDS API E INYECCIÓN DIRECTA
+# FUNCIÓN DE CONSULTA A THE ODDS API
 # ------------------------------------------------------------------------------
 def obtener_momios_api(sport_key, eq_loc, eq_vis):
     if not ODDS_API_KEY or ODDS_API_KEY.strip() == "":
         return None, "Clave de API no configurada."
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,uk,eu&markets=h2h,totals,spreads"
+    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,uk,eu&markets=h2h,totals"
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             events = response.json()
+            clean_loc = eq_loc.lower().replace("ø", "o").replace("münchen", "").replace("cf", "").strip()
+            clean_vis = eq_vis.lower().replace("ø", "o").replace("münchen", "").replace("cf", "").strip()
+            
             for event in events:
                 home_team = event.get("home_team", "").lower()
                 away_team = event.get("away_team", "").lower()
-                if eq_loc.lower() in home_team or eq_vis.lower() in away_team:
+                
+                if (clean_loc in home_team or home_team in clean_loc) and (clean_vis in away_team or away_team in clean_vis):
                     bookmakers = event.get("bookmakers", [])
                     if bookmakers:
                         markets = bookmakers[0].get("markets", [])
@@ -204,7 +208,7 @@ def obtener_momios_api(sport_key, eq_loc, eq_vis):
                                     if outcome["name"].lower() == "over": momios["q_over"] = outcome["price"]
                                     elif outcome["name"].lower() == "under": momios["q_under"] = outcome["price"]
                         return momios, "¡Momios cargados con éxito desde la API!"
-            return None, "No se encontraron cuotas activas publicadas para este partido actualmente."
+            return None, f"No hay momios en vivo para el partido {eq_loc} vs {eq_vis} en esta jornada."
         elif response.status_code == 401:
             return None, "Clave de API no autorizada o crédito agotado."
         else:
@@ -602,7 +606,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # MODO HÍBRIDO: AUTO-COMPLETAR VÍA API + INYECCIÓN DIRECTA A CAMPOS
+        # MODO HÍBRIDO: BOTÓN DE INYECCIÓN DIRECTA DE API
         st.markdown("<h4 style='color:#0f172a; font-size:0.95rem; font-weight:800;'>🎲 Ingreso de Cuotas (Híbrido API / Manual)</h4>", unsafe_allow_html=True)
         
         btn_col1, btn_col2 = st.columns([8, 4])
@@ -611,11 +615,15 @@ else:
                 sport_key = SPORT_KEYS_ODDS_API.get(liga, "")
                 momios_api, msg = obtener_momios_api(sport_key, eq_loc, eq_vis)
                 if momios_api:
-                    st.session_state[f"val_q1_{liga}"] = str(momios_api.get("q1", "2.80"))
-                    st.session_state[f"val_qx_{liga}"] = str(momios_api.get("qx", "3.40"))
-                    st.session_state[f"val_q2_{liga}"] = str(momios_api.get("q2", "2.40"))
-                    if "q_over" in momios_api: st.session_state[f"val_qover_{liga}"] = str(momios_api["q_over"])
-                    if "q_under" in momios_api: st.session_state[f"val_qunder_{liga}"] = str(momios_api["q_under"])
+                    # Sobrescribe directamente el estado de las cajas del formulario manual
+                    st.session_state[f"q1_input_{liga}"] = str(momios_api.get("q1", "2.80"))
+                    if "qx" in momios_api:
+                        st.session_state[f"qx_input_{liga}"] = str(momios_api.get("qx", "3.40"))
+                    st.session_state[f"q2_input_{liga}"] = str(momios_api.get("q2", "2.40"))
+                    if "q_over" in momios_api:
+                        st.session_state[f"qover_input_{liga}"] = str(momios_api["q_over"])
+                    if "q_under" in momios_api:
+                        st.session_state[f"qunder_input_{liga}"] = str(momios_api["q_under"])
                     st.success(msg)
                     st.rerun()
                 else:
@@ -623,12 +631,12 @@ else:
 
         fmt_odds = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
-        # DESPLEGABLE CON TODAS LAS OPCIONES MANUALES QUE RECIBEN LA INYECCIÓN DIRECTA
+        # DESPLEGABLE CON FORMULARIO MANUAL CONECTADO AL SESSION_STATE DE LA API
         with st.expander("⚙️ Ajustar Momios Manualmente (Todas las Opciones)", expanded=True):
             if liga == "NFL":
                 c_ml1, c_ml2 = st.columns(2)
-                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=st.session_state.get(f"val_q1_{liga}", "1.80"), key=f"q1_input_{liga}")
-                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=st.session_state.get(f"val_q2_{liga}", "2.05"), key=f"q2_input_{liga}")
+                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=st.session_state.get(f"q1_input_{liga}", "1.80"), key=f"q1_input_{liga}")
+                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=st.session_state.get(f"q2_input_{liga}", "2.05"), key=f"q2_input_{liga}")
                 q_x = "15.0"
 
                 ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
@@ -639,13 +647,13 @@ else:
 
                 ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
                 with ct1: line_pts = st.slider("Línea Puntos Totales", 20.5, 80.5, 47.5, step=1.0)
-                with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value=st.session_state.get(f"val_qover_{liga}", "1.90"), key=f"qover_input_{liga}")
-                with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value=st.session_state.get(f"val_qunder_{liga}", "1.90"), key=f"qunder_input_{liga}")
+                with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value=st.session_state.get(f"qover_input_{liga}", "1.90"), key=f"qover_input_{liga}")
+                with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value=st.session_state.get(f"qunder_input_{liga}", "1.90"), key=f"qunder_input_{liga}")
             else:
                 c1, c2, c3 = st.columns(3)
-                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=st.session_state.get(f"val_q1_{liga}", "2.80"), key=f"q1_input_{liga}")
-                with c2: q_x = st.text_input("1X2 Empate", value=st.session_state.get(f"val_qx_{liga}", "3.40"), key=f"qx_input_{liga}")
-                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=st.session_state.get(f"val_q2_{liga}", "2.40"), key=f"q2_input_{liga}")
+                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=st.session_state.get(f"q1_input_{liga}", "2.80"), key=f"q1_input_{liga}")
+                with c2: q_x = st.text_input("1X2 Empate", value=st.session_state.get(f"qx_input_{liga}", "3.40"), key=f"qx_input_{liga}")
+                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=st.session_state.get(f"q2_input_{liga}", "2.40"), key=f"q2_input_{liga}")
 
                 c4, c5, c6 = st.columns(3)
                 with c4: q_1x = st.text_input("DC 1X", value="1.55")
@@ -654,8 +662,8 @@ else:
 
                 cg1, cg2, cg3 = st.columns([1.5, 1.25, 1.25])
                 with cg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0)
-                with cg2: q_over_g = st.text_input(f"Over {line_goles}", value=st.session_state.get(f"val_qover_{liga}", "1.90"), key=f"qover_input_{liga}")
-                with cg3: q_under_g = st.text_input(f"Under {line_goles}", value=st.session_state.get(f"val_qunder_{liga}", "1.90"), key=f"qunder_input_{liga}")
+                with cg2: q_over_g = st.text_input(f"Over {line_goles}", value=st.session_state.get(f"qover_input_{liga}", "1.90"), key=f"qover_input_{liga}")
+                with cg3: q_under_g = st.text_input(f"Under {line_goles}", value=st.session_state.get(f"qunder_input_{liga}", "1.90"), key=f"qunder_input_{liga}")
 
                 cb1, cb2, cha1, cha2, cha3 = st.columns([1, 1, 1.2, 1, 1])
                 with cb1: q_btts_si = st.text_input("BTTS SÍ", value="1.75")
