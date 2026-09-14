@@ -12,6 +12,9 @@ st.set_page_config(
     page_icon="💸"
 )
 
+# API KEY REGISTRADA DE THE ODDS API
+ODDS_API_KEY = "826e995b77fba63fd42c2915877b1037"
+
 # LOGOS OFICIALES DE COMPETENCIAS
 LOGOS_COMPETENCIA = {
     "PREMIER LEAGUE": "https://crests.football-data.org/PL.png",
@@ -20,6 +23,16 @@ LOGOS_COMPETENCIA = {
     "BUNDESLIGA": "https://crests.football-data.org/BL1.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg"
+}
+
+# MAPEO DE COMPETICIONES PARA THE ODDS API
+SPORT_KEYS_ODDS_API = {
+    "PREMIER LEAGUE": "soccer_epl",
+    "LALIGA": "soccer_spain_la_liga",
+    "CHAMPIONS LEAGUE": "soccer_uefa_champs_league",
+    "BUNDESLIGA": "soccer_germany_bundesliga",
+    "NFL": "americanfootball_nfl",
+    "MLB": "baseball_mlb"
 }
 
 # ESTILOS CSS REFORZADOS
@@ -139,7 +152,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# 1. DECLARACIÓN DE TODAS LAS FUNCIONES AUXILIARES
+# 1. FUNCIONES AUXILIARES, SIMULACIONES Y CONSULTAS API
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
@@ -179,6 +192,45 @@ def obtener_pitcher_confirmado_mlb(equipo_nombre):
     except Exception:
         pass
     return "Pitcher Proyectado"
+
+def obtener_momios_reales_odds_api(sport_key, eq_loc, eq_vis):
+    if not ODDS_API_KEY or ODDS_API_KEY.strip() == "":
+        return None
+    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,eu&markets=h2h,spreads,totals"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            events = response.json()
+            clean_loc = eq_loc.lower().replace("la ", "").replace("los angeles ", "").replace("new york ", "").strip()
+            clean_vis = eq_vis.lower().replace("la ", "").replace("los angeles ", "").replace("new york ", "").strip()
+            
+            for event in events:
+                home_team = event.get("home_team", "").lower()
+                away_team = event.get("away_team", "").lower()
+                
+                if (clean_loc in home_team or home_team in clean_loc) and (clean_vis in away_team or away_team in clean_vis):
+                    bookmakers = event.get("bookmakers", [])
+                    if bookmakers:
+                        markets = bookmakers[0].get("markets", [])
+                        momios = {}
+                        for m in markets:
+                            if m["key"] == "h2h":
+                                for outcome in m["outcomes"]:
+                                    if outcome["name"].lower() == home_team: momios["q1"] = outcome["price"]
+                                    elif outcome["name"].lower() == away_team: momios["q2"] = outcome["price"]
+                                    else: momios["qx"] = outcome["price"]
+                            elif m["key"] == "spreads":
+                                for outcome in m["outcomes"]:
+                                    if outcome["name"].lower() == home_team: momios["q_spread_loc"] = outcome["price"]
+                                    elif outcome["name"].lower() == away_team: momios["q_spread_vis"] = outcome["price"]
+                            elif m["key"] == "totals":
+                                for outcome in m["outcomes"]:
+                                    if outcome["name"].lower() == "over": momios["q_over"] = outcome["price"]
+                                    elif outcome["name"].lower() == "under": momios["q_under"] = outcome["price"]
+                        return momios
+    except Exception:
+        return None
+    return None
 
 def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, arbitro_card, line_goles, line_corners, line_cards, n_sim=10000):
     fatiga_factor_loc = 1.0 - (fatiga_loc * 0.12 + rot_loc * 0.10)
@@ -344,7 +396,7 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# 3. BASES DE DATOS Y ÁRBITROS ACTUALIZADOS
+# 3. BASES DE DATOS Y ÁRBITROS
 # ------------------------------------------------------------------------------
 ARBITROS_PREMIER = {
     "Michael Oliver": {"prom_tarjetas": 3.6},
