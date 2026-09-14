@@ -17,6 +17,7 @@ LOGOS_COMPETENCIA = {
     "PREMIER LEAGUE": "https://crests.football-data.org/PL.png",
     "LALIGA": "https://crests.football-data.org/PD.png",
     "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
+    "BUNDESLIGA": "https://crests.football-data.org/BL1.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg"
 }
@@ -138,12 +139,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# 1. DECLARACIÓN DE TODAS LAS FUNCIONES AUXILIARES (AL PRINCIPIO DEL SCRIPT)
+# 1. DECLARACIÓN DE TODAS LAS FUNCIONES AUXILIARES
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
         "Real Madrid", "Manchester City", "Bayern", "PSG", "Barcelona", 
-        "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Chelsea", "Tottenham", "Aston Villa", "Napoli"
+        "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Leverkusen", "RB Leipzig"
     ]
     return (65, 40) if equipo in equipos_top else (20, 15)
 
@@ -301,7 +302,7 @@ def generar_grafica_mini_15_partidos(prob_exito):
     return fig
 
 def generar_grafica_efectividad_capsulas_3d(list_apuestas):
-    ligas = ["PREMIER LEAGUE", "LALIGA", "CHAMPIONS LEAGUE", "NFL", "MLB"]
+    ligas = ["PREMIER LEAGUE", "LALIGA", "CHAMPIONS LEAGUE", "BUNDESLIGA", "NFL", "MLB"]
     wins = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "WIN") for l in ligas]
     looses = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "LOOSE") for l in ligas]
 
@@ -343,8 +344,29 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# 3. BASES DE DATOS DE EQUIPOS (DECLARADAS ANTES DE LA INTERFAZ)
+# 3. BASES DE DATOS COMPLETAS
 # ------------------------------------------------------------------------------
+BUNDESLIGA_DATA = {
+    "Friburgo": {"logo": "https://crests.football-data.org/160.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.8, "aereos": 52, "corners": 5.1, "tarjetas": 1.8},
+    "Dortmund": {"logo": "https://crests.football-data.org/4.png", "xg_loc": 2.10, "xga_loc": 1.15, "xg_vis": 1.80, "xga_vis": 1.30, "ppda": 8.9, "aereos": 51, "corners": 6.3, "tarjetas": 1.7},
+    "Augsburgo": {"logo": "https://crests.football-data.org/16.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 12.2, "aereos": 54, "corners": 4.5, "tarjetas": 2.3},
+    "Bayern": {"logo": "https://crests.football-data.org/5.png", "xg_loc": 2.50, "xga_loc": 0.85, "xg_vis": 2.25, "xga_vis": 1.00, "ppda": 7.5, "aereos": 53, "corners": 7.2, "tarjetas": 1.4},
+    "RB Leipzig": {"logo": "https://crests.football-data.org/721.png", "xg_loc": 1.95, "xga_loc": 1.10, "xg_vis": 1.70, "xga_vis": 1.25, "ppda": 8.8, "aereos": 50, "corners": 6.1, "tarjetas": 1.9},
+    "SV Elversberg": {"logo": "https://crests.football-data.org/6706.png", "xg_loc": 1.20, "xga_loc": 1.60, "xg_vis": 0.95, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.1},
+    "Leverkusen": {"logo": "https://crests.football-data.org/3.png", "xg_loc": 2.20, "xga_loc": 0.95, "xg_vis": 1.90, "xga_vis": 1.10, "ppda": 8.2, "aereos": 49, "corners": 6.8, "tarjetas": 1.6},
+    "Mainz 05": {"logo": "https://crests.football-data.org/15.png", "xg_loc": 1.40, "xga_loc": 1.40, "xg_vis": 1.15, "xga_vis": 1.55, "ppda": 11.0, "aereos": 53, "corners": 4.8, "tarjetas": 2.2},
+    "Frankfurt": {"logo": "https://crests.football-data.org/19.png", "xg_loc": 1.70, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 10.2, "aereos": 51, "corners": 5.5, "tarjetas": 2.0},
+    "Werder Bremen": {"logo": "https://crests.football-data.org/12.png", "xg_loc": 1.45, "xga_loc": 1.45, "xg_vis": 1.20, "xga_vis": 1.60, "ppda": 11.5, "aereos": 52, "corners": 5.0, "tarjetas": 2.1},
+    "Schalke 04": {"logo": "https://crests.football-data.org/6.png", "xg_loc": 1.30, "xga_loc": 1.55, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.0, "aereos": 55, "corners": 4.6, "tarjetas": 2.4},
+    "Colonia": {"logo": "https://crests.football-data.org/1.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.65, "ppda": 11.8, "aereos": 50, "corners": 4.9, "tarjetas": 2.2},
+    "Hoffenheim": {"logo": "https://crests.football-data.org/2.png", "xg_loc": 1.60, "xga_loc": 1.50, "xg_vis": 1.35, "xga_vis": 1.65, "ppda": 10.5, "aereos": 50, "corners": 5.3, "tarjetas": 2.3},
+    "Stuttgart": {"logo": "https://crests.football-data.org/10.png", "xg_loc": 1.80, "xga_loc": 1.25, "xg_vis": 1.50, "xga_vis": 1.40, "ppda": 9.5, "aereos": 51, "corners": 5.8, "tarjetas": 1.9},
+    "Paderborn": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.25, "xga_loc": 1.65, "xg_vis": 1.00, "xga_vis": 1.85, "ppda": 12.8, "aereos": 47, "corners": 4.2, "tarjetas": 2.1},
+    "FC Union Berlin": {"logo": "https://crests.football-data.org/28.png", "xg_loc": 1.30, "xga_loc": 1.20, "xg_vis": 1.05, "xga_vis": 1.40, "ppda": 13.2, "aereos": 56, "corners": 4.4, "tarjetas": 2.0},
+    "Mönchengladbach": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.50, "xga_loc": 1.45, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 11.2, "aereos": 49, "corners": 5.2, "tarjetas": 1.9},
+    "Hamburg": {"logo": "https://crests.football-data.org/26.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 11.6, "aereos": 52, "corners": 4.8, "tarjetas": 2.2}
+}
+
 MLB_DATA = {
     "New York Yankees": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png", "sp_name": "Gerrit Cole", "sp_xera": 3.20, "sp_fip": 3.35, "sp_whip": 1.08, "sp_k_pct": 0.28, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 118, "ops": 0.780, "iso": 0.190, "park_factor": 1.02},
     "Los Angeles Dodgers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/lad.png", "sp_name": "Tyler Glasnow", "sp_xera": 3.10, "sp_fip": 3.25, "sp_whip": 1.05, "sp_k_pct": 0.29, "sp_bb_pct": 0.06, "bp_rating": 1.1, "wrc_plus": 122, "ops": 0.795, "iso": 0.200, "park_factor": 1.01},
@@ -501,6 +523,7 @@ NFL_DATA = {
 ARBITROS_PREMIER = {"Anthony Taylor": {"prom_tarjetas": 4.5}, "Chris Kavanagh": {"prom_tarjetas": 3.9}}
 ARBITROS_LALIGA = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Ricardo De Burgos": {"prom_tarjetas": 4.1}}
 ARBITROS_CHAMPIONS = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Szymon Marciniak": {"prom_tarjetas": 4.1}}
+ARBITROS_BUNDESLIGA = {"Felix Zwayer": {"prom_tarjetas": 4.2}, "Daniel Siebert": {"prom_tarjetas": 3.9}, "Tobias Stieler": {"prom_tarjetas": 3.8}, "Deniz Aytekin": {"prom_tarjetas": 4.0}}
 
 # ------------------------------------------------------------------------------
 # 4. HEADER PRINCIPAL
@@ -544,6 +567,13 @@ if st.session_state["liga_activa"] is None:
                 st.session_state["liga_activa"] = "CHAMPIONS LEAGUE"
                 st.rerun()
         with col_b3_img: st.image(LOGOS_COMPETENCIA["CHAMPIONS LEAGUE"], width=40)
+
+        col_b6, col_b6_img = st.columns([10, 2])
+        with col_b6:
+            if st.button("BUNDESLIGA (18 Equipos) ➔", use_container_width=True):
+                st.session_state["liga_activa"] = "BUNDESLIGA"
+                st.rerun()
+        with col_b6_img: st.image(LOGOS_COMPETENCIA["BUNDESLIGA"], width=40)
 
         col_b4, col_b4_img = st.columns([10, 2])
         with col_b4:
@@ -786,6 +816,7 @@ else:
     if liga == "PREMIER LEAGUE": TEAMS_DATA, ARBITROS_LIGA = PREMIER_LEAGUE_DATA, ARBITROS_PREMIER
     elif liga == "LALIGA": TEAMS_DATA, ARBITROS_LIGA = LALIGA_DATA, ARBITROS_LALIGA
     elif liga == "CHAMPIONS LEAGUE": TEAMS_DATA, ARBITROS_LIGA = CHAMPIONS_DATA, ARBITROS_CHAMPIONS
+    elif liga == "BUNDESLIGA": TEAMS_DATA, ARBITROS_LIGA = BUNDESLIGA_DATA, ARBITROS_BUNDESLIGA
     else: TEAMS_DATA, ARBITROS_LIGA = NFL_DATA, {}
 
     col_izq_inputs, col_der_analysis = st.columns([1, 1])
