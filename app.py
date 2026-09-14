@@ -339,7 +339,7 @@ def generar_grafica_efectividad_capsulas_3d(list_apuestas):
     return fig
 
 # ------------------------------------------------------------------------------
-# SESSION STATE & TRACKER PERSISTENTE GLOBAL
+# SESSION STATE & TRACKER
 # ------------------------------------------------------------------------------
 OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
 
@@ -549,7 +549,7 @@ NFL_DATA = {
 }
 
 # ------------------------------------------------------------------------------
-# 4. HEADER PRINCIPAL
+# HEADER PRINCIPAL
 # ------------------------------------------------------------------------------
 st.markdown("""
 <div class="nav-bar">
