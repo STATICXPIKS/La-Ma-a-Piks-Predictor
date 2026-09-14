@@ -139,7 +139,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# 1. FUNCIONES AUXILIARES Y SIMULACIONES DE MONTE CARLO
+# 1. DECLARACIÓN DE TODAS LAS FUNCIONES AUXILIARES
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
@@ -344,8 +344,83 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# 3. BASES DE DATOS DE EQUIPOS
+# 3. BASES DE DATOS Y ÁRBITROS ACTUALIZADOS
 # ------------------------------------------------------------------------------
+ARBITROS_PREMIER = {
+    "Michael Oliver": {"prom_tarjetas": 3.6},
+    "Jarred Gillett": {"prom_tarjetas": 3.8},
+    "Darren England": {"prom_tarjetas": 4.1},
+    "Chris Kavanagh": {"prom_tarjetas": 3.9},
+    "John Brooks": {"prom_tarjetas": 4.0},
+    "Thomas Bramall": {"prom_tarjetas": 3.7},
+    "Paul Tierney": {"prom_tarjetas": 4.8},
+    "Stuart Attwell": {"prom_tarjetas": 4.2},
+    "Craig Pawson": {"prom_tarjetas": 4.3},
+    "Andrew Madley": {"prom_tarjetas": 3.7},
+    "Peter Bankes": {"prom_tarjetas": 4.4},
+    "Tony Harrington": {"prom_tarjetas": 3.6},
+    "Robert Jones": {"prom_tarjetas": 4.1},
+    "Samuel Barrott": {"prom_tarjetas": 3.5},
+    "Farai Hallam": {"prom_tarjetas": 3.4},
+    "Michael Salisbury": {"prom_tarjetas": 3.6},
+    "Josh Smith": {"prom_tarjetas": 3.8}
+}
+
+ARBITROS_LALIGA = {
+    "Juan Martínez Munuera": {"prom_tarjetas": 4.8},
+    "De Burgos Bengoetxea": {"prom_tarjetas": 4.1},
+    "Jon Ander González Esteban": {"prom_tarjetas": 4.6},
+    "Miguel Ángel Ortiz Arias": {"prom_tarjetas": 5.0},
+    "Javier Alberola Rojas": {"prom_tarjetas": 3.8},
+    "Isidro Díaz de Mera Escuderos": {"prom_tarjetas": 5.4},
+    "Víctor García Verdura": {"prom_tarjetas": 4.5},
+    "Miguel Sesma Espinosa": {"prom_tarjetas": 4.3},
+    "Manuel Jesús Orellana Cid": {"prom_tarjetas": 4.7},
+    "Mateo Busquets Ferrer": {"prom_tarjetas": 5.1},
+    "Carlos Muñiz Muñoz": {"prom_tarjetas": 4.4},
+    "Alejandro Hernández Hernández": {"prom_tarjetas": 5.8},
+    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
+    "César Soto Grado": {"prom_tarjetas": 5.3},
+    "José María Sánchez Martínez": {"prom_tarjetas": 4.9},
+    "Francisco José Hernández Maeso": {"prom_tarjetas": 4.6},
+    "José Luis Munuera Montero": {"prom_tarjetas": 5.1},
+    "Luis Bestard Servera": {"prom_tarjetas": 4.2},
+    "Alejandro Quintero González": {"prom_tarjetas": 4.5}
+}
+
+ARBITROS_BUNDESLIGA = {
+    "Felix Zwayer": {"prom_tarjetas": 4.2},
+    "Daniel Siebert": {"prom_tarjetas": 3.9},
+    "Sven Jablonski": {"prom_tarjetas": 3.7},
+    "Sascha Stegemann": {"prom_tarjetas": 4.1},
+    "Florian Badstübner": {"prom_tarjetas": 3.8},
+    "Christian Dingert": {"prom_tarjetas": 4.3},
+    "Tobias Stieler": {"prom_tarjetas": 3.8},
+    "Robert Hartmann": {"prom_tarjetas": 3.6},
+    "Bastian Dankert": {"prom_tarjetas": 4.0},
+    "Martin Petersen": {"prom_tarjetas": 3.9},
+    "Timo Gerach": {"prom_tarjetas": 3.7},
+    "Harm Osmers": {"prom_tarjetas": 3.8},
+    "Benjamin Brand": {"prom_tarjetas": 3.6},
+    "Robert Schröder": {"prom_tarjetas": 4.1},
+    "Tobias Reichel": {"prom_tarjetas": 3.5},
+    "Dr. Matthias Jöllenbeck": {"prom_tarjetas": 3.7},
+    "Max Burda": {"prom_tarjetas": 3.9},
+    "Daniel Schlager": {"prom_tarjetas": 4.4},
+    "Sören Storks": {"prom_tarjetas": 4.0},
+    "Florian Exner": {"prom_tarjetas": 3.8},
+    "Richard Hempel": {"prom_tarjetas": 3.6},
+    "Robin Braun": {"prom_tarjetas": 3.7}
+}
+
+ARBITROS_CHAMPIONS = {
+    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
+    "Szymon Marciniak": {"prom_tarjetas": 4.1},
+    "Daniele Orsato": {"prom_tarjetas": 4.7},
+    "Clément Turpin": {"prom_tarjetas": 3.8},
+    "Slavko Vinčić": {"prom_tarjetas": 3.9}
+}
+
 BUNDESLIGA_DATA = {
     "Friburgo": {"logo": "https://crests.football-data.org/160.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.8, "aereos": 52, "corners": 5.1, "tarjetas": 1.8},
     "Dortmund": {"logo": "https://crests.football-data.org/4.png", "xg_loc": 2.10, "xga_loc": 1.15, "xg_vis": 1.80, "xga_vis": 1.30, "ppda": 8.9, "aereos": 51, "corners": 6.3, "tarjetas": 1.7},
@@ -520,11 +595,6 @@ NFL_DATA = {
     "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "td_exp": 3.6, "fg_exp": 1.5}
 }
 
-ARBITROS_PREMIER = {"Anthony Taylor": {"prom_tarjetas": 4.5}, "Chris Kavanagh": {"prom_tarjetas": 3.9}}
-ARBITROS_LALIGA = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Ricardo De Burgos": {"prom_tarjetas": 4.1}}
-ARBITROS_CHAMPIONS = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Szymon Marciniak": {"prom_tarjetas": 4.1}}
-ARBITROS_BUNDESLIGA = {"Felix Zwayer": {"prom_tarjetas": 4.2}, "Daniel Siebert": {"prom_tarjetas": 3.9}, "Tobias Stieler": {"prom_tarjetas": 3.8}, "Deniz Aytekin": {"prom_tarjetas": 4.0}}
-
 # ------------------------------------------------------------------------------
 # 4. HEADER PRINCIPAL
 # ------------------------------------------------------------------------------
@@ -678,7 +748,6 @@ elif st.session_state["liga_activa"] == "MLB":
         with col_lim1: limit_outs_loc = st.slider(f"Límite Outs Pitcher {eq_loc[:3]}", 12, 24, 17, step=1)
         with col_lim2: limit_outs_vis = st.slider(f"Límite Outs Pitcher {eq_vis[:3]}", 12, 24, 16, step=1)
 
-        # CÁLCULO AUTOMÁTICO DE MOMIOS BASE MLB
         sim_mlb_init = simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, 8.5, 5.5, 5.5, 17.5, 15.5)
         q_ml_loc_auto = str(round(1.0 / (sim_mlb_init['p_ml_loc'] * 1.06), 2))
         q_ml_vis_auto = str(round(1.0 / (sim_mlb_init['p_ml_vis'] * 1.06), 2))
@@ -785,6 +854,13 @@ elif st.session_state["liga_activa"] == "MLB":
     if not mlb_apuestas:
         st.info("No hay apuestas seleccionadas aún para la MLB.")
     else:
+        df_export = pd.DataFrame(mlb_apuestas)
+        st.download_button(
+            label="💾 Descargar Histórico (CSV)",
+            data=df_export.to_csv(index=False),
+            file_name="picks_mlb.csv",
+            mime="text/csv"
+        )
         for a in mlb_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
@@ -858,7 +934,6 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # CÁLCULO AUTOMÁTICO DE MOMIOS BASE SEGÚN EL MATCHUP
         if liga == "NFL":
             sim_init = simular_montecarlo_nfl(d_loc, d_vis, False, False, False, False, -3.5, 3.5, 47.5, 3.5, 5.5)
             q1_calc = str(round(1.0 / (sim_init['p_ml_loc'] * 1.06), 2))
