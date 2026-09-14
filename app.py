@@ -137,7 +137,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# FUNCIONES CONVERSORAS Y AUXILIARES
+# FUNCIONES AUXILIARES Y SIMULACIONES
 # ------------------------------------------------------------------------------
 def decimal_a_formato(val_dec, fmt_type):
     try:
@@ -339,7 +339,7 @@ def generar_grafica_efectividad_capsulas_3d(list_apuestas):
     return fig
 
 # ------------------------------------------------------------------------------
-# SESSION STATE & TRACKER PERSISTENTE
+# SESSION STATE & TRACKER PERSISTENTE GLOBAL
 # ------------------------------------------------------------------------------
 OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
 
@@ -364,8 +364,13 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# BASES DE DATOS MLB REALES Y LIGAS
+# BASES DE DATOS Y ÁRBITROS
 # ------------------------------------------------------------------------------
+ARBITROS_PREMIER = {"Michael Oliver": {"prom_tarjetas": 3.6}, "Chris Kavanagh": {"prom_tarjetas": 3.9}, "Paul Tierney": {"prom_tarjetas": 4.8}}
+ARBITROS_LALIGA = {"Juan Martínez Munuera": {"prom_tarjetas": 4.8}, "Jesús Gil Manzano": {"prom_tarjetas": 5.2}}
+ARBITROS_BUNDESLIGA = {"Felix Zwayer": {"prom_tarjetas": 4.2}, "Daniel Siebert": {"prom_tarjetas": 3.9}}
+ARBITROS_CHAMPIONS = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Szymon Marciniak": {"prom_tarjetas": 4.1}}
+
 MLB_MOMIOS_REALES_HOY = {
     "Los Angeles Dodgers": 1.45, "Cincinnati Reds": 2.80,
     "New York Yankees": 1.72, "Minnesota Twins": 2.15,
@@ -631,6 +636,32 @@ if st.session_state["liga_activa"] is None:
         fig_capsulas_3d = generar_grafica_efectividad_capsulas_3d(apuestas_hist)
         st.plotly_chart(fig_capsulas_3d, use_container_width=True, key="chart_3d_home")
 
+    # HISTORIAL GLOBAL MULTIDEPORTES EN HOME
+    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico Global de Apuestas Registradas</h3>", unsafe_allow_html=True)
+    if not st.session_state["apuestas_registradas"]:
+        st.info("No hay apuestas seleccionadas aún en ninguna competición.")
+    else:
+        df_export = pd.DataFrame(st.session_state["apuestas_registradas"])
+        st.download_button(
+            label="💾 Descargar Histórico Completo (CSV)",
+            data=df_export.to_csv(index=False),
+            file_name="picks_globales.csv",
+            mime="text/csv"
+        )
+        for a in st.session_state["apuestas_registradas"]:
+            col_info, col_estado, col_del = st.columns([7, 3, 2])
+            with col_info:
+                st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
+            with col_estado:
+                estado_actual = a.get("resultado", "⏳ PENDIENTE")
+                idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
+                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_home_{a['id']}")
+                a["resultado"] = nuevo_res
+            with col_del:
+                if st.button("🗑️ Eliminar", key=f"del_home_{a['id']}"):
+                    eliminar_apuesta(a["id"])
+                    st.rerun()
+
 # ==============================================================================
 # VISTA 2: PANEL DE ANÁLISIS A) MLB (SABERMETRÍA & MONTE CARLO)
 # ==============================================================================
@@ -703,7 +734,6 @@ elif st.session_state["liga_activa"] == "MLB":
 
         fmt_odds = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
-        # INYECCIÓN AUTOMÁTICA DE MOMIOS REALES MLB
         q_ml_loc_def = MLB_MOMIOS_REALES_HOY.get(eq_loc, 1.80)
         q_ml_vis_def = MLB_MOMIOS_REALES_HOY.get(eq_vis, 2.05)
 
@@ -807,30 +837,31 @@ elif st.session_state["liga_activa"] == "MLB":
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_mlb_{idx}")
 
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico e Inspección de Apuestas (MLB)</h3>", unsafe_allow_html=True)
+    # HISTORIAL DE LA MLB + MUESTRA DE TODAS LAS APUESTAS
+    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas (Todas las Ligas)</h3>", unsafe_allow_html=True)
     
-    mlb_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == "MLB"]
-    if not mlb_apuestas:
-        st.info("No hay apuestas seleccionadas aún para la MLB.")
+    todas_apuestas = st.session_state["apuestas_registradas"]
+    if not todas_apuestas:
+        st.info("No hay apuestas seleccionadas aún.")
     else:
-        df_export = pd.DataFrame(mlb_apuestas)
+        df_export = pd.DataFrame(todas_apuestas)
         st.download_button(
-            label="💾 Descargar Histórico (CSV)",
+            label="💾 Descargar Histórico Completo (CSV)",
             data=df_export.to_csv(index=False),
-            file_name="picks_mlb.csv",
+            file_name="picks_registrados.csv",
             mime="text/csv"
         )
-        for a in mlb_apuestas:
+        for a in todas_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
-                st.markdown(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
+                st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
             with col_estado:
                 estado_actual = a.get("resultado", "⏳ PENDIENTE")
                 idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
-                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_{a['id']}")
+                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_mlb_{a['id']}")
                 a["resultado"] = nuevo_res
             with col_del:
-                if st.button("🗑️ Eliminar", key=f"del_{a['id']}"):
+                if st.button("🗑️ Eliminar", key=f"del_mlb_{a['id']}"):
                     eliminar_apuesta(a["id"])
                     st.rerun()
 
@@ -1023,30 +1054,29 @@ else:
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_{liga}_{idx}")
 
-    # GESTIÓN E HISTORIAL INTERACTIVO DE PICKS REALES
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico e Inspección de Apuestas</h3>", unsafe_allow_html=True)
+    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas (Todas las Ligas)</h3>", unsafe_allow_html=True)
     
-    liga_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == liga]
-    if not liga_apuestas:
-        st.info("No hay apuestas seleccionadas aún para esta competición.")
+    todas_apuestas = st.session_state["apuestas_registradas"]
+    if not todas_apuestas:
+        st.info("No hay apuestas seleccionadas aún.")
     else:
-        df_export = pd.DataFrame(liga_apuestas)
+        df_export = pd.DataFrame(todas_apuestas)
         st.download_button(
-            label="💾 Descargar Histórico (CSV)",
+            label="💾 Descargar Histórico Completo (CSV)",
             data=df_export.to_csv(index=False),
-            file_name=f"picks_{liga.lower().replace(' ', '_')}.csv",
+            file_name="picks_registrados.csv",
             mime="text/csv"
         )
-        for a in liga_apuestas:
+        for a in todas_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
-                st.markdown(f"<b>{a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
+                st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
             with col_estado:
                 estado_actual = a.get("resultado", "⏳ PENDIENTE")
                 idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
-                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_{a['id']}")
+                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_panel_{a['id']}")
                 a["resultado"] = nuevo_res
             with col_del:
-                if st.button("🗑️ Eliminar", key=f"del_{a['id']}"):
+                if st.button("🗑️ Eliminar", key=f"del_panel_{a['id']}"):
                     eliminar_apuesta(a["id"])
                     st.rerun()
