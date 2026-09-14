@@ -139,7 +139,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# 1. DECLARACIÓN DE TODAS LAS FUNCIONES AUXILIARES
+# 1. FUNCIONES AUXILIARES Y SIMULACIONES DE MONTE CARLO
 # ------------------------------------------------------------------------------
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
@@ -319,7 +319,7 @@ def generar_grafica_efectividad_capsulas_3d(list_apuestas):
     return fig
 
 # ------------------------------------------------------------------------------
-# 2. SESSION STATE & TRACKER
+# 2. SESSION STATE & TRACKER PERSISTENTE
 # ------------------------------------------------------------------------------
 OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
 
@@ -344,7 +344,7 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# 3. BASES DE DATOS COMPLETAS
+# 3. BASES DE DATOS DE EQUIPOS
 # ------------------------------------------------------------------------------
 BUNDESLIGA_DATA = {
     "Friburgo": {"logo": "https://crests.football-data.org/160.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.8, "aereos": 52, "corners": 5.1, "tarjetas": 1.8},
@@ -678,12 +678,17 @@ elif st.session_state["liga_activa"] == "MLB":
         with col_lim1: limit_outs_loc = st.slider(f"Límite Outs Pitcher {eq_loc[:3]}", 12, 24, 17, step=1)
         with col_lim2: limit_outs_vis = st.slider(f"Límite Outs Pitcher {eq_vis[:3]}", 12, 24, 16, step=1)
 
+        # CÁLCULO AUTOMÁTICO DE MOMIOS BASE MLB
+        sim_mlb_init = simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, 8.5, 5.5, 5.5, 17.5, 15.5)
+        q_ml_loc_auto = str(round(1.0 / (sim_mlb_init['p_ml_loc'] * 1.06), 2))
+        q_ml_vis_auto = str(round(1.0 / (sim_mlb_init['p_ml_vis'] * 1.06), 2))
+
         fmt_odds = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
         with st.expander("⚙️ Ajustar Cuotas Manualmente de tu Casa de Apuestas", expanded=True):
             c_ml1, c_ml2 = st.columns(2)
-            with c_ml1: q_ml_loc = st.text_input(f"Moneyline {eq_loc[:8]}", value="1.80")
-            with c_ml2: q_ml_vis = st.text_input(f"Moneyline {eq_vis[:8]}", value="2.05")
+            with c_ml1: q_ml_loc = st.text_input(f"Moneyline {eq_loc[:8]}", value=q_ml_loc_auto)
+            with c_ml2: q_ml_vis = st.text_input(f"Moneyline {eq_vis[:8]}", value=q_ml_vis_auto)
 
             c_rl1, c_rl2 = st.columns(2)
             with c_rl1: q_rl_loc = st.text_input(f"Run Line {eq_loc[:8]} (-1.5)", value="2.35")
@@ -853,13 +858,27 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
+        # CÁLCULO AUTOMÁTICO DE MOMIOS BASE SEGÚN EL MATCHUP
+        if liga == "NFL":
+            sim_init = simular_montecarlo_nfl(d_loc, d_vis, False, False, False, False, -3.5, 3.5, 47.5, 3.5, 5.5)
+            q1_calc = str(round(1.0 / (sim_init['p_ml_loc'] * 1.06), 2))
+            q2_calc = str(round(1.0 / (sim_init['p_ml_vis'] * 1.06), 2))
+            qx_calc = "15.0"
+        else:
+            fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
+            fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
+            sim_init = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, arbitro_data["prom_tarjetas"], 2.5, 9.5, 4.5)
+            q1_calc = str(round(1.0 / (sim_init['p_1_ft'] * 1.06), 2))
+            qx_calc = str(round(1.0 / (sim_init['p_x_ft'] * 1.06), 2))
+            q2_calc = str(round(1.0 / (sim_init['p_2_ft'] * 1.06), 2))
+
         fmt_odds = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True)
 
         with st.expander("⚙️ Ajustar Momios Manualmente (Todas las Opciones)", expanded=True):
             if liga == "NFL":
                 c_ml1, c_ml2 = st.columns(2)
-                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value="1.80", key=f"q1_input_{liga}")
-                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value="2.05", key=f"q2_input_{liga}")
+                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=q1_calc, key=f"q1_input_{liga}")
+                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=q2_calc, key=f"q2_input_{liga}")
                 q_x = "15.0"
 
                 ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
@@ -874,9 +893,9 @@ else:
                 with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value="1.90")
             else:
                 c1, c2, c3 = st.columns(3)
-                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value="2.80", key=f"q1_input_{liga}")
-                with c2: q_x = st.text_input("1X2 Empate", value="3.40", key=f"qx_input_{liga}")
-                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value="2.40", key=f"q2_input_{liga}")
+                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=q1_calc, key=f"q1_input_{liga}")
+                with c2: q_x = st.text_input("1X2 Empate", value=qx_calc, key=f"qx_input_{liga}")
+                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=q2_calc, key=f"q2_input_{liga}")
 
                 c4, c5, c6 = st.columns(3)
                 with c4: q_1x = st.text_input("DC 1X", value="1.55")
@@ -975,6 +994,13 @@ else:
     if not liga_apuestas:
         st.info("No hay apuestas seleccionadas aún para esta competición.")
     else:
+        df_export = pd.DataFrame(liga_apuestas)
+        st.download_button(
+            label="💾 Descargar Histórico (CSV)",
+            data=df_export.to_csv(index=False),
+            file_name=f"picks_{liga.lower().replace(' ', '_')}.csv",
+            mime="text/csv"
+        )
         for a in liga_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
