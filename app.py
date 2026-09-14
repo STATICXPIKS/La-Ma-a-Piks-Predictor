@@ -12,10 +12,6 @@ st.set_page_config(
     page_icon="💸"
 )
 
-# API KEY REGISTRADA DE THE ODDS API
-ODDS_API_KEY = "826e995b77fba63fd42c2915877b1037"
-
-# LOGOS OFICIALES DE COMPETENCIAS
 LOGOS_COMPETENCIA = {
     "PREMIER LEAGUE": "https://crests.football-data.org/PL.png",
     "LALIGA": "https://crests.football-data.org/PD.png",
@@ -25,17 +21,6 @@ LOGOS_COMPETENCIA = {
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg"
 }
 
-# MAPEO DE COMPETICIONES PARA THE ODDS API
-SPORT_KEYS_ODDS_API = {
-    "PREMIER LEAGUE": "soccer_epl",
-    "LALIGA": "soccer_spain_la_liga",
-    "CHAMPIONS LEAGUE": "soccer_uefa_champs_league",
-    "BUNDESLIGA": "soccer_germany_bundesliga",
-    "NFL": "americanfootball_nfl",
-    "MLB": "baseball_mlb"
-}
-
-# ESTILOS CSS REFORZADOS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
@@ -152,22 +137,44 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# 1. FUNCIONES AUXILIARES, SIMULACIONES Y CONSULTAS API
+# FUNCIONES CONVERSORAS Y AUXILIARES
 # ------------------------------------------------------------------------------
+def decimal_a_formato(val_dec, fmt_type):
+    try:
+        val = float(val_dec)
+        if fmt_type == "Decimales":
+            return f"{val:.2f}"
+        else:
+            if val >= 2.0:
+                american = int(round((val - 1.0) * 100))
+                return f"+{american}"
+            else:
+                american = int(round(-100 / (val - 1.0)))
+                return f"{american}"
+    except:
+        return "1.90" if fmt_type == "Decimales" else "-110"
+
+def parse_odds(val_str, fmt_type="Decimales"):
+    try:
+        val_str = str(val_str).strip()
+        if fmt_type == "Decimales":
+            val = float(val_str)
+            return val if val > 1.0 else 2.00
+        else:
+            val = float(val_str)
+            if val > 0:
+                return (val / 100.0) + 1.0
+            else:
+                return (100.0 / abs(val)) + 1.0
+    except:
+        return 1.90
+
 def calcular_fatiga_rotacion_automatica(equipo):
     equipos_top = [
         "Real Madrid", "Manchester City", "Bayern", "PSG", "Barcelona", 
         "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Leverkusen", "RB Leipzig"
     ]
     return (65, 40) if equipo in equipos_top else (20, 15)
-
-def parse_odds(val_str, fmt_type="Decimales"):
-    try:
-        val = float(val_str)
-        if fmt_type == "Decimales": return val if val > 1.0 else 2.00
-        return (val / 100.0) + 1.0 if val > 0 else (100.0 / abs(val)) + 1.0
-    except:
-        return 2.00
 
 def obtener_pitcher_confirmado_mlb(equipo_nombre):
     url = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=probablePitcher"
@@ -192,45 +199,6 @@ def obtener_pitcher_confirmado_mlb(equipo_nombre):
     except Exception:
         pass
     return "Pitcher Proyectado"
-
-def obtener_momios_reales_odds_api(sport_key, eq_loc, eq_vis):
-    if not ODDS_API_KEY or ODDS_API_KEY.strip() == "":
-        return None
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,eu&markets=h2h,spreads,totals"
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            events = response.json()
-            clean_loc = eq_loc.lower().replace("la ", "").replace("los angeles ", "").replace("new york ", "").strip()
-            clean_vis = eq_vis.lower().replace("la ", "").replace("los angeles ", "").replace("new york ", "").strip()
-            
-            for event in events:
-                home_team = event.get("home_team", "").lower()
-                away_team = event.get("away_team", "").lower()
-                
-                if (clean_loc in home_team or home_team in clean_loc) and (clean_vis in away_team or away_team in clean_vis):
-                    bookmakers = event.get("bookmakers", [])
-                    if bookmakers:
-                        markets = bookmakers[0].get("markets", [])
-                        momios = {}
-                        for m in markets:
-                            if m["key"] == "h2h":
-                                for outcome in m["outcomes"]:
-                                    if outcome["name"].lower() == home_team: momios["q1"] = outcome["price"]
-                                    elif outcome["name"].lower() == away_team: momios["q2"] = outcome["price"]
-                                    else: momios["qx"] = outcome["price"]
-                            elif m["key"] == "spreads":
-                                for outcome in m["outcomes"]:
-                                    if outcome["name"].lower() == home_team: momios["q_spread_loc"] = outcome["price"]
-                                    elif outcome["name"].lower() == away_team: momios["q_spread_vis"] = outcome["price"]
-                            elif m["key"] == "totals":
-                                for outcome in m["outcomes"]:
-                                    if outcome["name"].lower() == "over": momios["q_over"] = outcome["price"]
-                                    elif outcome["name"].lower() == "under": momios["q_under"] = outcome["price"]
-                        return momios
-    except Exception:
-        return None
-    return None
 
 def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, arbitro_card, line_goles, line_corners, line_cards, n_sim=10000):
     fatiga_factor_loc = 1.0 - (fatiga_loc * 0.12 + rot_loc * 0.10)
@@ -371,7 +339,7 @@ def generar_grafica_efectividad_capsulas_3d(list_apuestas):
     return fig
 
 # ------------------------------------------------------------------------------
-# 2. SESSION STATE & TRACKER PERSISTENTE
+# SESSION STATE & TRACKER PERSISTENTE
 # ------------------------------------------------------------------------------
 OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
 
@@ -396,102 +364,14 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# 3. BASES DE DATOS Y ÁRBITROS
+# BASES DE DATOS MLB REALES Y LIGAS
 # ------------------------------------------------------------------------------
-ARBITROS_PREMIER = {
-    "Michael Oliver": {"prom_tarjetas": 3.6},
-    "Jarred Gillett": {"prom_tarjetas": 3.8},
-    "Darren England": {"prom_tarjetas": 4.1},
-    "Chris Kavanagh": {"prom_tarjetas": 3.9},
-    "John Brooks": {"prom_tarjetas": 4.0},
-    "Thomas Bramall": {"prom_tarjetas": 3.7},
-    "Paul Tierney": {"prom_tarjetas": 4.8},
-    "Stuart Attwell": {"prom_tarjetas": 4.2},
-    "Craig Pawson": {"prom_tarjetas": 4.3},
-    "Andrew Madley": {"prom_tarjetas": 3.7},
-    "Peter Bankes": {"prom_tarjetas": 4.4},
-    "Tony Harrington": {"prom_tarjetas": 3.6},
-    "Robert Jones": {"prom_tarjetas": 4.1},
-    "Samuel Barrott": {"prom_tarjetas": 3.5},
-    "Farai Hallam": {"prom_tarjetas": 3.4},
-    "Michael Salisbury": {"prom_tarjetas": 3.6},
-    "Josh Smith": {"prom_tarjetas": 3.8}
-}
-
-ARBITROS_LALIGA = {
-    "Juan Martínez Munuera": {"prom_tarjetas": 4.8},
-    "De Burgos Bengoetxea": {"prom_tarjetas": 4.1},
-    "Jon Ander González Esteban": {"prom_tarjetas": 4.6},
-    "Miguel Ángel Ortiz Arias": {"prom_tarjetas": 5.0},
-    "Javier Alberola Rojas": {"prom_tarjetas": 3.8},
-    "Isidro Díaz de Mera Escuderos": {"prom_tarjetas": 5.4},
-    "Víctor García Verdura": {"prom_tarjetas": 4.5},
-    "Miguel Sesma Espinosa": {"prom_tarjetas": 4.3},
-    "Manuel Jesús Orellana Cid": {"prom_tarjetas": 4.7},
-    "Mateo Busquets Ferrer": {"prom_tarjetas": 5.1},
-    "Carlos Muñiz Muñoz": {"prom_tarjetas": 4.4},
-    "Alejandro Hernández Hernández": {"prom_tarjetas": 5.8},
-    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
-    "César Soto Grado": {"prom_tarjetas": 5.3},
-    "José María Sánchez Martínez": {"prom_tarjetas": 4.9},
-    "Francisco José Hernández Maeso": {"prom_tarjetas": 4.6},
-    "José Luis Munuera Montero": {"prom_tarjetas": 5.1},
-    "Luis Bestard Servera": {"prom_tarjetas": 4.2},
-    "Alejandro Quintero González": {"prom_tarjetas": 4.5}
-}
-
-ARBITROS_BUNDESLIGA = {
-    "Felix Zwayer": {"prom_tarjetas": 4.2},
-    "Daniel Siebert": {"prom_tarjetas": 3.9},
-    "Sven Jablonski": {"prom_tarjetas": 3.7},
-    "Sascha Stegemann": {"prom_tarjetas": 4.1},
-    "Florian Badstübner": {"prom_tarjetas": 3.8},
-    "Christian Dingert": {"prom_tarjetas": 4.3},
-    "Tobias Stieler": {"prom_tarjetas": 3.8},
-    "Robert Hartmann": {"prom_tarjetas": 3.6},
-    "Bastian Dankert": {"prom_tarjetas": 4.0},
-    "Martin Petersen": {"prom_tarjetas": 3.9},
-    "Timo Gerach": {"prom_tarjetas": 3.7},
-    "Harm Osmers": {"prom_tarjetas": 3.8},
-    "Benjamin Brand": {"prom_tarjetas": 3.6},
-    "Robert Schröder": {"prom_tarjetas": 4.1},
-    "Tobias Reichel": {"prom_tarjetas": 3.5},
-    "Dr. Matthias Jöllenbeck": {"prom_tarjetas": 3.7},
-    "Max Burda": {"prom_tarjetas": 3.9},
-    "Daniel Schlager": {"prom_tarjetas": 4.4},
-    "Sören Storks": {"prom_tarjetas": 4.0},
-    "Florian Exner": {"prom_tarjetas": 3.8},
-    "Richard Hempel": {"prom_tarjetas": 3.6},
-    "Robin Braun": {"prom_tarjetas": 3.7}
-}
-
-ARBITROS_CHAMPIONS = {
-    "Jesús Gil Manzano": {"prom_tarjetas": 5.2},
-    "Szymon Marciniak": {"prom_tarjetas": 4.1},
-    "Daniele Orsato": {"prom_tarjetas": 4.7},
-    "Clément Turpin": {"prom_tarjetas": 3.8},
-    "Slavko Vinčić": {"prom_tarjetas": 3.9}
-}
-
-BUNDESLIGA_DATA = {
-    "Friburgo": {"logo": "https://crests.football-data.org/160.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.8, "aereos": 52, "corners": 5.1, "tarjetas": 1.8},
-    "Dortmund": {"logo": "https://crests.football-data.org/4.png", "xg_loc": 2.10, "xga_loc": 1.15, "xg_vis": 1.80, "xga_vis": 1.30, "ppda": 8.9, "aereos": 51, "corners": 6.3, "tarjetas": 1.7},
-    "Augsburgo": {"logo": "https://crests.football-data.org/16.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 12.2, "aereos": 54, "corners": 4.5, "tarjetas": 2.3},
-    "Bayern": {"logo": "https://crests.football-data.org/5.png", "xg_loc": 2.50, "xga_loc": 0.85, "xg_vis": 2.25, "xga_vis": 1.00, "ppda": 7.5, "aereos": 53, "corners": 7.2, "tarjetas": 1.4},
-    "RB Leipzig": {"logo": "https://crests.football-data.org/721.png", "xg_loc": 1.95, "xga_loc": 1.10, "xg_vis": 1.70, "xga_vis": 1.25, "ppda": 8.8, "aereos": 50, "corners": 6.1, "tarjetas": 1.9},
-    "SV Elversberg": {"logo": "https://crests.football-data.org/6706.png", "xg_loc": 1.20, "xga_loc": 1.60, "xg_vis": 0.95, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.1},
-    "Leverkusen": {"logo": "https://crests.football-data.org/3.png", "xg_loc": 2.20, "xga_loc": 0.95, "xg_vis": 1.90, "xga_vis": 1.10, "ppda": 8.2, "aereos": 49, "corners": 6.8, "tarjetas": 1.6},
-    "Mainz 05": {"logo": "https://crests.football-data.org/15.png", "xg_loc": 1.40, "xga_loc": 1.40, "xg_vis": 1.15, "xga_vis": 1.55, "ppda": 11.0, "aereos": 53, "corners": 4.8, "tarjetas": 2.2},
-    "Frankfurt": {"logo": "https://crests.football-data.org/19.png", "xg_loc": 1.70, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 10.2, "aereos": 51, "corners": 5.5, "tarjetas": 2.0},
-    "Werder Bremen": {"logo": "https://crests.football-data.org/12.png", "xg_loc": 1.45, "xga_loc": 1.45, "xg_vis": 1.20, "xga_vis": 1.60, "ppda": 11.5, "aereos": 52, "corners": 5.0, "tarjetas": 2.1},
-    "Schalke 04": {"logo": "https://crests.football-data.org/6.png", "xg_loc": 1.30, "xga_loc": 1.55, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.0, "aereos": 55, "corners": 4.6, "tarjetas": 2.4},
-    "Colonia": {"logo": "https://crests.football-data.org/1.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.65, "ppda": 11.8, "aereos": 50, "corners": 4.9, "tarjetas": 2.2},
-    "Hoffenheim": {"logo": "https://crests.football-data.org/2.png", "xg_loc": 1.60, "xga_loc": 1.50, "xg_vis": 1.35, "xga_vis": 1.65, "ppda": 10.5, "aereos": 50, "corners": 5.3, "tarjetas": 2.3},
-    "Stuttgart": {"logo": "https://crests.football-data.org/10.png", "xg_loc": 1.80, "xga_loc": 1.25, "xg_vis": 1.50, "xga_vis": 1.40, "ppda": 9.5, "aereos": 51, "corners": 5.8, "tarjetas": 1.9},
-    "Paderborn": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.25, "xga_loc": 1.65, "xg_vis": 1.00, "xga_vis": 1.85, "ppda": 12.8, "aereos": 47, "corners": 4.2, "tarjetas": 2.1},
-    "FC Union Berlin": {"logo": "https://crests.football-data.org/28.png", "xg_loc": 1.30, "xga_loc": 1.20, "xg_vis": 1.05, "xga_vis": 1.40, "ppda": 13.2, "aereos": 56, "corners": 4.4, "tarjetas": 2.0},
-    "Mönchengladbach": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.50, "xga_loc": 1.45, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 11.2, "aereos": 49, "corners": 5.2, "tarjetas": 1.9},
-    "Hamburg": {"logo": "https://crests.football-data.org/26.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 11.6, "aereos": 52, "corners": 4.8, "tarjetas": 2.2}
+MLB_MOMIOS_REALES_HOY = {
+    "Los Angeles Dodgers": 1.45, "Cincinnati Reds": 2.80,
+    "New York Yankees": 1.72, "Minnesota Twins": 2.15,
+    "Chicago Cubs": 2.05, "Atlanta Braves": 1.80,
+    "Cleveland Guardians": 1.52, "Chicago White Sox": 2.60,
+    "New York Mets": 1.85, "Baltimore Orioles": 1.95
 }
 
 MLB_DATA = {
@@ -525,6 +405,27 @@ MLB_DATA = {
     "Colorado Rockies": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/col.png", "sp_name": "Kyle Freeland", "sp_xera": 5.10, "sp_fip": 5.15, "sp_whip": 1.48, "sp_k_pct": 0.18, "sp_bb_pct": 0.08, "bp_rating": 1.8, "wrc_plus": 88, "ops": 0.710, "iso": 0.145, "park_factor": 1.35},
     "Miami Marlins": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/mia.png", "sp_name": "Sandy Alcantara", "sp_xera": 4.25, "sp_fip": 4.30, "sp_whip": 1.31, "sp_k_pct": 0.22, "sp_bb_pct": 0.08, "bp_rating": 1.5, "wrc_plus": 89, "ops": 0.665, "iso": 0.125, "park_factor": 0.96},
     "Chicago White Sox": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/chw.png", "sp_name": "Garrett Crochet", "sp_xera": 4.80, "sp_fip": 4.85, "sp_whip": 1.42, "sp_k_pct": 0.33, "sp_bb_pct": 0.06, "bp_rating": 1.7, "wrc_plus": 84, "ops": 0.640, "iso": 0.120, "park_factor": 1.01}
+}
+
+BUNDESLIGA_DATA = {
+    "Friburgo": {"logo": "https://crests.football-data.org/160.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.8, "aereos": 52, "corners": 5.1, "tarjetas": 1.8},
+    "Dortmund": {"logo": "https://crests.football-data.org/4.png", "xg_loc": 2.10, "xga_loc": 1.15, "xg_vis": 1.80, "xga_vis": 1.30, "ppda": 8.9, "aereos": 51, "corners": 6.3, "tarjetas": 1.7},
+    "Augsburgo": {"logo": "https://crests.football-data.org/16.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 12.2, "aereos": 54, "corners": 4.5, "tarjetas": 2.3},
+    "Bayern": {"logo": "https://crests.football-data.org/5.png", "xg_loc": 2.50, "xga_loc": 0.85, "xg_vis": 2.25, "xga_vis": 1.00, "ppda": 7.5, "aereos": 53, "corners": 7.2, "tarjetas": 1.4},
+    "RB Leipzig": {"logo": "https://crests.football-data.org/721.png", "xg_loc": 1.95, "xga_loc": 1.10, "xg_vis": 1.70, "xga_vis": 1.25, "ppda": 8.8, "aereos": 50, "corners": 6.1, "tarjetas": 1.9},
+    "SV Elversberg": {"logo": "https://crests.football-data.org/6706.png", "xg_loc": 1.20, "xga_loc": 1.60, "xg_vis": 0.95, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.1},
+    "Leverkusen": {"logo": "https://crests.football-data.org/3.png", "xg_loc": 2.20, "xga_loc": 0.95, "xg_vis": 1.90, "xga_vis": 1.10, "ppda": 8.2, "aereos": 49, "corners": 6.8, "tarjetas": 1.6},
+    "Mainz 05": {"logo": "https://crests.football-data.org/15.png", "xg_loc": 1.40, "xga_loc": 1.40, "xg_vis": 1.15, "xga_vis": 1.55, "ppda": 11.0, "aereos": 53, "corners": 4.8, "tarjetas": 2.2},
+    "Frankfurt": {"logo": "https://crests.football-data.org/19.png", "xg_loc": 1.70, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 10.2, "aereos": 51, "corners": 5.5, "tarjetas": 2.0},
+    "Werder Bremen": {"logo": "https://crests.football-data.org/12.png", "xg_loc": 1.45, "xga_loc": 1.45, "xg_vis": 1.20, "xga_vis": 1.60, "ppda": 11.5, "aereos": 52, "corners": 5.0, "tarjetas": 2.1},
+    "Schalke 04": {"logo": "https://crests.football-data.org/6.png", "xg_loc": 1.30, "xga_loc": 1.55, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.0, "aereos": 55, "corners": 4.6, "tarjetas": 2.4},
+    "Colonia": {"logo": "https://crests.football-data.org/1.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.65, "ppda": 11.8, "aereos": 50, "corners": 4.9, "tarjetas": 2.2},
+    "Hoffenheim": {"logo": "https://crests.football-data.org/2.png", "xg_loc": 1.60, "xga_loc": 1.50, "xg_vis": 1.35, "xga_vis": 1.65, "ppda": 10.5, "aereos": 50, "corners": 5.3, "tarjetas": 2.3},
+    "Stuttgart": {"logo": "https://crests.football-data.org/10.png", "xg_loc": 1.80, "xga_loc": 1.25, "xg_vis": 1.50, "xga_vis": 1.40, "ppda": 9.5, "aereos": 51, "corners": 5.8, "tarjetas": 1.9},
+    "Paderborn": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.25, "xga_loc": 1.65, "xg_vis": 1.00, "xga_vis": 1.85, "ppda": 12.8, "aereos": 47, "corners": 4.2, "tarjetas": 2.1},
+    "FC Union Berlin": {"logo": "https://crests.football-data.org/28.png", "xg_loc": 1.30, "xga_loc": 1.20, "xg_vis": 1.05, "xga_vis": 1.40, "ppda": 13.2, "aereos": 56, "corners": 4.4, "tarjetas": 2.0},
+    "Mönchengladbach": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.50, "xga_loc": 1.45, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 11.2, "aereos": 49, "corners": 5.2, "tarjetas": 1.9},
+    "Hamburg": {"logo": "https://crests.football-data.org/26.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 11.6, "aereos": 52, "corners": 4.8, "tarjetas": 2.2}
 }
 
 CHAMPIONS_DATA = {
@@ -755,8 +656,8 @@ elif st.session_state["liga_activa"] == "MLB":
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>⚾ 1. Matchup Sabermétrico & Pitching</h3>", unsafe_allow_html=True)
 
         c_loc, c_vis = st.columns(2)
-        with c_loc: eq_loc = st.selectbox("Equipo Local (Home):", sorted(list(MLB_DATA.keys())), index=0)
-        with c_vis: eq_vis = st.selectbox("Equipo Visitante (Away):", sorted(list(MLB_DATA.keys())), index=1)
+        with c_loc: eq_loc = st.selectbox("Equipo Local (Home):", sorted(list(MLB_DATA.keys())), index=1)
+        with c_vis: eq_vis = st.selectbox("Equipo Visitante (Away):", sorted(list(MLB_DATA.keys())), index=0)
 
         d_loc, d_vis = MLB_DATA[eq_loc], MLB_DATA[eq_vis]
 
@@ -800,47 +701,54 @@ elif st.session_state["liga_activa"] == "MLB":
         with col_lim1: limit_outs_loc = st.slider(f"Límite Outs Pitcher {eq_loc[:3]}", 12, 24, 17, step=1)
         with col_lim2: limit_outs_vis = st.slider(f"Límite Outs Pitcher {eq_vis[:3]}", 12, 24, 16, step=1)
 
-        sim_mlb_init = simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, 8.5, 5.5, 5.5, 17.5, 15.5)
-        q_ml_loc_auto = str(round(1.0 / (sim_mlb_init['p_ml_loc'] * 1.06), 2))
-        q_ml_vis_auto = str(round(1.0 / (sim_mlb_init['p_ml_vis'] * 1.06), 2))
-
         fmt_odds = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True)
+
+        # INYECCIÓN AUTOMÁTICA DE MOMIOS REALES MLB
+        q_ml_loc_def = MLB_MOMIOS_REALES_HOY.get(eq_loc, 1.80)
+        q_ml_vis_def = MLB_MOMIOS_REALES_HOY.get(eq_vis, 2.05)
+
+        val_ml_loc = decimal_a_formato(q_ml_loc_def, fmt_odds)
+        val_ml_vis = decimal_a_formato(q_ml_vis_def, fmt_odds)
+        val_rl_loc = decimal_a_formato(2.25, fmt_odds)
+        val_rl_vis = decimal_a_formato(1.68, fmt_odds)
+        val_over_runs = decimal_a_formato(1.90, fmt_odds)
+        val_under_runs = decimal_a_formato(1.90, fmt_odds)
 
         with st.expander("⚙️ Ajustar Cuotas Manualmente de tu Casa de Apuestas", expanded=True):
             c_ml1, c_ml2 = st.columns(2)
-            with c_ml1: q_ml_loc = st.text_input(f"Moneyline {eq_loc[:8]}", value=q_ml_loc_auto)
-            with c_ml2: q_ml_vis = st.text_input(f"Moneyline {eq_vis[:8]}", value=q_ml_vis_auto)
+            with c_ml1: q_ml_loc = st.text_input(f"Moneyline {eq_loc[:8]}", value=val_ml_loc, key=f"q_ml_loc_{eq_loc}_{fmt_odds}")
+            with c_ml2: q_ml_vis = st.text_input(f"Moneyline {eq_vis[:8]}", value=val_ml_vis, key=f"q_ml_vis_{eq_vis}_{fmt_odds}")
 
             c_rl1, c_rl2 = st.columns(2)
-            with c_rl1: q_rl_loc = st.text_input(f"Run Line {eq_loc[:8]} (-1.5)", value="2.35")
-            with c_rl2: q_rl_vis = st.text_input(f"Run Line {eq_vis[:8]} (+1.5)", value="1.65")
+            with c_rl1: q_rl_loc = st.text_input(f"Run Line {eq_loc[:8]} (-1.5)", value=val_rl_loc, key=f"q_rl_loc_{eq_loc}_{fmt_odds}")
+            with c_rl2: q_rl_vis = st.text_input(f"Run Line {eq_vis[:8]} (+1.5)", value=val_rl_vis, key=f"q_rl_vis_{eq_vis}_{fmt_odds}")
 
             ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
             with ct1: line_runs = st.slider("Línea Total Carreras", 6.5, 14.5, 8.5, step=0.5)
-            with ct2: q_over_runs = st.text_input(f"Over {line_runs}", value="1.90")
-            with ct3: q_under_runs = st.text_input(f"Under {line_runs}", value="1.90")
+            with ct2: q_over_runs = st.text_input(f"Over {line_runs}", value=val_over_runs, key=f"q_over_runs_{fmt_odds}")
+            with ct3: q_under_runs = st.text_input(f"Under {line_runs}", value=val_under_runs, key=f"q_under_runs_{fmt_odds}")
 
             ck1, ck2, ck3, ck4, ck5, ck6 = st.columns([1.2, 1, 1, 1.2, 1, 1])
             with ck1: line_k_loc = st.slider(f"K's {eq_loc[:3]}", 2.5, 10.5, 5.5, step=0.5)
-            with ck2: q_k_over_loc = st.text_input(f"Over K {eq_loc[:3]}", value="1.85")
-            with ck3: q_k_under_loc = st.text_input(f"Under K {eq_loc[:3]}", value="1.95")
+            with ck2: q_k_over_loc = st.text_input(f"Over K {eq_loc[:3]}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_k_over_loc_{fmt_odds}")
+            with ck3: q_k_under_loc = st.text_input(f"Under K {eq_loc[:3]}", value=decimal_a_formato(1.95, fmt_odds), key=f"q_k_under_loc_{fmt_odds}")
             with ck4: line_k_vis = st.slider(f"K's {eq_vis[:3]}", 2.5, 10.5, 5.5, step=0.5)
-            with ck5: q_k_over_vis = st.text_input(f"Over K {eq_vis[:3]}", value="1.85")
-            with ck6: q_k_under_vis = st.text_input(f"Under K {eq_vis[:3]}", value="1.95")
+            with ck5: q_k_over_vis = st.text_input(f"Over K {eq_vis[:3]}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_k_over_vis_{fmt_odds}")
+            with ck6: q_k_under_vis = st.text_input(f"Under K {eq_vis[:3]}", value=decimal_a_formato(1.95, fmt_odds), key=f"q_k_under_vis_{fmt_odds}")
 
             co1, co2, co3, co4 = st.columns([1.5, 1.25, 1.5, 1.25])
             with co1: line_outs_loc = st.slider(f"Outs Pitcher {eq_loc[:3]}", 12.5, 21.5, 17.5, step=0.5)
-            with co2: q_outs_loc = st.text_input(f"Over Outs {eq_loc[:3]}", value="1.90")
+            with co2: q_outs_loc = st.text_input(f"Over Outs {eq_loc[:3]}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_outs_loc_{fmt_odds}")
             with co3: line_outs_vis = st.slider(f"Outs Pitcher {eq_vis[:3]}", 12.5, 21.5, 15.5, step=0.5)
-            with co4: q_outs_vis = st.text_input(f"Over Outs {eq_vis[:3]}", value="1.90")
+            with co4: q_outs_vis = st.text_input(f"Over Outs {eq_vis[:3]}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_outs_vis_{fmt_odds}")
 
             cf5_1, cf5_2 = st.columns(2)
-            with cf5_1: q_f5_loc = st.text_input(f"F5 ML {eq_loc[:8]}", value="1.75")
-            with cf5_2: q_f5_vis = st.text_input(f"F5 ML {eq_vis[:8]}", value="2.10")
+            with cf5_1: q_f5_loc = st.text_input(f"F5 ML {eq_loc[:8]}", value=decimal_a_formato(1.75, fmt_odds), key=f"q_f5_loc_{fmt_odds}")
+            with cf5_2: q_f5_vis = st.text_input(f"F5 ML {eq_vis[:8]}", value=decimal_a_formato(2.10, fmt_odds), key=f"q_f5_vis_{fmt_odds}")
 
             cn1, cn2 = st.columns(2)
-            with cn1: q_nrfi = st.text_input("NRFI (Sin carrera 1ª Inn)", value="1.85")
-            with cn2: q_yrfi = st.text_input("YRFI (Sí carrera 1ª Inn)", value="1.95")
+            with cn1: q_nrfi = st.text_input("NRFI (Sin carrera 1ª Inn)", value=decimal_a_formato(1.85, fmt_odds), key=f"q_nrfi_{fmt_odds}")
+            with cn2: q_yrfi = st.text_input("YRFI (Sí carrera 1ª Inn)", value=decimal_a_formato(1.95, fmt_odds), key=f"q_yrfi_{fmt_odds}")
 
     with col_der_analysis:
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>📊 Matriz Sabermétrica y Escaneo (+EV)</h3>", unsafe_allow_html=True)
@@ -899,7 +807,6 @@ elif st.session_state["liga_activa"] == "MLB":
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_mlb_{idx}")
 
-    # GESTIÓN E HISTORIAL INTERACTIVO DE PICKS MLB
     st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico e Inspección de Apuestas (MLB)</h3>", unsafe_allow_html=True)
     
     mlb_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == "MLB"]
@@ -986,70 +893,72 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
+        fmt_odds = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True)
+
         if liga == "NFL":
-            sim_init = simular_montecarlo_nfl(d_loc, d_vis, False, False, False, False, -3.5, 3.5, 47.5, 3.5, 5.5)
-            q1_calc = str(round(1.0 / (sim_init['p_ml_loc'] * 1.06), 2))
-            q2_calc = str(round(1.0 / (sim_init['p_ml_vis'] * 1.06), 2))
-            qx_calc = "15.0"
+            q1_def = decimal_a_formato(1.80, fmt_odds)
+            q2_def = decimal_a_formato(2.05, fmt_odds)
+            q_x = "15.0"
         else:
             fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
             fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
             sim_init = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, arbitro_data["prom_tarjetas"], 2.5, 9.5, 4.5)
-            q1_calc = str(round(1.0 / (sim_init['p_1_ft'] * 1.06), 2))
-            qx_calc = str(round(1.0 / (sim_init['p_x_ft'] * 1.06), 2))
-            q2_calc = str(round(1.0 / (sim_init['p_2_ft'] * 1.06), 2))
-
-        fmt_odds = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True)
+            q1_calc = max(round(1.0 / (sim_init['p_1_ft'] * 1.06), 2), 1.05)
+            qx_calc = max(round(1.0 / (sim_init['p_x_ft'] * 1.06), 2), 1.05)
+            q2_calc = max(round(1.0 / (sim_init['p_2_ft'] * 1.06), 2), 1.05)
+            
+            q1_def = decimal_a_formato(q1_calc, fmt_odds)
+            qx_def = decimal_a_formato(qx_calc, fmt_odds)
+            q2_def = decimal_a_formato(q2_calc, fmt_odds)
 
         with st.expander("⚙️ Ajustar Momios Manualmente (Todas las Opciones)", expanded=True):
             if liga == "NFL":
                 c_ml1, c_ml2 = st.columns(2)
-                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=q1_calc, key=f"q1_input_{liga}")
-                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=q2_calc, key=f"q2_input_{liga}")
-                q_x = "15.0"
+                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=q1_def, key=f"q1_input_{liga}_{eq_loc}_{fmt_odds}")
+                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=q2_def, key=f"q2_input_{liga}_{eq_vis}_{fmt_odds}")
 
                 ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
                 with ch1: spread_loc = st.slider(f"Spread Local", -16.5, 16.5, -3.5, step=0.5)
-                with ch2: q_spread_loc = st.text_input(f"Cuota {spread_loc}", value="1.90")
+                with ch2: q_spread_loc = st.text_input(f"Cuota {spread_loc}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_spread_loc_{fmt_odds}")
                 with ch3: spread_vis = st.slider(f"Spread Visita", -16.5, 16.5, +3.5, step=0.5)
-                with ch4: q_spread_vis = st.text_input(f"Cuota {spread_vis}", value="1.90")
+                with ch4: q_spread_vis = st.text_input(f"Cuota {spread_vis}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_spread_vis_{fmt_odds}")
 
                 ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
                 with ct1: line_pts = st.slider("Línea Puntos Totales", 20.5, 80.5, 47.5, step=1.0)
-                with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value="1.90")
-                with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value="1.90")
+                with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_over_pts_{fmt_odds}")
+                with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_under_pts_{fmt_odds}")
             else:
                 c1, c2, c3 = st.columns(3)
-                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=q1_calc, key=f"q1_input_{liga}")
-                with c2: q_x = st.text_input("1X2 Empate", value=qx_calc, key=f"qx_input_{liga}")
-                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=q2_calc, key=f"q2_input_{liga}")
+                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=q1_def, key=f"q1_input_{liga}_{eq_loc}_{fmt_odds}")
+                with c2: q_x = st.text_input("1X2 Empate", value=qx_def, key=f"qx_input_{liga}_{fmt_odds}")
+                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=q2_def, key=f"q2_input_{liga}_{eq_vis}_{fmt_odds}")
 
                 c4, c5, c6 = st.columns(3)
-                with c4: q_1x = st.text_input("DC 1X", value="1.55")
-                with c5: q_x2 = st.text_input("DC X2", value="1.42")
-                with c6: q_12 = st.text_input("DC 12", value="1.30")
+                with c4: q_1x = st.text_input("DC 1X", value=decimal_a_formato(1.55, fmt_odds), key=f"q1x_{fmt_odds}")
+                with c5: q_x2 = st.text_input("DC X2", value=decimal_a_formato(1.42, fmt_odds), key=f"qx2_{fmt_odds}")
+                with c6: q_12 = st.text_input("DC 12", value=decimal_a_formato(1.30, fmt_odds), key=f"q12_{fmt_odds}")
 
                 cg1, cg2, cg3 = st.columns([1.5, 1.25, 1.25])
                 with cg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0)
-                with cg2: q_over_g = st.text_input(f"Over {line_goles}", value="1.90")
-                with cg3: q_under_g = st.text_input(f"Under {line_goles}", value="1.90")
+                with cg2: q_over_g = st.text_input(f"Over {line_goles}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_over_g_{fmt_odds}")
+                with cg3: q_under_g = st.text_input(f"Under {line_goles}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_under_g_{fmt_odds}")
 
                 cb1, cb2, cha1, cha2, cha3 = st.columns([1, 1, 1.2, 1, 1])
-                with cb1: q_btts_si = st.text_input("BTTS SÍ", value="1.75")
-                with cb2: q_btts_no = st.text_input("BTTS NO", value="2.05")
+                with cb1: q_btts_si = st.text_input("BTTS SÍ", value=decimal_a_formato(1.75, fmt_odds), key=f"q_btts_si_{fmt_odds}")
+                with cb2: q_btts_no = st.text_input("BTTS NO", value=decimal_a_formato(2.05, fmt_odds), key=f"q_btts_no_{fmt_odds}")
                 with cha1: line_ha = st.selectbox("Hándicap AH", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
-                with cha2: q_ha_loc = st.text_input(f"AH {eq_loc[:3]}", value="1.55")
-                with cha3: q_ha_vis = st.text_input(f"AH {eq_vis[:3]}", value="2.35")
+                with cha2: q_ha_loc = st.text_input(f"AH {eq_loc[:3]}", value=decimal_a_formato(1.55, fmt_odds), key=f"q_ha_loc_{fmt_odds}")
+                with cha3: q_ha_vis = st.text_input(f"AH {eq_vis[:3]}", value=decimal_a_formato(2.35, fmt_odds), key=f"q_ha_vis_{fmt_odds}")
 
                 cc1, cc2, cc3 = st.columns([1.5, 1.25, 1.25])
                 with cc1: line_corners = st.slider("Línea Córners", 8.5, 12.5, 9.5, step=1.0)
-                with cc2: q_over_c = st.text_input(f"Córners > {line_corners}", value="1.85")
-                with cc3: q_under_c = st.text_input(f"Córners < {line_corners}", value="1.85")
+                with cc2: q_over_c = st.text_input(f"Córners > {line_corners}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_over_c_{fmt_odds}")
+                with cc3: q_under_c = st.text_input(f"Córners < {line_corners}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_under_c_{fmt_odds}")
 
                 ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
                 with ct1: line_cards = st.slider("Línea Tarjetas", 3.5, 5.5, 4.5, step=1.0)
-                with ct2: q_over_t = st.text_input(f"Tarjetas > {line_cards}", value="1.95")
-                with ct3: q_under_t = st.text_input(f"Tarjetas < {line_cards}", value="1.80")
+                with ct2: q_over_t = st.text_input(f"Tarjetas > {line_cards}", value=decimal_a_formato(1.95, fmt_odds), key=f"q_over_t_{fmt_odds}")
+                with ct3: q_under_t = st.text_input(f"Tarjetas < {line_cards}", value=decimal_a_formato(1.80, fmt_odds), key=f"q_under_t_{fmt_odds}")
 
     with col_der_analysis:
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>📊 Matriz de Riesgo y Escaneo (+EV)</h3>", unsafe_allow_html=True)
