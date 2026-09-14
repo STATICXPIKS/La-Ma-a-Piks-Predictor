@@ -200,7 +200,7 @@ def obtener_pitcher_confirmado_mlb(equipo_nombre):
         pass
     return "Pitcher Proyectado"
 
-def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, arbitro_card, line_goles, line_corners, line_cards, n_sim=10000):
+def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, line_goles, line_corners, line_cards, n_sim=10000):
     fatiga_factor_loc = 1.0 - (fatiga_loc * 0.12 + rot_loc * 0.10)
     fatiga_factor_vis = 1.0 - (fatiga_vis * 0.12 + rot_vis * 0.10)
 
@@ -215,7 +215,7 @@ def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, r
 
     exp_c = (d_loc["corners"] + d_vis["corners"]) * 0.95
     corners_totales = np.random.poisson(exp_c, n_sim)
-    tarjetas_totales = np.random.poisson((d_loc["tarjetas"] + d_vis["tarjetas"]) * (arbitro_card / 4.0), n_sim)
+    tarjetas_totales = np.random.poisson((d_loc["tarjetas"] + d_vis["tarjetas"]), n_sim)
 
     return {
         "p_1_ft": np.mean(goles_h > goles_a),
@@ -364,13 +364,8 @@ def eliminar_apuesta(apuesta_id):
     st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
 
 # ------------------------------------------------------------------------------
-# BASES DE DATOS Y ÁRBITROS
+# BASES DE DATOS DE EQUIPOS
 # ------------------------------------------------------------------------------
-ARBITROS_PREMIER = {"Michael Oliver": {"prom_tarjetas": 3.6}, "Chris Kavanagh": {"prom_tarjetas": 3.9}, "Paul Tierney": {"prom_tarjetas": 4.8}}
-ARBITROS_LALIGA = {"Juan Martínez Munuera": {"prom_tarjetas": 4.8}, "Jesús Gil Manzano": {"prom_tarjetas": 5.2}}
-ARBITROS_BUNDESLIGA = {"Felix Zwayer": {"prom_tarjetas": 4.2}, "Daniel Siebert": {"prom_tarjetas": 3.9}}
-ARBITROS_CHAMPIONS = {"Jesús Gil Manzano": {"prom_tarjetas": 5.2}, "Szymon Marciniak": {"prom_tarjetas": 4.1}}
-
 MLB_MOMIOS_REALES_HOY = {
     "Los Angeles Dodgers": 1.45, "Cincinnati Reds": 2.80,
     "New York Yankees": 1.72, "Minnesota Twins": 2.15,
@@ -636,7 +631,6 @@ if st.session_state["liga_activa"] is None:
         fig_capsulas_3d = generar_grafica_efectividad_capsulas_3d(apuestas_hist)
         st.plotly_chart(fig_capsulas_3d, use_container_width=True, key="chart_3d_home")
 
-    # HISTORIAL GLOBAL MULTIDEPORTES EN HOME
     st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico Global de Apuestas Registradas</h3>", unsafe_allow_html=True)
     if not st.session_state["apuestas_registradas"]:
         st.info("No hay apuestas seleccionadas aún en ninguna competición.")
@@ -837,7 +831,6 @@ elif st.session_state["liga_activa"] == "MLB":
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_mlb_{idx}")
 
-    # HISTORIAL DE LA MLB + MUESTRA DE TODAS LAS APUESTAS
     st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas (Todas las Ligas)</h3>", unsafe_allow_html=True)
     
     todas_apuestas = st.session_state["apuestas_registradas"]
@@ -858,10 +851,10 @@ elif st.session_state["liga_activa"] == "MLB":
             with col_estado:
                 estado_actual = a.get("resultado", "⏳ PENDIENTE")
                 idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
-                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_mlb_{a['id']}")
+                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_mlb_hist_{a['id']}")
                 a["resultado"] = nuevo_res
             with col_del:
-                if st.button("🗑️ Eliminar", key=f"del_mlb_{a['id']}"):
+                if st.button("🗑️ Eliminar", key=f"del_mlb_hist_{a['id']}"):
                     eliminar_apuesta(a["id"])
                     st.rerun()
 
@@ -884,11 +877,11 @@ else:
             st.session_state["liga_activa"] = None
             st.rerun()
 
-    if liga == "PREMIER LEAGUE": TEAMS_DATA, ARBITROS_LIGA = PREMIER_LEAGUE_DATA, ARBITROS_PREMIER
-    elif liga == "LALIGA": TEAMS_DATA, ARBITROS_LIGA = LALIGA_DATA, ARBITROS_LALIGA
-    elif liga == "CHAMPIONS LEAGUE": TEAMS_DATA, ARBITROS_LIGA = CHAMPIONS_DATA, ARBITROS_CHAMPIONS
-    elif liga == "BUNDESLIGA": TEAMS_DATA, ARBITROS_LIGA = BUNDESLIGA_DATA, ARBITROS_BUNDESLIGA
-    else: TEAMS_DATA, ARBITROS_LIGA = NFL_DATA, {}
+    if liga == "PREMIER LEAGUE": TEAMS_DATA = PREMIER_LEAGUE_DATA
+    elif liga == "LALIGA": TEAMS_DATA = LALIGA_DATA
+    elif liga == "CHAMPIONS LEAGUE": TEAMS_DATA = CHAMPIONS_DATA
+    elif liga == "BUNDESLIGA": TEAMS_DATA = BUNDESLIGA_DATA
+    else: TEAMS_DATA = NFL_DATA
 
     col_izq_inputs, col_der_analysis = st.columns([1, 1])
 
@@ -900,11 +893,9 @@ else:
             with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(TEAMS_DATA.keys())), index=13)
             with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(TEAMS_DATA.keys())), index=26)
         else:
-            c_loc, c_vis, c_ref = st.columns([3, 3, 2])
+            c_loc, c_vis = st.columns(2)
             with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(TEAMS_DATA.keys())), index=0)
             with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(TEAMS_DATA.keys())), index=1 if len(TEAMS_DATA)>1 else 0)
-            with c_ref: arbitro_sel = st.selectbox("Árbitro:", list(ARBITROS_LIGA.keys()), index=0)
-            arbitro_data = ARBITROS_LIGA[arbitro_sel]
 
         d_loc, d_vis = TEAMS_DATA[eq_loc], TEAMS_DATA[eq_vis]
 
@@ -933,7 +924,7 @@ else:
         else:
             fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
             fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
-            sim_init = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, arbitro_data["prom_tarjetas"], 2.5, 9.5, 4.5)
+            sim_init = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, 2.5, 9.5, 4.5)
             q1_calc = max(round(1.0 / (sim_init['p_1_ft'] * 1.06), 2), 1.05)
             qx_calc = max(round(1.0 / (sim_init['p_x_ft'] * 1.06), 2), 1.05)
             q2_calc = max(round(1.0 / (sim_init['p_2_ft'] * 1.06), 2), 1.05)
@@ -1007,7 +998,7 @@ else:
         else:
             fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
             fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
-            sim_results = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, arbitro_data["prom_tarjetas"], line_goles, line_corners, line_cards)
+            sim_results = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, line_goles, line_corners, line_cards)
             mercados_evaluados = [
                 {"mercado": f"1. Resultado: Gana {eq_loc}", "prob": sim_results['p_1_ft'], "cuota": parse_odds(q_1, fmt_odds)},
                 {"mercado": f"1. Resultado: Empate", "prob": sim_results['p_x_ft'], "cuota": parse_odds(q_x, fmt_odds)},
