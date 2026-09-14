@@ -339,7 +339,7 @@ def generar_grafica_efectividad_capsulas_3d(list_apuestas):
     return fig
 
 # ------------------------------------------------------------------------------
-# SESSION STATE & TRACKER
+# SESSION STATE & TRACKER PERSISTENTE GLOBAL
 # ------------------------------------------------------------------------------
 OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
 
@@ -348,6 +348,9 @@ if "apuestas_registradas" not in st.session_state:
 
 if "liga_activa" not in st.session_state:
     st.session_state["liga_activa"] = None
+
+if "pitchers_mlb_sync" not in st.session_state:
+    st.session_state["pitchers_mlb_sync"] = {}
 
 def guardar_apuesta_seleccionada(liga, partido, mercado, cuota):
     nuevo_id = max([a["id"] for a in st.session_state["apuestas_registradas"]], default=0) + 1
@@ -681,17 +684,22 @@ elif st.session_state["liga_activa"] == "MLB":
         st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>⚾ 1. Matchup Sabermétrico & Pitching</h3>", unsafe_allow_html=True)
 
         c_loc, c_vis = st.columns(2)
-        with c_loc: eq_loc = st.selectbox("Equipo Local (Home):", sorted(list(MLB_DATA.keys())), index=1)
+        with c_loc: eq_loc = st.selectbox("Equipo Local (Home):", sorted(list(MLB_DATA.keys())), index=12)
         with c_vis: eq_vis = st.selectbox("Equipo Visitante (Away):", sorted(list(MLB_DATA.keys())), index=0)
 
         d_loc, d_vis = MLB_DATA[eq_loc], MLB_DATA[eq_vis]
 
+        matchup_key = f"{eq_loc}_vs_{eq_vis}"
+
         if st.button("🔄 Sincronizar Estadísticas y Pitchers Abridores del Día (MLB API)", use_container_width=True):
             p_loc_api = obtener_pitcher_confirmado_mlb(eq_loc)
             p_vis_api = obtener_pitcher_confirmado_mlb(eq_vis)
-            d_loc["sp_name"] = p_loc_api
-            d_vis["sp_name"] = p_vis_api
+            st.session_state["pitchers_mlb_sync"][matchup_key] = {"loc": p_loc_api, "vis": p_vis_api}
             st.success(f"Pitchers actualizados: {eq_loc} ({p_loc_api}) vs {eq_vis} ({p_vis_api})")
+
+        pitchers_guardados = st.session_state["pitchers_mlb_sync"].get(matchup_key, {})
+        sp_name_loc = pitchers_guardados.get("loc", d_loc['sp_name'])
+        sp_name_vis = pitchers_guardados.get("vis", d_vis['sp_name'])
 
         st.markdown(f"""
         <div class="analysis-card" style="border:1px solid #a7f3d0;">
@@ -700,14 +708,14 @@ elif st.session_state["liga_activa"] == "MLB":
                     <img src="{d_loc['logo']}" width="30">
                     <div>
                         <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_loc}</span><br>
-                        <span style="font-size:0.75rem; color:#059669; font-weight:800;">Pitcher: {d_loc['sp_name']}</span>
+                        <span style="font-size:0.75rem; color:#059669; font-weight:800;">Pitcher: {sp_name_loc}</span>
                     </div>
                 </div>
                 <div style="font-weight:900; color:#059669;">VS</div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <div>
                         <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_vis}</span><br>
-                        <span style="font-size:0.75rem; color:#059669; font-weight:800;">Pitcher: {d_vis['sp_name']}</span>
+                        <span style="font-size:0.75rem; color:#059669; font-weight:800;">Pitcher: {sp_name_vis}</span>
                     </div>
                     <img src="{d_vis['logo']}" width="30">
                 </div>
@@ -831,20 +839,21 @@ elif st.session_state["liga_activa"] == "MLB":
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_mlb_{idx}")
 
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas (Todas las Ligas)</h3>", unsafe_allow_html=True)
+    # HISTORIAL EXCLUSIVO DE MLB
+    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas (MLB)</h3>", unsafe_allow_html=True)
     
-    todas_apuestas = st.session_state["apuestas_registradas"]
-    if not todas_apuestas:
-        st.info("No hay apuestas seleccionadas aún.")
+    mlb_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == "MLB"]
+    if not mlb_apuestas:
+        st.info("No hay apuestas seleccionadas aún para la MLB.")
     else:
-        df_export = pd.DataFrame(todas_apuestas)
+        df_export = pd.DataFrame(mlb_apuestas)
         st.download_button(
-            label="💾 Descargar Histórico Completo (CSV)",
+            label="💾 Descargar Histórico MLB (CSV)",
             data=df_export.to_csv(index=False),
-            file_name="picks_registrados.csv",
+            file_name="picks_mlb.csv",
             mime="text/csv"
         )
-        for a in todas_apuestas:
+        for a in mlb_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
                 st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
@@ -1045,20 +1054,21 @@ else:
                 fig_mini = generar_grafica_mini_15_partidos(prob_val)
                 st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_{liga}_{idx}")
 
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas (Todas las Ligas)</h3>", unsafe_allow_html=True)
+    # HISTORIAL EXCLUSIVO DE LA LIGA SELECCIONADA
+    st.markdown(f"<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas ({liga})</h3>", unsafe_allow_html=True)
     
-    todas_apuestas = st.session_state["apuestas_registradas"]
-    if not todas_apuestas:
-        st.info("No hay apuestas seleccionadas aún.")
+    liga_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == liga]
+    if not liga_apuestas:
+        st.info(f"No hay apuestas seleccionadas aún para la competición {liga}.")
     else:
-        df_export = pd.DataFrame(todas_apuestas)
+        df_export = pd.DataFrame(liga_apuestas)
         st.download_button(
-            label="💾 Descargar Histórico Completo (CSV)",
+            label=f"💾 Descargar Histórico {liga} (CSV)",
             data=df_export.to_csv(index=False),
-            file_name="picks_registrados.csv",
+            file_name=f"picks_{liga.lower().replace(' ', '_')}.csv",
             mime="text/csv"
         )
-        for a in todas_apuestas:
+        for a in liga_apuestas:
             col_info, col_estado, col_del = st.columns([7, 3, 2])
             with col_info:
                 st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
