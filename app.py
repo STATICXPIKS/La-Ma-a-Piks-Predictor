@@ -257,7 +257,7 @@ def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, 
         "p_under_td": np.mean((sim_td_loc + sim_td_vis) < line_td)
     }
 
-def simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis, n_sim=10000):
+def simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis, rl_hc_loc=-1.5, rl_hc_vis=+1.5, n_sim=10000):
     env_factor = d_loc["park_factor"] * (1.08 if viento_out else 1.0) * (0.95 if humedad_alta else 1.0)
     
     off_loc = (d_loc["wrc_plus"] / 100.0) * (1.12 if bvp_favor_loc else 1.0)
@@ -292,8 +292,8 @@ def simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc
         "p_ml_vis": np.mean(runs_ft_vis > runs_ft_loc),
         "p_over_runs": np.mean((runs_ft_loc + runs_ft_vis) > line_runs),
         "p_under_runs": np.mean((runs_ft_loc + runs_ft_vis) < line_runs),
-        "p_rl_loc": np.mean((runs_ft_loc - 1.5) > runs_ft_vis),
-        "p_rl_vis": np.mean((runs_ft_vis + 1.5) > runs_ft_loc),
+        "p_rl_loc": np.mean((runs_ft_loc + rl_hc_loc) > runs_ft_vis),
+        "p_rl_vis": np.mean((runs_ft_vis + rl_hc_vis) > runs_ft_loc),
         "p_over_k_loc": np.mean(sim_k_loc > line_k_loc),
         "p_under_k_loc": np.mean(sim_k_loc < line_k_loc),
         "p_over_k_vis": np.mean(sim_k_vis > line_k_vis),
@@ -751,9 +751,12 @@ elif st.session_state["liga_activa"] == "MLB":
             with c_ml1: q_ml_loc = st.text_input(f"Moneyline {eq_loc[:8]}", value=val_ml_loc, key=f"q_ml_loc_{eq_loc}_{fmt_odds}")
             with c_ml2: q_ml_vis = st.text_input(f"Moneyline {eq_vis[:8]}", value=val_ml_vis, key=f"q_ml_vis_{eq_vis}_{fmt_odds}")
 
-            c_rl1, c_rl2 = st.columns(2)
-            with c_rl1: q_rl_loc = st.text_input(f"Run Line {eq_loc[:8]} (-1.5)", value=val_rl_loc, key=f"q_rl_loc_{eq_loc}_{fmt_odds}")
-            with c_rl2: q_rl_vis = st.text_input(f"Run Line {eq_vis[:8]} (+1.5)", value=val_rl_vis, key=f"q_rl_vis_{eq_vis}_{fmt_odds}")
+            # SLIDERS Y ENTRADAS PARA RUN LINE / HÁNDICAP AJUSTABLE (-3.5 A +4.5)
+            c_rl1, c_rl2, c_rl3, c_rl4 = st.columns([1.5, 1.25, 1.5, 1.25])
+            with c_rl1: rl_hc_loc = st.slider(f"Run Line {eq_loc[:8]}", -3.5, 4.5, -1.5, step=0.5)
+            with c_rl2: q_rl_loc = st.text_input(f"Cuota {rl_hc_loc:+}", value=val_rl_loc, key=f"q_rl_loc_{eq_loc}_{fmt_odds}")
+            with c_rl3: rl_hc_vis = st.slider(f"Run Line {eq_vis[:8]}", -3.5, 4.5, 1.5, step=0.5)
+            with c_rl4: q_rl_vis = st.text_input(f"Cuota {rl_hc_vis:+}", value=val_rl_vis, key=f"q_rl_vis_{eq_vis}_{fmt_odds}")
 
             ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
             with ct1: line_runs = st.slider("Línea Total Carreras", 6.5, 14.5, 8.5, step=0.5)
@@ -787,7 +790,8 @@ elif st.session_state["liga_activa"] == "MLB":
 
         sim_mlb = simular_montecarlo_mlb(
             d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, 
-            limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis
+            limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis,
+            rl_hc_loc=rl_hc_loc, rl_hc_vis=rl_hc_vis
         )
 
         mercados_mlb = [
@@ -795,8 +799,8 @@ elif st.session_state["liga_activa"] == "MLB":
             {"mercado": f"1. Moneyline (ML): Gana {eq_vis}", "prob": sim_mlb['p_ml_vis'], "cuota": parse_odds(q_ml_vis, fmt_odds)},
             {"mercado": f"2. Total Carreras: Over {line_runs}", "prob": sim_mlb['p_over_runs'], "cuota": parse_odds(q_over_runs, fmt_odds)},
             {"mercado": f"2. Total Carreras: Under {line_runs}", "prob": sim_mlb['p_under_runs'], "cuota": parse_odds(q_under_runs, fmt_odds)},
-            {"mercado": f"3. Run Line: {eq_loc} (-1.5 Carreras)", "prob": sim_mlb['p_rl_loc'], "cuota": parse_odds(q_rl_loc, fmt_odds)},
-            {"mercado": f"3. Run Line: {eq_vis} (+1.5 Carreras)", "prob": sim_mlb['p_rl_vis'], "cuota": parse_odds(q_rl_vis, fmt_odds)},
+            {"mercado": f"3. Run Line: {eq_loc} ({rl_hc_loc:+} Carreras)", "prob": sim_mlb['p_rl_loc'], "cuota": parse_odds(q_rl_loc, fmt_odds)},
+            {"mercado": f"3. Run Line: {eq_vis} ({rl_hc_vis:+} Carreras)", "prob": sim_mlb['p_rl_vis'], "cuota": parse_odds(q_rl_vis, fmt_odds)},
             {"mercado": f"4. Prop Ponches (K's): {eq_loc[:10]} Over {line_k_loc}", "prob": sim_mlb['p_over_k_loc'], "cuota": parse_odds(q_k_over_loc, fmt_odds)},
             {"mercado": f"4. Prop Ponches (K's): {eq_loc[:10]} Under {line_k_loc}", "prob": sim_mlb['p_under_k_loc'], "cuota": parse_odds(q_k_under_loc, fmt_odds)},
             {"mercado": f"4. Prop Ponches (K's): {eq_vis[:10]} Over {line_k_vis}", "prob": sim_mlb['p_over_k_vis'], "cuota": parse_odds(q_k_over_vis, fmt_odds)},
