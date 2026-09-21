@@ -14,10 +14,10 @@ import os
 from datetime import datetime
 import plotly.graph_objects as go
 
-print("🚀 Cargando La Maña Picks con Gráficas Independientes y Diseño Profesional...")
+print("🚀 Cargando La Maña Picks en Modo Oscuro Profesional...")
 
 # ==============================================================================
-# 2. SISTEMA DE HISTORIAL Y BASE DE DATOS PERSISTENTE (JSON LOCAL)
+# 2. HISTORIAL PERSISTENTE EN JSON
 # ==============================================================================
 DB_FILE = "historial_la_mana_picks.json"
 
@@ -72,7 +72,7 @@ def calcular_metricas_historial():
     return stats, tot_wins, tot_loss, tot_global, pct_global
 
 # ==============================================================================
-# 3. BASE DE DATOS DE LIGAS, EQUIPOS Y LOGOS OFICIALES
+# 3. BASE DE DATOS DE COMPETICIONES Y EQUIPOS
 # ==============================================================================
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
@@ -341,7 +341,7 @@ def auto_cargar_pitchers_mlb(nombre_local, nombre_visita):
     return era_loc, whip_loc, era_vis, whip_vis, status_msg
 
 # ==============================================================================
-# 4. SIMULACIONES CON TARJETAS
+# 4. SIMULACIONES CON RESULTADOS TIPO TARJETA
 # ==============================================================================
 def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, linea_goles, fatiga_eur, dict_actual):
     logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
@@ -366,40 +366,40 @@ def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_e
     pick_3_str = f"{'OVER' if dif_tot>=0 else 'UNDER'} de {linea_goles} Goles Totales"
 
     html_out = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • {liga.upper()}</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 74.2%</div>
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #0F172A; padding: 24px; border-radius: 20px; border: 1px solid #1E293B; box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #F8FAFC;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #10B981;">LA MAÑA PICKS • {liga.upper()}</div>
+            <div style="background: #064E3B; border: 1px solid #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #A7F3D0;">EFECTIVIDAD REAL: 74.2%</div>
         </div>
 
-        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+        <div style="background: #1E293B; border-radius: 14px; padding: 16px; border: 1px solid #334155; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({goles_vis:.1f} xG)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_visita} ({goles_vis:.1f} xG)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_visita}%</span>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({goles_loc:.1f} xG)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_local} ({goles_loc:.1f} xG)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_local}%</span>
             </div>
-            <div style="text-align: center; font-size: 12px; font-weight: 700; color: #64748B;">Probabilidad de Empate: {prob_empate}%</div>
+            <div style="text-align: center; font-size: 12px; font-weight: 700; color: #94A3B8;">Probabilidad de Empate: {prob_empate}%</div>
         </div>
 
-        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
-        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Ganador 1X2: {pick_1_str}</div></div>{badge_1}
+        <div style="font-size: 13px; font-weight: 800; color: #10B981; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
+        <div style="background: #064E3B; border-radius: 10px; padding: 10px 14px; border: 1px solid #059669; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #A7F3D0;">1. Ganador 1X2: {pick_1_str}</div></div>{badge_1}
         </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Doble Oportunidad: {pick_2_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">2. Doble Oportunidad: {pick_2_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
         </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
         </div>
     </div>
     """
@@ -415,7 +415,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     prob_win_visita = 100 - prob_win_local
     
     equipo_fav = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
-    prob_fav = max(prob_win_local, prob_win_visita)
     cuota_fav = cuota_loc_dec if prob_win_local >= prob_win_visita else cuota_vis_dec
     
     pick_1_str = f"{equipo_fav} ML @ {cuota_fav}"
@@ -423,36 +422,36 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     pick_3_str = f"{'OVER' if (tot_carreras - float(linea_tot_carreras))>=0 else 'UNDER'} de {linea_tot_carreras} carreras"
 
     html_out = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO MLB</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 76.5%</div>
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #0F172A; padding: 24px; border-radius: 20px; border: 1px solid #1E293B; box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #F8FAFC;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #10B981;">LA MAÑA PICKS • MODELO MLB</div>
+            <div style="background: #064E3B; border: 1px solid #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #A7F3D0;">EFECTIVIDAD +EV: 76.5%</div>
         </div>
-        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+        <div style="background: #1E293B; border-radius: 14px; padding: 16px; border: 1px solid #334155; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({carreras_vis:.1f} carreras)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_visita} ({carreras_vis:.1f} carreras)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_visita}%</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({carreras_loc:.1f} carreras)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_local} ({carreras_loc:.1f} carreras)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_local}%</span>
             </div>
         </div>
-        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
-        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        <div style="font-size: 13px; font-weight: 800; color: #10B981; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
+        <div style="background: #064E3B; border-radius: 10px; padding: 10px 14px; border: 1px solid #059669; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #A7F3D0;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
         </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Run Line / Hándicap: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">2. Run Line / Hándicap: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
         </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
         </div>
     </div>
     """
@@ -475,51 +474,51 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, linea_spread, l
     pick_3_str = f"{'OVER' if dif_total>=0 else 'UNDER'} de {linea_total} pts"
 
     html_out = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL (+EV)</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 78.0%</div>
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #0F172A; padding: 24px; border-radius: 20px; border: 1px solid #1E293B; box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #F8FAFC;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #10B981;">LA MAÑA PICKS • MODELO NFL (+EV)</div>
+            <div style="background: #064E3B; border: 1px solid #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #A7F3D0;">EFECTIVIDAD REAL: 78.0%</div>
         </div>
 
-        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+        <div style="background: #1E293B; border-radius: 14px; padding: 16px; border: 1px solid #334155; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_visita_est:.1f} pts)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_visita} ({pts_visita_est:.1f} pts)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_visita}%</span>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_local_est:.1f} pts)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_local} ({pts_local_est:.1f} pts)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_local}%</span>
             </div>
         </div>
 
-        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
-        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        <div style="font-size: 13px; font-weight: 800; color: #10B981; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
+        <div style="background: #064E3B; border-radius: 10px; padding: 10px 14px; border: 1px solid #059669; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #A7F3D0;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
         </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Hándicap / Spread: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">2. Hándicap / Spread: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
         </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
         </div>
     </div>
     """
     return html_out, pick_1_str, pick_2_str, pick_3_str, f"{nombre_local} vs {nombre_visita}"
 
 # ==============================================================================
-# 5. GENERACIÓN DE GRÁFICAS Y RESUMEN HISTÓRICO CON PLOTLY
+# 5. GENERACIÓN DE GRÁFICAS Y RESUMEN EN MODO OSCURO NEÓN (PLOTLY DARK)
 # ==============================================================================
 def generar_graficas_home():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
     
-    # 1. GRÁFICA NFL (Barras 3D/Estilizadas)
+    # 1. GRÁFICA NFL (Barras Neón en Modo Oscuro)
     fig_nfl = go.Figure()
     fig_nfl.add_trace(go.Bar(
         x=['WINS', 'LOSSES'],
@@ -530,39 +529,41 @@ def generar_graficas_home():
     ))
     fig_nfl.update_layout(
         title="EFECTIVIDAD NFL",
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#0F172A', size=12, family='Segoe UI'),
-        height=220,
+        template="plotly_dark",
+        paper_bgcolor='rgba(15, 23, 42, 0.8)',
+        plot_bgcolor='rgba(15, 23, 42, 0.8)',
+        font=dict(color='#F8FAFC', size=11, family='Segoe UI'),
+        height=200,
         margin=dict(l=10, r=10, t=35, b=10)
     )
 
-    # 2. GRÁFICA MLB (Línea de Tendencia con Área Sombreada)
+    # 2. GRÁFICA MLB (Línea Neón con Relleno Gradiente)
     fig_mlb = go.Figure()
     y_mlb_data = [0, stats['MLB']['wins']]
     fig_mlb.add_trace(go.Scatter(
         x=['Inicio', 'Actual'],
         y=y_mlb_data,
         mode='lines+markers+text',
-        line=dict(color='#10B981', width=3),
+        line=dict(color='#34D399', width=3),
         fill='tozeroy',
-        fillcolor='rgba(16, 185, 129, 0.15)',
+        fillcolor='rgba(52, 211, 153, 0.2)',
         text=[0, stats['MLB']['wins']],
         textposition='top center'
     ))
     fig_mlb.update_layout(
         title="EFECTIVIDAD MLB",
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#0F172A', size=12, family='Segoe UI'),
-        height=220,
+        template="plotly_dark",
+        paper_bgcolor='rgba(15, 23, 42, 0.8)',
+        plot_bgcolor='rgba(15, 23, 42, 0.8)',
+        font=dict(color='#F8FAFC', size=11, family='Segoe UI'),
+        height=200,
         margin=dict(l=10, r=10, t=35, b=10)
     )
 
-    # 3. GRÁFICA FÚTBOL (Dona / Donut Chart)
-    labels_fut = ['WINS', 'LOSSES', 'PENDING']
+    # 3. GRÁFICA FÚTBOL (Dona 3D Neón)
+    labels_fut = ['WIN', 'LOSS', 'PENDING']
     values_fut = [stats['FUTBOL']['wins'], stats['FUTBOL']['losses'], stats['FUTBOL']['pending']]
-    if sum(values_fut) == 0: values_fut = [1, 0, 0] # Estado inicial
+    if sum(values_fut) == 0: values_fut = [1, 0, 0]
     
     fig_fut = go.Figure(data=[go.Pie(
         labels=labels_fut,
@@ -572,70 +573,160 @@ def generar_graficas_home():
     )])
     fig_fut.update_layout(
         title="EFECTIVIDAD FÚTBOL",
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#0F172A', size=12, family='Segoe UI'),
-        height=220,
+        template="plotly_dark",
+        paper_bgcolor='rgba(15, 23, 42, 0.8)',
+        plot_bgcolor='rgba(15, 23, 42, 0.8)',
+        font=dict(color='#F8FAFC', size=11, family='Segoe UI'),
+        height=200,
         margin=dict(l=10, r=10, t=35, b=10),
         showlegend=False
     )
 
-    # PANEL HEADER HTML
+    # HEADER HTML NEÓN
     html_header = f"""
-    <div style="background: #FFFFFF; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 10px 25px rgba(16,185,129,0.08);">
-        <div style="font-size: 16px; font-weight: 800; color: #065F46;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
-        <div style="font-size: 42px; font-weight: 900; color: #10B981; margin: 4px 0;">{pct_global}%</div>
-        <div style="font-size: 12px; font-weight: 700; color: #64748B;">
-            Récord Registrado: <span style="color:#10B981;">{tot_wins} WINS</span> / <span style="color:#EF4444;">{tot_loss} LOSSES</span> (Total: {tot_global} Picks)
+    <div style="background: #0F172A; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);">
+        <div style="font-size: 15px; font-weight: 800; color: #A7F3D0; letter-spacing: 1px;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
+        <div style="font-size: 52px; font-weight: 900; color: #34D399; margin: 2px 0; text-shadow: 0 0 10px rgba(52, 211, 153, 0.5);">{pct_global}%</div>
+        <div style="font-size: 13px; font-weight: 700; color: #94A3B8;">
+            Récord Registrado: <span style="color:#34D399;">{tot_wins} WINS</span> / <span style="color:#F87171;">{tot_loss} LOOSES</span> (Total: {tot_global} Picks)
         </div>
     </div>
     """
     
-    # HISTORIAL TEXTO HTML
+    # HISTORIAL HTML NEÓN
     historial = cargar_historial_db()
     html_historial = f"""
-    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 16px; height: 160px; overflow-y: auto;">
-        <div style="font-size: 12px; font-weight: 800; color: #065F46; margin-bottom: 8px;">📋 HISTORIAL DE PICKS REGISTRADOS</div>
-        <div style="font-size: 11px; color: #334155;">
+    <div style="background: #0F172A; border: 1px solid #1E293B; border-radius: 16px; padding: 16px; height: 160px; overflow-y: auto;">
+        <div style="font-size: 12px; font-weight: 800; color: #10B981; margin-bottom: 8px;">HISTORIAL DE PICKS REGISTRADOS</div>
+        <div style="font-size: 11px; color: #CBD5E1;">
     """
     if not historial:
-        html_historial += "<i>No hay apuestas guardadas aún.</i>"
+        html_historial += "<i style='color: #64748B;'>No hay apuestas guardadas aún.</i>"
     else:
         for item in reversed(historial):
-            st_col = "#10B981" if item["estado"] == "WIN" else ("#EF4444" if item["estado"] == "LOSS" else "#F59E0B")
-            html_historial += f"<div style='margin-bottom: 6px; border-bottom: 1px solid #F1F5F9; padding-bottom: 4px;'>• <b>[{item['deporte']}]</b> {item['partido']} — {item['seleccion']} <b style='color:{st_col};'>[{item['estado']}]</b></div>"
+            st_col = "#34D399" if item["estado"] == "WIN" else ("#F87171" if item["estado"] == "LOSS" else "#FBBF24")
+            html_historial += f"<div style='margin-bottom: 6px; border-bottom: 1px solid #1E293B; padding-bottom: 4px;'>• <b>[{item['deporte']}]</b> {item['partido']} — {item['seleccion']} <b style='color:{st_col};'>({item['estado']})</b></div>"
             
     html_historial += "</div></div>"
     
     return html_header, html_historial, fig_nfl, fig_mlb, fig_fut
 
 # ==============================================================================
-# 6. INTERFAZ GRÁFICA CON BARRAS/BOTONES UNIFICADOS Y GRÁFICAS ESTÉTICAS
+# 6. ESTILOS CSS CUSTOM DARK Y RENDERIZADO GRADIO
 # ==============================================================================
-with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
+custom_css = """
+body, .gradio-container {
+    background-color: #0B0F19 !important;
+    color: #F8FAFC !important;
+}
+.btn_liga {
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+    border-radius: 14px !important;
+    color: #F8FAFC !important;
+    font-weight: 800 !important;
+    font-size: 14px !important;
+    padding: 12px 18px !important;
+    text-align: left !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+}
+.btn_liga:hover {
+    border-color: #10B981 !important;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3) !important;
+}
+"""
+
+with gr.Blocks(title="La Maña Picks", css=custom_css, theme=gr.themes.Base()) as app_mana:
     
-    # HOME
+    # HOME MODO OSCURO FIEL A TU IMAGEN
     with gr.Column(visible=True) as vista_home:
         gr.Markdown("""
-        # **LA MAÑA PICKS**
-        ### **ANALIZANDO CON LA MAÑA QUE NOS HACE GANAR. JUEGA CON ESTADÍSTICAS Y CON MAÑA.**
+        <div style="text-align: center; padding: 10px 0;">
+            <h1 style="font-size: 34px; font-weight: 900; color: #FFFFFF; margin: 0; letter-spacing: 1px;">LA MAÑA PICKS</h1>
+            <p style="font-size: 13px; font-weight: 700; color: #10B981; margin-top: 2px;">ANALIZANDO CON LA MAÑA QUE NOS HACE GANAR. JUEGA CON ESTADÍSTICAS Y CON MAÑA.</p>
+        </div>
         """)
         
         with gr.Row():
-            # COLUMNA IZQUIERDA: MENÚ CON UN SOLO BOTÓN POR LIGA E ICONO INTEGRADO
+            # COLUMNA IZQUIERDA: BOTONES CON BORDES DE CADA LIGA
             with gr.Column(scale=1):
-                btn_premier = gr.Button("⚽  PREMIER LEAGUE (20 Equipos) ➔", variant="secondary")
-                btn_laliga = gr.Button("⚽  LALIGA EA SPORTS (20 Equipos) ➔", variant="secondary")
-                btn_bundesliga = gr.Button("⚽  BUNDESLIGA (18 Equipos) ➔", variant="secondary")
-                btn_seriea = gr.Button("⚽  SERIE A (20 Equipos) ➔", variant="secondary")
-                btn_champions = gr.Button("🏆  CHAMPIONS LEAGUE (36 Equipos) ➔", variant="secondary")
-                btn_nfl = gr.Button("🏈  NFL (32 Equipos AFC/NFC) ➔", variant="primary")
-                btn_mlb = gr.Button("⚾  MLB (30 Equipos Grandes Ligas) ➔", variant="primary")
+                gr.HTML(f"""
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{LOGOS_LIGAS['Premier League']}" width="26" height="26" style="object-fit: contain;"/>
+                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">PREMIER LEAGUE</div><div style="font-size: 10px; color: #94A3B8;">20 Equipos</div></div>
+                        </div>
+                        <span style="color: #94A3B8;">➔</span>
+                    </div>
 
-            # COLUMNA DERECHA: DASHBOARD DE GRÁFICAS Y RÉCORD GLOBAL
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{LOGOS_LIGAS['LaLiga EA Sports']}" width="26" height="26" style="object-fit: contain;"/>
+                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">LALIGA EA SPORTS</div><div style="font-size: 10px; color: #94A3B8;">20 Equipos</div></div>
+                        </div>
+                        <span style="color: #94A3B8;">➔</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{LOGOS_LIGAS['Bundesliga']}" width="26" height="26" style="object-fit: contain;"/>
+                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">BUNDESLIGA</div><div style="font-size: 10px; color: #94A3B8;">18 Equipos</div></div>
+                        </div>
+                        <span style="color: #94A3B8;">➔</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{LOGOS_LIGAS['Serie A']}" width="26" height="26" style="object-fit: contain;"/>
+                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">SERIE A</div><div style="font-size: 10px; color: #94A3B8;">20 Equipos</div></div>
+                        </div>
+                        <span style="color: #94A3B8;">➔</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{LOGOS_LIGAS['Champions League']}" width="26" height="26" style="object-fit: contain;"/>
+                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">CHAMPIONS LEAGUE</div><div style="font-size: 10px; color: #94A3B8;">36 Equipos</div></div>
+                        </div>
+                        <span style="color: #94A3B8;">➔</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #064E3B; border: 1px solid #059669; border-radius: 12px; padding: 10px 14px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{LOGOS_LIGAS['NFL']}" width="26" height="26" style="object-fit: contain;"/>
+                            <div><div style="font-size: 13px; font-weight: 800; color: #A7F3D0;">NFL</div><div style="font-size: 10px; color: #A7F3D0;">32 Equipos AFC/NFC</div></div>
+                        </div>
+                        <span style="color: #A7F3D0;">➔</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #064E3B; border: 1px solid #059669; border-radius: 12px; padding: 10px 14px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="{LOGOS_LIGAS['MLB']}" width="26" height="26" style="object-fit: contain;"/>
+                            <div><div style="font-size: 13px; font-weight: 800; color: #A7F3D0;">MLB</div><div style="font-size: 10px; color: #A7F3D0;">30 Equipos Grandes Ligas</div></div>
+                        </div>
+                        <span style="color: #A7F3D0;">➔</span>
+                    </div>
+                </div>
+                """)
+                
+                # BOTONES DE ACCIÓN MAPPING
+                btn_premier = gr.Button("Entrar Premier League ➔", variant="secondary")
+                btn_laliga = gr.Button("Entrar LaLiga ➔", variant="secondary")
+                btn_bundesliga = gr.Button("Entrar Bundesliga ➔", variant="secondary")
+                btn_seriea = gr.Button("Entrar Serie A ➔", variant="secondary")
+                btn_champions = gr.Button("Entrar Champions League ➔", variant="secondary")
+                btn_nfl = gr.Button("Entrar NFL 🏈 ➔", variant="primary")
+                btn_mlb = gr.Button("Entrar MLB ⚾ ➔", variant="primary")
+
+            # COLUMNA DERECHA: TARJETAS Y GRÁFICAS MODO OSCURO
             with gr.Column(scale=2):
-                html_header_out = gr.HTML()
-                html_historial_out = gr.HTML()
+                with gr.Row():
+                    html_header_out = gr.HTML()
+                    html_historial_out = gr.HTML()
                 
                 with gr.Row():
                     plot_nfl_out = gr.Plot(show_label=False)
@@ -652,11 +743,11 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             with gr.Column(scale=1):
                 with gr.Row():
                     drop_fut_loc = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Arsenal", label="Equipo Local", scale=3)
-                    img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"], label="Local", width=60, height=60, show_label=False, scale=1)
+                    img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"], label="Local", width=50, height=50, show_label=False, scale=1)
                 
                 with gr.Row():
                     drop_fut_vis = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Chelsea", label="Equipo Visitante", scale=3)
-                    img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=60, height=60, show_label=False, scale=1)
+                    img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=50, height=50, show_label=False, scale=1)
                 
                 drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Champions/Europa League hace 3 días)"], value="No (Semana normal)", label="¿Fatiga Europea?")
                 
@@ -687,11 +778,11 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             with gr.Column(scale=1):
                 with gr.Row():
                     drop_nfl_loc = gr.Dropdown(choices=lista_nfl_nombres, value="Los Angeles Rams", label="Equipo Local", scale=3)
-                    img_nfl_loc = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["Los Angeles Rams"]], label="Local", width=60, height=60, show_label=False, scale=1)
+                    img_nfl_loc = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["Los Angeles Rams"]], label="Local", width=50, height=50, show_label=False, scale=1)
                 
                 with gr.Row():
                     drop_nfl_vis = gr.Dropdown(choices=lista_nfl_nombres, value="New York Giants", label="Equipo Visitante", scale=3)
-                    img_nfl_vis = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["New York Giants"]], label="Visitante", width=60, height=60, show_label=False, scale=1)
+                    img_nfl_vis = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["New York Giants"]], label="Visitante", width=50, height=50, show_label=False, scale=1)
 
                 num_nfl_sp = gr.Number(value=-6.5, label="Spread Casino")
                 num_nfl_tot = gr.Number(value=47.5, label="Línea Total")
@@ -716,11 +807,11 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             with gr.Column(scale=1):
                 with gr.Row():
                     drop_mlb_loc = gr.Dropdown(choices=lista_mlb_nombres, value="San Francisco Giants", label="Equipo Local", scale=3)
-                    img_mlb_loc = gr.Image(value=EQUIPOS_MLB["San Francisco Giants"]["logo"], label="Local", width=60, height=60, show_label=False, scale=1)
+                    img_mlb_loc = gr.Image(value=EQUIPOS_MLB["San Francisco Giants"]["logo"], label="Local", width=50, height=50, show_label=False, scale=1)
                 
                 with gr.Row():
                     drop_mlb_vis = gr.Dropdown(choices=lista_mlb_nombres, value="Minnesota Twins", label="Equipo Visitante", scale=3)
-                    img_mlb_vis = gr.Image(value=EQUIPOS_MLB["Minnesota Twins"]["logo"], label="Visitante", width=60, height=60, show_label=False, scale=1)
+                    img_mlb_vis = gr.Image(value=EQUIPOS_MLB["Minnesota Twins"]["logo"], label="Visitante", width=50, height=50, show_label=False, scale=1)
 
                 btn_auto_api = gr.Button("🔄 Cargar Abridores en Vivo (MLB API)", variant="secondary")
                 lbl_api_status = gr.Markdown("🟢 Listo para sincronizar")
@@ -750,11 +841,9 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 out_mlb = gr.HTML()
                 st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match = gr.State(""), gr.State(""), gr.State(""), gr.State("")
 
-    # ESTADO OCULTO LIGA ACTIVA
     st_liga_activa = gr.State("Premier League")
     st_dict_futbol_actual = gr.State(PREMIER_DICT)
 
-    # ACTUALIZACIÓN DE ESCUDOS
     def actualizar_escudos_fut(nombre_loc, nombre_vis, dict_actual):
         logo_loc = dict_actual.get(nombre_loc, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
         logo_vis = dict_actual.get(nombre_vis, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
@@ -767,7 +856,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     def actualizar_escudos_mlb(nombre_loc, nombre_vis):
         return EQUIPOS_MLB[nombre_loc]["logo"], EQUIPOS_MLB[nombre_vis]["logo"]
 
-    # FUNCIONES DE NAVEGACIÓN
     def cambiar_a_liga_futbol(diccionario_liga, nombre_liga):
         eqs = list(diccionario_liga.keys())
         loc_inicial, vis_inicial = eqs[0], (eqs[1] if len(eqs) > 1 else eqs[0])
@@ -841,7 +929,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match], outputs=[lbl_save_mlb])
     btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
 
-    # EVENTO DE CARGA INICIAL DE LA HOME
     app_mana.load(fn=generar_graficas_home, outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
 
 app_mana.launch(share=True, debug=True)
