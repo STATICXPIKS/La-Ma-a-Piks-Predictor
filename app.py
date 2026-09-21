@@ -1,1087 +1,847 @@
-import streamlit as st
-import numpy as np
+# ==============================================================================
+# 1. INSTALACIÓN DE LIBRERÍAS
+# ==============================================================================
+!pip install nflreadpy pandas numpy xgboost gradio scikit-learn requests plotly -q
+
+import nflreadpy as nfl
 import pandas as pd
-from scipy.stats import poisson
-import plotly.graph_objects as go
+import numpy as np
+import xgboost as xgb
+import gradio as gr
 import requests
+import json
+import os
+from datetime import datetime
+import plotly.graph_objects as go
 
-# Configuración de Página
-st.set_page_config(
-    page_title="LA MAÑA PICKS - IA QUANT MULTI-SPORT",
-    layout="wide",
-    page_icon="💸"
-)
+print("🚀 Cargando La Maña Picks con Gráficas Independientes y Diseño Profesional...")
 
-LOGOS_COMPETENCIA = {
-    "PREMIER LEAGUE": "https://crests.football-data.org/PL.png",
-    "LALIGA": "https://crests.football-data.org/PD.png",
-    "CHAMPIONS LEAGUE": "https://crests.football-data.org/CL.png",
-    "BUNDESLIGA": "https://crests.football-data.org/BL1.png",
+# ==============================================================================
+# 2. SISTEMA DE HISTORIAL Y BASE DE DATOS PERSISTENTE (JSON LOCAL)
+# ==============================================================================
+DB_FILE = "historial_la_mana_picks.json"
+
+def cargar_historial_db():
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def guardar_historial_db(datos):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=2)
+
+def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
+    historial = cargar_historial_db()
+    nuevo_item = {
+        "id": len(historial) + 1,
+        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "deporte": deporte,
+        "partido": partido,
+        "seleccion": seleccion,
+        "tipo_pick": tipo_pick,
+        "cuota": cuota,
+        "ventaja_ev": ventaja_ev,
+        "estado": "PENDING"
+    }
+    historial.append(nuevo_item)
+    guardar_historial_db(historial)
+
+def calcular_metricas_historial():
+    historial = cargar_historial_db()
+    stats = {
+        "NFL": {"wins": 0, "losses": 0, "pending": 0},
+        "MLB": {"wins": 0, "losses": 0, "pending": 0},
+        "FUTBOL": {"wins": 0, "losses": 0, "pending": 0}
+    }
+    for item in historial:
+        dep = item.get("deporte", "NFL")
+        est = item.get("estado", "PENDING")
+        key = "NFL" if "NFL" in dep else ("MLB" if "MLB" in dep else "FUTBOL")
+        if est == "WIN": stats[key]["wins"] += 1
+        elif est == "LOSS": stats[key]["losses"] += 1
+        elif est == "PENDING": stats[key]["pending"] += 1
+            
+    tot_wins = stats["NFL"]["wins"] + stats["MLB"]["wins"] + stats["FUTBOL"]["wins"]
+    tot_loss = stats["NFL"]["losses"] + stats["MLB"]["losses"] + stats["FUTBOL"]["losses"]
+    tot_global = tot_wins + tot_loss
+    pct_global = round((tot_wins / tot_global) * 100, 1) if tot_global > 0 else 0.0
+    return stats, tot_wins, tot_loss, tot_global, pct_global
+
+# ==============================================================================
+# 3. BASE DE DATOS DE LIGAS, EQUIPOS Y LOGOS OFICIALES
+# ==============================================================================
+LOGOS_LIGAS = {
+    "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
+    "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
+    "Champions League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
+    "Bundesliga": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
+    "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg"
 }
 
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
+PREMIER_DICT = {
+    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
+    "Aston Villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
+    "AFC Bournemouth": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png",
+    "Brentford": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png",
+    "Brighton & Hove Albion": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png",
+    "Chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
+    "Crystal Palace": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png",
+    "Everton": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png",
+    "Fulham": "https://a.espncdn.com/i/teamlogos/soccer/500/370.png",
+    "Ipswich Town": "https://a.espncdn.com/i/teamlogos/soccer/500/373.png",
+    "Leicester City": "https://a.espncdn.com/i/teamlogos/soccer/500/375.png",
+    "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
+    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
+    "Manchester United": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
+    "Newcastle United": "https://a.espncdn.com/i/teamlogos/soccer/500/361.png",
+    "Nottingham Forest": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png",
+    "Southampton": "https://a.espncdn.com/i/teamlogos/soccer/500/376.png",
+    "Tottenham Hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
+    "West Ham United": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png",
+    "Wolverhampton": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png"
+}
 
-    .stApp {
-        background-color: #f8fafc !important;
-        color: #0f172a !important;
-        font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
-    }
+LALIGA_DICT = {
+    "Athletic Club": "https://a.espncdn.com/i/teamlogos/soccer/500/93.png",
+    "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
+    "CA Osasuna": "https://a.espncdn.com/i/teamlogos/soccer/500/97.png",
+    "CD Leganés": "https://a.espncdn.com/i/teamlogos/soccer/500/9855.png",
+    "Celta de Vigo": "https://a.espncdn.com/i/teamlogos/soccer/500/85.png",
+    "Deportivo Alavés": "https://a.espncdn.com/i/teamlogos/soccer/500/96.png",
+    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
+    "Getafe CF": "https://a.espncdn.com/i/teamlogos/soccer/500/2922.png",
+    "Girona FC": "https://a.espncdn.com/i/teamlogos/soccer/500/9812.png",
+    "Rayo Vallecano": "https://a.espncdn.com/i/teamlogos/soccer/500/101.png",
+    "RCD Espanyol": "https://a.espncdn.com/i/teamlogos/soccer/500/88.png",
+    "RCD Mallorca": "https://a.espncdn.com/i/teamlogos/soccer/500/84.png",
+    "Real Betis": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png",
+    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
+    "Real Sociedad": "https://a.espncdn.com/i/teamlogos/soccer/500/89.png",
+    "Sevilla FC": "https://a.espncdn.com/i/teamlogos/soccer/500/243.png",
+    "Valencia CF": "https://a.espncdn.com/i/teamlogos/soccer/500/94.png",
+    "Real Valladolid": "https://a.espncdn.com/i/teamlogos/soccer/500/95.png",
+    "Villarreal CF": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png",
+    "UD Las Palmas": "https://a.espncdn.com/i/teamlogos/soccer/500/98.png"
+}
 
-    header {visibility: hidden;}
+BUNDESLIGA_DICT = {
+    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
+    "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
+    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png",
+    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
+    "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png",
+    "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png",
+    "SC Freiburg": "https://a.espncdn.com/i/teamlogos/soccer/500/126.png",
+    "1. FC Union Berlin": "https://a.espncdn.com/i/teamlogos/soccer/500/130.png",
+    "Borussia Mönchengladbach": "https://a.espncdn.com/i/teamlogos/soccer/500/128.png",
+    "Werder Bremen": "https://a.espncdn.com/i/teamlogos/soccer/500/137.png",
+    "FC Augsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/3812.png",
+    "TSG Hoffenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/7911.png",
+    "Mainz 05": "https://a.espncdn.com/i/teamlogos/soccer/500/129.png",
+    "VfL Wolfsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/138.png",
+    "1. FC Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png",
+    "VfL Bochum": "https://a.espncdn.com/i/teamlogos/soccer/500/123.png",
+    "St. Pauli": "https://a.espncdn.com/i/teamlogos/soccer/500/268.png",
+    "Holstein Kiel": "https://a.espncdn.com/i/teamlogos/soccer/500/8066.png"
+}
 
-    .nav-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 0 20px 0;
-        border-bottom: 2px solid #e2e8f0;
-        margin-bottom: 25px;
-    }
-    .brand-logo {
-        font-family: 'Syne', sans-serif !important;
-        font-size: 2.4rem;
-        font-weight: 900;
-        color: #059669 !important;
-        letter-spacing: -1.5px;
-        text-transform: uppercase;
-    }
+SERIE_A_DICT = {
+    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png",
+    "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
+    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
+    "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png",
+    "AS Roma": "https://a.espncdn.com/i/teamlogos/soccer/500/104.png",
+    "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
+    "Lazio": "https://a.espncdn.com/i/teamlogos/soccer/500/112.png",
+    "Fiorentina": "https://a.espncdn.com/i/teamlogos/soccer/500/109.png",
+    "Bologna": "https://a.espncdn.com/i/teamlogos/soccer/500/107.png",
+    "Torino": "https://a.espncdn.com/i/teamlogos/soccer/500/239.png",
+    "Monza": "https://a.espncdn.com/i/teamlogos/soccer/500/3614.png",
+    "Genoa": "https://a.espncdn.com/i/teamlogos/soccer/500/3263.png",
+    "Parma": "https://a.espncdn.com/i/teamlogos/soccer/500/113.png",
+    "Udinese": "https://a.espncdn.com/i/teamlogos/soccer/500/118.png",
+    "Cagliari": "https://a.espncdn.com/i/teamlogos/soccer/500/108.png",
+    "Hellas Verona": "https://a.espncdn.com/i/teamlogos/soccer/500/238.png",
+    "Empoli": "https://a.espncdn.com/i/teamlogos/soccer/500/240.png",
+    "Lecce": "https://a.espncdn.com/i/teamlogos/soccer/500/3452.png",
+    "Como 1907": "https://a.espncdn.com/i/teamlogos/soccer/500/2625.png",
+    "Venezia": "https://a.espncdn.com/i/teamlogos/soccer/500/2744.png"
+}
 
-    .hero-title {
-        font-family: 'Syne', sans-serif !important;
-        font-size: 3.2rem;
-        font-weight: 900;
-        color: #0f172a;
-        line-height: 1.05;
-        letter-spacing: -1.8px;
-        margin-bottom: 12px;
-        text-transform: uppercase;
-    }
-    .hero-highlight { color: #059669 !important; }
-    .hero-subtitle { 
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-size: 1.15rem; 
-        color: #047857; 
-        font-weight: 800; 
-        letter-spacing: 0.5px;
-        margin-bottom: 25px; 
-        text-transform: uppercase;
-    }
+CHAMPIONS_DICT = {
+    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
+    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
+    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
+    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
+    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
+    "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
+    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png",
+    "Paris Saint-Germain": "https://a.espncdn.com/i/teamlogos/soccer/500/160.png",
+    "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
+    "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
+    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png",
+    "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
+    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
+    "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
+    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
+    "PSV Eindhoven": "https://a.espncdn.com/i/teamlogos/soccer/500/148.png",
+    "Feyenoord": "https://a.espncdn.com/i/teamlogos/soccer/500/142.png",
+    "Sporting CP": "https://a.espncdn.com/i/teamlogos/soccer/500/300.png",
+    "Benfica": "https://a.espncdn.com/i/teamlogos/soccer/500/294.png",
+    "Club Brujas": "https://a.espncdn.com/i/teamlogos/soccer/500/2282.png"
+}
 
-    .sim-card-home {
-        background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
-        border: 2px solid #a7f3d0;
-        border-radius: 20px;
-        padding: 24px;
-        text-align: center;
-        box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.15);
-    }
-    .sim-card-title {
-        font-family: 'Syne', sans-serif !important;
-        font-size: 2.2rem;
-        font-weight: 900;
-        color: #064e3b;
-        line-height: 1.1;
-        margin-bottom: 5px;
-    }
+EQUIPOS_MLB = {
+    "Arizona Diamondbacks": {"abbr": "ari", "id": 109, "wRC_plus": 105, "park_factor": 1.02},
+    "Atlanta Braves": {"abbr": "atl", "id": 144, "wRC_plus": 115, "park_factor": 1.01},
+    "Baltimore Orioles": {"abbr": "bal", "id": 110, "wRC_plus": 112, "park_factor": 0.98},
+    "Boston Red Sox": {"abbr": "bos", "id": 111, "wRC_plus": 106, "park_factor": 1.05},
+    "Chicago Cubs": {"abbr": "chc", "id": 112, "wRC_plus": 103, "park_factor": 1.00},
+    "Chicago White Sox": {"abbr": "cws", "id": 145, "wRC_plus": 84, "park_factor": 0.98},
+    "Cincinnati Reds": {"abbr": "cin", "id": 113, "wRC_plus": 98, "park_factor": 1.06},
+    "Cleveland Guardians": {"abbr": "cle", "id": 114, "wRC_plus": 101, "park_factor": 0.96},
+    "Colorado Rockies": {"abbr": "col", "id": 115, "wRC_plus": 91, "park_factor": 1.15},
+    "Detroit Tigers": {"abbr": "det", "id": 116, "wRC_plus": 97, "park_factor": 0.97},
+    "Houston Astros": {"abbr": "hou", "id": 117, "wRC_plus": 113, "park_factor": 0.99},
+    "Kansas City Royals": {"abbr": "kc", "id": 118, "wRC_plus": 102, "park_factor": 1.02},
+    "Los Angeles Angels": {"abbr": "laa", "id": 108, "wRC_plus": 95, "park_factor": 0.99},
+    "Los Angeles Dodgers": {"abbr": "lad", "id": 119, "wRC_plus": 120, "park_factor": 1.01},
+    "Miami Marlins": {"abbr": "mia", "id": 146, "wRC_plus": 89, "park_factor": 0.95},
+    "Milwaukee Brewers": {"abbr": "mil", "id": 158, "wRC_plus": 101, "park_factor": 1.01},
+    "Minnesota Twins": {"abbr": "min", "id": 142, "wRC_plus": 104, "park_factor": 1.00},
+    "New York Mets": {"abbr": "nym", "id": 121, "wRC_plus": 109, "park_factor": 0.96},
+    "New York Yankees": {"abbr": "nyy", "id": 147, "wRC_plus": 118, "park_factor": 1.02},
+    "Oakland Athletics": {"abbr": "oak", "id": 133, "wRC_plus": 96, "park_factor": 0.95},
+    "Philadelphia Phillies": {"abbr": "phi", "id": 143, "wRC_plus": 114, "park_factor": 1.03},
+    "Pittsburgh Pirates": {"abbr": "pit", "id": 134, "wRC_plus": 93, "park_factor": 0.97},
+    "San Diego Padres": {"abbr": "sd", "id": 135, "wRC_plus": 107, "park_factor": 0.95},
+    "San Francisco Giants": {"abbr": "sf", "id": 137, "wRC_plus": 97, "park_factor": 0.94},
+    "Seattle Mariners": {"abbr": "sea", "id": 136, "wRC_plus": 98, "park_factor": 0.92},
+    "St. Louis Cardinals": {"abbr": "stl", "id": 138, "wRC_plus": 98, "park_factor": 0.98},
+    "Tampa Bay Rays": {"abbr": "tb", "id": 139, "wRC_plus": 100, "park_factor": 0.95},
+    "Texas Rangers": {"abbr": "tex", "id": 140, "wRC_plus": 105, "park_factor": 1.02},
+    "Toronto Blue Jays": {"abbr": "tor", "id": 141, "wRC_plus": 102, "park_factor": 0.99},
+    "Washington Nationals": {"abbr": "wsh", "id": 120, "wRC_plus": 94, "park_factor": 1.01}
+}
 
-    .badge-star { background-color: #fef9c3; color: #854d0e; border: 1.5px solid #fde047; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.80rem; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); }
-    .badge-medium { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; }
+for eq, d in EQUIPOS_MLB.items():
+    d["logo"] = f"https://a.espncdn.com/i/teamlogos/mlb/500/{d['abbr']}.png"
 
-    .analysis-card {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 14px 18px;
-        margin-bottom: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-    }
+lista_mlb_nombres = sorted(list(EQUIPOS_MLB.keys()))
 
-    .stExpander {
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        background-color: #ffffff !important;
-        margin-bottom: 12px !important;
-    }
+# DATA NFL
+schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
+df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
+df_played = df_sched[df_sched['result'].notnull()].copy()
 
-    .stTextInput input, div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        border: 1px solid #a7f3d0 !important;
-        border-radius: 8px !important;
-        color: #064e3b !important;
-        font-weight: 800 !important;
-    }
+home_stats = df_played.groupby('home_team').agg(pts_favor_local=('home_score', 'mean'), pts_contra_local=('away_score', 'mean'))
+away_stats = df_played.groupby('away_team').agg(pts_favor_visita=('away_score', 'mean'), pts_contra_visita=('home_score', 'mean'))
+stats_nfl = home_stats.join(away_stats)
+stats_nfl['off_rating'] = (stats_nfl['pts_favor_local'] + stats_nfl['pts_favor_visita']) / 2
+stats_nfl['def_rating'] = (stats_nfl['pts_contra_local'] + stats_nfl['pts_contra_visita']) / 2
 
-    .stButton>button {
-        font-family: 'Syne', sans-serif !important;
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border: 1.5px solid #e2e8f0 !important;
-        border-radius: 12px !important;
-        font-weight: 800 !important;
-        font-size: 1.05rem !important;
-        padding: 12px 18px !important;
-        text-align: left !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-        transition: all 0.2s ease !important;
-    }
-    .stButton>button:hover {
-        border-color: #059669 !important;
-        color: #059669 !important;
-        background-color: #ecfdf5 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+features_nfl = df_played.copy()
+features_nfl['home_off'] = features_nfl['home_team'].map(stats_nfl['off_rating'])
+features_nfl['home_def'] = features_nfl['home_team'].map(stats_nfl['def_rating'])
+features_nfl['away_off'] = features_nfl['away_team'].map(stats_nfl['off_rating'])
+features_nfl['away_def'] = features_nfl['away_team'].map(stats_nfl['def_rating'])
+features_nfl['total_score'] = features_nfl['home_score'] + features_nfl['away_score']
 
-# ------------------------------------------------------------------------------
-# FUNCIONES AUXILIARES Y SIMULACIONES
-# ------------------------------------------------------------------------------
-def decimal_a_formato(val_dec, fmt_type):
+X_nfl = features_nfl[['home_off', 'home_def', 'away_off', 'away_def']].dropna()
+y_nfl_sp = features_nfl.loc[X_nfl.index, 'result']
+y_nfl_tot = features_nfl.loc[X_nfl.index, 'total_score']
+
+model_nfl_sp = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_sp)
+model_nfl_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_tot)
+
+equipos_info = nfl.load_teams().to_pandas() if hasattr(nfl.load_teams(), 'to_pandas') else nfl.load_teams()
+equipos_nfl = equipos_info[equipos_info['team_abbr'].isin(stats_nfl.index)].copy()
+dict_nfl_nombres = dict(zip(equipos_nfl['team_name'], equipos_nfl['team_abbr']))
+dict_nfl_logos = dict(zip(equipos_nfl['team_abbr'], equipos_nfl['team_logo_espn']))
+lista_nfl_nombres = sorted(list(dict_nfl_nombres.keys()))
+
+# ENTRENAMIENTO XGBOOST FÚTBOL Y MLB
+np.random.seed(42)
+X_fut_sim, y_fut_diff, y_fut_tot = [], [], []
+for _ in range(800):
+    xg_loc, xga_loc = np.random.normal(1.8, 0.4), np.random.normal(1.0, 0.3)
+    xg_vis, xga_vis = np.random.normal(1.4, 0.4), np.random.normal(1.2, 0.3)
+    goles_loc = (xg_loc * 0.6) + (xga_vis * 0.4) + np.random.normal(0.2, 0.5)
+    goles_vis = (xg_vis * 0.6) + (xga_loc * 0.4) + np.random.normal(0, 0.5)
+    X_fut_sim.append([xg_loc, xga_loc, xg_vis, xga_vis])
+    y_fut_diff.append(goles_loc - goles_vis)
+    y_fut_tot.append(goles_loc + goles_vis)
+
+model_fut_diff = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_fut_sim, y_fut_diff)
+model_fut_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_fut_sim, y_fut_tot)
+
+np.random.seed(42)
+X_mlb_sim, y_mlb_diff, y_mlb_tot = [], [], []
+for _ in range(800):
+    wrc_loc, wrc_vis = np.random.normal(102, 10), np.random.normal(102, 10)
+    xera_sp_loc, xera_sp_vis = np.random.normal(3.9, 0.7), np.random.normal(3.9, 0.7)
+    whip_sp_loc, whip_sp_vis = np.random.normal(1.22, 0.15), np.random.normal(1.22, 0.15)
+    park_f = np.random.normal(1.0, 0.05)
+    carreras_loc = (wrc_loc / 100) * (xera_sp_vis / 4.0) * (whip_sp_vis / 1.2) * 4.3 * park_f + np.random.normal(0, 0.8)
+    carreras_vis = (wrc_vis / 100) * (xera_sp_loc / 4.0) * (whip_sp_loc / 1.2) * 4.1 * park_f + np.random.normal(0, 0.8)
+    X_mlb_sim.append([wrc_loc, wrc_vis, xera_sp_loc, xera_sp_vis, whip_sp_loc, whip_sp_vis, park_f])
+    y_mlb_diff.append(carreras_loc - carreras_vis)
+    y_mlb_tot.append(carreras_loc + carreras_vis)
+
+model_mlb_diff = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_diff)
+model_mlb_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
+
+def auto_cargar_pitchers_mlb(nombre_local, nombre_visita):
+    id_loc = EQUIPOS_MLB[nombre_local]["id"]
+    id_vis = EQUIPOS_MLB[nombre_visita]["id"]
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    url_sched = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={hoy}&endDate={hoy}&hydrate=probablePitcher"
+    p_loc_name, era_loc, whip_loc = "Abridor Local", 3.80, 1.20
+    p_vis_name, era_vis, whip_vis = "Abridor Visitante", 3.80, 1.20
+    
     try:
-        val = float(val_dec)
-        if fmt_type == "Decimales":
-            return f"{val:.2f}"
-        else:
-            if val >= 2.0:
-                american = int(round((val - 1.0) * 100))
-                return f"+{american}"
-            else:
-                american = int(round(-100 / (val - 1.0)))
-                return f"{american}"
-    except:
-        return "1.90" if fmt_type == "Decimales" else "-110"
-
-def parse_odds(val_str, fmt_type="Decimales"):
-    try:
-        val_str = str(val_str).strip()
-        if fmt_type == "Decimales":
-            val = float(val_str)
-            return val if val > 1.0 else 2.00
-        else:
-            val = float(val_str)
-            if val > 0:
-                return (val / 100.0) + 1.0
-            else:
-                return (100.0 / abs(val)) + 1.0
-    except:
-        return 1.90
-
-def calcular_fatiga_rotacion_automatica(equipo):
-    equipos_top = [
-        "Real Madrid", "Manchester City", "Bayern", "PSG", "Barcelona", 
-        "Arsenal", "Liverpool", "Inter", "Atlético Madrid", "Dortmund", "Leverkusen", "RB Leipzig"
-    ]
-    return (65, 40) if equipo in equipos_top else (20, 15)
-
-def obtener_pitcher_confirmado_mlb(equipo_nombre):
-    url = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=probablePitcher"
-    try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
+        r = requests.get(url_sched, timeout=4)
+        if r.status_code == 200:
+            data = r.json()
             dates = data.get("dates", [])
             if dates:
                 games = dates[0].get("games", [])
                 for g in games:
-                    teams = g.get("teams", {})
-                    home_name = teams.get("home", {}).get("team", {}).get("name", "")
-                    away_name = teams.get("away", {}).get("team", {}).get("name", "")
-                    
-                    if equipo_nombre.lower() in home_name.lower():
-                        p = teams.get("home", {}).get("probablePitcher", {})
-                        return p.get("fullName", "Pitcher Abridor Confirmado")
-                    elif equipo_nombre.lower() in away_name.lower():
-                        p = teams.get("away", {}).get("probablePitcher", {})
-                        return p.get("fullName", "Pitcher Abridor Confirmado")
+                    h_id = g.get("teams", {}).get("home", {}).get("team", {}).get("id")
+                    a_id = g.get("teams", {}).get("away", {}).get("team", {}).get("id")
+                    if h_id == id_loc or a_id == id_loc:
+                        p_loc_data = g.get("teams", {}).get("home", {}).get("probablePitcher", {})
+                        p_vis_data = g.get("teams", {}).get("away", {}).get("probablePitcher", {})
+                        p_loc_id, p_vis_id = p_loc_data.get("id"), p_vis_data.get("id")
+                        if p_loc_data.get("fullName"): p_loc_name = p_loc_data.get("fullName")
+                        if p_vis_data.get("fullName"): p_vis_name = p_vis_data.get("fullName")
+                        
+                        if p_loc_id:
+                            r_p1 = requests.get(f"https://statsapi.mlb.com/api/v1/people/{p_loc_id}?hydrate=stats(group=[pitching],type=[season])", timeout=3)
+                            if r_p1.status_code == 200:
+                                st1 = r_p1.json().get("people", [{}])[0].get("stats", [{}])[0].get("splits", [{}])[0].get("stat", {})
+                                era_loc, whip_loc = float(st1.get("era", 3.80)), float(st1.get("whip", 1.20))
+
+                        if p_vis_id:
+                            r_p2 = requests.get(f"https://statsapi.mlb.com/api/v1/people/{p_vis_id}?hydrate=stats(group=[pitching],type=[season])", timeout=3)
+                            if r_p2.status_code == 200:
+                                st2 = r_p2.json().get("people", [{}])[0].get("stats", [{}])[0].get("splits", [{}])[0].get("stat", {})
+                                era_vis, whip_vis = float(st2.get("era", 3.80)), float(st2.get("whip", 1.20))
+                        break
     except Exception:
         pass
-    return "Pitcher Proyectado"
+        
+    status_msg = f"🟢 MLB API: {p_loc_name} ({era_loc} ERA) vs {p_vis_name} ({era_vis} ERA)"
+    return era_loc, whip_loc, era_vis, whip_vis, status_msg
 
-def simular_montecarlo_avanzado(d_loc, d_vis, fatiga_loc, rot_loc, fatiga_vis, rot_vis, line_goles, line_corners, line_cards, n_sim=10000):
-    fatiga_factor_loc = 1.0 - (fatiga_loc * 0.12 + rot_loc * 0.10)
-    fatiga_factor_vis = 1.0 - (fatiga_vis * 0.12 + rot_vis * 0.10)
-
-    tactical_h = (12.0 / max(d_loc["ppda"], 5.0)) * (d_loc["aereos"] / 50.0)
-    tactical_a = (12.0 / max(d_vis["ppda"], 5.0)) * (d_vis["aereos"] / 50.0)
-
-    lambda_h = max(1.55 * (d_loc["xg_loc"] / 1.55) * (d_vis["xga_vis"] / 1.25) * tactical_h * fatiga_factor_loc, 0.2)
-    lambda_a = max(1.25 * (d_vis["xg_vis"] / 1.25) * (d_loc["xga_loc"] / 1.55) * tactical_a * fatiga_factor_vis, 0.15)
-
-    goles_h = np.random.poisson(lambda_h, n_sim)
-    goles_a = np.random.poisson(lambda_a, n_sim)
-
-    exp_c = (d_loc["corners"] + d_vis["corners"]) * 0.95
-    corners_totales = np.random.poisson(exp_c, n_sim)
-    tarjetas_totales = np.random.poisson((d_loc["tarjetas"] + d_vis["tarjetas"]), n_sim)
-
-    return {
-        "p_1_ft": np.mean(goles_h > goles_a),
-        "p_x_ft": np.mean(goles_h == goles_a),
-        "p_2_ft": np.mean(goles_h < goles_a),
-        "p_over_goles": np.mean((goles_h + goles_a) > line_goles),
-        "p_under_goles": np.mean((goles_h + goles_a) < line_goles),
-        "p_btts_si": np.mean((goles_h > 0) & (goles_a > 0)),
-        "p_btts_no": np.mean((goles_h == 0) | (goles_a == 0)),
-        "p_over_corners": np.mean(corners_totales > line_corners),
-        "p_under_corners": np.mean(corners_totales < line_corners),
-        "p_over_cards": np.mean(tarjetas_totales > line_cards),
-        "p_under_cards": np.mean(tarjetas_totales < line_cards)
-    }
-
-def simular_montecarlo_nfl(d_loc, d_vis, clima_viento, clima_frio, baja_qb_loc, baja_qb_vis, spread_loc, spread_vis, line_pts, line_fg, line_td, n_sim=10000):
-    factor_clima = 1.0 - (0.15 if clima_viento else 0.0) - (0.10 if clima_frio else 0.0)
-    exp_td_loc = d_loc.get("td_exp", 3.0) * (0.75 if baja_qb_loc else 1.0) * factor_clima
-    exp_td_vis = d_vis.get("td_exp", 2.8) * (0.75 if baja_qb_vis else 1.0) * factor_clima
-
-    sim_td_loc = np.random.poisson(exp_td_loc, n_sim)
-    sim_td_vis = np.random.poisson(exp_td_vis, n_sim)
-    sim_fg_loc = np.random.poisson(d_loc.get("fg_exp", 1.8), n_sim)
-    sim_fg_vis = np.random.poisson(d_vis.get("fg_exp", 1.7), n_sim)
-
-    pts_loc = (sim_td_loc * 7) + (sim_fg_loc * 3)
-    pts_vis = (sim_td_vis * 7) + (sim_fg_vis * 3)
-
-    return {
-        "p_ml_loc": np.mean(pts_loc > pts_vis),
-        "p_ml_vis": np.mean(pts_vis > pts_loc),
-        "p_spread_loc": np.mean((pts_loc + spread_loc) > pts_vis),
-        "p_spread_vis": np.mean((pts_vis + spread_vis) > pts_loc),
-        "p_over_pts": np.mean((pts_loc + pts_vis) > line_pts),
-        "p_under_pts": np.mean((pts_loc + pts_vis) < line_pts),
-        "p_over_fg": np.mean((sim_fg_loc + sim_fg_vis) > line_fg),
-        "p_under_fg": np.mean((sim_fg_loc + sim_fg_vis) < line_fg),
-        "p_over_td": np.mean((sim_td_loc + sim_td_vis) > line_td),
-        "p_under_td": np.mean((sim_td_loc + sim_td_vis) < line_td)
-    }
-
-def simular_montecarlo_mlb(d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis, rl_hc_loc=-1.5, rl_hc_vis=+1.5, n_sim=10000):
-    env_factor = d_loc["park_factor"] * (1.08 if viento_out else 1.0) * (0.95 if humedad_alta else 1.0)
+# ==============================================================================
+# 4. SIMULACIONES CON TARJETAS
+# ==============================================================================
+def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, linea_goles, fatiga_eur, dict_actual):
+    logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+    logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
     
-    off_loc = (d_loc["wrc_plus"] / 100.0) * (1.12 if bvp_favor_loc else 1.0)
-    off_vis = (d_vis["wrc_plus"] / 100.0) * (1.12 if bvp_favor_vis else 1.0)
+    mod_fatiga = 0.90 if "Sí" in fatiga_eur else 1.0
+    input_vector = [[1.8 * mod_fatiga, 1.0, 1.4, 1.2]]
+    diff_goles = float(model_fut_diff.predict(input_vector)[0])
+    tot_goles = float(model_fut_tot.predict(input_vector)[0])
     
-    exp_f5_loc = max(2.2 * (off_loc / (d_vis["sp_xera"] / 3.80)) * (env_factor / 1.0), 0.3)
-    exp_f5_vis = max(1.9 * (off_vis / (d_loc["sp_xera"] / 3.80)) * (env_factor / 1.0), 0.3)
+    goles_loc, goles_vis = max(0.1, (tot_goles + diff_goles) / 2), max(0.1, (tot_goles - diff_goles) / 2)
+    prob_win_local = int(round(100 / (1 + 10**(-diff_goles / 1.2))))
+    prob_win_visita = int(round(100 / (1 + 10**(diff_goles / 1.2))))
+    prob_empate = max(10, 100 - prob_win_local - prob_win_visita)
     
-    exp_ft_loc = exp_f5_loc + max(1.8 * (off_loc / d_vis["bp_rating"]), 0.2)
-    exp_ft_vis = exp_f5_vis + max(1.6 * (off_vis / d_loc["bp_rating"]), 0.2)
+    edge_loc = prob_win_local - (100 / float(cuota_loc)) if float(cuota_loc) > 1 else 0
+    badge_1 = '<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if edge_loc >= 4.0 else '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
     
-    runs_f5_loc = np.random.poisson(exp_f5_loc, n_sim)
-    runs_f5_vis = np.random.poisson(exp_f5_vis, n_sim)
-    runs_ft_loc = np.random.poisson(exp_ft_loc, n_sim)
-    runs_ft_vis = np.random.poisson(exp_ft_vis, n_sim)
-    
-    exp_k_loc = max(5.5 * (d_loc["sp_k_pct"] / 0.23) * (1.1 if not bvp_favor_vis else 0.9), 1.0)
-    exp_k_vis = max(5.2 * (d_vis["sp_k_pct"] / 0.23) * (1.1 if not bvp_favor_loc else 0.9), 1.0)
-    sim_k_loc = np.random.poisson(exp_k_loc, n_sim)
-    sim_k_vis = np.random.poisson(exp_k_vis, n_sim)
-    
-    mean_outs_loc = min(16.5 * (3.80 / d_loc["sp_xera"]), limit_outs_loc)
-    mean_outs_vis = min(15.8 * (3.80 / d_vis["sp_xera"]), limit_outs_vis)
-    sim_outs_loc = np.random.poisson(mean_outs_loc, n_sim)
-    sim_outs_vis = np.random.poisson(mean_outs_vis, n_sim)
-    
-    prob_nrfi = np.exp(-(exp_f5_loc * 0.22 + exp_f5_vis * 0.22))
-    sim_nrfi = np.random.choice([1, 0], size=n_sim, p=[prob_nrfi, 1.0 - prob_nrfi])
+    pick_1_str = f"Gana {nombre_local} (1X2) @ {cuota_loc}"
+    pick_2_str = f"Doble Oportunidad: {nombre_local} o Empate (1X)"
+    dif_tot = tot_goles - float(linea_goles)
+    pick_3_str = f"{'OVER' if dif_tot>=0 else 'UNDER'} de {linea_goles} Goles Totales"
 
-    return {
-        "p_ml_loc": np.mean(runs_ft_loc > runs_ft_vis),
-        "p_ml_vis": np.mean(runs_ft_vis > runs_ft_loc),
-        "p_over_runs": np.mean((runs_ft_loc + runs_ft_vis) > line_runs),
-        "p_under_runs": np.mean((runs_ft_loc + runs_ft_vis) < line_runs),
-        "p_rl_loc": np.mean((runs_ft_loc + rl_hc_loc) > runs_ft_vis),
-        "p_rl_vis": np.mean((runs_ft_vis + rl_hc_vis) > runs_ft_loc),
-        "p_over_k_loc": np.mean(sim_k_loc > line_k_loc),
-        "p_under_k_loc": np.mean(sim_k_loc < line_k_loc),
-        "p_over_k_vis": np.mean(sim_k_vis > line_k_vis),
-        "p_under_k_vis": np.mean(sim_k_vis < line_k_vis),
-        "p_over_outs_loc": np.mean(sim_outs_loc > line_outs_loc),
-        "p_over_outs_vis": np.mean(sim_outs_vis > line_outs_vis),
-        "p_f5_loc": np.mean(runs_f5_loc > runs_f5_vis),
-        "p_f5_vis": np.mean(runs_f5_vis > runs_f5_loc),
-        "p_nrfi": np.mean(sim_nrfi == 1),
-        "p_yrfi": np.mean(sim_nrfi == 0)
-    }
+    html_out = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • {liga.upper()}</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 74.2%</div>
+        </div>
 
-def generar_grafica_mini_15_partidos(prob_exito):
-    data = np.random.choice([1, 0], size=15, p=[prob_exito, 1 - prob_exito])
-    colors = ['#10b981' if x == 1 else '#ef4444' for x in data]
-    labels = [f"L{i+1}" for i in range(5)] + [f"V{i+1}" for i in range(5)] + [f"H{i+1}" for i in range(5)]
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({goles_vis:.1f} xG)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
+            </div>
 
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=labels, y=[1]*15, marker_color=colors, hoverinfo='x'))
-    fig.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        height=130, margin=dict(l=5, r=5, t=10, b=20),
-        xaxis=dict(showgrid=False, tickfont=dict(size=9, color='#64748b')),
-        yaxis=dict(showgrid=False, showticklabels=False, range=[0, 1.2])
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({goles_loc:.1f} xG)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
+            </div>
+            <div style="text-align: center; font-size: 12px; font-weight: 700; color: #64748B;">Probabilidad de Empate: {prob_empate}%</div>
+        </div>
+
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Ganador 1X2: {pick_1_str}</div></div>{badge_1}
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Doble Oportunidad: {pick_2_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        </div>
+    </div>
+    """
+    return html_out, pick_1_str, pick_2_str, pick_3_str, f"{nombre_local} vs {nombre_visita}"
+
+def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_loc, xera_vis, whip_vis, cuota_loc_dec, cuota_vis_dec, run_line_val, cuota_rl_dec, linea_tot_carreras):
+    loc_d, vis_d = EQUIPOS_MLB[nombre_local], EQUIPOS_MLB[nombre_visita]
+    logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
+    input_vector = [[loc_d['wRC_plus'], vis_d['wRC_plus'], float(xera_loc), float(xera_vis), float(whip_loc), float(whip_vis), loc_d['park_factor']]]
+    diff_carreras, tot_carreras = float(model_mlb_diff.predict(input_vector)[0]), float(model_mlb_tot.predict(input_vector)[0])
+    carreras_loc, carreras_vis = max(0.5, (tot_carreras + diff_carreras) / 2), max(0.5, (tot_carreras - diff_carreras) / 2)
+    prob_win_local = int(round(100 / (1 + 10**(-diff_carreras / 2.0))))
+    prob_win_visita = 100 - prob_win_local
+    
+    equipo_fav = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
+    prob_fav = max(prob_win_local, prob_win_visita)
+    cuota_fav = cuota_loc_dec if prob_win_local >= prob_win_visita else cuota_vis_dec
+    
+    pick_1_str = f"{equipo_fav} ML @ {cuota_fav}"
+    pick_2_str = f"{nombre_local if diff_carreras>=1.5 else nombre_visita} Run Line (-1.5) @ {cuota_rl_dec}"
+    pick_3_str = f"{'OVER' if (tot_carreras - float(linea_tot_carreras))>=0 else 'UNDER'} de {linea_tot_carreras} carreras"
+
+    html_out = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO MLB</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 76.5%</div>
+        </div>
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({carreras_vis:.1f} carreras)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({carreras_loc:.1f} carreras)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
+            </div>
+        </div>
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Run Line / Hándicap: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        </div>
+    </div>
+    """
+    return html_out, pick_1_str, pick_2_str, pick_3_str, f"{nombre_local} vs {nombre_visita}"
+
+def simular_partido_nfl_clasificado(nombre_local, nombre_visita, linea_spread, linea_total):
+    local, visita = dict_nfl_nombres[nombre_local], dict_nfl_nombres[nombre_visita]
+    logo_loc, logo_vis = dict_nfl_logos[local], dict_nfl_logos[visita]
+    input_data = pd.DataFrame([[stats_nfl.loc[local, 'off_rating'], stats_nfl.loc[local, 'def_rating'], stats_nfl.loc[visita, 'off_rating'], stats_nfl.loc[visita, 'def_rating']]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
+    pred_spread, pred_total = float(model_nfl_sp.predict(input_data)[0]), float(model_nfl_tot.predict(input_data)[0])
+    
+    pts_local_est, pts_visita_est = (pred_total + pred_spread) / 2, (pred_total - pred_spread) / 2
+    prob_win_local = int(round(100 / (1 + 10**(-pred_spread / 13.5))))
+    prob_win_visita = 100 - prob_win_local
+    
+    pick_1_str = f"{nombre_local if prob_win_local>=prob_win_visita else nombre_visita} ML ({max(prob_win_local, prob_win_visita)}%)"
+    dif_spread = pred_spread - (-linea_spread)
+    pick_2_str = f"{nombre_local} {linea_spread}" if dif_spread > 0 else f"{nombre_visita} (+{abs(linea_spread)})"
+    dif_total = pred_total - linea_total
+    pick_3_str = f"{'OVER' if dif_total>=0 else 'UNDER'} de {linea_total} pts"
+
+    html_out = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL (+EV)</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 78.0%</div>
+        </div>
+
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_visita_est:.1f} pts)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_local_est:.1f} pts)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
+            </div>
+        </div>
+
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Hándicap / Spread: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        </div>
+    </div>
+    """
+    return html_out, pick_1_str, pick_2_str, pick_3_str, f"{nombre_local} vs {nombre_visita}"
+
+# ==============================================================================
+# 5. GENERACIÓN DE GRÁFICAS Y RESUMEN HISTÓRICO CON PLOTLY
+# ==============================================================================
+def generar_graficas_home():
+    stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
+    
+    # 1. GRÁFICA NFL (Barras 3D/Estilizadas)
+    fig_nfl = go.Figure()
+    fig_nfl.add_trace(go.Bar(
+        x=['WINS', 'LOSSES'],
+        y=[stats['NFL']['wins'], stats['NFL']['losses']],
+        marker_color=['#10B981', '#EF4444'],
+        text=[stats['NFL']['wins'], stats['NFL']['losses']],
+        textposition='auto'
+    ))
+    fig_nfl.update_layout(
+        title="EFECTIVIDAD NFL",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#0F172A', size=12, family='Segoe UI'),
+        height=220,
+        margin=dict(l=10, r=10, t=35, b=10)
     )
-    return fig
 
-def generar_grafica_efectividad_capsulas_3d(list_apuestas):
-    ligas = ["PREMIER LEAGUE", "LALIGA", "CHAMPIONS LEAGUE", "BUNDESLIGA", "NFL", "MLB"]
-    wins = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "WIN") for l in ligas]
-    looses = [sum(1 for a in list_apuestas if a["liga"] == l and a["resultado"] == "LOOSE") for l in ligas]
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(name='WIN (Ganados)', x=ligas, y=wins, marker=dict(color='#10b981', line=dict(color='#059669', width=2), cornerradius=15), opacity=0.95))
-    fig.add_trace(go.Bar(name='LOOSE (Perdidos)', x=ligas, y=looses, marker=dict(color='#ef4444', line=dict(color='#b91c1c', width=2), cornerradius=15), opacity=0.95))
-    fig.update_layout(
-        barmode='group', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        height=260, margin=dict(l=10, r=10, t=10, b=10),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11, color='#0f172a', family='Syne')),
-        xaxis=dict(showgrid=False, tickfont=dict(size=11, color='#0f172a', family='Syne')),
-        yaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=10, color='#64748b'))
+    # 2. GRÁFICA MLB (Línea de Tendencia con Área Sombreada)
+    fig_mlb = go.Figure()
+    y_mlb_data = [0, stats['MLB']['wins']]
+    fig_mlb.add_trace(go.Scatter(
+        x=['Inicio', 'Actual'],
+        y=y_mlb_data,
+        mode='lines+markers+text',
+        line=dict(color='#10B981', width=3),
+        fill='tozeroy',
+        fillcolor='rgba(16, 185, 129, 0.15)',
+        text=[0, stats['MLB']['wins']],
+        textposition='top center'
+    ))
+    fig_mlb.update_layout(
+        title="EFECTIVIDAD MLB",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#0F172A', size=12, family='Segoe UI'),
+        height=220,
+        margin=dict(l=10, r=10, t=35, b=10)
     )
-    return fig
 
-# ------------------------------------------------------------------------------
-# SESSION STATE & TRACKER PERSISTENTE GLOBAL
-# ------------------------------------------------------------------------------
-OPCIONES_ESTADO = ["⏳ PENDIENTE", "WIN", "LOOSE"]
-
-if "apuestas_registradas" not in st.session_state:
-    st.session_state["apuestas_registradas"] = []
-
-if "liga_activa" not in st.session_state:
-    st.session_state["liga_activa"] = None
-
-if "pitchers_mlb_sync" not in st.session_state:
-    st.session_state["pitchers_mlb_sync"] = {}
-
-def guardar_apuesta_seleccionada(liga, partido, mercado, cuota):
-    nuevo_id = max([a["id"] for a in st.session_state["apuestas_registradas"]], default=0) + 1
-    st.session_state["apuestas_registradas"].append({
-        "id": nuevo_id,
-        "liga": liga,
-        "partido": partido,
-        "mercado": mercado,
-        "cuota": cuota,
-        "resultado": "⏳ PENDIENTE"
-    })
-
-def eliminar_apuesta(apuesta_id):
-    st.session_state["apuestas_registradas"] = [a for a in st.session_state["apuestas_registradas"] if a["id"] != apuesta_id]
-
-# ------------------------------------------------------------------------------
-# BASES DE DATOS DE EQUIPOS
-# ------------------------------------------------------------------------------
-MLB_MOMIOS_REALES_HOY = {
-    "Los Angeles Dodgers": 1.45, "Cincinnati Reds": 2.80,
-    "New York Yankees": 1.72, "Minnesota Twins": 2.15,
-    "Chicago Cubs": 2.05, "Atlanta Braves": 1.80,
-    "Cleveland Guardians": 1.52, "Chicago White Sox": 2.60,
-    "New York Mets": 1.85, "Baltimore Orioles": 1.95
-}
-
-MLB_DATA = {
-    "New York Yankees": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png", "sp_name": "Gerrit Cole", "sp_xera": 3.20, "sp_fip": 3.35, "sp_whip": 1.08, "sp_k_pct": 0.28, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 118, "ops": 0.780, "iso": 0.190, "park_factor": 1.02},
-    "Los Angeles Dodgers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/lad.png", "sp_name": "Tyler Glasnow", "sp_xera": 3.10, "sp_fip": 3.25, "sp_whip": 1.05, "sp_k_pct": 0.29, "sp_bb_pct": 0.06, "bp_rating": 1.1, "wrc_plus": 122, "ops": 0.795, "iso": 0.200, "park_factor": 1.01},
-    "Atlanta Braves": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/atl.png", "sp_name": "Spencer Strider", "sp_xera": 3.45, "sp_fip": 3.50, "sp_whip": 1.15, "sp_k_pct": 0.31, "sp_bb_pct": 0.07, "bp_rating": 1.3, "wrc_plus": 115, "ops": 0.770, "iso": 0.185, "park_factor": 1.03},
-    "Houston Astros": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/hou.png", "sp_name": "Framber Valdez", "sp_xera": 3.55, "sp_fip": 3.60, "sp_whip": 1.18, "sp_k_pct": 0.25, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 112, "ops": 0.760, "iso": 0.175, "park_factor": 0.99},
-    "Philadelphia Phillies": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/phi.png", "sp_name": "Zack Wheeler", "sp_xera": 3.30, "sp_fip": 3.40, "sp_whip": 1.12, "sp_k_pct": 0.27, "sp_bb_pct": 0.07, "bp_rating": 1.2, "wrc_plus": 114, "ops": 0.765, "iso": 0.180, "park_factor": 1.04},
-    "Baltimore Orioles": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/bal.png", "sp_name": "Corbin Burnes", "sp_xera": 3.60, "sp_fip": 3.70, "sp_whip": 1.20, "sp_k_pct": 0.26, "sp_bb_pct": 0.08, "bp_rating": 1.3, "wrc_plus": 110, "ops": 0.750, "iso": 0.170, "park_factor": 0.98},
-    "San Diego Padres": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/sd.png", "sp_name": "Dylan Cease", "sp_xera": 3.50, "sp_fip": 3.55, "sp_whip": 1.16, "sp_k_pct": 0.28, "sp_bb_pct": 0.08, "bp_rating": 1.2, "wrc_plus": 108, "ops": 0.745, "iso": 0.165, "park_factor": 0.95},
-    "Boston Red Sox": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/bos.png", "sp_name": "Brayan Bello", "sp_xera": 4.10, "sp_fip": 4.15, "sp_whip": 1.28, "sp_k_pct": 0.23, "sp_bb_pct": 0.08, "bp_rating": 1.5, "wrc_plus": 106, "ops": 0.740, "iso": 0.165, "park_factor": 1.08},
-    "New York Mets": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/nym.png", "sp_name": "Kodai Senga", "sp_xera": 3.80, "sp_fip": 3.85, "sp_whip": 1.22, "sp_k_pct": 0.26, "sp_bb_pct": 0.09, "bp_rating": 1.4, "wrc_plus": 107, "ops": 0.742, "iso": 0.168, "park_factor": 0.97},
-    "Texas Rangers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/tex.png", "sp_name": "Nathan Eovaldi", "sp_xera": 3.90, "sp_fip": 3.95, "sp_whip": 1.24, "sp_k_pct": 0.23, "sp_bb_pct": 0.08, "bp_rating": 1.4, "wrc_plus": 105, "ops": 0.735, "iso": 0.162, "park_factor": 1.02},
-    "Cleveland Guardians": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/cle.png", "sp_name": "Tanner Bibee", "sp_xera": 3.65, "sp_fip": 3.75, "sp_whip": 1.19, "sp_k_pct": 0.24, "sp_bb_pct": 0.07, "bp_rating": 1.1, "wrc_plus": 102, "ops": 0.720, "iso": 0.145, "park_factor": 0.99},
-    "Seattle Mariners": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/sea.png", "sp_name": "George Kirby", "sp_xera": 3.15, "sp_fip": 3.20, "sp_whip": 1.06, "sp_k_pct": 0.27, "sp_bb_pct": 0.04, "bp_rating": 1.2, "wrc_plus": 99, "ops": 0.705, "iso": 0.155, "park_factor": 0.92},
-    "Minnesota Twins": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/min.png", "sp_name": "Pablo López", "sp_xera": 3.85, "sp_fip": 3.90, "sp_whip": 1.21, "sp_k_pct": 0.27, "sp_bb_pct": 0.07, "bp_rating": 1.3, "wrc_plus": 106, "ops": 0.738, "iso": 0.170, "park_factor": 1.01},
-    "Arizona Cardinals / Diamondbacks": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/ari.png", "sp_name": "Zac Gallen", "sp_xera": 4.05, "sp_fip": 4.10, "sp_whip": 1.26, "sp_k_pct": 0.25, "sp_bb_pct": 0.08, "bp_rating": 1.4, "wrc_plus": 109, "ops": 0.748, "iso": 0.165, "park_factor": 1.03},
-    "Chicago Cubs": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/chc.png", "sp_name": "Shota Imanaga", "sp_xera": 3.75, "sp_fip": 3.80, "sp_whip": 1.20, "sp_k_pct": 0.26, "sp_bb_pct": 0.05, "bp_rating": 1.3, "wrc_plus": 103, "ops": 0.725, "iso": 0.158, "park_factor": 1.01},
-    "Tampa Bay Rays": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/tb.png", "sp_name": "Shane Baz", "sp_xera": 3.50, "sp_fip": 3.60, "sp_whip": 1.15, "sp_k_pct": 0.25, "sp_bb_pct": 0.08, "bp_rating": 1.2, "wrc_plus": 101, "ops": 0.715, "iso": 0.150, "park_factor": 0.96},
-    "Toronto Blue Jays": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/tor.png", "sp_name": "Kevin Gausman", "sp_xera": 3.95, "sp_fip": 4.00, "sp_whip": 1.25, "sp_k_pct": 0.24, "sp_bb_pct": 0.07, "bp_rating": 1.4, "wrc_plus": 102, "ops": 0.722, "iso": 0.152, "park_factor": 1.00},
-    "San Francisco Giants": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/sf.png", "sp_name": "Logan Webb", "sp_xera": 3.70, "sp_fip": 3.75, "sp_whip": 1.18, "sp_k_pct": 0.23, "sp_bb_pct": 0.06, "bp_rating": 1.3, "wrc_plus": 98, "ops": 0.700, "iso": 0.142, "park_factor": 0.94},
-    "Kansas City Royals": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/kc.png", "sp_name": "Cole Ragans", "sp_xera": 3.60, "sp_fip": 3.65, "sp_whip": 1.17, "sp_k_pct": 0.29, "sp_bb_pct": 0.08, "bp_rating": 1.3, "wrc_plus": 104, "ops": 0.728, "iso": 0.160, "park_factor": 1.02},
-    "Milwaukee Brewers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/mil.png", "sp_name": "Freddy Peralta", "sp_xera": 3.65, "sp_fip": 3.70, "sp_whip": 1.18, "sp_k_pct": 0.28, "sp_bb_pct": 0.09, "bp_rating": 1.1, "wrc_plus": 100, "ops": 0.710, "iso": 0.148, "park_factor": 1.00},
-    "Cincinnati Reds": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/cin.png", "sp_name": "Hunter Greene", "sp_xera": 4.20, "sp_fip": 4.25, "sp_whip": 1.30, "sp_k_pct": 0.30, "sp_bb_pct": 0.09, "bp_rating": 1.5, "wrc_plus": 97, "ops": 0.698, "iso": 0.155, "park_factor": 1.07},
-    "St. Louis Cardinals": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/stl.png", "sp_name": "Sonny Gray", "sp_xera": 4.15, "sp_fip": 4.20, "sp_whip": 1.29, "sp_k_pct": 0.26, "sp_bb_pct": 0.07, "bp_rating": 1.4, "wrc_plus": 98, "ops": 0.702, "iso": 0.145, "park_factor": 0.98},
-    "Detroit Tigers": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/det.png", "sp_name": "Tarik Skubal", "sp_xera": 3.55, "sp_fip": 3.60, "sp_whip": 1.15, "sp_k_pct": 0.31, "sp_bb_pct": 0.05, "bp_rating": 1.2, "wrc_plus": 96, "ops": 0.690, "iso": 0.140, "park_factor": 0.97},
-    "Pittsburgh Pirates": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/pit.png", "sp_name": "Paul Skenes", "sp_xera": 3.75, "sp_fip": 3.80, "sp_whip": 1.21, "sp_k_pct": 0.32, "sp_bb_pct": 0.06, "bp_rating": 1.4, "wrc_plus": 92, "ops": 0.675, "iso": 0.135, "park_factor": 0.97},
-    "Washington Nationals": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/wsh.png", "sp_name": "Mackenzie Gore", "sp_xera": 4.35, "sp_fip": 4.40, "sp_whip": 1.34, "sp_k_pct": 0.24, "sp_bb_pct": 0.09, "bp_rating": 1.6, "wrc_plus": 94, "ops": 0.685, "iso": 0.138, "park_factor": 1.01},
-    "Los Angeles Angels": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/laa.png", "sp_name": "Tyler Anderson", "sp_xera": 4.45, "sp_fip": 4.50, "sp_whip": 1.36, "sp_k_pct": 0.20, "sp_bb_pct": 0.09, "bp_rating": 1.6, "wrc_plus": 93, "ops": 0.680, "iso": 0.142, "park_factor": 1.00},
-    "Athletics": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/oak.png", "sp_name": "JP Sears", "sp_xera": 4.30, "sp_fip": 4.35, "sp_whip": 1.32, "sp_k_pct": 0.21, "sp_bb_pct": 0.08, "bp_rating": 1.5, "wrc_plus": 96, "ops": 0.695, "iso": 0.150, "park_factor": 0.95},
-    "Colorado Rockies": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/col.png", "sp_name": "Kyle Freeland", "sp_xera": 5.10, "sp_fip": 5.15, "sp_whip": 1.48, "sp_k_pct": 0.18, "sp_bb_pct": 0.08, "bp_rating": 1.8, "wrc_plus": 88, "ops": 0.710, "iso": 0.145, "park_factor": 1.35},
-    "Miami Marlins": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/mia.png", "sp_name": "Sandy Alcantara", "sp_xera": 4.25, "sp_fip": 4.30, "sp_whip": 1.31, "sp_k_pct": 0.22, "sp_bb_pct": 0.08, "bp_rating": 1.5, "wrc_plus": 89, "ops": 0.665, "iso": 0.125, "park_factor": 0.96},
-    "Chicago White Sox": {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/chw.png", "sp_name": "Garrett Crochet", "sp_xera": 4.80, "sp_fip": 4.85, "sp_whip": 1.42, "sp_k_pct": 0.33, "sp_bb_pct": 0.06, "bp_rating": 1.7, "wrc_plus": 84, "ops": 0.640, "iso": 0.120, "park_factor": 1.01}
-}
-
-BUNDESLIGA_DATA = {
-    "Friburgo": {"logo": "https://crests.football-data.org/160.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.8, "aereos": 52, "corners": 5.1, "tarjetas": 1.8},
-    "Dortmund": {"logo": "https://crests.football-data.org/4.png", "xg_loc": 2.10, "xga_loc": 1.15, "xg_vis": 1.80, "xga_vis": 1.30, "ppda": 8.9, "aereos": 51, "corners": 6.3, "tarjetas": 1.7},
-    "Augsburgo": {"logo": "https://crests.football-data.org/16.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 12.2, "aereos": 54, "corners": 4.5, "tarjetas": 2.3},
-    "Bayern": {"logo": "https://crests.football-data.org/5.png", "xg_loc": 2.50, "xga_loc": 0.85, "xg_vis": 2.25, "xga_vis": 1.00, "ppda": 7.5, "aereos": 53, "corners": 7.2, "tarjetas": 1.4},
-    "RB Leipzig": {"logo": "https://crests.football-data.org/721.png", "xg_loc": 1.95, "xga_loc": 1.10, "xg_vis": 1.70, "xga_vis": 1.25, "ppda": 8.8, "aereos": 50, "corners": 6.1, "tarjetas": 1.9},
-    "SV Elversberg": {"logo": "https://crests.football-data.org/6706.png", "xg_loc": 1.20, "xga_loc": 1.60, "xg_vis": 0.95, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.1},
-    "Leverkusen": {"logo": "https://crests.football-data.org/3.png", "xg_loc": 2.20, "xga_loc": 0.95, "xg_vis": 1.90, "xga_vis": 1.10, "ppda": 8.2, "aereos": 49, "corners": 6.8, "tarjetas": 1.6},
-    "Mainz 05": {"logo": "https://crests.football-data.org/15.png", "xg_loc": 1.40, "xga_loc": 1.40, "xg_vis": 1.15, "xga_vis": 1.55, "ppda": 11.0, "aereos": 53, "corners": 4.8, "tarjetas": 2.2},
-    "Frankfurt": {"logo": "https://crests.football-data.org/19.png", "xg_loc": 1.70, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 10.2, "aereos": 51, "corners": 5.5, "tarjetas": 2.0},
-    "Werder Bremen": {"logo": "https://crests.football-data.org/12.png", "xg_loc": 1.45, "xga_loc": 1.45, "xg_vis": 1.20, "xga_vis": 1.60, "ppda": 11.5, "aereos": 52, "corners": 5.0, "tarjetas": 2.1},
-    "Schalke 04": {"logo": "https://crests.football-data.org/6.png", "xg_loc": 1.30, "xga_loc": 1.55, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.0, "aereos": 55, "corners": 4.6, "tarjetas": 2.4},
-    "Colonia": {"logo": "https://crests.football-data.org/1.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.65, "ppda": 11.8, "aereos": 50, "corners": 4.9, "tarjetas": 2.2},
-    "Hoffenheim": {"logo": "https://crests.football-data.org/2.png", "xg_loc": 1.60, "xga_loc": 1.50, "xg_vis": 1.35, "xga_vis": 1.65, "ppda": 10.5, "aereos": 50, "corners": 5.3, "tarjetas": 2.3},
-    "Stuttgart": {"logo": "https://crests.football-data.org/10.png", "xg_loc": 1.80, "xga_loc": 1.25, "xg_vis": 1.50, "xga_vis": 1.40, "ppda": 9.5, "aereos": 51, "corners": 5.8, "tarjetas": 1.9},
-    "Paderborn": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.25, "xga_loc": 1.65, "xg_vis": 1.00, "xga_vis": 1.85, "ppda": 12.8, "aereos": 47, "corners": 4.2, "tarjetas": 2.1},
-    "FC Union Berlin": {"logo": "https://crests.football-data.org/28.png", "xg_loc": 1.30, "xga_loc": 1.20, "xg_vis": 1.05, "xga_vis": 1.40, "ppda": 13.2, "aereos": 56, "corners": 4.4, "tarjetas": 2.0},
-    "Mönchengladbach": {"logo": "https://crests.football-data.org/18.png", "xg_loc": 1.50, "xga_loc": 1.45, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 11.2, "aereos": 49, "corners": 5.2, "tarjetas": 1.9},
-    "Hamburg": {"logo": "https://crests.football-data.org/26.png", "xg_loc": 1.35, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 11.6, "aereos": 52, "corners": 4.8, "tarjetas": 2.2}
-}
-
-CHAMPIONS_DATA = {
-    "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
-    "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
-    "Real Betis": {"logo": "https://crests.football-data.org/90.png", "xg_loc": 1.50, "xga_loc": 1.30, "xg_vis": 1.35, "xga_vis": 1.45, "ppda": 11.0, "aereos": 49, "corners": 5.2, "tarjetas": 2.4},
-    "Dortmund": {"logo": "https://crests.football-data.org/4.png", "xg_loc": 1.90, "xga_loc": 1.20, "xg_vis": 1.65, "xga_vis": 1.35, "ppda": 9.2, "aereos": 52, "corners": 6.1, "tarjetas": 1.8},
-    "Real Madrid": {"logo": "https://crests.football-data.org/86.png", "xg_loc": 2.35, "xga_loc": 0.80, "xg_vis": 2.15, "xga_vis": 0.90, "ppda": 8.5, "aereos": 51, "corners": 7.2, "tarjetas": 1.6},
-    "AEK": {"logo": "https://crests.football-data.org/1075.png", "xg_loc": 1.30, "xga_loc": 1.40, "xg_vis": 1.10, "xga_vis": 1.60, "ppda": 11.5, "aereos": 48, "corners": 4.5, "tarjetas": 2.2},
-    "Fenerbahçe": {"logo": "https://crests.football-data.org/613.png", "xg_loc": 1.65, "xga_loc": 1.25, "xg_vis": 1.40, "xga_vis": 1.45, "ppda": 10.1, "aereos": 50, "corners": 5.5, "tarjetas": 2.5},
-    "Napoli": {"logo": "https://crests.football-data.org/113.png", "xg_loc": 1.80, "xga_loc": 1.10, "xg_vis": 1.55, "xga_vis": 1.30, "ppda": 9.4, "aereos": 49, "corners": 5.8, "tarjetas": 1.9},
-    "Slovan Bratislava": {"logo": "https://crests.football-data.org/1816.png", "xg_loc": 1.10, "xga_loc": 1.85, "xg_vis": 0.90, "xga_vis": 2.10, "ppda": 14.0, "aereos": 46, "corners": 3.8, "tarjetas": 2.6},
-    "Shakhtar": {"logo": "https://crests.football-data.org/588.png", "xg_loc": 1.40, "xga_loc": 1.50, "xg_vis": 1.20, "xga_vis": 1.70, "ppda": 11.8, "aereos": 47, "corners": 4.6, "tarjetas": 2.1},
-    "Sporting Lisboa": {"logo": "https://crests.football-data.org/498.png", "xg_loc": 1.95, "xga_loc": 0.90, "xg_vis": 1.70, "xga_vis": 1.10, "ppda": 8.9, "aereos": 53, "corners": 6.4, "tarjetas": 1.7},
-    "Como": {"logo": "https://crests.football-data.org/1072.png", "xg_loc": 1.25, "xga_loc": 1.55, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.2, "aereos": 48, "corners": 4.2, "tarjetas": 2.3},
-    "Feyenoord": {"logo": "https://crests.football-data.org/675.png", "xg_loc": 1.70, "xga_loc": 1.20, "xg_vis": 1.45, "xga_vis": 1.40, "ppda": 9.6, "aereos": 51, "corners": 5.9, "tarjetas": 1.8},
-    "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
-    "Stuttgart": {"logo": "https://crests.football-data.org/10.png", "xg_loc": 1.60, "xga_loc": 1.35, "xg_vis": 1.35, "xga_vis": 1.50, "ppda": 10.4, "aereos": 50, "corners": 5.1, "tarjetas": 2.0},
-    "PSV": {"logo": "https://crests.football-data.org/674.png", "xg_loc": 1.85, "xga_loc": 1.15, "xg_vis": 1.55, "xga_vis": 1.35, "ppda": 9.0, "aereos": 49, "corners": 6.2, "tarjetas": 1.6},
-    "Bayern": {"logo": "https://crests.football-data.org/5.png", "xg_loc": 2.40, "xga_loc": 0.90, "xg_vis": 2.20, "xga_vis": 1.05, "ppda": 7.8, "aereos": 53, "corners": 7.0, "tarjetas": 1.5},
-    "Lens": {"logo": "https://crests.football-data.org/523.png", "xg_loc": 1.35, "xga_loc": 1.30, "xg_vis": 1.15, "xga_vis": 1.50, "ppda": 10.8, "aereos": 52, "corners": 4.8, "tarjetas": 2.2},
-    "Liverpool": {"logo": "https://crests.football-data.org/64.png", "xg_loc": 2.20, "xga_loc": 1.00, "xg_vis": 2.05, "xga_vis": 1.10, "ppda": 8.5, "aereos": 54, "corners": 7.1, "tarjetas": 1.5},
-    "Barcelona": {"logo": "https://crests.football-data.org/81.png", "xg_loc": 2.30, "xga_loc": 0.95, "xg_vis": 2.10, "xga_vis": 1.05, "ppda": 8.0, "aereos": 50, "corners": 6.9, "tarjetas": 1.9},
-    "PSG": {"logo": "https://crests.football-data.org/524.png", "xg_loc": 2.15, "xga_loc": 1.05, "xg_vis": 1.80, "xga_vis": 1.20, "ppda": 8.9, "aereos": 49, "corners": 6.5, "tarjetas": 2.0},
-    "Bodø/Glimt": {"logo": "https://crests.football-data.org/1149.png", "xg_loc": 1.30, "xga_loc": 1.60, "xg_vis": 1.10, "xga_vis": 1.80, "ppda": 11.0, "aereos": 47, "corners": 4.5, "tarjetas": 1.9},
-    "Sabah Futbol": {"logo": "https://crests.football-data.org/8157.png", "xg_loc": 1.05, "xga_loc": 1.90, "xg_vis": 0.85, "xga_vis": 2.20, "ppda": 13.5, "aereos": 45, "corners": 3.6, "tarjetas": 2.7},
-    "Viking": {"logo": "https://crests.football-data.org/1148.png", "xg_loc": 1.20, "xga_loc": 1.65, "xg_vis": 1.00, "xga_vis": 1.85, "ppda": 12.0, "aereos": 49, "corners": 4.1, "tarjetas": 2.1},
-    "Galatasaray": {"logo": "https://crests.football-data.org/610.png", "xg_loc": 1.60, "xga_loc": 1.35, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 10.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.4},
-    "RB Leipzig": {"logo": "https://crests.football-data.org/721.png", "xg_loc": 1.85, "xga_loc": 1.15, "xg_vis": 1.60, "xga_vis": 1.35, "ppda": 9.1, "aereos": 50, "corners": 6.0, "tarjetas": 1.8},
-    "Atlético Madrid": {"logo": "https://crests.football-data.org/78.png", "xg_loc": 1.85, "xga_loc": 0.90, "xg_vis": 1.55, "xga_vis": 1.10, "ppda": 10.2, "aereos": 53, "corners": 5.8, "tarjetas": 2.4},
-    "Slavia Praga": {"logo": "https://crests.football-data.org/583.png", "xg_loc": 1.35, "xga_loc": 1.30, "xg_vis": 1.15, "xga_vis": 1.50, "ppda": 10.6, "aereos": 52, "corners": 4.7, "tarjetas": 2.0},
-    "Roma": {"logo": "https://crests.football-data.org/100.png", "xg_loc": 1.55, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 11.1, "aereos": 51, "corners": 5.2, "tarjetas": 2.3},
-    "Manchester United": {"logo": "https://crests.football-data.org/66.png", "xg_loc": 1.60, "xga_loc": 1.45, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 10.8, "aereos": 50, "corners": 5.9, "tarjetas": 2.2},
-    "Villarreal": {"logo": "https://crests.football-data.org/102.png", "xg_loc": 1.80, "xga_loc": 1.50, "xg_vis": 1.40, "xga_vis": 1.60, "ppda": 10.0, "aereos": 49, "corners": 5.6, "tarjetas": 2.2},
-    "Club Brujas": {"logo": "https://crests.football-data.org/551.png", "xg_loc": 1.45, "xga_loc": 1.40, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 11.3, "aereos": 48, "corners": 4.9, "tarjetas": 2.1},
-    "LOSC": {"logo": "https://crests.football-data.org/521.png", "xg_loc": 1.50, "xga_loc": 1.25, "xg_vis": 1.30, "xga_vis": 1.45, "ppda": 10.0, "aereos": 50, "corners": 5.2, "tarjetas": 1.9},
-    "Inter": {"logo": "https://crests.football-data.org/108.png", "xg_loc": 1.95, "xga_loc": 0.85, "xg_vis": 1.65, "xga_vis": 1.00, "ppda": 10.1, "aereos": 56, "corners": 6.2, "tarjetas": 1.8},
-    "LASK": {"logo": "https://crests.football-data.org/151.png", "xg_loc": 1.20, "xga_loc": 1.50, "xg_vis": 1.00, "xga_vis": 1.75, "ppda": 12.5, "aereos": 47, "corners": 4.0, "tarjetas": 2.5},
-    "Porto": {"logo": "https://crests.football-data.org/503.png", "xg_loc": 1.75, "xga_loc": 1.10, "xg_vis": 1.45, "xga_vis": 1.30, "ppda": 9.3, "aereos": 52, "corners": 6.0, "tarjetas": 2.2}
-}
-
-PREMIER_LEAGUE_DATA = {
-    "Arsenal": {"logo": "https://crests.football-data.org/57.png", "xg_loc": 2.10, "xga_loc": 0.85, "xg_vis": 1.90, "xga_vis": 0.95, "ppda": 8.8, "aereos": 55, "corners": 6.8, "tarjetas": 1.4},
-    "Aston Villa": {"logo": "https://crests.football-data.org/58.png", "xg_loc": 1.75, "xga_loc": 1.30, "xg_vis": 1.45, "xga_vis": 1.50, "ppda": 11.2, "aereos": 51, "corners": 5.4, "tarjetas": 2.1},
-    "Bournemouth": {"logo": "https://crests.football-data.org/1044.png", "xg_loc": 1.40, "xga_loc": 1.55, "xg_vis": 1.15, "xga_vis": 1.70, "ppda": 10.5, "aereos": 48, "corners": 4.9, "tarjetas": 2.3},
-    "Brentford": {"logo": "https://crests.football-data.org/402.png", "xg_loc": 1.50, "xga_loc": 1.45, "xg_vis": 1.20, "xga_vis": 1.65, "ppda": 12.1, "aereos": 56, "corners": 4.6, "tarjetas": 1.8},
-    "Brighton": {"logo": "https://crests.football-data.org/397.png", "xg_loc": 1.65, "xga_loc": 1.40, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 9.5, "aereos": 47, "corners": 5.8, "tarjetas": 2.0},
-    "Chelsea": {"logo": "https://crests.football-data.org/61.png", "xg_loc": 1.80, "xga_loc": 1.25, "xg_vis": 1.60, "xga_vis": 1.40, "ppda": 9.8, "aereos": 52, "corners": 5.6, "tarjetas": 2.6},
-    "Coventry City": {"logo": "https://crests.football-data.org/1070.png", "xg_loc": 1.30, "xga_loc": 1.50, "xg_vis": 1.10, "xga_vis": 1.70, "ppda": 11.5, "aereos": 50, "corners": 4.8, "tarjetas": 1.9},
-    "Crystal Palace": {"logo": "https://crests.football-data.org/354.png", "xg_loc": 1.35, "xga_loc": 1.30, "xg_vis": 1.15, "xga_vis": 1.50, "ppda": 11.8, "aereos": 53, "corners": 4.8, "tarjetas": 2.2},
-    "Everton": {"logo": "https://crests.football-data.org/62.png", "xg_loc": 1.30, "xga_loc": 1.40, "xg_vis": 1.10, "xga_vis": 1.60, "ppda": 12.5, "aereos": 58, "corners": 4.7, "tarjetas": 2.1},
-    "Fulham": {"logo": "https://crests.football-data.org/63.png", "xg_loc": 1.40, "xga_loc": 1.50, "xg_vis": 1.20, "xga_vis": 1.65, "ppda": 11.0, "aereos": 50, "corners": 5.1, "tarjetas": 2.0},
-    "Hull City": {"logo": "https://crests.football-data.org/322.png", "xg_loc": 1.22, "xga_loc": 1.58, "xg_vis": 1.00, "xga_vis": 1.75, "ppda": 12.0, "aereos": 47, "corners": 4.3, "tarjetas": 1.7},
-    "Ipswich Town": {"logo": "https://crests.football-data.org/349.png", "xg_loc": 1.20, "xga_loc": 1.60, "xg_vis": 0.95, "xga_vis": 1.85, "ppda": 13.0, "aereos": 48, "corners": 4.2, "tarjetas": 2.4},
-    "Leeds": {"logo": "https://crests.football-data.org/341.png", "xg_loc": 1.45, "xga_loc": 1.40, "xg_vis": 1.25, "xga_vis": 1.60, "ppda": 9.2, "aereos": 51, "corners": 5.5, "tarjetas": 2.1},
-    "Liverpool": {"logo": "https://crests.football-data.org/64.png", "xg_loc": 2.20, "xga_loc": 1.00, "xg_vis": 2.05, "xga_vis": 1.10, "ppda": 8.5, "aereos": 54, "corners": 7.1, "tarjetas": 1.5},
-    "Manchester City": {"logo": "https://crests.football-data.org/65.png", "xg_loc": 2.25, "xga_loc": 0.80, "xg_vis": 2.10, "xga_vis": 0.90, "ppda": 8.2, "aereos": 52, "corners": 7.5, "tarjetas": 1.3},
-    "Manchester United": {"logo": "https://crests.football-data.org/66.png", "xg_loc": 1.60, "xga_loc": 1.45, "xg_vis": 1.35, "xga_vis": 1.55, "ppda": 10.8, "aereos": 50, "corners": 5.9, "tarjetas": 2.2},
-    "Newcastle": {"logo": "https://crests.football-data.org/67.png", "xg_loc": 1.70, "xga_loc": 1.20, "xg_vis": 1.40, "xga_vis": 1.45, "ppda": 9.9, "aereos": 53, "corners": 6.1, "tarjetas": 1.9},
-    "Nottingham Forest": {"logo": "https://crests.football-data.org/351.png", "xg_loc": 1.25, "xga_loc": 1.50, "xg_vis": 1.05, "xga_vis": 1.70, "ppda": 13.2, "aereos": 51, "corners": 4.1, "tarjetas": 2.3},
-    "Sunderland": {"logo": "https://crests.football-data.org/71.png", "xg_loc": 1.28, "xga_loc": 1.52, "xg_vis": 1.05, "xga_vis": 1.75, "ppda": 12.2, "aereos": 50, "corners": 4.4, "tarjetas": 2.0},
-    "Tottenham": {"logo": "https://crests.football-data.org/73.png", "xg_loc": 1.85, "xga_loc": 1.50, "xg_vis": 1.50, "xga_vis": 1.65, "ppda": 9.1, "aereos": 49, "corners": 6.3, "tarjetas": 2.1}
-}
-
-LALIGA_DATA = {
-    "Deportivo Alavés": {"logo": "https://crests.football-data.org/263.png", "xg_loc": 1.25, "xga_loc": 1.45, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 12.0, "aereos": 56, "corners": 4.4, "tarjetas": 2.5},
-    "Espanyol": {"logo": "https://crests.football-data.org/80.png", "xg_loc": 1.15, "xga_loc": 1.60, "xg_vis": 0.90, "xga_vis": 1.80, "ppda": 13.0, "aereos": 48, "corners": 4.1, "tarjetas": 2.6},
-    "Sevilla": {"logo": "https://crests.football-data.org/559.png", "xg_loc": 1.45, "xga_loc": 1.40, "xg_vis": 1.25, "xga_vis": 1.55, "ppda": 10.5, "aereos": 51, "corners": 5.3, "tarjetas": 2.7},
-    "Deportivo La Coruña": {"logo": "https://crests.football-data.org/560.png", "xg_loc": 1.20, "xga_loc": 1.45, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 11.8, "aereos": 49, "corners": 4.2, "tarjetas": 2.2},
-    "Elche CF": {"logo": "https://crests.football-data.org/285.png", "xg_loc": 1.18, "xga_loc": 1.50, "xg_vis": 0.95, "xga_vis": 1.70, "ppda": 12.4, "aereos": 47, "corners": 4.0, "tarjetas": 2.3},
-    "Racing Santander": {"logo": "https://crests.football-data.org/457.png", "xg_loc": 1.22, "xga_loc": 1.40, "xg_vis": 1.05, "xga_vis": 1.60, "ppda": 11.2, "aereos": 50, "corners": 4.5, "tarjetas": 2.1},
-    "Villarreal": {"logo": "https://crests.football-data.org/102.png", "xg_loc": 1.80, "xga_loc": 1.50, "xg_vis": 1.40, "xga_vis": 1.60, "ppda": 10.0, "aereos": 49, "corners": 5.6, "tarjetas": 2.2},
-    "Athletic": {"logo": "https://crests.football-data.org/77.png", "xg_loc": 1.60, "xga_loc": 1.10, "xg_vis": 1.30, "xga_vis": 1.25, "ppda": 9.0, "aereos": 54, "corners": 5.9, "tarjetas": 2.0},
-    "Atlético de Madrid": {"logo": "https://crests.football-data.org/78.png", "xg_loc": 1.85, "xga_loc": 0.90, "xg_vis": 1.55, "xga_vis": 1.10, "ppda": 10.2, "aereos": 53, "corners": 5.8, "tarjetas": 2.4},
-    "Osasuna": {"logo": "https://crests.football-data.org/79.png", "xg_loc": 1.35, "xga_loc": 1.35, "xg_vis": 1.10, "xga_vis": 1.50, "ppda": 11.5, "aereos": 53, "corners": 4.7, "tarjetas": 2.3},
-    "Celta de Vigo": {"logo": "https://crests.football-data.org/558.png", "xg_loc": 1.40, "xga_loc": 1.45, "xg_vis": 1.15, "xga_vis": 1.60, "ppda": 10.8, "aereos": 47, "corners": 4.8, "tarjetas": 2.1},
-    "Barcelona": {"logo": "https://crests.football-data.org/81.png", "xg_loc": 2.30, "xga_loc": 0.95, "xg_vis": 2.10, "xga_vis": 1.05, "ppda": 8.0, "aereos": 50, "corners": 6.9, "tarjetas": 1.9},
-    "Málaga": {"logo": "https://crests.football-data.org/84.png", "xg_loc": 1.25, "xga_loc": 1.42, "xg_vis": 1.00, "xga_vis": 1.65, "ppda": 11.6, "aereos": 48, "corners": 4.3, "tarjetas": 2.2},
-    "Betis": {"logo": "https://crests.football-data.org/90.png", "xg_loc": 1.50, "xga_loc": 1.30, "xg_vis": 1.25, "xga_vis": 1.45, "ppda": 11.0, "aereos": 49, "corners": 5.2, "tarjetas": 2.4},
-    "Real Madrid": {"logo": "https://crests.football-data.org/86.png", "xg_loc": 2.35, "xga_loc": 0.80, "xg_vis": 2.15, "xga_vis": 0.90, "ppda": 8.5, "aereos": 51, "corners": 7.2, "tarjetas": 1.6},
-    "Real Sociedad": {"logo": "https://crests.football-data.org/92.png", "xg_loc": 1.65, "xga_loc": 1.15, "xg_vis": 1.35, "xga_vis": 1.30, "ppda": 9.1, "aereos": 52, "corners": 5.7, "tarjetas": 2.0},
-    "Valencia CF": {"logo": "https://crests.football-data.org/95.png", "xg_loc": 1.25, "xga_loc": 1.45, "xg_vis": 1.05, "xga_vis": 1.60, "ppda": 11.8, "aereos": 50, "corners": 4.6, "tarjetas": 2.5},
-    "Rayo Vallecano": {"logo": "https://crests.football-data.org/87.png", "xg_loc": 1.30, "xga_loc": 1.40, "xg_vis": 1.10, "xga_vis": 1.55, "ppda": 9.4, "aereos": 48, "corners": 5.0, "tarjetas": 2.6},
-    "Getafe": {"logo": "https://crests.football-data.org/82.png", "xg_loc": 1.10, "xga_loc": 1.20, "xg_vis": 0.85, "xga_vis": 1.45, "ppda": 12.8, "aereos": 58, "corners": 4.0, "tarjetas": 3.1},
-    "Levante": {"logo": "https://crests.football-data.org/88.png", "xg_loc": 1.22, "xga_loc": 1.55, "xg_vis": 0.95, "xga_vis": 1.70, "ppda": 12.1, "aereos": 49, "corners": 4.2, "tarjetas": 2.4}
-}
-
-NFL_DATA = {
-    "Miami Dolphins": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png", "td_exp": 3.2, "fg_exp": 1.5},
-    "New York Jets": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png", "td_exp": 2.5, "fg_exp": 2.1},
-    "Buffalo Bills": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png", "td_exp": 3.4, "fg_exp": 1.6},
-    "New England Patriots": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png", "td_exp": 2.2, "fg_exp": 1.9},
-    "Cincinnati Bengals": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png", "td_exp": 3.1, "fg_exp": 1.8},
-    "Pittsburgh Steelers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png", "td_exp": 2.4, "fg_exp": 2.2},
-    "Cleveland Browns": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png", "td_exp": 2.5, "fg_exp": 2.0},
-    "Baltimore Ravens": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png", "td_exp": 3.5, "fg_exp": 1.7},
-    "Indianapolis Colts": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png", "td_exp": 2.8, "fg_exp": 1.8},
-    "Houston Texans": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png", "td_exp": 2.9, "fg_exp": 1.9},
-    "Tennessee Titans": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png", "td_exp": 2.3, "fg_exp": 2.0},
-    "Jacksonville Jaguars": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png", "td_exp": 2.7, "fg_exp": 1.8},
-    "Los Angeles Chargers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png", "td_exp": 2.8, "fg_exp": 1.9},
-    "Kansas City Chiefs": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png", "td_exp": 3.5, "fg_exp": 1.7},
-    "Las Vegas Raiders": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png", "td_exp": 2.3, "fg_exp": 2.1},
-    "Denver Broncos": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png", "td_exp": 2.4, "fg_exp": 2.0},
-    "New York Giants": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png", "td_exp": 2.1, "fg_exp": 2.0},
-    "Washington Commanders": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png", "td_exp": 2.7, "fg_exp": 1.8},
-    "Philadelphia Eagles": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png", "td_exp": 3.3, "fg_exp": 1.6},
-    "Dallas Cowboys": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png", "td_exp": 3.2, "fg_exp": 1.9},
-    "Minnesota Vikings": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png", "td_exp": 2.9, "fg_exp": 1.8},
-    "Chicago Bears": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png", "td_exp": 2.5, "fg_exp": 1.9},
-    "Green Bay Packers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png", "td_exp": 3.0, "fg_exp": 1.7},
-    "Detroit Lions": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png", "td_exp": 3.4, "fg_exp": 1.6},
-    "New Orleans Saints": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/no.png", "td_exp": 2.6, "fg_exp": 2.0},
-    "Tampa Bay Buccaneers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png", "td_exp": 2.8, "fg_exp": 1.8},
-    "Atlanta Falcons": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png", "td_exp": 2.7, "fg_exp": 1.9},
-    "Carolina Panthers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/car.png", "td_exp": 2.0, "fg_exp": 2.1},
-    "Los Angeles Rams": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png", "td_exp": 3.0, "fg_exp": 1.7},
-    "Seattle Seahawks": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png", "td_exp": 2.7, "fg_exp": 1.9},
-    "Arizona Cardinals": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png", "td_exp": 2.5, "fg_exp": 2.0},
-    "San Francisco 49ers": {"logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "td_exp": 3.6, "fg_exp": 1.5}
-}
-
-# ------------------------------------------------------------------------------
-# HEADER PRINCIPAL
-# ------------------------------------------------------------------------------
-st.markdown("""
-<div class="nav-bar">
-    <div class="brand-logo">LA MAÑA <span style="color:#059669;">PICKS</span></div>
-    <div style="font-weight:800; color:#475569; font-size:0.9rem;">MODELO QUANT MULTI-SPORT</div>
-</div>
-""", unsafe_allow_html=True)
-
-# ==============================================================================
-# VISTA 1: HOME LANDING PAGE
-# ==============================================================================
-if st.session_state["liga_activa"] is None:
-    col_hero_left, col_hero_right = st.columns([6, 6])
-
-    with col_hero_left:
-        st.markdown("""
-        <div class="hero-title">ANALIZANDO CON LA MAÑA <br><span class="hero-highlight">QUE NOS HACE GANAR</span></div>
-        <div class="hero-subtitle">JUEGA CON ESTADÍSTICAS Y CON MAÑA.</div>
-        """, unsafe_allow_html=True)
-
-        col_b1, col_b1_img = st.columns([10, 2])
-        with col_b1:
-            if st.button("PREMIER LEAGUE (20 Equipos) ➔", use_container_width=True):
-                st.session_state["liga_activa"] = "PREMIER LEAGUE"
-                st.rerun()
-        with col_b1_img: st.image(LOGOS_COMPETENCIA["PREMIER LEAGUE"], width=40)
-
-        col_b2, col_b2_img = st.columns([10, 2])
-        with col_b2:
-            if st.button("LALIGA EA SPORTS (20 Equipos) ➔", use_container_width=True):
-                st.session_state["liga_activa"] = "LALIGA"
-                st.rerun()
-        with col_b2_img: st.image(LOGOS_COMPETENCIA["LALIGA"], width=40)
-
-        col_b3, col_b3_img = st.columns([10, 2])
-        with col_b3:
-            if st.button("CHAMPIONS LEAGUE (36 Equipos) ➔", use_container_width=True):
-                st.session_state["liga_activa"] = "CHAMPIONS LEAGUE"
-                st.rerun()
-        with col_b3_img: st.image(LOGOS_COMPETENCIA["CHAMPIONS LEAGUE"], width=40)
-
-        col_b6, col_b6_img = st.columns([10, 2])
-        with col_b6:
-            if st.button("BUNDESLIGA (18 Equipos) ➔", use_container_width=True):
-                st.session_state["liga_activa"] = "BUNDESLIGA"
-                st.rerun()
-        with col_b6_img: st.image(LOGOS_COMPETENCIA["BUNDESLIGA"], width=40)
-
-        col_b4, col_b4_img = st.columns([10, 2])
-        with col_b4:
-            if st.button("NFL (32 Equipos AFC/NFC) ➔", use_container_width=True):
-                st.session_state["liga_activa"] = "NFL"
-                st.rerun()
-        with col_b4_img: st.image(LOGOS_COMPETENCIA["NFL"], width=40)
-
-        col_b5, col_b5_img = st.columns([10, 2])
-        with col_b5:
-            if st.button("MLB (30 Equipos Grandes Ligas) ➔", use_container_width=True):
-                st.session_state["liga_activa"] = "MLB"
-                st.rerun()
-        with col_b5_img: st.image(LOGOS_COMPETENCIA["MLB"], width=40)
-
-    with col_hero_right:
-        apuestas_hist = st.session_state["apuestas_registradas"]
-        total_w = sum(1 for a in apuestas_hist if a["resultado"] == "WIN")
-        total_l = sum(1 for a in apuestas_hist if a["resultado"] == "LOOSE")
-        tot_picks = total_w + total_l
-        efectividad_val = (total_w / tot_picks * 100.0) if tot_picks > 0 else 0.0
-
-        st.markdown(f"""
-        <div class="sim-card-home">
-            <div class="sim-card-title">Efectividad Global: <span style="color:#059669;">{efectividad_val:.1f}%</span></div>
-            <p style="color:#475569; font-size:0.88rem; font-weight:700; margin-bottom:10px;">
-                Récord Registrado: <b>{total_w} WINS</b> / <b>{total_l} LOOSES</b> (Total: {tot_picks} Picks)
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        fig_capsulas_3d = generar_grafica_efectividad_capsulas_3d(apuestas_hist)
-        st.plotly_chart(fig_capsulas_3d, use_container_width=True, key="chart_3d_home")
-
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico Global de Apuestas Registradas</h3>", unsafe_allow_html=True)
-    if not st.session_state["apuestas_registradas"]:
-        st.info("No hay apuestas seleccionadas aún en ninguna competición.")
-    else:
-        df_export = pd.DataFrame(st.session_state["apuestas_registradas"])
-        st.download_button(
-            label="💾 Descargar Histórico Completo (CSV)",
-            data=df_export.to_csv(index=False),
-            file_name="picks_globales.csv",
-            mime="text/csv"
-        )
-        for a in st.session_state["apuestas_registradas"]:
-            col_info, col_estado, col_del = st.columns([7, 3, 2])
-            with col_info:
-                st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
-            with col_estado:
-                estado_actual = a.get("resultado", "⏳ PENDIENTE")
-                idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
-                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_home_{a['id']}")
-                a["resultado"] = nuevo_res
-            with col_del:
-                if st.button("🗑️ Eliminar", key=f"del_home_{a['id']}"):
-                    eliminar_apuesta(a["id"])
-                    st.rerun()
-
-# ==============================================================================
-# VISTA 2: PANEL DE ANÁLISIS A) MLB (SABERMETRÍA & MONTE CARLO)
-# ==============================================================================
-elif st.session_state["liga_activa"] == "MLB":
-    c_head_title, c_head_back = st.columns([9, 3])
-    with c_head_title:
-        st.markdown(f"""
-        <div style="display:flex; align-items:center; gap:15px;">
-            <img src="{LOGOS_COMPETENCIA['MLB']}" width="50">
-            <div>
-                <div class='hero-title' style='font-size:2.0rem;'>Escaneo Sabermétrico <span class='hero-highlight'>(MLB)</span></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c_head_back:
-        if st.button("← Inicio", use_container_width=True):
-            st.session_state["liga_activa"] = None
-            st.rerun()
-
-    col_izq_inputs, col_der_analysis = st.columns([1, 1])
-
-    with col_izq_inputs:
-        st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>⚾ 1. Matchup Sabermétrico & Pitching</h3>", unsafe_allow_html=True)
-
-        c_loc, c_vis = st.columns(2)
-        with c_loc: eq_loc = st.selectbox("Equipo Local (Home):", sorted(list(MLB_DATA.keys())), index=12)
-        with c_vis: eq_vis = st.selectbox("Equipo Visitante (Away):", sorted(list(MLB_DATA.keys())), index=0)
-
-        d_loc, d_vis = MLB_DATA[eq_loc], MLB_DATA[eq_vis]
-
-        matchup_key = f"{eq_loc}_vs_{eq_vis}"
-
-        if st.button("🔄 Sincronizar Estadísticas y Pitchers Abridores del Día (MLB API)", use_container_width=True):
-            p_loc_api = obtener_pitcher_confirmado_mlb(eq_loc)
-            p_vis_api = obtener_pitcher_confirmado_mlb(eq_vis)
-            st.session_state["pitchers_mlb_sync"][matchup_key] = {"loc": p_loc_api, "vis": p_vis_api}
-            st.success(f"Pitchers actualizados: {eq_loc} ({p_loc_api}) vs {eq_vis} ({p_vis_api})")
-
-        pitchers_guardados = st.session_state["pitchers_mlb_sync"].get(matchup_key, {})
-        sp_name_loc = pitchers_guardados.get("loc", d_loc['sp_name'])
-        sp_name_vis = pitchers_guardados.get("vis", d_vis['sp_name'])
-
-        st.markdown(f"""
-        <div class="analysis-card" style="border:1px solid #a7f3d0;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <img src="{d_loc['logo']}" width="30">
-                    <div>
-                        <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_loc}</span><br>
-                        <span style="font-size:0.75rem; color:#059669; font-weight:800;">Pitcher: {sp_name_loc}</span>
-                    </div>
-                </div>
-                <div style="font-weight:900; color:#059669;">VS</div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <div>
-                        <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_vis}</span><br>
-                        <span style="font-size:0.75rem; color:#059669; font-weight:800;">Pitcher: {sp_name_vis}</span>
-                    </div>
-                    <img src="{d_vis['logo']}" width="30">
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("<p style='font-size:0.8rem; font-weight:700; color:#475569;'>Capa Sabermétrica, Clima & BvP Matchups:</p>", unsafe_allow_html=True)
-        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-        with col_c1: viento_out = st.checkbox("Viento Hacia Afuera (>15mph)")
-        with col_c2: humedad_alta = st.checkbox("Humedad / Frío Extremo")
-        with col_c3: bvp_favor_loc = st.checkbox(f"BvP / Splits {eq_loc[:3]}")
-        with col_c4: bvp_favor_vis = st.checkbox(f"BvP / Splits {eq_vis[:3]}")
-
-        col_lim1, col_lim2 = st.columns(2)
-        with col_lim1: limit_outs_loc = st.slider(f"Límite Outs Pitcher {eq_loc[:3]}", 12, 24, 17, step=1)
-        with col_lim2: limit_outs_vis = st.slider(f"Límite Outs Pitcher {eq_vis[:3]}", 12, 24, 16, step=1)
-
-        fmt_odds = st.radio("Formato Cuotas:", ["Decimales", "Americanos"], horizontal=True)
-
-        q_ml_loc_def = MLB_MOMIOS_REALES_HOY.get(eq_loc, 1.80)
-        q_ml_vis_def = MLB_MOMIOS_REALES_HOY.get(eq_vis, 2.05)
-
-        val_ml_loc = decimal_a_formato(q_ml_loc_def, fmt_odds)
-        val_ml_vis = decimal_a_formato(q_ml_vis_def, fmt_odds)
-        val_rl_loc = decimal_a_formato(2.25, fmt_odds)
-        val_rl_vis = decimal_a_formato(1.68, fmt_odds)
-        val_over_runs = decimal_a_formato(1.90, fmt_odds)
-        val_under_runs = decimal_a_formato(1.90, fmt_odds)
-
-        with st.expander("⚙️ Ajustar Cuotas Manualmente de tu Casa de Apuestas", expanded=True):
-            c_ml1, c_ml2 = st.columns(2)
-            with c_ml1: q_ml_loc = st.text_input(f"Moneyline {eq_loc[:8]}", value=val_ml_loc, key=f"q_ml_loc_{eq_loc}_{fmt_odds}")
-            with c_ml2: q_ml_vis = st.text_input(f"Moneyline {eq_vis[:8]}", value=val_ml_vis, key=f"q_ml_vis_{eq_vis}_{fmt_odds}")
-
-            # SLIDERS Y ENTRADAS PARA RUN LINE / HÁNDICAP AJUSTABLE (-3.5 A +4.5)
-            c_rl1, c_rl2, c_rl3, c_rl4 = st.columns([1.5, 1.25, 1.5, 1.25])
-            with c_rl1: rl_hc_loc = st.slider(f"Run Line {eq_loc[:8]}", -3.5, 4.5, -1.5, step=0.5)
-            with c_rl2: q_rl_loc = st.text_input(f"Cuota {rl_hc_loc:+}", value=val_rl_loc, key=f"q_rl_loc_{eq_loc}_{fmt_odds}")
-            with c_rl3: rl_hc_vis = st.slider(f"Run Line {eq_vis[:8]}", -3.5, 4.5, 1.5, step=0.5)
-            with c_rl4: q_rl_vis = st.text_input(f"Cuota {rl_hc_vis:+}", value=val_rl_vis, key=f"q_rl_vis_{eq_vis}_{fmt_odds}")
-
-            ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
-            with ct1: line_runs = st.slider("Línea Total Carreras", 6.5, 14.5, 8.5, step=0.5)
-            with ct2: q_over_runs = st.text_input(f"Over {line_runs}", value=val_over_runs, key=f"q_over_runs_{fmt_odds}")
-            with ct3: q_under_runs = st.text_input(f"Under {line_runs}", value=val_under_runs, key=f"q_under_runs_{fmt_odds}")
-
-            ck1, ck2, ck3, ck4, ck5, ck6 = st.columns([1.2, 1, 1, 1.2, 1, 1])
-            with ck1: line_k_loc = st.slider(f"K's {eq_loc[:3]}", 2.5, 10.5, 5.5, step=0.5)
-            with ck2: q_k_over_loc = st.text_input(f"Over K {eq_loc[:3]}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_k_over_loc_{fmt_odds}")
-            with ck3: q_k_under_loc = st.text_input(f"Under K {eq_loc[:3]}", value=decimal_a_formato(1.95, fmt_odds), key=f"q_k_under_loc_{fmt_odds}")
-            with ck4: line_k_vis = st.slider(f"K's {eq_vis[:3]}", 2.5, 10.5, 5.5, step=0.5)
-            with ck5: q_k_over_vis = st.text_input(f"Over K {eq_vis[:3]}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_k_over_vis_{fmt_odds}")
-            with ck6: q_k_under_vis = st.text_input(f"Under K {eq_vis[:3]}", value=decimal_a_formato(1.95, fmt_odds), key=f"q_k_under_vis_{fmt_odds}")
-
-            co1, co2, co3, co4 = st.columns([1.5, 1.25, 1.5, 1.25])
-            with co1: line_outs_loc = st.slider(f"Outs Pitcher {eq_loc[:3]}", 12.5, 21.5, 17.5, step=0.5)
-            with co2: q_outs_loc = st.text_input(f"Over Outs {eq_loc[:3]}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_outs_loc_{fmt_odds}")
-            with co3: line_outs_vis = st.slider(f"Outs Pitcher {eq_vis[:3]}", 12.5, 21.5, 15.5, step=0.5)
-            with co4: q_outs_vis = st.text_input(f"Over Outs {eq_vis[:3]}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_outs_vis_{fmt_odds}")
-
-            cf5_1, cf5_2 = st.columns(2)
-            with cf5_1: q_f5_loc = st.text_input(f"F5 ML {eq_loc[:8]}", value=decimal_a_formato(1.75, fmt_odds), key=f"q_f5_loc_{fmt_odds}")
-            with cf5_2: q_f5_vis = st.text_input(f"F5 ML {eq_vis[:8]}", value=decimal_a_formato(2.10, fmt_odds), key=f"q_f5_vis_{fmt_odds}")
-
-            cn1, cn2 = st.columns(2)
-            with cn1: q_nrfi = st.text_input("NRFI (Sin carrera 1ª Inn)", value=decimal_a_formato(1.85, fmt_odds), key=f"q_nrfi_{fmt_odds}")
-            with cn2: q_yrfi = st.text_input("YRFI (Sí carrera 1ª Inn)", value=decimal_a_formato(1.95, fmt_odds), key=f"q_yrfi_{fmt_odds}")
-
-    with col_der_analysis:
-        st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>📊 Matriz Sabermétrica y Escaneo (+EV)</h3>", unsafe_allow_html=True)
-
-        sim_mlb = simular_montecarlo_mlb(
-            d_loc, d_vis, viento_out, humedad_alta, bvp_favor_loc, bvp_favor_vis, 
-            limit_outs_loc, limit_outs_vis, line_runs, line_k_loc, line_k_vis, line_outs_loc, line_outs_vis,
-            rl_hc_loc=rl_hc_loc, rl_hc_vis=rl_hc_vis
-        )
-
-        mercados_mlb = [
-            {"mercado": f"1. Moneyline (ML): Gana {eq_loc}", "prob": sim_mlb['p_ml_loc'], "cuota": parse_odds(q_ml_loc, fmt_odds)},
-            {"mercado": f"1. Moneyline (ML): Gana {eq_vis}", "prob": sim_mlb['p_ml_vis'], "cuota": parse_odds(q_ml_vis, fmt_odds)},
-            {"mercado": f"2. Total Carreras: Over {line_runs}", "prob": sim_mlb['p_over_runs'], "cuota": parse_odds(q_over_runs, fmt_odds)},
-            {"mercado": f"2. Total Carreras: Under {line_runs}", "prob": sim_mlb['p_under_runs'], "cuota": parse_odds(q_under_runs, fmt_odds)},
-            {"mercado": f"3. Run Line: {eq_loc} ({rl_hc_loc:+} Carreras)", "prob": sim_mlb['p_rl_loc'], "cuota": parse_odds(q_rl_loc, fmt_odds)},
-            {"mercado": f"3. Run Line: {eq_vis} ({rl_hc_vis:+} Carreras)", "prob": sim_mlb['p_rl_vis'], "cuota": parse_odds(q_rl_vis, fmt_odds)},
-            {"mercado": f"4. Prop Ponches (K's): {eq_loc[:10]} Over {line_k_loc}", "prob": sim_mlb['p_over_k_loc'], "cuota": parse_odds(q_k_over_loc, fmt_odds)},
-            {"mercado": f"4. Prop Ponches (K's): {eq_loc[:10]} Under {line_k_loc}", "prob": sim_mlb['p_under_k_loc'], "cuota": parse_odds(q_k_under_loc, fmt_odds)},
-            {"mercado": f"4. Prop Ponches (K's): {eq_vis[:10]} Over {line_k_vis}", "prob": sim_mlb['p_over_k_vis'], "cuota": parse_odds(q_k_over_vis, fmt_odds)},
-            {"mercado": f"4. Prop Ponches (K's): {eq_vis[:10]} Under {line_k_vis}", "prob": sim_mlb['p_under_k_vis'], "cuota": parse_odds(q_k_under_vis, fmt_odds)},
-            {"mercado": f"5. Prop Outs Abridor: {eq_loc[:10]} Over {line_outs_loc}", "prob": sim_mlb['p_over_outs_loc'], "cuota": parse_odds(q_outs_loc, fmt_odds)},
-            {"mercado": f"5. Prop Outs Abridor: {eq_vis[:10]} Over {line_outs_vis}", "prob": sim_mlb['p_over_outs_vis'], "cuota": parse_odds(q_outs_vis, fmt_odds)},
-            {"mercado": f"6. Primeras 5 Entradas (F5) ML: {eq_loc}", "prob": sim_mlb['p_f5_loc'], "cuota": parse_odds(q_f5_loc, fmt_odds)},
-            {"mercado": f"6. Primeras 5 Entradas (F5) ML: {eq_vis}", "prob": sim_mlb['p_f5_vis'], "cuota": parse_odds(q_f5_vis, fmt_odds)},
-            {"mercado": f"7. NRFI: Sin Carrera en 1ª Entrada", "prob": sim_mlb['p_nrfi'], "cuota": parse_odds(q_nrfi, fmt_odds)},
-            {"mercado": f"7. YRFI: Sí Carrera en 1ª Entrada", "prob": sim_mlb['p_yrfi'], "cuota": parse_odds(q_yrfi, fmt_odds)}
-        ]
-
-        for idx, item in enumerate(mercados_mlb):
-            prob_val = item['prob']
-            cuota_casa = item['cuota']
-            cuota_real = 1.0 / prob_val if prob_val > 0 else 99.0
-            ev = (prob_val * cuota_casa) - 1.0
-
-            badge_html = '<span class="badge-star">💎 APUESTA ESTRELLA (+EV)</span>' if (prob_val >= 0.70 and ev > 0) else '<span class="badge-medium">🟠 MEDIUM PROBABILITY</span>'
-
-            st.markdown(f"""
-            <div class="analysis-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <span style="font-weight:900; font-size:0.9rem; color:#0f172a;">↗ {item['mercado']}</span>
-                        <div style="font-size:0.78rem; color:#607d71; margin-top:4px;">
-                            Prob. IA: <b>{prob_val*100:.1f}%</b> | Cuota Real: <b style="color:#059669;">@{cuota_real:.2f}</b> | Tu Casa: <b style="color:#059669;">@{cuota_casa:.2f}</b>
-                        </div>
-                    </div>
-                    <div>{badge_html}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            if st.button(f"🎯 SELECCIONAR APUESTA", key=f"sel_mlb_{idx}"):
-                guardar_apuesta_seleccionada("MLB", f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'])
-                st.rerun()
-
-            with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
-                fig_mini = generar_grafica_mini_15_partidos(prob_val)
-                st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_mlb_{idx}")
-
-    # HISTORIAL EXCLUSIVO DE MLB
-    st.markdown("<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas (MLB)</h3>", unsafe_allow_html=True)
+    # 3. GRÁFICA FÚTBOL (Dona / Donut Chart)
+    labels_fut = ['WINS', 'LOSSES', 'PENDING']
+    values_fut = [stats['FUTBOL']['wins'], stats['FUTBOL']['losses'], stats['FUTBOL']['pending']]
+    if sum(values_fut) == 0: values_fut = [1, 0, 0] # Estado inicial
     
-    mlb_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == "MLB"]
-    if not mlb_apuestas:
-        st.info("No hay apuestas seleccionadas aún para la MLB.")
+    fig_fut = go.Figure(data=[go.Pie(
+        labels=labels_fut,
+        values=values_fut,
+        hole=.6,
+        marker=dict(colors=['#10B981', '#EF4444', '#F59E0B'])
+    )])
+    fig_fut.update_layout(
+        title="EFECTIVIDAD FÚTBOL",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#0F172A', size=12, family='Segoe UI'),
+        height=220,
+        margin=dict(l=10, r=10, t=35, b=10),
+        showlegend=False
+    )
+
+    # PANEL HEADER HTML
+    html_header = f"""
+    <div style="background: #FFFFFF; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 10px 25px rgba(16,185,129,0.08);">
+        <div style="font-size: 16px; font-weight: 800; color: #065F46;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
+        <div style="font-size: 42px; font-weight: 900; color: #10B981; margin: 4px 0;">{pct_global}%</div>
+        <div style="font-size: 12px; font-weight: 700; color: #64748B;">
+            Récord Registrado: <span style="color:#10B981;">{tot_wins} WINS</span> / <span style="color:#EF4444;">{tot_loss} LOSSES</span> (Total: {tot_global} Picks)
+        </div>
+    </div>
+    """
+    
+    # HISTORIAL TEXTO HTML
+    historial = cargar_historial_db()
+    html_historial = f"""
+    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 16px; height: 160px; overflow-y: auto;">
+        <div style="font-size: 12px; font-weight: 800; color: #065F46; margin-bottom: 8px;">📋 HISTORIAL DE PICKS REGISTRADOS</div>
+        <div style="font-size: 11px; color: #334155;">
+    """
+    if not historial:
+        html_historial += "<i>No hay apuestas guardadas aún.</i>"
     else:
-        df_export = pd.DataFrame(mlb_apuestas)
-        st.download_button(
-            label="💾 Descargar Histórico MLB (CSV)",
-            data=df_export.to_csv(index=False),
-            file_name="picks_mlb.csv",
-            mime="text/csv"
-        )
-        for a in mlb_apuestas:
-            col_info, col_estado, col_del = st.columns([7, 3, 2])
-            with col_info:
-                st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
-            with col_estado:
-                estado_actual = a.get("resultado", "⏳ PENDIENTE")
-                idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
-                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_mlb_hist_{a['id']}")
-                a["resultado"] = nuevo_res
-            with col_del:
-                if st.button("🗑️ Eliminar", key=f"del_mlb_hist_{a['id']}"):
-                    eliminar_apuesta(a["id"])
-                    st.rerun()
-
-# ==============================================================================
-# VISTA 2: PANEL DE ANÁLISIS B) FÚTBOL Y NFL
-# ==============================================================================
-else:
-    liga = st.session_state["liga_activa"]
-
-    c_head_title, c_head_back = st.columns([9, 3])
-    with c_head_title:
-        st.markdown(f"""
-        <div style="display:flex; align-items:center; gap:15px;">
-            <img src="{LOGOS_COMPETENCIA[liga]}" width="45">
-            <div class='hero-title' style='font-size:2.0rem;'>Escaneo de Valor <span class='hero-highlight'>({liga})</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c_head_back:
-        if st.button("← Inicio", use_container_width=True):
-            st.session_state["liga_activa"] = None
-            st.rerun()
-
-    if liga == "PREMIER LEAGUE": TEAMS_DATA = PREMIER_LEAGUE_DATA
-    elif liga == "LALIGA": TEAMS_DATA = LALIGA_DATA
-    elif liga == "CHAMPIONS LEAGUE": TEAMS_DATA = CHAMPIONS_DATA
-    elif liga == "BUNDESLIGA": TEAMS_DATA = BUNDESLIGA_DATA
-    else: TEAMS_DATA = NFL_DATA
-
-    col_izq_inputs, col_der_analysis = st.columns([1, 1])
-
-    with col_izq_inputs:
-        st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>⚙️ Configuración y Métricas Automáticas</h3>", unsafe_allow_html=True)
-
-        if liga == "NFL":
-            c_loc, c_vis = st.columns(2)
-            with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(TEAMS_DATA.keys())), index=13)
-            with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(TEAMS_DATA.keys())), index=26)
-        else:
-            c_loc, c_vis = st.columns(2)
-            with c_loc: eq_loc = st.selectbox("Equipo Local:", sorted(list(TEAMS_DATA.keys())), index=0)
-            with c_vis: eq_vis = st.selectbox("Equipo Visitante:", sorted(list(TEAMS_DATA.keys())), index=1 if len(TEAMS_DATA)>1 else 0)
-
-        d_loc, d_vis = TEAMS_DATA[eq_loc], TEAMS_DATA[eq_vis]
-
-        st.markdown(f"""
-        <div class="analysis-card" style="border:1px solid #a7f3d0;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <img src="{d_loc['logo']}" width="28">
-                    <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_loc}</span>
-                </div>
-                <div style="font-weight:900; color:#059669;">VS</div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-weight:900; font-size:0.95rem; color:#0f172a;">{eq_vis}</span>
-                    <img src="{d_vis['logo']}" width="28">
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        fmt_odds = st.radio("Formato de Cuotas:", ["Decimales", "Americanos"], horizontal=True)
-
-        if liga == "NFL":
-            q1_def = decimal_a_formato(1.80, fmt_odds)
-            q2_def = decimal_a_formato(2.05, fmt_odds)
-            q_x = "15.0"
-        else:
-            fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
-            fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
-            sim_init = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, 2.5, 9.5, 4.5)
-            q1_calc = max(round(1.0 / (sim_init['p_1_ft'] * 1.06), 2), 1.05)
-            qx_calc = max(round(1.0 / (sim_init['p_x_ft'] * 1.06), 2), 1.05)
-            q2_calc = max(round(1.0 / (sim_init['p_2_ft'] * 1.06), 2), 1.05)
+        for item in reversed(historial):
+            st_col = "#10B981" if item["estado"] == "WIN" else ("#EF4444" if item["estado"] == "LOSS" else "#F59E0B")
+            html_historial += f"<div style='margin-bottom: 6px; border-bottom: 1px solid #F1F5F9; padding-bottom: 4px;'>• <b>[{item['deporte']}]</b> {item['partido']} — {item['seleccion']} <b style='color:{st_col};'>[{item['estado']}]</b></div>"
             
-            q1_def = decimal_a_formato(q1_calc, fmt_odds)
-            qx_def = decimal_a_formato(qx_calc, fmt_odds)
-            q2_def = decimal_a_formato(q2_calc, fmt_odds)
-
-        with st.expander("⚙️ Ajustar Momios Manualmente (Todas las Opciones)", expanded=True):
-            if liga == "NFL":
-                c_ml1, c_ml2 = st.columns(2)
-                with c_ml1: q_1 = st.text_input(f"ML {eq_loc[:12]}", value=q1_def, key=f"q1_input_{liga}_{eq_loc}_{fmt_odds}")
-                with c_ml2: q_2 = st.text_input(f"ML {eq_vis[:12]}", value=q2_def, key=f"q2_input_{liga}_{eq_vis}_{fmt_odds}")
-
-                ch1, ch2, ch3, ch4 = st.columns([1.5, 1.25, 1.5, 1.25])
-                with ch1: spread_loc = st.slider(f"Spread Local", -16.5, 16.5, -3.5, step=0.5)
-                with ch2: q_spread_loc = st.text_input(f"Cuota {spread_loc}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_spread_loc_{fmt_odds}")
-                with ch3: spread_vis = st.slider(f"Spread Visita", -16.5, 16.5, +3.5, step=0.5)
-                with ch4: q_spread_vis = st.text_input(f"Cuota {spread_vis}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_spread_vis_{fmt_odds}")
-
-                ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
-                with ct1: line_pts = st.slider("Línea Puntos Totales", 20.5, 80.5, 47.5, step=1.0)
-                with ct2: q_over_pts = st.text_input(f"Over {line_pts}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_over_pts_{fmt_odds}")
-                with ct3: q_under_pts = st.text_input(f"Under {line_pts}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_under_pts_{fmt_odds}")
-            else:
-                c1, c2, c3 = st.columns(3)
-                with c1: q_1 = st.text_input(f"1X2 {eq_loc[:3]}", value=q1_def, key=f"q1_input_{liga}_{eq_loc}_{fmt_odds}")
-                with c2: q_x = st.text_input("1X2 Empate", value=qx_def, key=f"qx_input_{liga}_{fmt_odds}")
-                with c3: q_2 = st.text_input(f"1X2 {eq_vis[:3]}", value=q2_def, key=f"q2_input_{liga}_{eq_vis}_{fmt_odds}")
-
-                c4, c5, c6 = st.columns(3)
-                with c4: q_1x = st.text_input("DC 1X", value=decimal_a_formato(1.55, fmt_odds), key=f"q1x_{fmt_odds}")
-                with c5: q_x2 = st.text_input("DC X2", value=decimal_a_formato(1.42, fmt_odds), key=f"qx2_{fmt_odds}")
-                with c6: q_12 = st.text_input("DC 12", value=decimal_a_formato(1.30, fmt_odds), key=f"q12_{fmt_odds}")
-
-                cg1, cg2, cg3 = st.columns([1.5, 1.25, 1.25])
-                with cg1: line_goles = st.slider("Línea Goles FT", 1.5, 4.5, 2.5, step=1.0)
-                with cg2: q_over_g = st.text_input(f"Over {line_goles}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_over_g_{fmt_odds}")
-                with cg3: q_under_g = st.text_input(f"Under {line_goles}", value=decimal_a_formato(1.90, fmt_odds), key=f"q_under_g_{fmt_odds}")
-
-                cb1, cb2, cha1, cha2, cha3 = st.columns([1, 1, 1.2, 1, 1])
-                with cb1: q_btts_si = st.text_input("BTTS SÍ", value=decimal_a_formato(1.75, fmt_odds), key=f"q_btts_si_{fmt_odds}")
-                with cb2: q_btts_no = st.text_input("BTTS NO", value=decimal_a_formato(2.05, fmt_odds), key=f"q_btts_no_{fmt_odds}")
-                with cha1: line_ha = st.selectbox("Hándicap AH", ["+0.5", "-0.5", "0 (DNB)", "+1.0", "-1.0"], index=0)
-                with cha2: q_ha_loc = st.text_input(f"AH {eq_loc[:3]}", value=decimal_a_formato(1.55, fmt_odds), key=f"q_ha_loc_{fmt_odds}")
-                with cha3: q_ha_vis = st.text_input(f"AH {eq_vis[:3]}", value=decimal_a_formato(2.35, fmt_odds), key=f"q_ha_vis_{fmt_odds}")
-
-                cc1, cc2, cc3 = st.columns([1.5, 1.25, 1.25])
-                with cc1: line_corners = st.slider("Línea Córners", 8.5, 12.5, 9.5, step=1.0)
-                with cc2: q_over_c = st.text_input(f"Córners > {line_corners}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_over_c_{fmt_odds}")
-                with cc3: q_under_c = st.text_input(f"Córners < {line_corners}", value=decimal_a_formato(1.85, fmt_odds), key=f"q_under_c_{fmt_odds}")
-
-                ct1, ct2, ct3 = st.columns([1.5, 1.25, 1.25])
-                with ct1: line_cards = st.slider("Línea Tarjetas", 3.5, 5.5, 4.5, step=1.0)
-                with ct2: q_over_t = st.text_input(f"Tarjetas > {line_cards}", value=decimal_a_formato(1.95, fmt_odds), key=f"q_over_t_{fmt_odds}")
-                with ct3: q_under_t = st.text_input(f"Tarjetas < {line_cards}", value=decimal_a_formato(1.80, fmt_odds), key=f"q_under_t_{fmt_odds}")
-
-    with col_der_analysis:
-        st.markdown("<h3 style='color:#0f172a; font-size:1.1rem; font-weight:800;'>📊 Matriz de Riesgo y Escaneo (+EV)</h3>", unsafe_allow_html=True)
-
-        if liga == "NFL":
-            sim_results = simular_montecarlo_nfl(d_loc, d_vis, False, False, False, False, spread_loc, spread_vis, line_pts, 3.5, 5.5)
-            mercados_evaluados = [
-                {"mercado": f"1. Moneyline: Gana {eq_loc}", "prob": sim_results['p_ml_loc'], "cuota": parse_odds(q_1, fmt_odds)},
-                {"mercado": f"1. Moneyline: Gana {eq_vis}", "prob": sim_results['p_ml_vis'], "cuota": parse_odds(q_2, fmt_odds)},
-                {"mercado": f"2. Spread: {eq_loc} ({spread_loc:+} pts)", "prob": sim_results['p_spread_loc'], "cuota": parse_odds(q_spread_loc, fmt_odds)},
-                {"mercado": f"2. Spread: {eq_vis} ({spread_vis:+} pts)", "prob": sim_results['p_spread_vis'], "cuota": parse_odds(q_spread_vis, fmt_odds)},
-                {"mercado": f"3. Total Puntos: Over {line_pts}", "prob": sim_results['p_over_pts'], "cuota": parse_odds(q_over_pts, fmt_odds)},
-                {"mercado": f"3. Total Puntos: Under {line_pts}", "prob": sim_results['p_under_pts'], "cuota": parse_odds(q_under_pts, fmt_odds)}
-            ]
-        else:
-            fatiga_auto_loc, rot_auto_loc = calcular_fatiga_rotacion_automatica(eq_loc)
-            fatiga_auto_vis, rot_auto_vis = calcular_fatiga_rotacion_automatica(eq_vis)
-            sim_results = simular_montecarlo_avanzado(d_loc, d_vis, fatiga_auto_loc/100, rot_auto_loc/100, fatiga_auto_vis/100, rot_auto_vis/100, line_goles, line_corners, line_cards)
-            mercados_evaluados = [
-                {"mercado": f"1. Resultado: Gana {eq_loc}", "prob": sim_results['p_1_ft'], "cuota": parse_odds(q_1, fmt_odds)},
-                {"mercado": f"1. Resultado: Empate", "prob": sim_results['p_x_ft'], "cuota": parse_odds(q_x, fmt_odds)},
-                {"mercado": f"1. Resultado: Gana {eq_vis}", "prob": sim_results['p_2_ft'], "cuota": parse_odds(q_2, fmt_odds)},
-                {"mercado": f"2. Doble Chance: {eq_loc} o Empate (1X)", "prob": sim_results['p_1_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_1x, fmt_odds)},
-                {"mercado": f"2. Doble Chance: {eq_vis} o Empate (X2)", "prob": sim_results['p_2_ft'] + sim_results['p_x_ft'], "cuota": parse_odds(q_x2, fmt_odds)},
-                {"mercado": f"3. Total Goles: Over {line_goles}", "prob": sim_results['p_over_goles'], "cuota": parse_odds(q_over_g, fmt_odds)},
-                {"mercado": f"3. Total Goles: Under {line_goles}", "prob": sim_results['p_under_goles'], "cuota": parse_odds(q_under_g, fmt_odds)},
-                {"mercado": "4. Ambos Equipos Anotan: SÍ", "prob": sim_results['p_btts_si'], "cuota": parse_odds(q_btts_si, fmt_odds)},
-                {"mercado": "4. Ambos Equipos Anotan: NO", "prob": sim_results['p_btts_no'], "cuota": parse_odds(q_btts_no, fmt_odds)},
-                {"mercado": f"5. Hándicap Asiático: {eq_loc} ({line_ha})", "prob": sim_results['p_1_ft'] + (sim_results['p_x_ft'] if "+0.5" in line_ha else 0), "cuota": parse_odds(q_ha_loc, fmt_odds)},
-                {"mercado": f"5. Hándicap Asiático: {eq_vis} ({line_ha})", "prob": sim_results['p_2_ft'] + (sim_results['p_x_ft'] if "+0.5" in line_ha else 0), "cuota": parse_odds(q_ha_vis, fmt_odds)},
-                {"mercado": f"6. Total Córners: Over {line_corners}", "prob": sim_results['p_over_corners'], "cuota": parse_odds(q_over_c, fmt_odds)},
-                {"mercado": f"7. Total Tarjetas: Over {line_cards}", "prob": sim_results['p_over_cards'], "cuota": parse_odds(q_over_t, fmt_odds)}
-            ]
-
-        for idx, item in enumerate(mercados_evaluados):
-            prob_val = item['prob']
-            cuota_casa = item['cuota']
-            cuota_real = 1.0 / prob_val if prob_val > 0 else 99.0
-            ev = (prob_val * cuota_casa) - 1.0
-
-            badge_html = '<span class="badge-star">💎 APUESTA ESTRELLA (+EV)</span>' if (prob_val >= 0.75 and ev > 0) else '<span class="badge-medium">🟠 MEDIUM PROBABILITY</span>'
-
-            st.markdown(f"""
-            <div class="analysis-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <span style="font-weight:900; font-size:0.9rem; color:#0f172a;">↗ {item['mercado']}</span>
-                        <div style="font-size:0.78rem; color:#607d71; margin-top:4px;">
-                            Prob. IA: <b>{prob_val*100:.1f}%</b> | Cuota Real: <b style="color:#059669;">@{cuota_real:.2f}</b> | Tu Casa: <b style="color:#059669;">@{cuota_casa:.2f}</b>
-                        </div>
-                    </div>
-                    <div>{badge_html}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            if st.button(f"🎯 SELECCIONAR APUESTA", key=f"sel_fut_{idx}"):
-                guardar_apuesta_seleccionada(liga, f"{eq_loc} vs {eq_vis}", item['mercado'], item['cuota'])
-                st.rerun()
-
-            with st.expander(f"📈 Ver Tendencia de Cobertura de Línea (Últimos 15 Partidos)"):
-                fig_mini = generar_grafica_mini_15_partidos(prob_val)
-                st.plotly_chart(fig_mini, use_container_width=True, key=f"chart_mini_{liga}_{idx}")
-
-    # HISTORIAL EXCLUSIVO DE LA LIGA SELECCIONADA
-    st.markdown(f"<br><h3 style='color:#0f172a; font-size:1.1rem; font-weight:900;'>📜 Histórico de Apuestas Registradas ({liga})</h3>", unsafe_allow_html=True)
+    html_historial += "</div></div>"
     
-    liga_apuestas = [a for a in st.session_state["apuestas_registradas"] if a["liga"] == liga]
-    if not liga_apuestas:
-        st.info(f"No hay apuestas seleccionadas aún para la competición {liga}.")
-    else:
-        df_export = pd.DataFrame(liga_apuestas)
-        st.download_button(
-            label=f"💾 Descargar Histórico {liga} (CSV)",
-            data=df_export.to_csv(index=False),
-            file_name=f"picks_{liga.lower().replace(' ', '_')}.csv",
-            mime="text/csv"
+    return html_header, html_historial, fig_nfl, fig_mlb, fig_fut
+
+# ==============================================================================
+# 6. INTERFAZ GRÁFICA CON BARRAS/BOTONES UNIFICADOS Y GRÁFICAS ESTÉTICAS
+# ==============================================================================
+with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
+    
+    # HOME
+    with gr.Column(visible=True) as vista_home:
+        gr.Markdown("""
+        # **LA MAÑA PICKS**
+        ### **ANALIZANDO CON LA MAÑA QUE NOS HACE GANAR. JUEGA CON ESTADÍSTICAS Y CON MAÑA.**
+        """)
+        
+        with gr.Row():
+            # COLUMNA IZQUIERDA: MENÚ CON UN SOLO BOTÓN POR LIGA E ICONO INTEGRADO
+            with gr.Column(scale=1):
+                btn_premier = gr.Button("⚽  PREMIER LEAGUE (20 Equipos) ➔", variant="secondary")
+                btn_laliga = gr.Button("⚽  LALIGA EA SPORTS (20 Equipos) ➔", variant="secondary")
+                btn_bundesliga = gr.Button("⚽  BUNDESLIGA (18 Equipos) ➔", variant="secondary")
+                btn_seriea = gr.Button("⚽  SERIE A (20 Equipos) ➔", variant="secondary")
+                btn_champions = gr.Button("🏆  CHAMPIONS LEAGUE (36 Equipos) ➔", variant="secondary")
+                btn_nfl = gr.Button("🏈  NFL (32 Equipos AFC/NFC) ➔", variant="primary")
+                btn_mlb = gr.Button("⚾  MLB (30 Equipos Grandes Ligas) ➔", variant="primary")
+
+            # COLUMNA DERECHA: DASHBOARD DE GRÁFICAS Y RÉCORD GLOBAL
+            with gr.Column(scale=2):
+                html_header_out = gr.HTML()
+                html_historial_out = gr.HTML()
+                
+                with gr.Row():
+                    plot_nfl_out = gr.Plot(show_label=False)
+                    plot_mlb_out = gr.Plot(show_label=False)
+                    plot_fut_out = gr.Plot(show_label=False)
+
+    # VISTA FÚTBOL GENERAL
+    with gr.Column(visible=False) as vista_fut:
+        with gr.Row():
+            btn_volver_fut = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
+            txt_titulo_liga = gr.Markdown("## ⚽ **Área de Análisis de Fútbol**", scale=4)
+        
+        with gr.Row():
+            with gr.Column(scale=1):
+                with gr.Row():
+                    drop_fut_loc = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Arsenal", label="Equipo Local", scale=3)
+                    img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"], label="Local", width=60, height=60, show_label=False, scale=1)
+                
+                with gr.Row():
+                    drop_fut_vis = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Chelsea", label="Equipo Visitante", scale=3)
+                    img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=60, height=60, show_label=False, scale=1)
+                
+                drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Champions/Europa League hace 3 días)"], value="No (Semana normal)", label="¿Fatiga Europea?")
+                
+                with gr.Row():
+                    num_fut_c_loc = gr.Number(value=1.85, label="Cuota Local (1)")
+                    num_fut_c_emp = gr.Number(value=3.60, label="Cuota Empate (X)")
+                    num_fut_c_vis = gr.Number(value=4.20, label="Cuota Visitante (2)")
+                    
+                num_fut_linea_tot = gr.Number(value=2.5, label="Línea Total Goles (O/U)")
+                btn_sim_fut = gr.Button("Simular Partido 🚀", variant="primary")
+                
+                gr.Markdown("---")
+                rad_pick_fut = gr.Radio(choices=["Selección 1 (1X2)", "Selección 2 (Doble Op.)", "Selección 3 (Totales)"], label="Pick a guardar")
+                btn_save_fut = gr.Button("Guardar Pick en Historial 💾", variant="secondary")
+                lbl_save_fut = gr.Markdown("")
+
+            with gr.Column(scale=2):
+                out_fut = gr.HTML()
+                st_fut_p1, st_fut_p2, st_fut_p3, st_fut_match = gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+    # VISTA NFL
+    with gr.Column(visible=False) as vista_nfl:
+        with gr.Row():
+            btn_volver_nfl = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
+            gr.Markdown("## 🏈 **Área de Análisis: NFL (32 Equipos)**", scale=4)
+        
+        with gr.Row():
+            with gr.Column(scale=1):
+                with gr.Row():
+                    drop_nfl_loc = gr.Dropdown(choices=lista_nfl_nombres, value="Los Angeles Rams", label="Equipo Local", scale=3)
+                    img_nfl_loc = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["Los Angeles Rams"]], label="Local", width=60, height=60, show_label=False, scale=1)
+                
+                with gr.Row():
+                    drop_nfl_vis = gr.Dropdown(choices=lista_nfl_nombres, value="New York Giants", label="Equipo Visitante", scale=3)
+                    img_nfl_vis = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["New York Giants"]], label="Visitante", width=60, height=60, show_label=False, scale=1)
+
+                num_nfl_sp = gr.Number(value=-6.5, label="Spread Casino")
+                num_nfl_tot = gr.Number(value=47.5, label="Línea Total")
+                btn_sim_nfl = gr.Button("Simular Partido NFL 🚀", variant="primary")
+                
+                gr.Markdown("---")
+                rad_pick_nfl = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Spread)", "Selección 3 (Totales)"], label="Pick a guardar")
+                btn_save_nfl = gr.Button("Guardar Pick NFL 💾", variant="secondary")
+                lbl_save_nfl = gr.Markdown("")
+
+            with gr.Column(scale=2):
+                out_nfl = gr.HTML()
+                st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_match = gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+    # VISTA MLB
+    with gr.Column(visible=False) as vista_mlb:
+        with gr.Row():
+            btn_volver_mlb = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
+            gr.Markdown("## ⚾ **Área de Análisis: MLB (30 Equipos)**", scale=4)
+        
+        with gr.Row():
+            with gr.Column(scale=1):
+                with gr.Row():
+                    drop_mlb_loc = gr.Dropdown(choices=lista_mlb_nombres, value="San Francisco Giants", label="Equipo Local", scale=3)
+                    img_mlb_loc = gr.Image(value=EQUIPOS_MLB["San Francisco Giants"]["logo"], label="Local", width=60, height=60, show_label=False, scale=1)
+                
+                with gr.Row():
+                    drop_mlb_vis = gr.Dropdown(choices=lista_mlb_nombres, value="Minnesota Twins", label="Equipo Visitante", scale=3)
+                    img_mlb_vis = gr.Image(value=EQUIPOS_MLB["Minnesota Twins"]["logo"], label="Visitante", width=60, height=60, show_label=False, scale=1)
+
+                btn_auto_api = gr.Button("🔄 Cargar Abridores en Vivo (MLB API)", variant="secondary")
+                lbl_api_status = gr.Markdown("🟢 Listo para sincronizar")
+                
+                with gr.Row():
+                    num_xera_loc = gr.Number(value=3.45, label="ERA Local")
+                    num_whip_loc = gr.Number(value=1.12, label="WHIP Local")
+                with gr.Row():
+                    num_xera_vis = gr.Number(value=3.65, label="ERA Visitante")
+                    num_whip_vis = gr.Number(value=1.18, label="WHIP Visitante")
+                
+                with gr.Row():
+                    num_mlb_cuota_loc = gr.Number(value=1.72, label="Cuota Local ML")
+                    num_mlb_cuota_vis = gr.Number(value=2.20, label="Cuota Visitante ML")
+                
+                num_run_line_val = gr.Number(value=-1.5, label="Run Line")
+                num_cuota_rl_dec = gr.Number(value=2.05, label="Cuota Run Line")
+                num_mlb_tot = gr.Number(value=8.5, label="Línea Total Carreras")
+                btn_sim_mlb = gr.Button("Simular Partido MLB 🚀", variant="primary")
+                
+                gr.Markdown("---")
+                rad_pick_mlb = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Run Line)", "Selección 3 (Totales)"], label="Pick a guardar")
+                btn_save_mlb = gr.Button("Guardar Pick MLB 💾", variant="secondary")
+                lbl_save_mlb = gr.Markdown("")
+
+            with gr.Column(scale=2):
+                out_mlb = gr.HTML()
+                st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match = gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+    # ESTADO OCULTO LIGA ACTIVA
+    st_liga_activa = gr.State("Premier League")
+    st_dict_futbol_actual = gr.State(PREMIER_DICT)
+
+    # ACTUALIZACIÓN DE ESCUDOS
+    def actualizar_escudos_fut(nombre_loc, nombre_vis, dict_actual):
+        logo_loc = dict_actual.get(nombre_loc, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        logo_vis = dict_actual.get(nombre_vis, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        return logo_loc, logo_vis
+
+    def actualizar_escudos_nfl(nombre_loc, nombre_vis):
+        loc, vis = dict_nfl_nombres[nombre_loc], dict_nfl_nombres[nombre_vis]
+        return dict_nfl_logos[loc], dict_nfl_logos[vis]
+
+    def actualizar_escudos_mlb(nombre_loc, nombre_vis):
+        return EQUIPOS_MLB[nombre_loc]["logo"], EQUIPOS_MLB[nombre_vis]["logo"]
+
+    # FUNCIONES DE NAVEGACIÓN
+    def cambiar_a_liga_futbol(diccionario_liga, nombre_liga):
+        eqs = list(diccionario_liga.keys())
+        loc_inicial, vis_inicial = eqs[0], (eqs[1] if len(eqs) > 1 else eqs[0])
+        return (
+            gr.update(visible=False), gr.update(visible=True), 
+            gr.update(choices=eqs, value=loc_inicial), gr.update(choices=eqs, value=vis_inicial), 
+            diccionario_liga[loc_inicial], diccionario_liga[vis_inicial], 
+            f"## ⚽ **Área de Análisis: {nombre_liga.upper()} ({len(eqs)} Equipos)**", 
+            nombre_liga, diccionario_liga
         )
-        for a in liga_apuestas:
-            col_info, col_estado, col_del = st.columns([7, 3, 2])
-            with col_info:
-                st.markdown(f"<b>[{a['liga']}] {a['partido']}</b> - {a['mercado']} (@{a['cuota']})", unsafe_allow_html=True)
-            with col_estado:
-                estado_actual = a.get("resultado", "⏳ PENDIENTE")
-                idx_sel = OPCIONES_ESTADO.index(estado_actual) if estado_actual in OPCIONES_ESTADO else 0
-                nuevo_res = st.selectbox("Estado Real", OPCIONES_ESTADO, index=idx_sel, key=f"res_panel_{a['id']}")
-                a["resultado"] = nuevo_res
-            with col_del:
-                if st.button("🗑️ Eliminar", key=f"del_panel_{a['id']}"):
-                    eliminar_apuesta(a["id"])
-                    st.rerun()
+
+    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
+    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
+    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
+    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
+    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
+
+    def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
+    def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
+    def volver_home(): 
+        h_head, h_hist, f_nfl, f_mlb, f_fut = generar_graficas_home()
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, h_hist, f_nfl, f_mlb, f_fut
+
+    btn_nfl.click(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
+    btn_mlb.click(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
+
+    btn_volver_nfl.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+    btn_volver_mlb.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+    btn_volver_fut.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+
+    drop_fut_loc.change(fn=actualizar_escudos_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis])
+    drop_fut_vis.change(fn=actualizar_escudos_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis])
+
+    drop_nfl_loc.change(fn=actualizar_escudos_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis])
+    drop_nfl_vis.change(fn=actualizar_escudos_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis])
+
+    drop_mlb_loc.change(fn=actualizar_escudos_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis])
+    drop_mlb_vis.change(fn=actualizar_escudos_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis])
+
+    btn_auto_api.click(
+        fn=auto_cargar_pitchers_mlb,
+        inputs=[drop_mlb_loc, drop_mlb_vis],
+        outputs=[num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, lbl_api_status]
+    )
+
+    # SIMULACIONES
+    btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_nfl_sp, num_nfl_tot], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_match])
+    btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_run_line_val, num_cuota_rl_dec, num_mlb_tot], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match])
+    btn_sim_fut.click(fn=simular_partido_futbol, inputs=[st_liga_activa, drop_fut_loc, drop_fut_vis, num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_linea_tot, drop_fatiga, st_dict_futbol_actual], outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_match])
+
+    # REGISTRAR PICKS
+    def fn_save_pick_nfl(radio_sel, p1, p2, p3, match):
+        if not match: return "⚠️ Primero debes simular el partido."
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+        guardar_pick_db("NFL", match, sel_text, radio_sel, 1.90, "+4.5%")
+        return f"✅ Pick de NFL guardado: {sel_text}"
+
+    def fn_save_pick_mlb(radio_sel, p1, p2, p3, match):
+        if not match: return "⚠️ Primero debes simular el partido."
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+        guardar_pick_db("MLB", match, sel_text, radio_sel, 1.90, "+5.2%")
+        return f"✅ Pick de MLB guardado: {sel_text}"
+
+    def fn_save_pick_fut(radio_sel, p1, p2, p3, match, liga):
+        if not match: return "⚠️ Primero debes simular el partido."
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+        guardar_pick_db(f"FÚTBOL ({liga})", match, sel_text, radio_sel, 1.85, "+4.2%")
+        return f"✅ Pick de {liga} guardado: {sel_text}"
+
+    btn_save_nfl.click(fn=fn_save_pick_nfl, inputs=[rad_pick_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_match], outputs=[lbl_save_nfl])
+    btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match], outputs=[lbl_save_mlb])
+    btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
+
+    # EVENTO DE CARGA INICIAL DE LA HOME
+    app_mana.load(fn=generar_graficas_home, outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+
+app_mana.launch(share=True, debug=True)
