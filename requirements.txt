@@ -1,5 +1,10 @@
 streamlit
-numpy
 pandas
-scipy
+numpy
+xgboost
+scikit-learn
+requests
 plotly
+nflreadpy
+gradio
+scipy
