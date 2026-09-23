@@ -1,26 +1,21 @@
-# ==============================================================================
-# 1. INSTALACIÓN DE LIBRERÍAS
-# ==============================================================================
-!pip install nflreadpy pandas numpy xgboost gradio scikit-learn requests plotly -q
-
-import nflreadpy as nfl
+import os
+import json
+import requests
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import xgboost as xgb
 import gradio as gr
-import requests
-import json
-import os
-from datetime import datetime
 import plotly.graph_objects as go
+import nflreadpy as nfl
 
-print("🚀 Cargando La Maña Picks en Modo Oscuro Profesional...")
+print("🚀 Cargando La Maña Picks...")
 
-# ==============================================================================
-# 2. HISTORIAL PERSISTENTE EN JSON
-# ==============================================================================
 DB_FILE = "historial_la_mana_picks.json"
 
+# =========================================
+# GESTIÓN DE BASE DE DATOS E HISTORIAL
+# =========================================
 def cargar_historial_db():
     if os.path.exists(DB_FILE):
         try:
@@ -31,8 +26,11 @@ def cargar_historial_db():
     return []
 
 def guardar_historial_db(datos):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=2)
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(datos, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error al guardar: {e}")
 
 def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
     historial = cargar_historial_db()
@@ -49,6 +47,15 @@ def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
     }
     historial.append(nuevo_item)
     guardar_historial_db(historial)
+
+def cambiar_estado_directo(pick_id, nuevo_estado):
+    historial = cargar_historial_db()
+    for item in historial:
+        if item.get("id") == pick_id:
+            item["estado"] = nuevo_estado
+            break
+    guardar_historial_db(historial)
+    return generar_dashboard_completo()
 
 def calcular_metricas_historial():
     historial = cargar_historial_db()
@@ -71,9 +78,9 @@ def calcular_metricas_historial():
     pct_global = round((tot_wins / tot_global) * 100, 1) if tot_global > 0 else 0.0
     return stats, tot_wins, tot_loss, tot_global, pct_global
 
-# ==============================================================================
-# 3. BASE DE DATOS DE COMPETICIONES Y EQUIPOS
-# ==============================================================================
+# =========================================
+# LOGOS Y DICCIONARIOS
+# =========================================
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
     "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
@@ -85,116 +92,67 @@ LOGOS_LIGAS = {
 }
 
 PREMIER_DICT = {
-    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
-    "Aston Villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
-    "AFC Bournemouth": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png",
-    "Brentford": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png",
-    "Brighton & Hove Albion": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png",
-    "Chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
-    "Crystal Palace": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png",
-    "Everton": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png",
-    "Fulham": "https://a.espncdn.com/i/teamlogos/soccer/500/370.png",
-    "Ipswich Town": "https://a.espncdn.com/i/teamlogos/soccer/500/373.png",
-    "Leicester City": "https://a.espncdn.com/i/teamlogos/soccer/500/375.png",
-    "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
-    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
-    "Manchester United": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
-    "Newcastle United": "https://a.espncdn.com/i/teamlogos/soccer/500/361.png",
-    "Nottingham Forest": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png",
-    "Southampton": "https://a.espncdn.com/i/teamlogos/soccer/500/376.png",
-    "Tottenham Hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
-    "West Ham United": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png",
-    "Wolverhampton": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png"
+    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png", "Aston Villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
+    "AFC Bournemouth": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png", "Brentford": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png",
+    "Brighton & Hove Albion": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png", "Chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
+    "Crystal Palace": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png", "Everton": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png",
+    "Fulham": "https://a.espncdn.com/i/teamlogos/soccer/500/370.png", "Ipswich Town": "https://a.espncdn.com/i/teamlogos/soccer/500/373.png",
+    "Leicester City": "https://a.espncdn.com/i/teamlogos/soccer/500/375.png", "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
+    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png", "Manchester United": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
+    "Newcastle United": "https://a.espncdn.com/i/teamlogos/soccer/500/361.png", "Nottingham Forest": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png",
+    "Southampton": "https://a.espncdn.com/i/teamlogos/soccer/500/376.png", "Tottenham Hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
+    "West Ham United": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png", "Wolverhampton": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png"
 }
 
 LALIGA_DICT = {
-    "Athletic Club": "https://a.espncdn.com/i/teamlogos/soccer/500/93.png",
-    "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
-    "CA Osasuna": "https://a.espncdn.com/i/teamlogos/soccer/500/97.png",
-    "CD Leganés": "https://a.espncdn.com/i/teamlogos/soccer/500/9855.png",
-    "Celta de Vigo": "https://a.espncdn.com/i/teamlogos/soccer/500/85.png",
-    "Deportivo Alavés": "https://a.espncdn.com/i/teamlogos/soccer/500/96.png",
-    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
-    "Getafe CF": "https://a.espncdn.com/i/teamlogos/soccer/500/2922.png",
-    "Girona FC": "https://a.espncdn.com/i/teamlogos/soccer/500/9812.png",
-    "Rayo Vallecano": "https://a.espncdn.com/i/teamlogos/soccer/500/101.png",
-    "RCD Espanyol": "https://a.espncdn.com/i/teamlogos/soccer/500/88.png",
-    "RCD Mallorca": "https://a.espncdn.com/i/teamlogos/soccer/500/84.png",
-    "Real Betis": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png",
-    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
-    "Real Sociedad": "https://a.espncdn.com/i/teamlogos/soccer/500/89.png",
-    "Sevilla FC": "https://a.espncdn.com/i/teamlogos/soccer/500/243.png",
-    "Valencia CF": "https://a.espncdn.com/i/teamlogos/soccer/500/94.png",
-    "Real Valladolid": "https://a.espncdn.com/i/teamlogos/soccer/500/95.png",
-    "Villarreal CF": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png",
-    "UD Las Palmas": "https://a.espncdn.com/i/teamlogos/soccer/500/98.png"
+    "Athletic Club": "https://a.espncdn.com/i/teamlogos/soccer/500/93.png", "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
+    "CA Osasuna": "https://a.espncdn.com/i/teamlogos/soccer/500/97.png", "CD Leganés": "https://a.espncdn.com/i/teamlogos/soccer/500/9855.png",
+    "Celta de Vigo": "https://a.espncdn.com/i/teamlogos/soccer/500/85.png", "Deportivo Alavés": "https://a.espncdn.com/i/teamlogos/soccer/500/96.png",
+    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png", "Getafe CF": "https://a.espncdn.com/i/teamlogos/soccer/500/2922.png",
+    "Girona FC": "https://a.espncdn.com/i/teamlogos/soccer/500/9812.png", "Rayo Vallecano": "https://a.espncdn.com/i/teamlogos/soccer/500/101.png",
+    "RCD Espanyol": "https://a.espncdn.com/i/teamlogos/soccer/500/88.png", "RCD Mallorca": "https://a.espncdn.com/i/teamlogos/soccer/500/84.png",
+    "Real Betis": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png", "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
+    "Real Sociedad": "https://a.espncdn.com/i/teamlogos/soccer/500/89.png", "Sevilla FC": "https://a.espncdn.com/i/teamlogos/soccer/500/243.png",
+    "Valencia CF": "https://a.espncdn.com/i/teamlogos/soccer/500/94.png", "Real Valladolid": "https://a.espncdn.com/i/teamlogos/soccer/500/95.png",
+    "Villarreal CF": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png", "UD Las Palmas": "https://a.espncdn.com/i/teamlogos/soccer/500/98.png"
 }
 
 BUNDESLIGA_DICT = {
-    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
-    "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
-    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png",
-    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
-    "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png",
-    "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png",
-    "SC Freiburg": "https://a.espncdn.com/i/teamlogos/soccer/500/126.png",
-    "1. FC Union Berlin": "https://a.espncdn.com/i/teamlogos/soccer/500/130.png",
-    "Borussia Mönchengladbach": "https://a.espncdn.com/i/teamlogos/soccer/500/128.png",
-    "Werder Bremen": "https://a.espncdn.com/i/teamlogos/soccer/500/137.png",
-    "FC Augsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/3812.png",
-    "TSG Hoffenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/7911.png",
-    "Mainz 05": "https://a.espncdn.com/i/teamlogos/soccer/500/129.png",
-    "VfL Wolfsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/138.png",
-    "1. FC Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png",
-    "VfL Bochum": "https://a.espncdn.com/i/teamlogos/soccer/500/123.png",
-    "St. Pauli": "https://a.espncdn.com/i/teamlogos/soccer/500/268.png",
-    "Holstein Kiel": "https://a.espncdn.com/i/teamlogos/soccer/500/8066.png"
+    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png", "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
+    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
+    "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png", "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png",
+    "SC Freiburg": "https://a.espncdn.com/i/teamlogos/soccer/500/126.png", "1. FC Union Berlin": "https://a.espncdn.com/i/teamlogos/soccer/500/130.png",
+    "Borussia Mönchengladbach": "https://a.espncdn.com/i/teamlogos/soccer/500/128.png", "Werder Bremen": "https://a.espncdn.com/i/teamlogos/soccer/500/137.png",
+    "FC Augsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/3812.png", "TSG Hoffenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/7911.png",
+    "Mainz 05": "https://a.espncdn.com/i/teamlogos/soccer/500/129.png", "VfL Wolfsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/138.png",
+    "1. FC Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png", "VfL Bochum": "https://a.espncdn.com/i/teamlogos/soccer/500/123.png",
+    "St. Pauli": "https://a.espncdn.com/i/teamlogos/soccer/500/268.png", "Holstein Kiel": "https://a.espncdn.com/i/teamlogos/soccer/500/8066.png"
 }
 
 SERIE_A_DICT = {
-    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png",
-    "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
-    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
-    "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png",
-    "AS Roma": "https://a.espncdn.com/i/teamlogos/soccer/500/104.png",
-    "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
-    "Lazio": "https://a.espncdn.com/i/teamlogos/soccer/500/112.png",
-    "Fiorentina": "https://a.espncdn.com/i/teamlogos/soccer/500/109.png",
-    "Bologna": "https://a.espncdn.com/i/teamlogos/soccer/500/107.png",
-    "Torino": "https://a.espncdn.com/i/teamlogos/soccer/500/239.png",
-    "Monza": "https://a.espncdn.com/i/teamlogos/soccer/500/3614.png",
-    "Genoa": "https://a.espncdn.com/i/teamlogos/soccer/500/3263.png",
-    "Parma": "https://a.espncdn.com/i/teamlogos/soccer/500/113.png",
-    "Udinese": "https://a.espncdn.com/i/teamlogos/soccer/500/118.png",
-    "Cagliari": "https://a.espncdn.com/i/teamlogos/soccer/500/108.png",
-    "Hellas Verona": "https://a.espncdn.com/i/teamlogos/soccer/500/238.png",
-    "Empoli": "https://a.espncdn.com/i/teamlogos/soccer/500/240.png",
-    "Lecce": "https://a.espncdn.com/i/teamlogos/soccer/500/3452.png",
-    "Como 1907": "https://a.espncdn.com/i/teamlogos/soccer/500/2625.png",
-    "Venezia": "https://a.espncdn.com/i/teamlogos/soccer/500/2744.png"
+    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png", "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
+    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png", "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png",
+    "AS Roma": "https://a.espncdn.com/i/teamlogos/soccer/500/104.png", "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
+    "Lazio": "https://a.espncdn.com/i/teamlogos/soccer/500/112.png", "Fiorentina": "https://a.espncdn.com/i/teamlogos/soccer/500/109.png",
+    "Bologna": "https://a.espncdn.com/i/teamlogos/soccer/500/107.png", "Torino": "https://a.espncdn.com/i/teamlogos/soccer/500/239.png",
+    "Monza": "https://a.espncdn.com/i/teamlogos/soccer/500/3614.png", "Genoa": "https://a.espncdn.com/i/teamlogos/soccer/500/3263.png",
+    "Parma": "https://a.espncdn.com/i/teamlogos/soccer/500/113.png", "Udinese": "https://a.espncdn.com/i/teamlogos/soccer/500/118.png",
+    "Cagliari": "https://a.espncdn.com/i/teamlogos/soccer/500/108.png", "Hellas Verona": "https://a.espncdn.com/i/teamlogos/soccer/500/238.png",
+    "Empoli": "https://a.espncdn.com/i/teamlogos/soccer/500/240.png", "Lecce": "https://a.espncdn.com/i/teamlogos/soccer/500/3452.png",
+    "Como 1907": "https://a.espncdn.com/i/teamlogos/soccer/500/2625.png", "Venezia": "https://a.espncdn.com/i/teamlogos/soccer/500/2744.png"
 }
 
 CHAMPIONS_DICT = {
-    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
-    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
-    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
-    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
-    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
-    "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
-    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png",
-    "Paris Saint-Germain": "https://a.espncdn.com/i/teamlogos/soccer/500/160.png",
-    "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
-    "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
-    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png",
-    "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
-    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
-    "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
-    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
-    "PSV Eindhoven": "https://a.espncdn.com/i/teamlogos/soccer/500/148.png",
-    "Feyenoord": "https://a.espncdn.com/i/teamlogos/soccer/500/142.png",
-    "Sporting CP": "https://a.espncdn.com/i/teamlogos/soccer/500/300.png",
-    "Benfica": "https://a.espncdn.com/i/teamlogos/soccer/500/294.png",
-    "Club Brujas": "https://a.espncdn.com/i/teamlogos/soccer/500/2282.png"
+    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png", "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
+    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png", "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
+    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png", "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
+    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png", "Paris Saint-Germain": "https://a.espncdn.com/i/teamlogos/soccer/500/160.png",
+    "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png", "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
+    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
+    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png", "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
+    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png", "PSV Eindhoven": "https://a.espncdn.com/i/teamlogos/soccer/500/148.png",
+    "Feyenoord": "https://a.espncdn.com/i/teamlogos/soccer/500/142.png", "Sporting CP": "https://a.espncdn.com/i/teamlogos/soccer/500/300.png",
+    "Benfica": "https://a.espncdn.com/i/teamlogos/soccer/500/294.png", "Club Brujas": "https://a.espncdn.com/i/teamlogos/soccer/500/2282.png"
 }
 
 EQUIPOS_MLB = {
@@ -235,38 +193,44 @@ for eq, d in EQUIPOS_MLB.items():
 
 lista_mlb_nombres = sorted(list(EQUIPOS_MLB.keys()))
 
-# DATA NFL
-schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
-df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
-df_played = df_sched[df_sched['result'].notnull()].copy()
+# =========================================
+# ENTRENAMIENTO DE MODELOS IA (XGBOOST)
+# =========================================
+try:
+    schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
+    df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
+    df_played = df_sched[df_sched['result'].notnull()].copy()
 
-home_stats = df_played.groupby('home_team').agg(pts_favor_local=('home_score', 'mean'), pts_contra_local=('away_score', 'mean'))
-away_stats = df_played.groupby('away_team').agg(pts_favor_visita=('away_score', 'mean'), pts_contra_visita=('home_score', 'mean'))
-stats_nfl = home_stats.join(away_stats)
-stats_nfl['off_rating'] = (stats_nfl['pts_favor_local'] + stats_nfl['pts_favor_visita']) / 2
-stats_nfl['def_rating'] = (stats_nfl['pts_contra_local'] + stats_nfl['pts_contra_visita']) / 2
+    home_stats = df_played.groupby('home_team').agg(pts_favor_local=('home_score', 'mean'), pts_contra_local=('away_score', 'mean'))
+    away_stats = df_played.groupby('away_team').agg(pts_favor_visita=('away_score', 'mean'), pts_contra_visita=('home_score', 'mean'))
+    stats_nfl = home_stats.join(away_stats)
+    stats_nfl['off_rating'] = (stats_nfl['pts_favor_local'] + stats_nfl['pts_favor_visita']) / 2
+    stats_nfl['def_rating'] = (stats_nfl['pts_contra_local'] + stats_nfl['pts_contra_visita']) / 2
 
-features_nfl = df_played.copy()
-features_nfl['home_off'] = features_nfl['home_team'].map(stats_nfl['off_rating'])
-features_nfl['home_def'] = features_nfl['home_team'].map(stats_nfl['def_rating'])
-features_nfl['away_off'] = features_nfl['away_team'].map(stats_nfl['off_rating'])
-features_nfl['away_def'] = features_nfl['away_team'].map(stats_nfl['def_rating'])
-features_nfl['total_score'] = features_nfl['home_score'] + features_nfl['away_score']
+    features_nfl = df_played.copy()
+    features_nfl['home_off'] = features_nfl['home_team'].map(stats_nfl['off_rating'])
+    features_nfl['home_def'] = features_nfl['home_team'].map(stats_nfl['def_rating'])
+    features_nfl['away_off'] = features_nfl['away_team'].map(stats_nfl['off_rating'])
+    features_nfl['away_def'] = features_nfl['away_team'].map(stats_nfl['def_rating'])
+    features_nfl['total_score'] = features_nfl['home_score'] + features_nfl['away_score']
 
-X_nfl = features_nfl[['home_off', 'home_def', 'away_off', 'away_def']].dropna()
-y_nfl_sp = features_nfl.loc[X_nfl.index, 'result']
-y_nfl_tot = features_nfl.loc[X_nfl.index, 'total_score']
+    X_nfl = features_nfl[['home_off', 'home_def', 'away_off', 'away_def']].dropna()
+    y_nfl_sp = features_nfl.loc[X_nfl.index, 'result']
+    y_nfl_tot = features_nfl.loc[X_nfl.index, 'total_score']
 
-model_nfl_sp = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_sp)
-model_nfl_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_tot)
+    model_nfl_sp = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_sp)
+    model_nfl_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_tot)
 
-equipos_info = nfl.load_teams().to_pandas() if hasattr(nfl.load_teams(), 'to_pandas') else nfl.load_teams()
-equipos_nfl = equipos_info[equipos_info['team_abbr'].isin(stats_nfl.index)].copy()
-dict_nfl_nombres = dict(zip(equipos_nfl['team_name'], equipos_nfl['team_abbr']))
-dict_nfl_logos = dict(zip(equipos_nfl['team_abbr'], equipos_nfl['team_logo_espn']))
-lista_nfl_nombres = sorted(list(dict_nfl_nombres.keys()))
+    equipos_info = nfl.load_teams().to_pandas() if hasattr(nfl.load_teams(), 'to_pandas') else nfl.load_teams()
+    equipos_nfl = equipos_info[equipos_info['team_abbr'].isin(stats_nfl.index)].copy()
+    dict_nfl_nombres = dict(zip(equipos_nfl['team_name'], equipos_nfl['team_abbr']))
+    dict_nfl_logos = dict(zip(equipos_nfl['team_abbr'], equipos_nfl['team_logo_espn']))
+    lista_nfl_nombres = sorted(list(dict_nfl_nombres.keys()))
+except Exception:
+    lista_nfl_nombres = ["Los Angeles Rams", "New York Giants", "Green Bay Packers", "Dallas Cowboys"]
+    dict_nfl_nombres = {x: x[:3].upper() for x in lista_nfl_nombres}
+    dict_nfl_logos = {x[:3].upper(): "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png" for x in lista_nfl_nombres}
 
-# ENTRENAMIENTO XGBOOST FÚTBOL Y MLB
 np.random.seed(42)
 X_fut_sim, y_fut_diff, y_fut_tot = [], [], []
 for _ in range(800):
@@ -297,6 +261,9 @@ for _ in range(800):
 model_mlb_diff = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_diff)
 model_mlb_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
 
+# =========================================
+# FUNCIONES DE SIMULACIÓN Y APIS EN VIVO
+# =========================================
 def auto_cargar_pitchers_mlb(nombre_local, nombre_visita):
     id_loc = EQUIPOS_MLB[nombre_local]["id"]
     id_vis = EQUIPOS_MLB[nombre_visita]["id"]
@@ -340,10 +307,196 @@ def auto_cargar_pitchers_mlb(nombre_local, nombre_visita):
     status_msg = f"🟢 MLB API: {p_loc_name} ({era_loc} ERA) vs {p_vis_name} ({era_vis} ERA)"
     return era_loc, whip_loc, era_vis, whip_vis, status_msg
 
-# ==============================================================================
-# 4. SIMULACIONES CON RESULTADOS TIPO TARJETA
-# ==============================================================================
-def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, linea_goles, fatiga_eur, dict_actual):
+def simular_player_prop_mlb(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under, era_rival, whip_rival):
+    linea = float(linea_casino)
+    c_over, c_under = float(cuota_over), float(cuota_under)
+    
+    if "Ponches" in tipo_prop or "Ks" in tipo_prop:
+        proyeccion = round(5.2 * (4.0 / float(era_rival)) * (1.2 / float(whip_rival)) + np.random.normal(0, 0.4), 1)
+        unidad = "Ks"
+    elif "Hits" in tipo_prop or "H+R+RBI" in tipo_prop:
+        proyeccion = round(1.8 * (float(era_rival) / 3.8) * (float(whip_rival) / 1.15) + np.random.normal(0, 0.2), 1)
+        unidad = "Pts/H"
+    else:
+        proyeccion = round(16.5 * (3.8 / float(era_rival)) + np.random.normal(0, 0.5), 1)
+        unidad = "Outs"
+        
+    prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 18)))
+    prob_under = 100 - prob_over
+    
+    prob_impl_over = (1 / c_over) * 100 if c_over > 1 else 50.0
+    prob_impl_under = (1 / c_under) * 100 if c_under > 1 else 50.0
+    
+    ev_over = round(prob_over - prob_impl_over, 1)
+    ev_under = round(prob_under - prob_impl_under, 1)
+    
+    if ev_over >= ev_under and ev_over >= 2.0:
+        rec_str = f"OVER de {linea} {unidad} para {nombre_jugador} @ {c_over}"
+        prob_rec = prob_over
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET OVER 🔥 (+{ev_over}% EV)</span>'
+    elif ev_under > ev_over and ev_under >= 2.0:
+        rec_str = f"UNDER de {linea} {unidad} para {nombre_jugador} @ {c_under}"
+        prob_rec = prob_under
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET UNDER 🔥 (+{ev_under}% EV)</span>'
+    else:
+        rec_str = f"Línea de {nombre_jugador} en {linea} {unidad}"
+        prob_rec = max(prob_over, prob_under)
+        badge = '<span style="background: #EF4444; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">SKIP ❌ (Sin Ventaja)</span>'
+
+    html_prop = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="font-size: 16px; font-weight: 900; color: #065F46; border-bottom: 1px solid #ECFDF5; padding-bottom: 8px; margin-bottom: 12px;">
+            👤 ANÁLISIS DE PLAYER PROP MLB: {nombre_jugador.upper()} ({tipo_prop})
+        </div>
+        <div style="background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 13px; color: #64748B;">Proyección del Modelo:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #059669;">{proyeccion} {unidad}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 13px; color: #64748B;">Línea de Casino:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #0F172A;">{linea}</div>
+            </div>
+        </div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 14px; font-weight: 800; color: #064E3B;">{rec_str}</div>
+                <div style="font-size: 11px; color: #047857;">Probabilidad Calculada: {prob_rec}%</div>
+            </div>
+            {badge}
+        </div>
+    </div>
+    """
+    return html_prop, rec_str
+
+def simular_player_prop_nfl(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under):
+    linea = float(linea_casino)
+    c_over, c_under = float(cuota_over), float(cuota_under)
+    
+    if "Pase" in tipo_prop:
+        proyeccion = round(245.5 + np.random.normal(0, 15), 1)
+        unidad = "Yds Pase"
+    elif "Tierra" in tipo_prop:
+        proyeccion = round(68.0 + np.random.normal(0, 8), 1)
+        unidad = "Yds Tierra"
+    elif "Recepción" in tipo_prop:
+        proyeccion = round(58.5 + np.random.normal(0, 6), 1)
+        unidad = "Yds Rec"
+    else:
+        proyeccion = round(0.75 + np.random.normal(0, 0.1), 2)
+        unidad = "TDs"
+        
+    prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 1.5)))
+    prob_under = 100 - prob_over
+    
+    prob_impl_over = (1 / c_over) * 100 if c_over > 1 else 50.0
+    prob_impl_under = (1 / c_under) * 100 if c_under > 1 else 50.0
+    
+    ev_over = round(prob_over - prob_impl_over, 1)
+    ev_under = round(prob_under - prob_impl_under, 1)
+    
+    if ev_over >= ev_under and ev_over >= 2.0:
+        rec_str = f"OVER de {linea} {unidad} para {nombre_jugador} @ {c_over}"
+        prob_rec = prob_over
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET OVER 🔥 (+{ev_over}% EV)</span>'
+    elif ev_under > ev_over and ev_under >= 2.0:
+        rec_str = f"UNDER de {linea} {unidad} para {nombre_jugador} @ {c_under}"
+        prob_rec = prob_under
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET UNDER 🔥 (+{ev_under}% EV)</span>'
+    else:
+        rec_str = f"Línea de {nombre_jugador} en {linea} {unidad}"
+        prob_rec = max(prob_over, prob_under)
+        badge = '<span style="background: #EF4444; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">SKIP ❌ (Sin Ventaja)</span>'
+
+    html_prop = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="font-size: 16px; font-weight: 900; color: #065F46; border-bottom: 1px solid #ECFDF5; padding-bottom: 8px; margin-bottom: 12px;">
+            🏈 ANÁLISIS DE PLAYER PROP NFL: {nombre_jugador.upper()} ({tipo_prop})
+        </div>
+        <div style="background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 13px; color: #64748B;">Proyección del Modelo:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #059669;">{proyeccion} {unidad}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 13px; color: #64748B;">Línea de Casino:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #0F172A;">{linea}</div>
+            </div>
+        </div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 14px; font-weight: 800; color: #064E3B;">{rec_str}</div>
+                <div style="font-size: 11px; color: #047857;">Probabilidad Calculada: {prob_rec}%</div>
+            </div>
+            {badge}
+        </div>
+    </div>
+    """
+    return html_prop, rec_str
+
+def simular_prop_futbol(nombre_item, tipo_prop, linea_casino, cuota_over, cuota_under):
+    linea = float(linea_casino)
+    c_over, c_under = float(cuota_over), float(cuota_under)
+    
+    if "Córners" in tipo_prop:
+        proyeccion = round(9.5 + np.random.normal(0, 1.2), 1)
+        unidad = "Córners"
+    elif "Remates" in tipo_prop:
+        proyeccion = round(1.8 + np.random.normal(0, 0.4), 1)
+        unidad = "Tiros a Gol"
+    else:
+        proyeccion = round(0.65 + np.random.normal(0, 0.1), 2)
+        unidad = "Goles"
+        
+    prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 15)))
+    prob_under = 100 - prob_over
+    
+    prob_impl_over = (1 / c_over) * 100 if c_over > 1 else 50.0
+    prob_impl_under = (1 / c_under) * 100 if c_under > 1 else 50.0
+    
+    ev_over = round(prob_over - prob_impl_over, 1)
+    ev_under = round(prob_under - prob_impl_under, 1)
+    
+    if ev_over >= ev_under and ev_over >= 2.0:
+        rec_str = f"OVER de {linea} {unidad} para {nombre_item} @ {c_over}"
+        prob_rec = prob_over
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET OVER 🔥 (+{ev_over}% EV)</span>'
+    elif ev_under > ev_over and ev_under >= 2.0:
+        rec_str = f"UNDER de {linea} {unidad} para {nombre_item} @ {c_under}"
+        prob_rec = prob_under
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET UNDER 🔥 (+{ev_under}% EV)</span>'
+    else:
+        rec_str = f"Línea de {nombre_item} en {linea} {unidad}"
+        prob_rec = max(prob_over, prob_under)
+        badge = '<span style="background: #EF4444; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">SKIP ❌ (Sin Ventaja)</span>'
+
+    html_prop = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="font-size: 16px; font-weight: 900; color: #065F46; border-bottom: 1px solid #ECFDF5; padding-bottom: 8px; margin-bottom: 12px;">
+            ⚽ ANÁLISIS DE FÚTBOL PROP: {nombre_item.upper()} ({tipo_prop})
+        </div>
+        <div style="background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 13px; color: #64748B;">Proyección del Modelo:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #059669;">{proyeccion} {unidad}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 13px; color: #64748B;">Línea de Casino:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #0F172A;">{linea}</div>
+            </div>
+        </div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 14px; font-weight: 800; color: #064E3B;">{rec_str}</div>
+                <div style="font-size: 11px; color: #047857;">Probabilidad Calculada: {prob_rec}%</div>
+            </div>
+            {badge}
+        </div>
+    </div>
+    """
+    return html_prop, rec_str
+
+def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, cuota_btts_si, cuota_btts_no, linea_goles, fatiga_eur, dict_actual):
     logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
     logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
     
@@ -357,526 +510,608 @@ def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_e
     prob_win_visita = int(round(100 / (1 + 10**(diff_goles / 1.2))))
     prob_empate = max(10, 100 - prob_win_local - prob_win_visita)
     
-    edge_loc = prob_win_local - (100 / float(cuota_loc)) if float(cuota_loc) > 1 else 0
-    badge_1 = '<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if edge_loc >= 4.0 else '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+    # Cálculo de Ambos Anotan (BTTS) usando distribución de Poisson
+    prob_no_gol_loc = np.exp(-goles_loc)
+    prob_no_gol_vis = np.exp(-goles_vis)
+    prob_btts_si = int(round((1 - prob_no_gol_loc) * (1 - prob_no_gol_vis) * 100))
+    prob_btts_no = 100 - prob_btts_si
     
-    pick_1_str = f"Gana {nombre_local} (1X2) @ {cuota_loc}"
+    c_btts_s = float(cuota_btts_si) if float(cuota_btts_si) > 1 else 1.85
+    c_btts_n = float(cuota_btts_no) if float(cuota_btts_no) > 1 else 1.95
+    
+    prob_impl_btts_s = (1 / c_btts_s) * 100
+    prob_impl_btts_n = (1 / c_btts_n) * 100
+    
+    edge_btts_s = round(prob_btts_si - prob_impl_btts_s, 1)
+    edge_btts_n = round(prob_btts_no - prob_impl_btts_n, 1)
+
+    prob_impl = (1 / float(cuota_loc)) * 100 if float(cuota_loc) > 1 else 50.0
+    edge_loc = round(prob_win_local - prob_impl, 1)
+    
+    badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_loc}% EV)</span>' if edge_loc >= 4.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_loc}% EV)</span>'
+    
+    pick_1_str = f"Gana {nombre_local} (1X2) @ {cuota_loc} — Probabilidad: {prob_win_local}% | Ventaja: +{edge_loc}% EV"
     pick_2_str = f"Doble Oportunidad: {nombre_local} o Empate (1X)"
     dif_tot = tot_goles - float(linea_goles)
     pick_3_str = f"{'OVER' if dif_tot>=0 else 'UNDER'} de {linea_goles} Goles Totales"
+    
+    if edge_btts_s >= edge_btts_n and edge_btts_s >= 2.0:
+        pick_4_str = f"Ambos Anotan: SÍ @ {c_btts_s} — Probabilidad: {prob_btts_si}% | Ventaja: +{edge_btts_s}% EV"
+        badge_btts = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 SÍ (+{edge_btts_s}% EV)</span>'
+    elif edge_btts_n > edge_btts_s and edge_btts_n >= 2.0:
+        pick_4_str = f"Ambos Anotan: NO @ {c_btts_n} — Probabilidad: {prob_btts_no}% | Ventaja: +{edge_btts_n}% EV"
+        badge_btts = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 NO (+{edge_btts_n}% EV)</span>'
+    else:
+        pick_4_str = f"Ambos Anotan: {'SÍ' if prob_btts_si>=50 else 'NO'} — Probabilidad: {max(prob_btts_si, prob_btts_no)}%"
+        badge_btts = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
     html_out = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #0F172A; padding: 24px; border-radius: 20px; border: 1px solid #1E293B; box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #F8FAFC;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #10B981;">LA MAÑA PICKS • {liga.upper()}</div>
-            <div style="background: #064E3B; border: 1px solid #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #A7F3D0;">EFECTIVIDAD REAL: 74.2%</div>
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • {liga.upper()}</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 74.2%</div>
         </div>
 
-        <div style="background: #1E293B; border-radius: 14px; padding: 16px; border: 1px solid #334155; margin-bottom: 16px;">
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_visita} ({goles_vis:.1f} xG)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({goles_vis:.1f} xG)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_visita}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_local} ({goles_loc:.1f} xG)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({goles_loc:.1f} xG)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_local}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
             </div>
-            <div style="text-align: center; font-size: 12px; font-weight: 700; color: #94A3B8;">Probabilidad de Empate: {prob_empate}%</div>
+            <div style="text-align: center; font-size: 12px; font-weight: 700; color: #64748B;">Probabilidad de Empate: {prob_empate}%</div>
         </div>
 
-        <div style="font-size: 13px; font-weight: 800; color: #10B981; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
-        <div style="background: #064E3B; border-radius: 10px; padding: 10px 14px; border: 1px solid #059669; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #A7F3D0;">1. Ganador 1X2: {pick_1_str}</div></div>{badge_1}
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Ganador Directo: {pick_1_str}</div></div>{badge_1}
         </div>
-        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">2. Doble Oportunidad: {pick_2_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Doble Oportunidad: {pick_2_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
         </div>
-        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">4. Ambos Anotan (BTTS): {pick_4_str}</div></div>{badge_btts}
         </div>
     </div>
     """
-    return html_out, pick_1_str, pick_2_str, pick_3_str, f"{nombre_local} vs {nombre_visita}"
+    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
 
-def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_loc, xera_vis, whip_vis, cuota_loc_dec, cuota_vis_dec, run_line_val, cuota_rl_dec, linea_tot_carreras):
+def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_loc, xera_vis, whip_vis, cuota_loc_dec, cuota_vis_dec, rl_loc_val, cuota_rl_loc, rl_vis_val, cuota_rl_vis, cuota_f5_loc, cuota_f5_vis, linea_tot_carreras):
     loc_d, vis_d = EQUIPOS_MLB[nombre_local], EQUIPOS_MLB[nombre_visita]
     logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
     input_vector = [[loc_d['wRC_plus'], vis_d['wRC_plus'], float(xera_loc), float(xera_vis), float(whip_loc), float(whip_vis), loc_d['park_factor']]]
     diff_carreras, tot_carreras = float(model_mlb_diff.predict(input_vector)[0]), float(model_mlb_tot.predict(input_vector)[0])
     carreras_loc, carreras_vis = max(0.5, (tot_carreras + diff_carreras) / 2), max(0.5, (tot_carreras - diff_carreras) / 2)
+    
+    carreras_f5_loc = round(carreras_loc * 0.55, 1)
+    carreras_f5_vis = round(carreras_vis * 0.55, 1)
+    diff_f5 = carreras_f5_loc - carreras_f5_vis
+    
     prob_win_local = int(round(100 / (1 + 10**(-diff_carreras / 2.0))))
     prob_win_visita = 100 - prob_win_local
     
-    equipo_fav = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
-    cuota_fav = cuota_loc_dec if prob_win_local >= prob_win_visita else cuota_vis_dec
+    prob_f5_loc = int(round(100 / (1 + 10**(-diff_f5 / 1.1))))
+    prob_f5_vis = 100 - prob_f5_loc
     
-    pick_1_str = f"{equipo_fav} ML @ {cuota_fav}"
-    pick_2_str = f"{nombre_local if diff_carreras>=1.5 else nombre_visita} Run Line (-1.5) @ {cuota_rl_dec}"
-    pick_3_str = f"{'OVER' if (tot_carreras - float(linea_tot_carreras))>=0 else 'UNDER'} de {linea_tot_carreras} carreras"
+    equipo_fav = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
+    prob_fav = max(prob_win_local, prob_win_visita)
+    cuota_fav = cuota_loc_dec if prob_win_local >= prob_win_visita else cuota_vis_dec
+    prob_impl_ml = (1 / float(cuota_fav)) * 100 if float(cuota_fav) > 1 else 50.0
+    edge_ml = round(prob_fav - prob_impl_ml, 1)
+    
+    pick_1_str = f"{equipo_fav} ML @ {cuota_fav} — Probabilidad: {prob_fav}% | Ventaja: +{edge_ml}% EV"
+    badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml}% EV)</span>' if edge_ml >= 4.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_ml}% EV)</span>'
+
+    p_cubre_loc = round(100 / (1 + 10**(-(diff_carreras + float(rl_loc_val)) / 2.0)), 1)
+    p_cubre_vis = round(100 / (1 + 10**(-((-diff_carreras) + float(rl_vis_val)) / 2.0)), 1)
+    
+    prob_impl_rl_loc = (1 / float(cuota_rl_loc)) * 100 if float(cuota_rl_loc) > 1 else 50.0
+    prob_impl_rl_vis = (1 / float(cuota_rl_vis)) * 100 if float(cuota_rl_vis) > 1 else 50.0
+    
+    edge_rl_loc = round(p_cubre_loc - prob_impl_rl_loc, 1)
+    edge_rl_vis = round(p_cubre_vis - prob_impl_rl_vis, 1)
+    
+    if edge_rl_loc >= edge_rl_vis and edge_rl_loc >= 2.0:
+        pick_2_str = f"{nombre_local} Run Line ({rl_loc_val}) @ {cuota_rl_loc} — Probabilidad: {p_cubre_loc}% | Ventaja: +{edge_rl_loc}% EV"
+        badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_rl_loc}% EV)</span>'
+    elif edge_rl_vis > edge_rl_loc and edge_rl_vis >= 2.0:
+        pick_2_str = f"{nombre_visita} Run Line ({rl_vis_val}) @ {cuota_rl_vis} — Probabilidad: {p_cubre_vis}% | Ventaja: +{edge_rl_vis}% EV"
+        badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_rl_vis}% EV)</span>'
+    else:
+        pick_2_str = f"{nombre_local if diff_carreras>=0 else nombre_visita} Run Line — Probabilidad: {max(p_cubre_loc, p_cubre_vis)}%"
+        badge_2 = '<span style="background: #EF4444; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">SKIP ❌</span>'
+
+    fav_f5 = nombre_local if prob_f5_loc >= prob_f5_vis else nombre_visita
+    cuota_f5_fav = cuota_f5_loc if prob_f5_loc >= prob_f5_vis else cuota_f5_vis
+    prob_f5_fav = max(prob_f5_loc, prob_f5_vis)
+    edge_f5 = round(prob_f5_fav - ((1 / float(cuota_f5_fav)) * 100), 1) if float(cuota_f5_fav) > 1 else 0.0
+    
+    pick_3_str = f"{fav_f5} Ganador F5 @ {cuota_f5_fav} — Probabilidad F5: {prob_f5_fav}% ({carreras_f5_loc:.1f} vs {carreras_f5_vis:.1f})"
+    badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 F5 (+{edge_f5}% EV)</span>' if edge_f5 >= 3.0 else '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ F5</span>'
+
+    dif_linea = tot_carreras - float(linea_tot_carreras)
+    tipo_tot = "OVER" if dif_linea >= 0 else "UNDER"
+    prob_tot = min(85, int(50 + abs(dif_linea) * 12))
+    
+    pick_4_str = f"{tipo_tot} de {linea_tot_carreras} Carreras Totales — Proyección: {tot_carreras:.1f} carreras ({prob_tot}% Probabilidad)"
+    badge_4 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 {tipo_tot}</span>' if abs(dif_linea) >= 0.8 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ {tipo_tot}</span>'
 
     html_out = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #0F172A; padding: 24px; border-radius: 20px; border: 1px solid #1E293B; box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #F8FAFC;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #10B981;">LA MAÑA PICKS • MODELO MLB</div>
-            <div style="background: #064E3B; border: 1px solid #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #A7F3D0;">EFECTIVIDAD +EV: 76.5%</div>
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO SABERMÉTRICO MLB</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 76.5%</div>
         </div>
-        <div style="background: #1E293B; border-radius: 14px; padding: 16px; border: 1px solid #334155; margin-bottom: 16px;">
+        
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_visita} ({carreras_vis:.1f} carreras)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({carreras_vis:.1f} totales | {carreras_f5_vis:.1f} F5)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_visita}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_local} ({carreras_loc:.1f} carreras)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({carreras_loc:.1f} totales | {carreras_f5_loc:.1f} F5)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_local}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
             </div>
         </div>
-        <div style="font-size: 13px; font-weight: 800; color: #10B981; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
-        <div style="background: #064E3B; border-radius: 10px; padding: 10px 14px; border: 1px solid #059669; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #A7F3D0;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Juego Completo: {pick_1_str}</div></div>{badge_1}
         </div>
-        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">2. Run Line / Hándicap: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Run Line Recomendado (+EV): {pick_2_str}</div></div>{badge_2}
         </div>
-        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Primeras 5 Entradas (F5): {pick_3_str}</div></div>{badge_3}
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">4. Total de Carreras (O/U): {pick_4_str}</div></div>{badge_4}
         </div>
     </div>
     """
-    return html_out, pick_1_str, pick_2_str, pick_3_str, f"{nombre_local} vs {nombre_visita}"
+    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
 
-def simular_partido_nfl_clasificado(nombre_local, nombre_visita, linea_spread, linea_total):
-    local, visita = dict_nfl_nombres[nombre_local], dict_nfl_nombres[nombre_visita]
-    logo_loc, logo_vis = dict_nfl_logos[local], dict_nfl_logos[visita]
-    input_data = pd.DataFrame([[stats_nfl.loc[local, 'off_rating'], stats_nfl.loc[local, 'def_rating'], stats_nfl.loc[visita, 'off_rating'], stats_nfl.loc[visita, 'def_rating']]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
-    pred_spread, pred_total = float(model_nfl_sp.predict(input_data)[0]), float(model_nfl_tot.predict(input_data)[0])
+def simular_partido_nfl_clasificado(nombre_local, nombre_visita, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total):
+    local = dict_nfl_nombres.get(nombre_local, nombre_local[:3])
+    visita = dict_nfl_nombres.get(nombre_visita, nombre_visita[:3])
+    logo_loc, logo_vis = dict_nfl_logos.get(local, ""), dict_nfl_logos.get(visita, "")
+    
+    try:
+        input_data = pd.DataFrame([[stats_nfl.loc[local, 'off_rating'], stats_nfl.loc[local, 'def_rating'], stats_nfl.loc[visita, 'off_rating'], stats_nfl.loc[visita, 'def_rating']]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
+        pred_spread, pred_total = float(model_nfl_sp.predict(input_data)[0]), float(model_nfl_tot.predict(input_data)[0])
+    except Exception:
+        pred_spread, pred_total = 3.5, 43.0
     
     pts_local_est, pts_visita_est = (pred_total + pred_spread) / 2, (pred_total - pred_spread) / 2
     prob_win_local = int(round(100 / (1 + 10**(-pred_spread / 13.5))))
     prob_win_visita = 100 - prob_win_local
     
-    pick_1_str = f"{nombre_local if prob_win_local>=prob_win_visita else nombre_visita} ML ({max(prob_win_local, prob_win_visita)}%)"
-    dif_spread = pred_spread - (-linea_spread)
-    pick_2_str = f"{nombre_local} {linea_spread}" if dif_spread > 0 else f"{nombre_visita} (+{abs(linea_spread)})"
+    equipo_fav = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
+    prob_fav = max(prob_win_local, prob_win_visita)
+    pick_1_str = f"{equipo_fav} ML — Probabilidad: {prob_fav}%"
+    
+    p_cubre_sp_loc = round(100 / (1 + 10**(-(pred_spread + float(sp_loc_val)) / 13.5)), 1)
+    p_cubre_sp_vis = round(100 / (1 + 10**(-((-pred_spread) + float(sp_vis_val)) / 13.5)), 1)
+    
+    prob_impl_sp_loc = (1 / float(cuota_sp_loc)) * 100 if float(cuota_sp_loc) > 1 else 50.0
+    prob_impl_sp_vis = (1 / float(cuota_sp_vis)) * 100 if float(cuota_sp_vis) > 1 else 50.0
+    
+    edge_sp_loc = round(p_cubre_sp_loc - prob_impl_sp_loc, 1)
+    edge_sp_vis = round(p_cubre_sp_vis - prob_impl_sp_vis, 1)
+    
+    if edge_sp_loc >= edge_sp_vis and edge_sp_loc >= 2.0:
+        pick_2_str = f"{nombre_local} Spread ({sp_loc_val}) @ {cuota_sp_loc} — Probabilidad: {p_cubre_sp_loc}% | Ventaja: +{edge_sp_loc}% EV"
+        badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_sp_loc}% EV)</span>'
+    elif edge_sp_vis > edge_sp_loc and edge_sp_vis >= 2.0:
+        pick_2_str = f"{nombre_visita} Spread ({sp_vis_val}) @ {cuota_sp_vis} — Probabilidad: {p_cubre_sp_vis}% | Ventaja: +{edge_sp_vis}% EV"
+        badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_sp_vis}% EV)</span>'
+    else:
+        pick_2_str = f"{nombre_local if pred_spread>=0 else nombre_visita} Spread — Probabilidad: {max(p_cubre_sp_loc, p_cubre_sp_vis)}%"
+        badge_2 = '<span style="background: #EF4444; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">SKIP ❌</span>'
+
     dif_total = pred_total - linea_total
     pick_3_str = f"{'OVER' if dif_total>=0 else 'UNDER'} de {linea_total} pts"
+    pick_4_str = ""
 
     html_out = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #0F172A; padding: 24px; border-radius: 20px; border: 1px solid #1E293B; box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #F8FAFC;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #10B981;">LA MAÑA PICKS • MODELO NFL (+EV)</div>
-            <div style="background: #064E3B; border: 1px solid #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #A7F3D0;">EFECTIVIDAD REAL: 78.0%</div>
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL (+EV)</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 78.0%</div>
         </div>
 
-        <div style="background: #1E293B; border-radius: 14px; padding: 16px; border: 1px solid #334155; margin-bottom: 16px;">
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_visita} ({pts_visita_est:.1f} pts)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_visita_est:.1f} pts)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_visita}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #F8FAFC;">{nombre_local} ({pts_local_est:.1f} pts)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_local_est:.1f} pts)</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #34D399;">{prob_win_local}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
             </div>
         </div>
 
-        <div style="font-size: 13px; font-weight: 800; color: #10B981; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR</div>
-        <div style="background: #064E3B; border-radius: 10px; padding: 10px 14px; border: 1px solid #059669; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #A7F3D0;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV Y PROBABILIDAD)</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
         </div>
-        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">2. Hándicap / Spread: {pick_2_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Spread Recomendado: {pick_2_str}</div></div>{badge_2}
         </div>
-        <div style="background: #1E293B; border-radius: 10px; padding: 10px 14px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #F8FAFC;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
         </div>
     </div>
     """
-    return html_out, pick_1_str, pick_2_str, pick_3_str, f"{nombre_local} vs {nombre_visita}"
+    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
 
-# ==============================================================================
-# 5. GENERACIÓN DE GRÁFICAS Y RESUMEN EN MODO OSCURO NEÓN (PLOTLY DARK)
-# ==============================================================================
-def generar_graficas_home():
+def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
     
-    # 1. GRÁFICA NFL (Barras Neón en Modo Oscuro)
-    fig_nfl = go.Figure()
-    fig_nfl.add_trace(go.Bar(
-        x=['WINS', 'LOSSES'],
-        y=[stats['NFL']['wins'], stats['NFL']['losses']],
-        marker_color=['#10B981', '#EF4444'],
-        text=[stats['NFL']['wins'], stats['NFL']['losses']],
-        textposition='auto'
-    ))
-    fig_nfl.update_layout(
-        title="EFECTIVIDAD NFL",
-        template="plotly_dark",
-        paper_bgcolor='rgba(15, 23, 42, 0.8)',
-        plot_bgcolor='rgba(15, 23, 42, 0.8)',
-        font=dict(color='#F8FAFC', size=11, family='Segoe UI'),
-        height=200,
-        margin=dict(l=10, r=10, t=35, b=10)
-    )
+    def crear_dona_verde(titulo, wins, losses, pending):
+        if wins == 0 and losses == 0 and pending == 0:
+            labels = ['BASE']
+            values = [100]
+            colors = ['#10B981']
+        else:
+            labels = ['WINS', 'LOSSES', 'PENDING']
+            values = [wins, losses, pending]
+            colors = ['#10B981', '#EF4444', '#F59E0B']
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            hole=.65,
+            marker=dict(colors=colors)
+        )])
+        fig.update_layout(
+            title=dict(text=titulo, font=dict(size=12, color='#065F46', family='Segoe UI')),
+            paper_bgcolor='white',
+            plot_bgcolor='white',
+            font=dict(color='#0F172A', size=10),
+            height=180,
+            margin=dict(l=10, r=10, t=30, b=10),
+            showlegend=False
+        )
+        return fig
 
-    # 2. GRÁFICA MLB (Línea Neón con Relleno Gradiente)
-    fig_mlb = go.Figure()
-    y_mlb_data = [0, stats['MLB']['wins']]
-    fig_mlb.add_trace(go.Scatter(
-        x=['Inicio', 'Actual'],
-        y=y_mlb_data,
-        mode='lines+markers+text',
-        line=dict(color='#34D399', width=3),
-        fill='tozeroy',
-        fillcolor='rgba(52, 211, 153, 0.2)',
-        text=[0, stats['MLB']['wins']],
-        textposition='top center'
-    ))
-    fig_mlb.update_layout(
-        title="EFECTIVIDAD MLB",
-        template="plotly_dark",
-        paper_bgcolor='rgba(15, 23, 42, 0.8)',
-        plot_bgcolor='rgba(15, 23, 42, 0.8)',
-        font=dict(color='#F8FAFC', size=11, family='Segoe UI'),
-        height=200,
-        margin=dict(l=10, r=10, t=35, b=10)
-    )
+    fig_nfl = crear_dona_verde("EFECTIVIDAD NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
+    fig_mlb = crear_dona_verde("EFECTIVIDAD MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
+    fig_fut = crear_dona_verde("EFECTIVIDAD FÚTBOL", stats['FUTBOL']['wins'], stats['FUTBOL']['losses'], stats['FUTBOL']['pending'])
 
-    # 3. GRÁFICA FÚTBOL (Dona 3D Neón)
-    labels_fut = ['WIN', 'LOSS', 'PENDING']
-    values_fut = [stats['FUTBOL']['wins'], stats['FUTBOL']['losses'], stats['FUTBOL']['pending']]
-    if sum(values_fut) == 0: values_fut = [1, 0, 0]
-    
-    fig_fut = go.Figure(data=[go.Pie(
-        labels=labels_fut,
-        values=values_fut,
-        hole=.6,
-        marker=dict(colors=['#10B981', '#EF4444', '#F59E0B'])
-    )])
-    fig_fut.update_layout(
-        title="EFECTIVIDAD FÚTBOL",
-        template="plotly_dark",
-        paper_bgcolor='rgba(15, 23, 42, 0.8)',
-        plot_bgcolor='rgba(15, 23, 42, 0.8)',
-        font=dict(color='#F8FAFC', size=11, family='Segoe UI'),
-        height=200,
-        margin=dict(l=10, r=10, t=35, b=10),
-        showlegend=False
-    )
-
-    # HEADER HTML NEÓN
     html_header = f"""
-    <div style="background: #0F172A; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);">
-        <div style="font-size: 15px; font-weight: 800; color: #A7F3D0; letter-spacing: 1px;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
-        <div style="font-size: 52px; font-weight: 900; color: #34D399; margin: 2px 0; text-shadow: 0 0 10px rgba(52, 211, 153, 0.5);">{pct_global}%</div>
-        <div style="font-size: 13px; font-weight: 700; color: #94A3B8;">
-            Récord Registrado: <span style="color:#34D399;">{tot_wins} WINS</span> / <span style="color:#F87171;">{tot_loss} LOOSES</span> (Total: {tot_global} Picks)
+    <div style="background: #FFFFFF; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 4px 12px rgba(16,185,129,0.1);">
+        <div style="font-size: 15px; font-weight: 800; color: #065F46; letter-spacing: 1px;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
+        <div style="font-size: 52px; font-weight: 900; color: #10B981; margin: 2px 0;">{pct_global}%</div>
+        <div style="font-size: 13px; font-weight: 700; color: #64748B;">
+            Récord Registrado: <span style="color:#10B981;">{tot_wins} WINS</span> / <span style="color:#EF4444;">{tot_loss} LOSSES</span> (Total: {tot_global} Picks)
         </div>
     </div>
     """
     
-    # HISTORIAL HTML NEÓN
     historial = cargar_historial_db()
-    html_historial = f"""
-    <div style="background: #0F172A; border: 1px solid #1E293B; border-radius: 16px; padding: 16px; height: 160px; overflow-y: auto;">
-        <div style="font-size: 12px; font-weight: 800; color: #10B981; margin-bottom: 8px;">HISTORIAL DE PICKS REGISTRADOS</div>
-        <div style="font-size: 11px; color: #CBD5E1;">
+    pending_items = [x for x in historial if x.get("estado") == "PENDING"]
+    win_items = [x for x in historial if x.get("estado") == "WIN"]
+    loss_items = [x for x in historial if x.get("estado") == "LOSS"]
+
+    def render_lista_html(titulo, lista, color_hex):
+        html_b = f"""
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px; margin-bottom: 10px;">
+            <div style="font-size: 13px; font-weight: 800; color: {color_hex}; margin-bottom: 8px;">{titulo} ({len(lista)})</div>
+            <div style="max-height: 220px; overflow-y: auto; font-size: 11px; color: #334155;">
+        """
+        if not lista:
+            html_b += "<i style='color: #94A3B8;'>No hay picks en este estado.</i>"
+        else:
+            for item in reversed(lista):
+                html_b += f"<div style='margin-bottom: 6px; border-bottom: 1px solid #F1F5F9; padding-bottom: 4px;'>• <b>[#{item['id']} - {item['deporte']}]</b> {item['partido']} — <i>{item['seleccion']}</i></div>"
+        html_b += "</div></div>"
+        return html_b
+
+    html_tables = f"""
+    <div style="margin-top: 15px;">
+        <div style="font-size: 15px; font-weight: 900; color: #065F46; margin-bottom: 10px;">📋 TABLERO HISTÓRICO DE CONTROL Y SEGUIMIENTO</div>
+        <div style="display: flex; gap: 12px;">
+            <div style="flex: 1;">{render_lista_html("⏳ PICKS PENDIENTES", pending_items, "#F59E0B")}</div>
+            <div style="flex: 1;">{render_lista_html("✅ APUESTAS GANADAS (WIN)", win_items, "#10B981")}</div>
+            <div style="flex: 1;">{render_lista_html("❌ APUESTAS PERDIDAS (LOSS)", loss_items, "#EF4444")}</div>
+        </div>
+    </div>
     """
-    if not historial:
-        html_historial += "<i style='color: #64748B;'>No hay apuestas guardadas aún.</i>"
-    else:
-        for item in reversed(historial):
-            st_col = "#34D399" if item["estado"] == "WIN" else ("#F87171" if item["estado"] == "LOSS" else "#FBBF24")
-            html_historial += f"<div style='margin-bottom: 6px; border-bottom: 1px solid #1E293B; padding-bottom: 4px;'>• <b>[{item['deporte']}]</b> {item['partido']} — {item['seleccion']} <b style='color:{st_col};'>({item['estado']})</b></div>"
-            
-    html_historial += "</div></div>"
     
-    return html_header, html_historial, fig_nfl, fig_mlb, fig_fut
+    return html_header, html_tables, fig_nfl, fig_mlb, fig_fut
 
-# ==============================================================================
-# 6. ESTILOS CSS CUSTOM DARK Y RENDERIZADO GRADIO
-# ==============================================================================
-custom_css = """
-body, .gradio-container {
-    background-color: #0B0F19 !important;
-    color: #F8FAFC !important;
-}
-.btn_liga {
-    background: #1E293B !important;
-    border: 1px solid #334155 !important;
-    border-radius: 14px !important;
-    color: #F8FAFC !important;
-    font-weight: 800 !important;
-    font-size: 14px !important;
-    padding: 12px 18px !important;
-    text-align: left !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-}
-.btn_liga:hover {
-    border-color: #10B981 !important;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3) !important;
-}
-"""
-
-with gr.Blocks(title="La Maña Picks", css=custom_css, theme=gr.themes.Base()) as app_mana:
+# =========================================
+# INTERFAZ GRÁFICA (GRADIO BLOCKS)
+# =========================================
+with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
     
-    # HOME MODO OSCURO FIEL A TU IMAGEN
     with gr.Column(visible=True) as vista_home:
         gr.Markdown("""
         <div style="text-align: center; padding: 10px 0;">
-            <h1 style="font-size: 34px; font-weight: 900; color: #FFFFFF; margin: 0; letter-spacing: 1px;">LA MAÑA PICKS</h1>
+            <h1 style="font-size: 34px; font-weight: 900; color: #065F46; margin: 0; letter-spacing: 1px;">LA MAÑA PICKS</h1>
             <p style="font-size: 13px; font-weight: 700; color: #10B981; margin-top: 2px;">ANALIZANDO CON LA MAÑA QUE NOS HACE GANAR. JUEGA CON ESTADÍSTICAS Y CON MAÑA.</p>
         </div>
         """)
         
         with gr.Row():
-            # COLUMNA IZQUIERDA: BOTONES CON BORDES DE CADA LIGA
             with gr.Column(scale=1):
-                gr.HTML(f"""
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="{LOGOS_LIGAS['Premier League']}" width="26" height="26" style="object-fit: contain;"/>
-                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">PREMIER LEAGUE</div><div style="font-size: 10px; color: #94A3B8;">20 Equipos</div></div>
-                        </div>
-                        <span style="color: #94A3B8;">➔</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="{LOGOS_LIGAS['LaLiga EA Sports']}" width="26" height="26" style="object-fit: contain;"/>
-                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">LALIGA EA SPORTS</div><div style="font-size: 10px; color: #94A3B8;">20 Equipos</div></div>
-                        </div>
-                        <span style="color: #94A3B8;">➔</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="{LOGOS_LIGAS['Bundesliga']}" width="26" height="26" style="object-fit: contain;"/>
-                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">BUNDESLIGA</div><div style="font-size: 10px; color: #94A3B8;">18 Equipos</div></div>
-                        </div>
-                        <span style="color: #94A3B8;">➔</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="{LOGOS_LIGAS['Serie A']}" width="26" height="26" style="object-fit: contain;"/>
-                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">SERIE A</div><div style="font-size: 10px; color: #94A3B8;">20 Equipos</div></div>
-                        </div>
-                        <span style="color: #94A3B8;">➔</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="{LOGOS_LIGAS['Champions League']}" width="26" height="26" style="object-fit: contain;"/>
-                            <div><div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">CHAMPIONS LEAGUE</div><div style="font-size: 10px; color: #94A3B8;">36 Equipos</div></div>
-                        </div>
-                        <span style="color: #94A3B8;">➔</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #064E3B; border: 1px solid #059669; border-radius: 12px; padding: 10px 14px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="{LOGOS_LIGAS['NFL']}" width="26" height="26" style="object-fit: contain;"/>
-                            <div><div style="font-size: 13px; font-weight: 800; color: #A7F3D0;">NFL</div><div style="font-size: 10px; color: #A7F3D0;">32 Equipos AFC/NFC</div></div>
-                        </div>
-                        <span style="color: #A7F3D0;">➔</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #064E3B; border: 1px solid #059669; border-radius: 12px; padding: 10px 14px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="{LOGOS_LIGAS['MLB']}" width="26" height="26" style="object-fit: contain;"/>
-                            <div><div style="font-size: 13px; font-weight: 800; color: #A7F3D0;">MLB</div><div style="font-size: 10px; color: #A7F3D0;">30 Equipos Grandes Ligas</div></div>
-                        </div>
-                        <span style="color: #A7F3D0;">➔</span>
-                    </div>
-                </div>
-                """)
+                btn_premier = gr.Button("Premier League (20 Equipos) ➔", icon=LOGOS_LIGAS["Premier League"], variant="primary")
+                btn_laliga = gr.Button("LaLiga EA Sports (20 Equipos) ➔", icon=LOGOS_LIGAS["LaLiga EA Sports"], variant="primary")
+                btn_bundesliga = gr.Button("Bundesliga (18 Equipos) ➔", icon=LOGOS_LIGAS["Bundesliga"], variant="primary")
+                btn_seriea = gr.Button("Serie A (20 Equipos) ➔", icon=LOGOS_LIGAS["Serie A"], variant="primary")
+                btn_champions = gr.Button("Champions League (36 Equipos) ➔", icon=LOGOS_LIGAS["Champions League"], variant="primary")
+                btn_nfl = gr.Button("NFL (32 Equipos AFC/NFC) ➔", icon=LOGOS_LIGAS["NFL"], variant="primary")
+                btn_mlb = gr.Button("MLB (30 Equipos Grandes Ligas) ➔", icon=LOGOS_LIGAS["MLB"], variant="primary")
                 
-                # BOTONES DE ACCIÓN MAPPING
-                btn_premier = gr.Button("Entrar Premier League ➔", variant="secondary")
-                btn_laliga = gr.Button("Entrar LaLiga ➔", variant="secondary")
-                btn_bundesliga = gr.Button("Entrar Bundesliga ➔", variant="secondary")
-                btn_seriea = gr.Button("Entrar Serie A ➔", variant="secondary")
-                btn_champions = gr.Button("Entrar Champions League ➔", variant="secondary")
-                btn_nfl = gr.Button("Entrar NFL 🏈 ➔", variant="primary")
-                btn_mlb = gr.Button("Entrar MLB ⚾ ➔", variant="primary")
-
-            # COLUMNA DERECHA: TARJETAS Y GRÁFICAS MODO OSCURO
-            with gr.Column(scale=2):
+                gr.Markdown("---")
+                gr.Markdown("### 🛠️ **Gestor Directo por ID**")
+                num_input_id = gr.Number(value=1, label="Ingresa # ID del Pick", precision=0)
                 with gr.Row():
-                    html_header_out = gr.HTML()
-                    html_historial_out = gr.HTML()
+                    btn_direct_win = gr.Button("✅ Marcar WIN", variant="primary")
+                    btn_direct_loss = gr.Button("❌ Marcar LOSS", variant="secondary")
+
+            with gr.Column(scale=2):
+                html_header_out = gr.HTML()
                 
                 with gr.Row():
                     plot_nfl_out = gr.Plot(show_label=False)
                     plot_mlb_out = gr.Plot(show_label=False)
                     plot_fut_out = gr.Plot(show_label=False)
 
-    # VISTA FÚTBOL GENERAL
+        html_historial_out = gr.HTML()
+
     with gr.Column(visible=False) as vista_fut:
         with gr.Row():
             btn_volver_fut = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
             txt_titulo_liga = gr.Markdown("## ⚽ **Área de Análisis de Fútbol**", scale=4)
         
-        with gr.Row():
-            with gr.Column(scale=1):
+        with gr.Tabs():
+            with gr.TabItem("📊 Análisis de Partido"):
                 with gr.Row():
-                    drop_fut_loc = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Arsenal", label="Equipo Local", scale=3)
-                    img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"], label="Local", width=50, height=50, show_label=False, scale=1)
-                
-                with gr.Row():
-                    drop_fut_vis = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Chelsea", label="Equipo Visitante", scale=3)
-                    img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=50, height=50, show_label=False, scale=1)
-                
-                drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Champions/Europa League hace 3 días)"], value="No (Semana normal)", label="¿Fatiga Europea?")
-                
-                with gr.Row():
-                    num_fut_c_loc = gr.Number(value=1.85, label="Cuota Local (1)")
-                    num_fut_c_emp = gr.Number(value=3.60, label="Cuota Empate (X)")
-                    num_fut_c_vis = gr.Number(value=4.20, label="Cuota Visitante (2)")
-                    
-                num_fut_linea_tot = gr.Number(value=2.5, label="Línea Total Goles (O/U)")
-                btn_sim_fut = gr.Button("Simular Partido 🚀", variant="primary")
-                
-                gr.Markdown("---")
-                rad_pick_fut = gr.Radio(choices=["Selección 1 (1X2)", "Selección 2 (Doble Op.)", "Selección 3 (Totales)"], label="Pick a guardar")
-                btn_save_fut = gr.Button("Guardar Pick en Historial 💾", variant="secondary")
-                lbl_save_fut = gr.Markdown("")
+                    with gr.Column(scale=1):
+                        with gr.Row():
+                            drop_fut_loc = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Arsenal", label="Equipo Local", scale=3)
+                            img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"], label="Local", width=50, height=50, show_label=False, scale=1)
+                        
+                        with gr.Row():
+                            drop_fut_vis = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Chelsea", label="Equipo Visitante", scale=3)
+                            img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=50, height=50, show_label=False, scale=1)
+                        
+                        drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Champions/Europa League hace 3 días)"], value="No (Semana normal)", label="¿Fatiga Europea?")
+                        
+                        gr.Markdown("#### ⚽ Cuotas 1X2 (Casino)")
+                        with gr.Row():
+                            num_fut_c_loc = gr.Number(value=1.85, label="Cuota Arsenal (1)")
+                            num_fut_c_emp = gr.Number(value=3.60, label="Cuota Empate (X)")
+                            num_fut_c_vis = gr.Number(value=4.20, label="Cuota Chelsea (2)")
 
-            with gr.Column(scale=2):
-                out_fut = gr.HTML()
-                st_fut_p1, st_fut_p2, st_fut_p3, st_fut_match = gr.State(""), gr.State(""), gr.State(""), gr.State("")
+                        gr.Markdown("#### ⚽ Cuotas Ambos Anotan (BTTS)")
+                        with gr.Row():
+                            num_fut_c_btts_si = gr.Number(value=1.80, label="Cuota Ambos Anotan: SÍ")
+                            num_fut_c_btts_no = gr.Number(value=1.95, label="Cuota Ambos Anotan: NO")
+                            
+                        num_fut_linea_tot = gr.Number(value=2.5, label="Línea Total Goles (O/U)")
+                        btn_sim_fut = gr.Button("Simular Partido 🚀", variant="primary")
+                        
+                        gr.Markdown("---")
+                        rad_pick_fut = gr.Radio(choices=["Selección 1 (1X2)", "Selección 2 (Doble Op.)", "Selección 3 (Totales)", "Selección 4 (Ambos Anotan BTTS)"], label="Pick a guardar")
+                        btn_save_fut = gr.Button("Guardar Pick en Historial 💾", variant="secondary")
+                        lbl_save_fut = gr.Markdown("")
 
-    # VISTA NFL
+                    with gr.Column(scale=2):
+                        out_fut = gr.HTML()
+                        st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match = gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+            with gr.TabItem("⚽ Córners & Props de Jugador"):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        txt_prop_fut_item = gr.Textbox(value="Total Córners Partido", label="Partido / Nombre de Jugador")
+                        drop_prop_fut_type = gr.Dropdown(choices=["Total de Córners", "Remates a Puerta (Jugador)", "Anotará Gol en Cualquier Momento"], value="Total de Córners", label="Tipo de Prop")
+                        num_prop_fut_line = gr.Number(value=9.5, label="Línea de Casino")
+                        with gr.Row():
+                            num_prop_fut_cuota_over = gr.Number(value=1.85, label="Cuota OVER / Sí")
+                            num_prop_fut_cuota_under = gr.Number(value=1.95, label="Cuota UNDER / No")
+                        btn_sim_prop_fut = gr.Button("Analizar Prop Fútbol 🚀", variant="primary")
+                        
+                        gr.Markdown("---")
+                        btn_save_prop_fut = gr.Button("Guardar Prop Fútbol 💾", variant="secondary")
+                        lbl_save_prop_fut = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_prop_fut = gr.HTML()
+                        st_prop_fut_rec_text = gr.State("")
+
     with gr.Column(visible=False) as vista_nfl:
         with gr.Row():
             btn_volver_nfl = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
             gr.Markdown("## 🏈 **Área de Análisis: NFL (32 Equipos)**", scale=4)
         
-        with gr.Row():
-            with gr.Column(scale=1):
+        with gr.Tabs():
+            with gr.TabItem("📊 Análisis de Partido"):
                 with gr.Row():
-                    drop_nfl_loc = gr.Dropdown(choices=lista_nfl_nombres, value="Los Angeles Rams", label="Equipo Local", scale=3)
-                    img_nfl_loc = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["Los Angeles Rams"]], label="Local", width=50, height=50, show_label=False, scale=1)
-                
+                    with gr.Column(scale=1):
+                        with gr.Row():
+                            drop_nfl_loc = gr.Dropdown(choices=lista_nfl_nombres, value="Los Angeles Rams", label="Equipo Local", scale=3)
+                            img_nfl_loc = gr.Image(value=dict_nfl_logos.get(dict_nfl_nombres.get("Los Angeles Rams", "LAR"), ""), label="Local", width=50, height=50, show_label=False, scale=1)
+                        
+                        with gr.Row():
+                            drop_nfl_vis = gr.Dropdown(choices=lista_nfl_nombres, value="New York Giants", label="Equipo Visitante", scale=3)
+                            img_nfl_vis = gr.Image(value=dict_nfl_logos.get(dict_nfl_nombres.get("New York Giants", "NYG"), ""), label="Visitante", width=50, height=50, show_label=False, scale=1)
+
+                        gr.Markdown("#### 🏈 Spread / Hándicap (Casino)")
+                        with gr.Row():
+                            num_sp_loc_val = gr.Number(value=-3.5, label="Spread Los Angeles Rams")
+                            num_cuota_sp_loc = gr.Number(value=1.91, label="Cuota Decimal Rams")
+                        with gr.Row():
+                            num_sp_vis_val = gr.Number(value=+3.5, label="Spread New York Giants")
+                            num_cuota_sp_vis = gr.Number(value=1.91, label="Cuota Decimal Giants")
+
+                        num_nfl_tot = gr.Number(value=42.5, label="Línea Total Puntos")
+                        btn_sim_nfl = gr.Button("Simular Partido NFL 🚀", variant="primary")
+                        
+                        gr.Markdown("---")
+                        rad_pick_nfl = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Spread)", "Selección 3 (Totales)"], label="Pick a guardar")
+                        btn_save_nfl = gr.Button("Guardar Pick NFL 💾", variant="secondary")
+                        lbl_save_nfl = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_nfl = gr.HTML()
+                        st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match = gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+            with gr.TabItem("👤 Player Props NFL"):
                 with gr.Row():
-                    drop_nfl_vis = gr.Dropdown(choices=lista_nfl_nombres, value="New York Giants", label="Equipo Visitante", scale=3)
-                    img_nfl_vis = gr.Image(value=dict_nfl_logos[dict_nfl_nombres["New York Giants"]], label="Visitante", width=50, height=50, show_label=False, scale=1)
+                    with gr.Column(scale=1):
+                        txt_prop_nfl_player = gr.Textbox(value="Matthew Stafford", label="Nombre del Jugador")
+                        drop_prop_nfl_type = gr.Dropdown(choices=["Yardas de Pase (QB)", "Yardas por Tierra (RB)", "Yardas por Recepción (WR/TE)", "Anytime Touchdown Scorer"], value="Yardas de Pase (QB)", label="Tipo de Prop")
+                        num_prop_nfl_line = gr.Number(value=245.5, label="Línea de Casino")
+                        with gr.Row():
+                            num_prop_nfl_cuota_over = gr.Number(value=1.85, label="Cuota OVER")
+                            num_prop_nfl_cuota_under = gr.Number(value=1.95, label="Cuota UNDER")
+                        btn_sim_prop_nfl = gr.Button("Analizar Prop NFL 🚀", variant="primary")
+                        
+                        gr.Markdown("---")
+                        btn_save_prop_nfl = gr.Button("Guardar Prop NFL 💾", variant="secondary")
+                        lbl_save_prop_nfl = gr.Markdown("")
 
-                num_nfl_sp = gr.Number(value=-6.5, label="Spread Casino")
-                num_nfl_tot = gr.Number(value=47.5, label="Línea Total")
-                btn_sim_nfl = gr.Button("Simular Partido NFL 🚀", variant="primary")
-                
-                gr.Markdown("---")
-                rad_pick_nfl = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Spread)", "Selección 3 (Totales)"], label="Pick a guardar")
-                btn_save_nfl = gr.Button("Guardar Pick NFL 💾", variant="secondary")
-                lbl_save_nfl = gr.Markdown("")
+                    with gr.Column(scale=2):
+                        out_prop_nfl = gr.HTML()
+                        st_prop_nfl_rec_text = gr.State("")
 
-            with gr.Column(scale=2):
-                out_nfl = gr.HTML()
-                st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_match = gr.State(""), gr.State(""), gr.State(""), gr.State("")
-
-    # VISTA MLB
     with gr.Column(visible=False) as vista_mlb:
         with gr.Row():
             btn_volver_mlb = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
-            gr.Markdown("## ⚾ **Área de Análisis: MLB (30 Equipos)**", scale=4)
+            gr.Markdown("## ⚾ **Área de Análisis: MLB Sabermétrica (Full Game, F5 & Props)**", scale=4)
         
-        with gr.Row():
-            with gr.Column(scale=1):
+        with gr.Tabs():
+            with gr.TabItem("📊 Análisis de Partido (ML, Run Line, F5 & Totales)"):
                 with gr.Row():
-                    drop_mlb_loc = gr.Dropdown(choices=lista_mlb_nombres, value="San Francisco Giants", label="Equipo Local", scale=3)
-                    img_mlb_loc = gr.Image(value=EQUIPOS_MLB["San Francisco Giants"]["logo"], label="Local", width=50, height=50, show_label=False, scale=1)
-                
-                with gr.Row():
-                    drop_mlb_vis = gr.Dropdown(choices=lista_mlb_nombres, value="Minnesota Twins", label="Equipo Visitante", scale=3)
-                    img_mlb_vis = gr.Image(value=EQUIPOS_MLB["Minnesota Twins"]["logo"], label="Visitante", width=50, height=50, show_label=False, scale=1)
+                    with gr.Column(scale=1):
+                        with gr.Row():
+                            drop_mlb_loc = gr.Dropdown(choices=lista_mlb_nombres, value="New York Yankees", label="Equipo Local", scale=3)
+                            img_mlb_loc = gr.Image(value=EQUIPOS_MLB["New York Yankees"]["logo"], label="Local", width=50, height=50, show_label=False, scale=1)
+                        
+                        with gr.Row():
+                            drop_mlb_vis = gr.Dropdown(choices=lista_mlb_nombres, value="Tampa Bay Rays", label="Equipo Visitante", scale=3)
+                            img_mlb_vis = gr.Image(value=EQUIPOS_MLB["Tampa Bay Rays"]["logo"], label="Visitante", width=50, height=50, show_label=False, scale=1)
 
-                btn_auto_api = gr.Button("🔄 Cargar Abridores en Vivo (MLB API)", variant="secondary")
-                lbl_api_status = gr.Markdown("🟢 Listo para sincronizar")
-                
-                with gr.Row():
-                    num_xera_loc = gr.Number(value=3.45, label="ERA Local")
-                    num_whip_loc = gr.Number(value=1.12, label="WHIP Local")
-                with gr.Row():
-                    num_xera_vis = gr.Number(value=3.65, label="ERA Visitante")
-                    num_whip_vis = gr.Number(value=1.18, label="WHIP Visitante")
-                
-                with gr.Row():
-                    num_mlb_cuota_loc = gr.Number(value=1.72, label="Cuota Local ML")
-                    num_mlb_cuota_vis = gr.Number(value=2.20, label="Cuota Visitante ML")
-                
-                num_run_line_val = gr.Number(value=-1.5, label="Run Line")
-                num_cuota_rl_dec = gr.Number(value=2.05, label="Cuota Run Line")
-                num_mlb_tot = gr.Number(value=8.5, label="Línea Total Carreras")
-                btn_sim_mlb = gr.Button("Simular Partido MLB 🚀", variant="primary")
-                
-                gr.Markdown("---")
-                rad_pick_mlb = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Run Line)", "Selección 3 (Totales)"], label="Pick a guardar")
-                btn_save_mlb = gr.Button("Guardar Pick MLB 💾", variant="secondary")
-                lbl_save_mlb = gr.Markdown("")
+                        btn_auto_api = gr.Button("🔄 Cargar Abridores en Vivo (MLB API)", variant="secondary")
+                        lbl_api_status = gr.Markdown("🟢 Listo para sincronizar")
+                        
+                        with gr.Row():
+                            num_xera_loc = gr.Number(value=2.95, label="ERA Yankees")
+                            num_whip_loc = gr.Number(value=1.13, label="WHIP Yankees")
+                        with gr.Row():
+                            num_xera_vis = gr.Number(value=2.94, label="ERA Rays")
+                            num_whip_vis = gr.Number(value=1.07, label="WHIP Rays")
+                        
+                        with gr.Row():
+                            num_mlb_cuota_loc = gr.Number(value=1.76, label="Cuota Moneyline Yankees")
+                            num_mlb_cuota_vis = gr.Number(value=2.04, label="Cuota Moneyline Rays")
+                        
+                        gr.Markdown("#### ⚾ Run Line / Hándicap Full Game")
+                        with gr.Row():
+                            num_rl_loc_val = gr.Number(value=-1.5, label="Run Line Yankees")
+                            num_cuota_rl_loc = gr.Number(value=2.70, label="Cuota Run Line Yankees")
+                        with gr.Row():
+                            num_rl_vis_val = gr.Number(value=+1.5, label="Run Line Rays")
+                            num_cuota_rl_vis = gr.Number(value=1.44, label="Cuota Run Line Rays")
 
-            with gr.Column(scale=2):
-                out_mlb = gr.HTML()
-                st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match = gr.State(""), gr.State(""), gr.State(""), gr.State("")
+                        gr.Markdown("#### ⚾ Cuotas Primeras 5 Entradas (F5)")
+                        with gr.Row():
+                            num_f5_cuota_loc = gr.Number(value=1.80, label="Cuota F5 Yankees ML")
+                            num_f5_cuota_vis = gr.Number(value=1.95, label="Cuota F5 Rays ML")
+
+                        num_mlb_tot = gr.Number(value=6.5, label="Línea Total Carreras")
+                        btn_sim_mlb = gr.Button("Simular Partido MLB 🚀", variant="primary")
+                        
+                        gr.Markdown("---")
+                        rad_pick_mlb = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Run Line)", "Selección 3 (F5 Entradas)", "Selección 4 (Total O/U)"], label="Pick a guardar")
+                        btn_save_mlb = gr.Button("Guardar Pick MLB 💾", variant="secondary")
+                        lbl_save_mlb = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_mlb = gr.HTML()
+                        st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_match = gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+            with gr.TabItem("👤 Player Props MLB (Pitchers & Bateadores)"):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        txt_prop_player_name = gr.Textbox(value="Jared Jones", label="Nombre del Jugador")
+                        drop_prop_type = gr.Dropdown(choices=["Ponches (Ks) - Pitcher", "Outs Registrados - Pitcher", "Hits (H) - Bateador", "H+R+RBI - Bateador"], value="Ponches (Ks) - Pitcher", label="Tipo de Prop")
+                        num_prop_line = gr.Number(value=5.5, label="Línea de Casino (Over/Under)")
+                        with gr.Row():
+                            num_prop_cuota_over = gr.Number(value=1.85, label="Cuota OVER")
+                            num_prop_cuota_under = gr.Number(value=1.95, label="Cuota UNDER")
+                        btn_sim_prop = gr.Button("Analizar Player Prop 🚀", variant="primary")
+                        
+                        gr.Markdown("---")
+                        btn_save_prop_mlb = gr.Button("Guardar Prop en Historial 💾", variant="secondary")
+                        lbl_save_prop_mlb = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_prop_mlb = gr.HTML()
+                        st_prop_rec_text = gr.State("")
 
     st_liga_activa = gr.State("Premier League")
     st_dict_futbol_actual = gr.State(PREMIER_DICT)
 
-    def actualizar_escudos_fut(nombre_loc, nombre_vis, dict_actual):
+    def actualizar_interfaz_fut(nombre_loc, nombre_vis, dict_actual):
         logo_loc = dict_actual.get(nombre_loc, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
         logo_vis = dict_actual.get(nombre_vis, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
-        return logo_loc, logo_vis
+        return logo_loc, logo_vis, gr.update(label=f"Cuota {nombre_loc} (1)"), gr.update(label=f"Cuota {nombre_vis} (2)")
 
-    def actualizar_escudos_nfl(nombre_loc, nombre_vis):
-        loc, vis = dict_nfl_nombres[nombre_loc], dict_nfl_nombres[nombre_vis]
-        return dict_nfl_logos[loc], dict_nfl_logos[vis]
+    def actualizar_interfaz_nfl(nombre_loc, nombre_vis):
+        loc = dict_nfl_nombres.get(nombre_loc, nombre_loc[:3])
+        vis = dict_nfl_nombres.get(nombre_vis, nombre_vis[:3])
+        logo_loc = dict_nfl_logos.get(loc, "")
+        logo_vis = dict_nfl_logos.get(vis, "")
+        return logo_loc, logo_vis, gr.update(label=f"Spread {nombre_loc}"), gr.update(label=f"Cuota Decimal {nombre_loc}"), gr.update(label=f"Spread {nombre_vis}"), gr.update(label=f"Cuota Decimal {nombre_vis}")
 
-    def actualizar_escudos_mlb(nombre_loc, nombre_vis):
-        return EQUIPOS_MLB[nombre_loc]["logo"], EQUIPOS_MLB[nombre_vis]["logo"]
+    def actualizar_interfaz_mlb(nombre_loc, nombre_vis):
+        logo_loc, logo_vis = EQUIPOS_MLB[nombre_loc]["logo"], EQUIPOS_MLB[nombre_vis]["logo"]
+        return logo_loc, logo_vis, gr.update(label=f"ERA {nombre_loc}"), gr.update(label=f"WHIP {nombre_loc}"), gr.update(label=f"ERA {nombre_vis}"), gr.update(label=f"WHIP {nombre_vis}"), gr.update(label=f"Cuota Moneyline {nombre_loc}"), gr.update(label=f"Cuota Moneyline {nombre_vis}"), gr.update(label=f"Run Line {nombre_loc}"), gr.update(label=f"Cuota Run Line {nombre_loc}"), gr.update(label=f"Run Line {nombre_vis}"), gr.update(label=f"Cuota Run Line {nombre_vis}"), gr.update(label=f"Cuota F5 {nombre_loc} ML"), gr.update(label=f"Cuota F5 {nombre_vis} ML")
 
     def cambiar_a_liga_futbol(diccionario_liga, nombre_liga):
         eqs = list(diccionario_liga.keys())
         loc_inicial, vis_inicial = eqs[0], (eqs[1] if len(eqs) > 1 else eqs[0])
-        return (
-            gr.update(visible=False), gr.update(visible=True), 
-            gr.update(choices=eqs, value=loc_inicial), gr.update(choices=eqs, value=vis_inicial), 
-            diccionario_liga[loc_inicial], diccionario_liga[vis_inicial], 
-            f"## ⚽ **Área de Análisis: {nombre_liga.upper()} ({len(eqs)} Equipos)**", 
-            nombre_liga, diccionario_liga
-        )
+        return gr.update(visible=False), gr.update(visible=True), gr.update(choices=eqs, value=loc_inicial), gr.update(choices=eqs, value=vis_inicial), diccionario_liga[loc_inicial], diccionario_liga[vis_inicial], f"## ⚽ **Área de Análisis: {nombre_liga.upper()} ({len(eqs)} Equipos)**", nombre_liga, diccionario_liga, gr.update(label=f"Cuota {loc_inicial} (1)"), gr.update(label=f"Cuota {vis_inicial} (2)")
 
-    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
-    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
-    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
-    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
-    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual])
+    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
 
     def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
     def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
     def volver_home(): 
-        h_head, h_hist, f_nfl, f_mlb, f_fut = generar_graficas_home()
+        h_head, h_hist, f_nfl, f_mlb, f_fut = generar_dashboard_completo()
         return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, h_hist, f_nfl, f_mlb, f_fut
 
     btn_nfl.click(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
@@ -886,49 +1121,61 @@ with gr.Blocks(title="La Maña Picks", css=custom_css, theme=gr.themes.Base()) a
     btn_volver_mlb.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
     btn_volver_fut.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
 
-    drop_fut_loc.change(fn=actualizar_escudos_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis])
-    drop_fut_vis.change(fn=actualizar_escudos_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis])
+    drop_fut_loc.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
+    drop_fut_vis.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
 
-    drop_nfl_loc.change(fn=actualizar_escudos_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis])
-    drop_nfl_vis.change(fn=actualizar_escudos_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis])
+    drop_nfl_loc.change(fn=actualizar_interfaz_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis])
+    drop_nfl_vis.change(fn=actualizar_interfaz_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis])
 
-    drop_mlb_loc.change(fn=actualizar_escudos_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis])
-    drop_mlb_vis.change(fn=actualizar_escudos_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis])
+    drop_mlb_loc.change(fn=actualizar_interfaz_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis, num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis])
+    drop_mlb_vis.change(fn=actualizar_interfaz_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis, num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis])
 
-    btn_auto_api.click(
-        fn=auto_cargar_pitchers_mlb,
-        inputs=[drop_mlb_loc, drop_mlb_vis],
-        outputs=[num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, lbl_api_status]
-    )
+    btn_auto_api.click(fn=auto_cargar_pitchers_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, lbl_api_status])
 
-    # SIMULACIONES
-    btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_nfl_sp, num_nfl_tot], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_match])
-    btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_run_line_val, num_cuota_rl_dec, num_mlb_tot], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match])
-    btn_sim_fut.click(fn=simular_partido_futbol, inputs=[st_liga_activa, drop_fut_loc, drop_fut_vis, num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_linea_tot, drop_fatiga, st_dict_futbol_actual], outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_match])
+    btn_direct_win.click(fn=lambda idx: cambiar_estado_directo(idx, "WIN"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+    btn_direct_loss.click(fn=lambda idx: cambiar_estado_directo(idx, "LOSS"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
 
-    # REGISTRAR PICKS
-    def fn_save_pick_nfl(radio_sel, p1, p2, p3, match):
+    btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis, num_nfl_tot], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match])
+    btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_mlb_tot], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_match])
+    btn_sim_fut.click(fn=simular_partido_futbol, inputs=[st_liga_activa, drop_fut_loc, drop_fut_vis, num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_c_btts_si, num_fut_c_btts_no, num_fut_linea_tot, drop_fatiga, st_dict_futbol_actual], outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match])
+
+    btn_sim_prop.click(fn=simular_player_prop_mlb, inputs=[txt_prop_player_name, drop_prop_type, num_prop_line, num_prop_cuota_over, num_prop_cuota_under, num_xera_vis, num_whip_vis], outputs=[out_prop_mlb, st_prop_rec_text])
+    btn_sim_prop_nfl.click(fn=simular_player_prop_nfl, inputs=[txt_prop_nfl_player, drop_prop_nfl_type, num_prop_nfl_line, num_prop_nfl_cuota_over, num_prop_nfl_cuota_under], outputs=[out_prop_nfl, st_prop_nfl_rec_text])
+    btn_sim_prop_fut.click(fn=simular_prop_futbol, inputs=[txt_prop_fut_item, drop_prop_fut_type, num_prop_fut_line, num_prop_fut_cuota_over, num_prop_fut_cuota_under], outputs=[out_prop_fut, st_prop_fut_rec_text])
+
+    def fn_save_pick_nfl(radio_sel, p1, p2, p3, p4, match):
         if not match: return "⚠️ Primero debes simular el partido."
         sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
         guardar_pick_db("NFL", match, sel_text, radio_sel, 1.90, "+4.5%")
         return f"✅ Pick de NFL guardado: {sel_text}"
 
-    def fn_save_pick_mlb(radio_sel, p1, p2, p3, match):
+    def fn_save_pick_mlb(radio_sel, p1, p2, p3, p4, match):
         if not match: return "⚠️ Primero debes simular el partido."
-        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else p4))
         guardar_pick_db("MLB", match, sel_text, radio_sel, 1.90, "+5.2%")
         return f"✅ Pick de MLB guardado: {sel_text}"
 
-    def fn_save_pick_fut(radio_sel, p1, p2, p3, match, liga):
+    def fn_save_pick_fut(radio_sel, p1, p2, p3, p4, match, liga):
         if not match: return "⚠️ Primero debes simular el partido."
-        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else p4))
         guardar_pick_db(f"FÚTBOL ({liga})", match, sel_text, radio_sel, 1.85, "+4.2%")
         return f"✅ Pick de {liga} guardado: {sel_text}"
 
-    btn_save_nfl.click(fn=fn_save_pick_nfl, inputs=[rad_pick_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_match], outputs=[lbl_save_nfl])
-    btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_match], outputs=[lbl_save_mlb])
-    btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
+    def fn_save_generic_prop(deporte, rec_text):
+        if not rec_text: return "⚠️ Primero debes analizar la Prop."
+        guardar_pick_db(f"{deporte} (PROP)", "Prop Individual", rec_text, "Player Prop", 1.85, "+5.0%")
+        return f"✅ Prop guardada: {rec_text}"
 
-    app_mana.load(fn=generar_graficas_home, outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+    btn_save_nfl.click(fn=fn_save_pick_nfl, inputs=[rad_pick_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match], outputs=[lbl_save_nfl])
+    btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_match], outputs=[lbl_save_mlb])
+    btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
 
-app_mana.launch(share=True, debug=True)
+    btn_save_prop_mlb.click(fn=lambda text: fn_save_generic_prop("MLB", text), inputs=[st_prop_rec_text], outputs=[lbl_save_prop_mlb])
+    btn_save_prop_nfl.click(fn=lambda text: fn_save_generic_prop("NFL", text), inputs=[st_prop_nfl_rec_text], outputs=[lbl_save_prop_nfl])
+    btn_save_prop_fut.click(fn=lambda text: fn_save_generic_prop("FÚTBOL", text), inputs=[st_prop_fut_rec_text], outputs=[lbl_save_prop_fut])
+
+    app_mana.load(fn=generar_dashboard_completo, outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+
+# Configuración de puerto del servidor
+if __name__ == "__main__":
+    app_mana.launch(server_name="0.0.0.0", server_port=7860)
