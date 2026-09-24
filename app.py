@@ -967,14 +967,14 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
         with gr.Row():
             with gr.Column(scale=1):
-                btn_premier = gr.Button("Premier League (20 Equipos) ➔", icon=LOGOS_LIGAS["Premier League"], variant="primary")
-                btn_laliga = gr.Button("LaLiga EA Sports (20 Equipos) ➔", icon=LOGOS_LIGAS["LaLiga EA Sports"], variant="primary")
+                btn_premier = gr.Button("⚽ Premier League (20 Equipos) ➔", variant="primary")
+                btn_laliga = gr.Button("⚽ LaLiga EA Sports (20 Equipos) ➔", variant="primary")
                 btn_nations = gr.Button("🏆 UEFA Nations League (20 Selecciones) ➔", variant="primary")
-                btn_bundesliga = gr.Button("Bundesliga (18 Equipos) ➔", icon=LOGOS_LIGAS["Bundesliga"], variant="primary")
-                btn_seriea = gr.Button("Serie A (20 Equipos) ➔", icon=LOGOS_LIGAS["Serie A"], variant="primary")
-                btn_champions = gr.Button("Champions League (36 Equipos) ➔", icon=LOGOS_LIGAS["Champions League"], variant="primary")
-                btn_nfl = gr.Button("NFL (32 Equipos AFC/NFC) ➔", icon=LOGOS_LIGAS["NFL"], variant="primary")
-                btn_mlb = gr.Button("MLB (30 Equipos Grandes Ligas) ➔", icon=LOGOS_LIGAS["MLB"], variant="primary")
+                btn_bundesliga = gr.Button("⚽ Bundesliga (18 Equipos) ➔", variant="primary")
+                btn_seriea = gr.Button("⚽ Serie A (20 Equipos) ➔", variant="primary")
+                btn_champions = gr.Button("⭐ Champions League (36 Equipos) ➔", variant="primary")
+                btn_nfl = gr.Button("🏈 NFL (32 Equipos AFC/NFC) ➔", variant="primary")
+                btn_mlb = gr.Button("⚾ MLB (30 Equipos Grandes Ligas) ➔", variant="primary")
 
                 gr.Markdown("---")
                 gr.Markdown("### 🛠️ **Gestor Directo por ID**")
