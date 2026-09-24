@@ -1,4 +1,4 @@
-streamlit
+gradio
 pandas
 numpy
 xgboost
@@ -6,5 +6,4 @@ scikit-learn
 requests
 plotly
 nflreadpy
-gradio
 scipy
