@@ -241,9 +241,17 @@ try:
     dict_nfl_logos = dict(zip(equipos_nfl['team_abbr'], equipos_nfl['team_logo_espn']))
     lista_nfl_nombres = sorted(list(dict_nfl_nombres.keys()))
 except Exception:
-    lista_nfl_nombres = ["Los Angeles Rams", "New York Giants", "Green Bay Packers", "Dallas Cowboys"]
-    dict_nfl_nombres = {x: x[:3].upper() for x in lista_nfl_nombres}
-    dict_nfl_logos = {x[:3].upper(): "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png" for x in lista_nfl_nombres}
+    lista_nfl_nombres = ["Detroit Lions", "New York Jets", "Green Bay Packers", "Dallas Cowboys"]
+    dict_nfl_nombres = {
+        "Detroit Lions": "DET", "New York Jets": "NYJ",
+        "Green Bay Packers": "GB", "Dallas Cowboys": "DAL"
+    }
+    dict_nfl_logos = {
+        "DET": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
+        "NYJ": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
+        "GB": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
+        "DAL": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"
+    }
 
 np.random.seed(42)
 X_fut_sim, y_fut_diff, y_fut_tot = [], [], []
@@ -627,7 +635,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     prob_f5_loc = int(round(100 / (1 + 10**(-diff_f5 / 1.1))))
     prob_f5_vis = 100 - prob_f5_loc
 
-    # 1. MONEYLINE JUEGO COMPLETO
     equipo_fav = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
     prob_fav = max(prob_win_local, prob_win_visita)
     cuota_fav = cuota_loc_dec if prob_win_local >= prob_win_visita else cuota_vis_dec
@@ -637,7 +644,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     pick_1_str = f"{equipo_fav} ML @ {cuota_fav} — Probabilidad: {prob_fav}% | Ventaja: +{edge_ml}% EV"
     badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml}% EV)</span>' if edge_ml >= 4.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_ml}% EV)</span>'
 
-    # 2. RUN LINE
     p_cubre_loc = round(100 / (1 + 10**(-(diff_carreras + float(rl_loc_val)) / 2.0)), 1)
     p_cubre_vis = round(100 / (1 + 10**(-((-diff_carreras) + float(rl_vis_val)) / 2.0)), 1)
     prob_impl_rl_loc = (1 / float(cuota_rl_loc)) * 100 if float(cuota_rl_loc) > 1 else 50.0
@@ -655,7 +661,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
         pick_2_str = f"{nombre_local if diff_carreras>=0 else nombre_visita} Run Line — Probabilidad: {max(p_cubre_loc, p_cubre_vis)}%"
         badge_2 = '<span style="background: #EF4444; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">SKIP ❌</span>'
 
-    # 3. PRIMERAS 5 ENTRADAS (F5 ML)
     fav_f5 = nombre_local if prob_f5_loc >= prob_f5_vis else nombre_visita
     cuota_f5_fav = cuota_f5_loc if prob_f5_loc >= prob_f5_vis else cuota_f5_vis
     prob_f5_fav = max(prob_f5_loc, prob_f5_vis)
@@ -664,7 +669,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     pick_3_str = f"{fav_f5} Ganador F5 ML @ {cuota_f5_fav} — Probabilidad: {prob_f5_fav}% ({carreras_f5_loc:.1f} vs {carreras_f5_vis:.1f})"
     badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_f5}% EV)</span>' if edge_f5 >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_f5}% EV)</span>'
 
-    # 4. MERCADO NRFI / YRFI (1er Inning)
     exp_carreras_1st = (float(xera_loc) + float(xera_vis)) / 9.0
     prob_nrfi = int(round(np.exp(-exp_carreras_1st) * 100))
     prob_yrfi = 100 - prob_nrfi
@@ -685,7 +689,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
         pick_4_str = f"1er Inning: {'NRFI' if prob_nrfi>=50 else 'YRFI'} — Probabilidad: {max(prob_nrfi, prob_yrfi)}%"
         badge_4 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
-    # 5. TEAM TOTAL LOCAL
     dif_team_loc = carreras_loc - float(linea_team_loc)
     tipo_team_loc = "OVER" if dif_team_loc >= 0 else "UNDER"
     cuota_team_loc = cuota_team_loc_over if tipo_team_loc == "OVER" else cuota_team_loc_under
@@ -694,7 +697,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     pick_5_str = f"Team Total {nombre_local}: {tipo_team_loc} {linea_team_loc} @ {cuota_team_loc} — Probabilidad: {prob_team_loc}% (Proyección: {carreras_loc:.1f})"
     badge_5 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_team_loc}% EV)</span>' if edge_team_loc >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_team_loc}% EV)</span>'
 
-    # 6. TEAM TOTAL VISITANTE
     dif_team_vis = carreras_vis - float(linea_team_vis)
     tipo_team_vis = "OVER" if dif_team_vis >= 0 else "UNDER"
     cuota_team_vis = cuota_team_vis_over if tipo_team_vis == "OVER" else cuota_team_vis_under
@@ -703,7 +705,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     pick_6_str = f"Team Total {nombre_visita}: {tipo_team_vis} {linea_team_vis} @ {cuota_team_vis} — Probabilidad: {prob_team_vis}% (Proyección: {carreras_vis:.1f})"
     badge_6 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_team_vis}% EV)</span>' if edge_team_vis >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_team_vis}% EV)</span>'
 
-    # 7. TOTAL JUEGO COMPLETO
     dif_linea = tot_carreras - float(linea_tot_carreras)
     tipo_tot = "OVER" if dif_linea >= 0 else "UNDER"
     prob_tot = min(85, int(50 + abs(dif_linea) * 12))
@@ -760,11 +761,11 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     """
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, pick_5_str, pick_6_str, pick_7_str, f"{nombre_local} vs {nombre_visita}"
 
-# MODELO CALIBRADO DE LA NFL BASADO EN DISTRIBUCIÓN ESTADÍSTICA DE PUNTOS
 def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under):
-    local = dict_nfl_nombres.get(nombre_local, nombre_local[:3])
-    visita = dict_nfl_nombres.get(nombre_visita, nombre_visita[:3])
-    logo_loc, logo_vis = dict_nfl_logos.get(local, ""), dict_nfl_logos.get(visita, "")
+    local = dict_nfl_nombres.get(nombre_local, "DET")
+    visita = dict_nfl_nombres.get(nombre_visita, "NYJ")
+    logo_loc = dict_nfl_logos.get(local, "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
+    logo_vis = dict_nfl_logos.get(visita, "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
     try:
         input_data = pd.DataFrame([[stats_nfl.loc[local, 'off_rating'], stats_nfl.loc[local, 'def_rating'], stats_nfl.loc[visita, 'off_rating'], stats_nfl.loc[visita, 'def_rating']]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
@@ -779,7 +780,6 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 13.5) * 100))))
     prob_win_visita = 100 - prob_win_local
 
-    # 1. MONEYLINE DIRECTO
     prob_impl_ml_loc = (1 / float(cuota_ml_loc)) * 100 if float(cuota_ml_loc) > 1 else 50.0
     prob_impl_ml_vis = (1 / float(cuota_ml_vis)) * 100 if float(cuota_ml_vis) > 1 else 50.0
 
@@ -800,7 +800,6 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
         pick_1_str = f"{fav_name} ML @ {fav_cuota} — Probabilidad: {fav_prob}% | Ventaja: {fav_edge}% EV"
         badge_1 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ ({fav_edge}% EV)</span>'
 
-    # 2. SPREAD / HÁNDICAP
     p_cubre_sp_loc = round(norm.cdf((diff_pts + float(sp_loc_val)) / 10.5) * 100, 1)
     p_cubre_sp_vis = round(norm.cdf(((-diff_pts) + float(sp_vis_val)) / 10.5) * 100, 1)
 
@@ -825,7 +824,6 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
         pick_2_str = f"{sp_fav_name} Spread ({sp_fav_val}) @ {sp_fav_cuota} — Probabilidad: {sp_fav_prob}% | Ventaja: {sp_fav_edge}% EV"
         badge_2 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ ({sp_fav_edge}% EV)</span>'
 
-    # 3. TOTALES (OVER / UNDER)
     dif_total = pred_total - float(linea_total)
     tipo_tot = "OVER" if dif_total >= 0 else "UNDER"
     cuota_tot_fav = cuota_tot_over if tipo_tot == "OVER" else cuota_tot_under
@@ -1054,7 +1052,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                         out_prop_fut = gr.HTML()
                         st_prop_fut_rec_text = gr.State("")
 
-    # VISTA ANÁLISIS NFL COMPLETA CON CUOTAS
     with gr.Column(visible=False) as vista_nfl:
         with gr.Row():
             btn_volver_nfl = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
@@ -1066,11 +1063,11 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                     with gr.Column(scale=1):
                         with gr.Row():
                             drop_nfl_loc = gr.Dropdown(choices=lista_nfl_nombres, value="Detroit Lions", label="Equipo Local", scale=3)
-                            img_nfl_loc = gr.Image(value=dict_nfl_logos.get(dict_nfl_nombres.get("Detroit Lions", "DET"), ""), label="Local", width=50, height=50, show_label=False, scale=1)
+                            img_nfl_loc = gr.Image(value="https://a.espncdn.com/i/teamlogos/nfl/500/det.png", label="Local", width=50, height=50, show_label=False, scale=1)
 
                         with gr.Row():
                             drop_nfl_vis = gr.Dropdown(choices=lista_nfl_nombres, value="New York Jets", label="Equipo Visitante", scale=3)
-                            img_nfl_vis = gr.Image(value=dict_nfl_logos.get(dict_nfl_nombres.get("New York Jets", "NYJ"), ""), label="Visitante", width=50, height=50, show_label=False, scale=1)
+                            img_nfl_vis = gr.Image(value="https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png", label="Visitante", width=50, height=50, show_label=False, scale=1)
 
                         gr.Markdown("#### 🏈 Cuotas Moneyline (Ganador Directo)")
                         with gr.Row():
@@ -1231,10 +1228,10 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         return logo_loc, logo_vis, gr.update(label=f"Cuota {nombre_loc} (1)"), gr.update(label=f"Cuota {nombre_vis} (2)")
 
     def actualizar_interfaz_nfl(nombre_loc, nombre_vis):
-        loc = dict_nfl_nombres.get(nombre_loc, nombre_loc[:3])
-        vis = dict_nfl_nombres.get(nombre_vis, nombre_vis[:3])
-        logo_loc = dict_nfl_logos.get(loc, "")
-        logo_vis = dict_nfl_logos.get(vis, "")
+        loc = dict_nfl_nombres.get(nombre_loc, "DET")
+        vis = dict_nfl_nombres.get(nombre_vis, "NYJ")
+        logo_loc = dict_nfl_logos.get(loc, "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
+        logo_vis = dict_nfl_logos.get(vis, "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
         return (
             logo_loc, logo_vis,
             gr.update(label=f"Cuota ML {nombre_loc}"),
