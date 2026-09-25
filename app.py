@@ -83,7 +83,7 @@ def calcular_metricas_historial():
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
     "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-    "UEFA Nations League": "https://upload.wikimedia.org/wikipedia/commons/a/ab/UEFA_Nations_League_logo.svg",
+    "UEFA Nations League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2060.png",
     "Champions League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
     "Bundesliga": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
     "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
@@ -897,7 +897,6 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
 def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
 
-    # Reemplazo de las gráficas de dona con KPI que incluye % de efectividad por deporte
     def crear_kpi_card(titulo, wins, losses, pending):
         total = wins + losses
         pct = round((wins / total) * 100, 1) if total > 0 else 0.0
