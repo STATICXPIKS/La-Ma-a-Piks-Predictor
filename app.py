@@ -959,25 +959,16 @@ def generar_dashboard_completo():
 
     return html_header, html_tables, kpi_nfl_html, kpi_mlb_html, kpi_fut_html
 
-# Estilo CSS para botones de navegación con imágenes
-css_custom = """
-.btn-logo-nav {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    cursor: pointer !important;
-    transition: transform 0.2s ease !important;
-}
-.btn-logo-nav:hover {
-    transform: scale(1.1) !important;
-}
-"""
+# Auxiliar para mostrar el logo HTML limpio
+def render_logo_html(url, height=55):
+    return f"""<div style="display: flex; justify-content: center; align-items: center; height: 60px; margin-bottom: 4px;">
+        <img src="{url}" style="max-height: {height}px; width: auto; object-fit: contain;" />
+    </div>"""
 
 # =========================================
 # INTERFAZ GRÁFICA (GRADIO BLOCKS)
 # =========================================
-with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald"), css=css_custom) as app_mana:
+with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
 
     with gr.Column(visible=True) as vista_home:
         gr.Markdown("""
@@ -987,16 +978,39 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         </div>
         """)
 
-        # NAVEGACIÓN POR LOGOS
+        # COLUMNAS DE LOGO + BOTÓN PEQUEÑO DEBAJO
         with gr.Row():
-            btn_premier = gr.Button("⚽ Premier League", variant="secondary", elem_classes="btn-logo-nav")
-            btn_laliga = gr.Button("⚽ LaLiga EA Sports", variant="secondary", elem_classes="btn-logo-nav")
-            btn_bundesliga = gr.Button("⚽ Bundesliga", variant="secondary", elem_classes="btn-logo-nav")
-            btn_seriea = gr.Button("⚽ Serie A", variant="secondary", elem_classes="btn-logo-nav")
-            btn_champions = gr.Button("⭐ Champions League", variant="secondary", elem_classes="btn-logo-nav")
-            btn_nations = gr.Button("🏆 Nations League", variant="secondary", elem_classes="btn-logo-nav")
-            btn_nfl = gr.Button("🏈 NFL", variant="secondary", elem_classes="btn-logo-nav")
-            btn_mlb = gr.Button("⚾ MLB", variant="secondary", elem_classes="btn-logo-nav")
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["Premier League"]))
+                btn_premier = gr.Button("Analizar ➔", variant="primary", size="sm")
+
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["LaLiga EA Sports"]))
+                btn_laliga = gr.Button("Analizar ➔", variant="primary", size="sm")
+
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["Bundesliga"]))
+                btn_bundesliga = gr.Button("Analizar ➔", variant="primary", size="sm")
+
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["Serie A"]))
+                btn_seriea = gr.Button("Analizar ➔", variant="primary", size="sm")
+
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["Champions League"]))
+                btn_champions = gr.Button("Analizar ➔", variant="primary", size="sm")
+
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"], height=48))
+                btn_nations = gr.Button("Analizar ➔", variant="primary", size="sm")
+
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["NFL"]))
+                btn_nfl = gr.Button("Analizar ➔", variant="primary", size="sm")
+
+            with gr.Column(scale=1, min_width=90):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["MLB"]))
+                btn_mlb = gr.Button("Analizar ➔", variant="primary", size="sm")
 
         gr.Markdown("<br>")
 
@@ -1314,7 +1328,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             gr.update(label=f"Cuota {vis_inicial} (2)")
         )
 
-    # Eventos de Clic en los Botones
+    # Eventos de Clic en los Botones "Analizar ➔"
     btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
     btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
     btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
