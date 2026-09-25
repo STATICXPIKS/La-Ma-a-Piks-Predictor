@@ -155,11 +155,11 @@ BUNDESLIGA_DICT = {
     "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png", "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
     "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
     "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png", "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png",
-    "SC Freiburg": "https://a.espncdn.com/i/teamlogos/soccer/500/126.png", "1. FC Union Berlin": "https://a.espncdn.com/i/teamlogos/soccer/500/130.png",
+    "SC Freiburg": "https://a.espncdn.com/i/teamlogos/soccer/500/126.png", "Union Berlin": "https://a.espncdn.com/i/teamlogos/soccer/500/130.png",
     "Borussia Mönchengladbach": "https://a.espncdn.com/i/teamlogos/soccer/500/128.png", "Werder Bremen": "https://a.espncdn.com/i/teamlogos/soccer/500/137.png",
     "FC Augsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/3812.png", "TSG Hoffenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/7911.png",
     "Mainz 05": "https://a.espncdn.com/i/teamlogos/soccer/500/129.png", "VfL Wolfsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/138.png",
-    "1. FC Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png", "VfL Bochum": "https://a.espncdn.com/i/teamlogos/soccer/500/123.png",
+    "Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png", "VfL Bochum": "https://a.espncdn.com/i/teamlogos/soccer/500/123.png",
     "St. Pauli": "https://a.espncdn.com/i/teamlogos/soccer/500/268.png", "Holstein Kiel": "https://a.espncdn.com/i/teamlogos/soccer/500/8066.png"
 }
 
@@ -703,7 +703,7 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
         pick_4_str = f"NRFI (No Carrera 1er Inning) @ {c_nrfi} — Probabilidad: {prob_nrfi}% | Ventaja: +{edge_nrfi}% EV"
         badge_4 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 NRFI (+{edge_nrfi}% EV)</span>'
     elif edge_yrfi > edge_nrfi and edge_yrfi >= 2.0:
-        pick_4_str = f"YRFI (Sí Carrera 1er Inning) @ {c_yrfi} — Probabilidad: {prob_yrfi}% | Ventaja: +{edge_yrfi}% EV"
+        pick_4_str = f"YRFI (Sí Carrera 1er Inning) @ {c_yrfi} — Probabilidad: {prob_yrfi}% | Ventaja: {prob_yrfi}%"
         badge_4 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET 🔥 YRFI (+{edge_yrfi}% EV)</span>'
     else:
         pick_4_str = f"1er Inning: {'NRFI' if prob_nrfi>=50 else 'YRFI'} — Probabilidad: {max(prob_nrfi, prob_yrfi)}%"
@@ -897,6 +897,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
 def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
 
+    # Reemplazo de las gráficas de dona con KPI que incluye % de efectividad por deporte
     def crear_kpi_card(titulo, wins, losses, pending):
         total = wins + losses
         pct = round((wins / total) * 100, 1) if total > 0 else 0.0
@@ -1329,12 +1330,14 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         )
 
     # Eventos de Clic en los Botones "Analizar ➔"
-    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_nations.click(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    outputs_liga_futbol = [vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis]
+
+    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=outputs_liga_futbol)
+    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=outputs_liga_futbol)
+    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=outputs_liga_futbol)
+    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=outputs_liga_futbol)
+    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=outputs_liga_futbol)
+    btn_nations.click(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=outputs_liga_futbol)
 
     def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
     def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
