@@ -80,7 +80,6 @@ def calcular_metricas_historial():
 # =========================================
 # LOGOS Y DICCIONARIOS DE EQUIPOS
 # =========================================
-# SVG del Trofeo Nations League incrustado en código para cero fallos
 NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
 
 LOGOS_LIGAS = {
@@ -233,6 +232,14 @@ lista_mlb_nombres = sorted(list(EQUIPOS_MLB.keys()))
 # =========================================
 # MODELOS DE ENTRENAMIENTO IA
 # =========================================
+# Ratings estáticos calibrados de respaldo para la NFL (Evita fallos por falta de memoria)
+NFL_RATINGS_STABLE = {
+    'DET': {'off': 26.8, 'def': 20.2}, 'NYJ': {'off': 17.5, 'def': 19.8},
+    'GB': {'off': 23.5, 'def': 21.0}, 'DAL': {'off': 25.2, 'def': 21.5},
+    'KC': {'off': 24.8, 'def': 18.2}, 'SF': {'off': 27.5, 'def': 19.1},
+    'BAL': {'off': 26.1, 'def': 18.5}, 'PHI': {'off': 25.5, 'def': 20.8}
+}
+
 try:
     schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
     df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
@@ -790,17 +797,23 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     logo_loc = dict_nfl_logos.get(local, "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
     logo_vis = dict_nfl_logos.get(visita, "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
+    # Forzado de ratings reales para evitar el fallback estático erróneo
+    off_loc = stats_nfl.loc[local, 'off_rating'] if local in stats_nfl.index else NFL_RATINGS_STABLE.get(local, {}).get('off', 25.0)
+    def_loc = stats_nfl.loc[local, 'def_rating'] if local in stats_nfl.index else NFL_RATINGS_STABLE.get(local, {}).get('def', 20.0)
+    off_vis = stats_nfl.loc[visita, 'off_rating'] if visita in stats_nfl.index else NFL_RATINGS_STABLE.get(visita, {}).get('off', 18.0)
+    def_vis = stats_nfl.loc[visita, 'def_rating'] if visita in stats_nfl.index else NFL_RATINGS_STABLE.get(visita, {}).get('def', 20.0)
+
     try:
-        input_data = pd.DataFrame([[stats_nfl.loc[local, 'off_rating'], stats_nfl.loc[local, 'def_rating'], stats_nfl.loc[visita, 'off_rating'], stats_nfl.loc[visita, 'def_rating']]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
+        input_data = pd.DataFrame([[off_loc, def_loc, off_vis, def_vis]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
         pred_spread, pred_total = float(model_nfl_sp.predict(input_data)[0]), float(model_nfl_tot.predict(input_data)[0])
     except Exception:
-        pred_spread, pred_total = 3.5, 43.0
+        pred_spread, pred_total = 7.5, 48.0
 
     pts_local_est = round(max(3.0, (pred_total + pred_spread) / 2), 1)
     pts_visita_est = round(max(3.0, (pred_total - pred_spread) / 2), 1)
 
     diff_pts = pts_local_est - pts_visita_est
-    prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 13.5) * 100))))
+    prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 10.5) * 100))))
     prob_win_visita = 100 - prob_win_local
 
     prob_impl_ml_loc = (1 / float(cuota_ml_loc)) * 100 if float(cuota_ml_loc) > 1 else 50.0
@@ -900,7 +913,6 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
 def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
 
-    # Reemplazo de las gráficas de dona con KPI que incluye % de efectividad por deporte
     def crear_kpi_card(titulo, wins, losses, pending):
         total = wins + losses
         pct = round((wins / total) * 100, 1) if total > 0 else 0.0
@@ -1116,22 +1128,22 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
                         gr.Markdown("#### 🏈 Cuotas Moneyline (Ganador Directo)")
                         with gr.Row():
-                            num_nfl_cuota_ml_loc = gr.Number(value=1.35, label="Cuota ML Detroit Lions")
-                            num_nfl_cuota_ml_vis = gr.Number(value=3.25, label="Cuota ML New York Jets")
+                            num_nfl_cuota_ml_loc = gr.Number(value=1.30, label="Cuota ML Detroit Lions")
+                            num_nfl_cuota_ml_vis = gr.Number(value=3.55, label="Cuota ML New York Jets")
 
                         gr.Markdown("#### 🏈 Spread / Hándicap (Casino)")
                         with gr.Row():
                             num_sp_loc_val = gr.Number(value=-7.0, label="Spread Detroit Lions")
-                            num_cuota_sp_loc = gr.Number(value=1.90, label="Cuota Spread Lions")
+                            num_cuota_sp_loc = gr.Number(value=1.91, label="Cuota Spread Lions")
                         with gr.Row():
                             num_sp_vis_val = gr.Number(value=+7.0, label="Spread New York Jets")
-                            num_cuota_sp_vis = gr.Number(value=1.85, label="Cuota Spread Jets")
+                            num_cuota_sp_vis = gr.Number(value=1.83, label="Cuota Spread Jets")
 
                         gr.Markdown("#### 🏈 Totales (Puntos Juego Completo)")
-                        num_nfl_tot = gr.Number(value=47.5, label="Línea Total Puntos")
+                        num_nfl_tot = gr.Number(value=48.0, label="Línea Total Puntos")
                         with gr.Row():
-                            num_nfl_cuota_tot_over = gr.Number(value=1.91, label="Cuota OVER")
-                            num_nfl_cuota_tot_under = gr.Number(value=1.91, label="Cuota UNDER")
+                            num_nfl_cuota_tot_over = gr.Number(value=1.88, label="Cuota OVER")
+                            num_nfl_cuota_tot_under = gr.Number(value=1.87, label="Cuota UNDER")
 
                         btn_sim_nfl = gr.Button("Simular Partido NFL 🚀", variant="primary")
 
@@ -1332,7 +1344,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             gr.update(label=f"Cuota {vis_inicial} (2)")
         )
 
-    # Eventos de Clic en los Botones "Analizar ➔"
+    # Eventos de Clic
     outputs_liga_futbol = [vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis]
 
     btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=outputs_liga_futbol)
