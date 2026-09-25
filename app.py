@@ -83,7 +83,7 @@ def calcular_metricas_historial():
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
     "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-    "UEFA Nations League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2060.png",
+    "UEFA Nations League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png", # Logo genérico UEFA Champions/Nations transparente
     "Champions League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
     "Bundesliga": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
     "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
@@ -703,7 +703,7 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
         pick_4_str = f"NRFI (No Carrera 1er Inning) @ {c_nrfi} — Probabilidad: {prob_nrfi}% | Ventaja: +{edge_nrfi}% EV"
         badge_4 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 NRFI (+{edge_nrfi}% EV)</span>'
     elif edge_yrfi > edge_nrfi and edge_yrfi >= 2.0:
-        pick_4_str = f"YRFI (Sí Carrera 1er Inning) @ {c_yrfi} — Probabilidad: {prob_yrfi}% | Ventaja: {prob_yrfi}%"
+        pick_4_str = f"YRFI (Sí Carrera 1er Inning) @ {c_yrfi} — Probabilidad: {prob_yrfi}% | Ventaja: +{edge_yrfi}% EV"
         badge_4 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET 🔥 YRFI (+{edge_yrfi}% EV)</span>'
     else:
         pick_4_str = f"1er Inning: {'NRFI' if prob_nrfi>=50 else 'YRFI'} — Probabilidad: {max(prob_nrfi, prob_yrfi)}%"
@@ -1002,7 +1002,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 btn_champions = gr.Button("Analizar ➔", variant="primary", size="sm")
 
             with gr.Column(scale=1, min_width=90):
-                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"], height=48))
+                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"]))
                 btn_nations = gr.Button("Analizar ➔", variant="primary", size="sm")
 
             with gr.Column(scale=1, min_width=90):
