@@ -83,7 +83,7 @@ def calcular_metricas_historial():
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
     "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-    "UEFA Nations League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png", # Logo genérico UEFA Champions/Nations transparente
+    "UEFA Nations League": "https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/UEFA_Nations_League_logo.svg/500px-UEFA_Nations_League_logo.svg.png",
     "Champions League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
     "Bundesliga": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
     "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
@@ -1002,7 +1002,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 btn_champions = gr.Button("Analizar ➔", variant="primary", size="sm")
 
             with gr.Column(scale=1, min_width=90):
-                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"]))
+                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"], height=55))
                 btn_nations = gr.Button("Analizar ➔", variant="primary", size="sm")
 
             with gr.Column(scale=1, min_width=90):
