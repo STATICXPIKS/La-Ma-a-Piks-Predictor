@@ -897,7 +897,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
 def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
 
-    # Reemplazo de las gráficas de dona por tarjetas KPI elegantes
+    # Reemplazo de las gráficas de dona por tarjetas KPI elegantes tipo Scoreboard Deportivo
     def crear_kpi_card(titulo, wins, losses, pending):
         total = wins + losses
         pct = round((wins / total) * 100, 1) if total > 0 else 0.0
@@ -959,10 +959,25 @@ def generar_dashboard_completo():
 
     return html_header, html_tables, kpi_nfl_html, kpi_mlb_html, kpi_fut_html
 
+# Estilo CSS para botones de navegación con imágenes
+css_custom = """
+.btn-logo-nav {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease !important;
+}
+.btn-logo-nav:hover {
+    transform: scale(1.1) !important;
+}
+"""
+
 # =========================================
 # INTERFAZ GRÁFICA (GRADIO BLOCKS)
 # =========================================
-with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
+with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald"), css=css_custom) as app_mana:
 
     with gr.Column(visible=True) as vista_home:
         gr.Markdown("""
@@ -972,16 +987,16 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         </div>
         """)
 
-        # BOTONES DE LOGOS OFICIALES USANDO COMPONENTES DE IMAGEN GRADIO
+        # NAVEGACIÓN POR LOGOS
         with gr.Row():
-            img_btn_premier = gr.Image(value=LOGOS_LIGAS["Premier League"], show_label=False, interactive=False, height=65, width=65, container=False)
-            img_btn_laliga = gr.Image(value=LOGOS_LIGAS["LaLiga EA Sports"], show_label=False, interactive=False, height=65, width=65, container=False)
-            img_btn_bundesliga = gr.Image(value=LOGOS_LIGAS["Bundesliga"], show_label=False, interactive=False, height=65, width=65, container=False)
-            img_btn_seriea = gr.Image(value=LOGOS_LIGAS["Serie A"], show_label=False, interactive=False, height=65, width=65, container=False)
-            img_btn_champions = gr.Image(value=LOGOS_LIGAS["Champions League"], show_label=False, interactive=False, height=65, width=65, container=False)
-            img_btn_nations = gr.Image(value=LOGOS_LIGAS["UEFA Nations League"], show_label=False, interactive=False, height=65, width=65, container=False)
-            img_btn_nfl = gr.Image(value=LOGOS_LIGAS["NFL"], show_label=False, interactive=False, height=65, width=65, container=False)
-            img_btn_mlb = gr.Image(value=LOGOS_LIGAS["MLB"], show_label=False, interactive=False, height=65, width=65, container=False)
+            btn_premier = gr.Button("⚽ Premier League", variant="secondary", elem_classes="btn-logo-nav")
+            btn_laliga = gr.Button("⚽ LaLiga EA Sports", variant="secondary", elem_classes="btn-logo-nav")
+            btn_bundesliga = gr.Button("⚽ Bundesliga", variant="secondary", elem_classes="btn-logo-nav")
+            btn_seriea = gr.Button("⚽ Serie A", variant="secondary", elem_classes="btn-logo-nav")
+            btn_champions = gr.Button("⭐ Champions League", variant="secondary", elem_classes="btn-logo-nav")
+            btn_nations = gr.Button("🏆 Nations League", variant="secondary", elem_classes="btn-logo-nav")
+            btn_nfl = gr.Button("🏈 NFL", variant="secondary", elem_classes="btn-logo-nav")
+            btn_mlb = gr.Button("⚾ MLB", variant="secondary", elem_classes="btn-logo-nav")
 
         gr.Markdown("<br>")
 
@@ -1299,13 +1314,13 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             gr.update(label=f"Cuota {vis_inicial} (2)")
         )
 
-    # Eventos de Clic en las imágenes de las ligas
-    img_btn_premier.select(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    img_btn_laliga.select(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    img_btn_bundesliga.select(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    img_btn_seriea.select(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    img_btn_champions.select(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    img_btn_nations.select(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    # Eventos de Clic en los Botones
+    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_nations.click(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
 
     def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
     def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
@@ -1313,8 +1328,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         h_head, h_hist, f_nfl, f_mlb, f_fut = generar_dashboard_completo()
         return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, h_hist, f_nfl, f_mlb, f_fut
 
-    img_btn_nfl.select(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
-    img_btn_mlb.select(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
+    btn_nfl.click(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
+    btn_mlb.click(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
 
     btn_volver_nfl.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
     btn_volver_mlb.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
