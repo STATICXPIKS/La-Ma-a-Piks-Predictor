@@ -971,38 +971,54 @@ def generar_dashboard_completo():
 
     return html_header, html_tables, fig_nfl, fig_mlb, fig_fut
 
+# CSS Personalizado para los botones con imágenes transparentes
+css_custom = """
+.nav-logo-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, opacity 0.2s ease !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+.nav-logo-btn:hover {
+    transform: scale(1.12) !important;
+    opacity: 0.85 !important;
+}
+"""
+
 # =========================================
 # INTERFAZ GRÁFICA (GRADIO BLOCKS)
 # =========================================
-with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
+with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald"), css=css_custom) as app_mana:
 
     with gr.Column(visible=True) as vista_home:
         gr.Markdown("""
-        <div style="text-align: center; padding: 10px 0;">
-            <h1 style="font-size: 34px; font-weight: 900; color: #065F46; margin: 0; letter-spacing: 1px;">LA MAÑA PICKS</h1>
+        <div style="text-align: center; padding: 10px 0 5px 0;">
+            <h1 style="font-size: 36px; font-weight: 900; color: #065F46; margin: 0; letter-spacing: 1px;">LA MAÑA PICKS</h1>
             <p style="font-size: 13px; font-weight: 700; color: #10B981; margin-top: 2px;">ANALIZANDO CON LA MAÑA QUE NOS HACE GANAR. JUEGA CON ESTADÍSTICAS Y CON MAÑA.</p>
         </div>
         """)
 
+        # BANNER HORIZONTALE DE LOGOS INTERACTIVOS (MENÚ SUPERIOR)
+        with gr.Row(elem_id="navbar_logos"):
+            btn_premier = gr.Button(f'<img src="{LOGOS_LIGAS["Premier League"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+            btn_laliga = gr.Button(f'<img src="{LOGOS_LIGAS["LaLiga EA Sports"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+            btn_bundesliga = gr.Button(f'<img src="{LOGOS_LIGAS["Bundesliga"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+            btn_seriea = gr.Button(f'<img src="{LOGOS_LIGAS["Serie A"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+            btn_champions = gr.Button(f'<img src="{LOGOS_LIGAS["Champions League"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+            btn_nations = gr.Button(f'<img src="{LOGOS_LIGAS["UEFA Nations League"]}" style="height: 50px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+            btn_nfl = gr.Button(f'<img src="{LOGOS_LIGAS["NFL"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+            btn_mlb = gr.Button(f'<img src="{LOGOS_LIGAS["MLB"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+
+        gr.Markdown("<br>")
+
         with gr.Row():
             with gr.Column(scale=1):
-                def make_btn_html(liga_name, desc, logo_key):
-                    logo_url = LOGOS_LIGAS.get(logo_key, "")
-                    return f"""<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                        <img src="{logo_url}" style="width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));" />
-                        <span>{liga_name} ({desc}) ➔</span>
-                    </div>"""
-
-                btn_premier = gr.Button(make_btn_html("Premier League", "20 Equipos", "Premier League"), variant="primary")
-                btn_laliga = gr.Button(make_btn_html("LaLiga EA Sports", "20 Equipos", "LaLiga EA Sports"), variant="primary")
-                btn_nations = gr.Button(make_btn_html("UEFA Nations League", "54 Selecciones", "UEFA Nations League"), variant="primary")
-                btn_bundesliga = gr.Button(make_btn_html("Bundesliga", "18 Equipos", "Bundesliga"), variant="primary")
-                btn_seriea = gr.Button(make_btn_html("Serie A", "20 Equipos", "Serie A"), variant="primary")
-                btn_champions = gr.Button(make_btn_html("Champions League", "36 Equipos", "Champions League"), variant="primary")
-                btn_nfl = gr.Button(make_btn_html("NFL", "32 Equipos AFC/NFC", "NFL"), variant="primary")
-                btn_mlb = gr.Button(make_btn_html("MLB", "30 Equipos Grandes Ligas", "MLB"), variant="primary")
-
-                gr.Markdown("---")
                 gr.Markdown("### 🛠️ **Gestor Directo por ID**")
                 num_input_id = gr.Number(value=1, label="Ingresa # ID del Pick", precision=0)
                 with gr.Row():
@@ -1021,7 +1037,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     with gr.Column(visible=False) as vista_fut:
         with gr.Row():
-            btn_volver_fut = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
+            btn_volver_fut = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
             txt_titulo_liga = gr.Markdown("## ⚽ **Área de Análisis de Fútbol**", scale=4)
 
         with gr.Tabs():
@@ -1082,7 +1098,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     with gr.Column(visible=False) as vista_nfl:
         with gr.Row():
-            btn_volver_nfl = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
+            btn_volver_nfl = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
             gr.Markdown("## 🏈 **Área de Análisis: NFL (32 Equipos)**", scale=4)
 
         with gr.Tabs():
@@ -1148,7 +1164,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     with gr.Column(visible=False) as vista_mlb:
         with gr.Row():
-            btn_volver_mlb = gr.Button("⬅️ Volver a Ligas", variant="secondary", scale=1)
+            btn_volver_mlb = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
             gr.Markdown("## ⚾ **Área de Análisis: MLB Sabermétrica (Full Game, F5, NRFI, Team Totals & Props)**", scale=4)
 
         with gr.Tabs():
