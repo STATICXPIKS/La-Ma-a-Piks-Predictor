@@ -80,10 +80,13 @@ def calcular_metricas_historial():
 # =========================================
 # LOGOS Y DICCIONARIOS DE EQUIPOS
 # =========================================
+# SVG del Trofeo Nations League incrustado en código para cero fallos
+NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
+
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
     "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-    "UEFA Nations League": "https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/UEFA_Nations_League_logo.svg/500px-UEFA_Nations_League_logo.svg.png",
+    "UEFA Nations League": NATIONS_TROPHY_SVG,
     "Champions League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
     "Bundesliga": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
     "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
