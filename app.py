@@ -83,7 +83,7 @@ def calcular_metricas_historial():
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
     "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-    "UEFA Nations League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2060.png",
+    "UEFA Conference League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2036.png",
     "Champions League": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
     "Bundesliga": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
     "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
@@ -117,38 +117,13 @@ LALIGA_DICT = {
     "Villarreal CF": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png", "UD Las Palmas": "https://a.espncdn.com/i/teamlogos/soccer/500/98.png"
 }
 
-NATIONS_LEAGUE_DICT = {
-    # LIGA A
-    "España": "https://a.espncdn.com/i/teamlogos/countries/500/esp.png", "Francia": "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
-    "Alemania": "https://a.espncdn.com/i/teamlogos/countries/500/ger.png", "Inglaterra": "https://a.espncdn.com/i/teamlogos/countries/500/eng.png",
-    "Portugal": "https://a.espncdn.com/i/teamlogos/countries/500/por.png", "Italia": "https://a.espncdn.com/i/teamlogos/countries/500/ita.png",
-    "Países Bajos": "https://a.espncdn.com/i/teamlogos/countries/500/ned.png", "Bélgica": "https://a.espncdn.com/i/teamlogos/countries/500/bel.png",
-    "Croacia": "https://a.espncdn.com/i/teamlogos/countries/500/cro.png", "Dinamarca": "https://a.espncdn.com/i/teamlogos/countries/500/den.png",
-    "Suiza": "https://a.espncdn.com/i/teamlogos/countries/500/sui.png", "Austria": "https://a.espncdn.com/i/teamlogos/countries/500/aut.png",
-    "Hungría": "https://a.espncdn.com/i/teamlogos/countries/500/hun.png", "Polonia": "https://a.espncdn.com/i/teamlogos/countries/500/pol.png",
-    "Escocia": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png", "Serbia": "https://a.espncdn.com/i/teamlogos/countries/500/srb.png",
-    # LIGA B
-    "Israel": "https://a.espncdn.com/i/teamlogos/countries/500/isr.png", "Bosnia y Herzegovina": "https://a.espncdn.com/i/teamlogos/countries/500/bih.png",
-    "República Checa": "https://a.espncdn.com/i/teamlogos/countries/500/cze.png", "Gales": "https://a.espncdn.com/i/teamlogos/countries/500/wal.png",
-    "Finlandia": "https://a.espncdn.com/i/teamlogos/countries/500/fin.png", "Ucrania": "https://a.espncdn.com/i/teamlogos/countries/500/ukr.png",
-    "Islandia": "https://a.espncdn.com/i/teamlogos/countries/500/isl.png", "Noruega": "https://a.espncdn.com/i/teamlogos/countries/500/nor.png",
-    "Eslovenia": "https://a.espncdn.com/i/teamlogos/countries/500/svn.png", "Irlanda": "https://a.espncdn.com/i/teamlogos/countries/500/irl.png",
-    "Albania": "https://a.espncdn.com/i/teamlogos/countries/500/alb.png", "Georgia": "https://a.espncdn.com/i/teamlogos/countries/500/geo.png",
-    "Grecia": "https://a.espncdn.com/i/teamlogos/countries/500/gre.png", "Turquía": "https://a.espncdn.com/i/teamlogos/countries/500/tur.png",
-    "Kazajistán": "https://a.espncdn.com/i/teamlogos/countries/500/kaz.png", "Montenegro": "https://a.espncdn.com/i/teamlogos/countries/500/mne.png",
-    # LIGA C
-    "Suecia": "https://a.espncdn.com/i/teamlogos/countries/500/swe.png", "Rumanía": "https://a.espncdn.com/i/teamlogos/countries/500/rou.png",
-    "Armenia": "https://a.espncdn.com/i/teamlogos/countries/500/arm.png", "Luxemburgo": "https://a.espncdn.com/i/teamlogos/countries/500/lux.png",
-    "Azerbaiyán": "https://a.espncdn.com/i/teamlogos/countries/500/aze.png", "Bulgaria": "https://a.espncdn.com/i/teamlogos/countries/500/bul.png",
-    "Islas Feroe": "https://a.espncdn.com/i/teamlogos/countries/500/fro.png", "Macedonia del Norte": "https://a.espncdn.com/i/teamlogos/countries/500/mkd.png",
-    "Eslovaquia": "https://a.espncdn.com/i/teamlogos/countries/500/svk.png", "Irlanda del Norte": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
-    "Chipre": "https://a.espncdn.com/i/teamlogos/countries/500/cyp.png", "Bielorrusia": "https://a.espncdn.com/i/teamlogos/countries/500/blr.png",
-    "Lituania": "https://a.espncdn.com/i/teamlogos/countries/500/ltu.png", "Estonia": "https://a.espncdn.com/i/teamlogos/countries/500/est.png",
-    "Letonia": "https://a.espncdn.com/i/teamlogos/countries/500/lva.png", "Kosovo": "https://a.espncdn.com/i/teamlogos/countries/500/kvx.png",
-    # LIGA D
-    "Moldavia": "https://a.espncdn.com/i/teamlogos/countries/500/mda.png", "Malta": "https://a.espncdn.com/i/teamlogos/countries/500/mlt.png",
-    "Andorra": "https://a.espncdn.com/i/teamlogos/countries/500/and.png", "San Marino": "https://a.espncdn.com/i/teamlogos/countries/500/smr.png",
-    "Liechtenstein": "https://a.espncdn.com/i/teamlogos/countries/500/lie.png", "Gibraltar": "https://a.espncdn.com/i/teamlogos/countries/500/gib.png"
+CONFERENCE_LEAGUE_DICT = {
+    "Chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png", "Real Betis": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png",
+    "Fiorentina": "https://a.espncdn.com/i/teamlogos/soccer/500/109.png", "FC Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png",
+    "Panathinaikos": "https://a.espncdn.com/i/teamlogos/soccer/500/265.png", "Copenhague": "https://a.espncdn.com/i/teamlogos/soccer/500/165.png",
+    "Rapid Viena": "https://a.espncdn.com/i/teamlogos/soccer/500/171.png", "Legia Varsovia": "https://a.espncdn.com/i/teamlogos/soccer/500/237.png",
+    "Vitória Guimarães": "https://a.espncdn.com/i/teamlogos/soccer/500/2020.png", "Gent": "https://a.espncdn.com/i/teamlogos/soccer/500/463.png",
+    "LASK": "https://a.espncdn.com/i/teamlogos/soccer/500/2034.png", "Molde": "https://a.espncdn.com/i/teamlogos/soccer/500/624.png"
 }
 
 BUNDESLIGA_DICT = {
@@ -897,7 +872,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
 def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
 
-    # Reemplazo de las gráficas de dona por tarjetas KPI elegantes tipo Scoreboard Deportivo
+    # Reemplazo de las gráficas de dona con KPI que incluye % de efectividad por deporte
     def crear_kpi_card(titulo, wins, losses, pending):
         total = wins + losses
         pct = round((wins / total) * 100, 1) if total > 0 else 0.0
@@ -905,6 +880,7 @@ def generar_dashboard_completo():
         <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center;">
             <div style="font-size: 12px; font-weight: 800; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</div>
             <div style="font-size: 32px; font-weight: 900; color: #10B981; margin: 4px 0;">{pct}%</div>
+            <div style="font-size: 11px; font-weight: 700; color: #64748B; margin-bottom: 6px;">Efectividad {titulo}</div>
             <div style="display: flex; justify-content: center; gap: 8px; font-size: 11px; font-weight: 700;">
                 <span style="color: #10B981; background: #ECFDF5; padding: 2px 8px; border-radius: 6px;">W: {wins}</span>
                 <span style="color: #EF4444; background: #FEF2F2; padding: 2px 8px; border-radius: 6px;">L: {losses}</span>
@@ -1001,8 +977,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 btn_champions = gr.Button("Analizar ➔", variant="primary", size="sm")
 
             with gr.Column(scale=1, min_width=90):
-                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"], height=48))
-                btn_nations = gr.Button("Analizar ➔", variant="primary", size="sm")
+                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Conference League"], height=48))
+                btn_conference = gr.Button("Analizar ➔", variant="primary", size="sm")
 
             with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["NFL"]))
@@ -1334,7 +1310,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
     btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
     btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_nations.click(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    btn_conference.click(fn=lambda: cambiar_a_liga_futbol(CONFERENCE_LEAGUE_DICT, "UEFA Conference League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
 
     def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
     def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
