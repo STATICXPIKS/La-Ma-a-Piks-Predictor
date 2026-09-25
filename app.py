@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 import gradio as gr
-import plotly.graph_objects as go
 import nflreadpy as nfl
 from scipy.stats import norm
 
@@ -898,36 +897,25 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
 def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
 
-    def crear_dona_verde(titulo, wins, losses, pending):
-        if wins == 0 and losses == 0 and pending == 0:
-            labels = ['BASE']
-            values = [100]
-            colors = ['#10B981']
-        else:
-            labels = ['WINS', 'LOSSES', 'PENDING']
-            values = [wins, losses, pending]
-            colors = ['#10B981', '#EF4444', '#F59E0B']
+    # Reemplazo de las gráficas de dona por tarjetas KPI elegantes
+    def crear_kpi_card(titulo, wins, losses, pending):
+        total = wins + losses
+        pct = round((wins / total) * 100, 1) if total > 0 else 0.0
+        return f"""
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center;">
+            <div style="font-size: 12px; font-weight: 800; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</div>
+            <div style="font-size: 32px; font-weight: 900; color: #10B981; margin: 4px 0;">{pct}%</div>
+            <div style="display: flex; justify-content: center; gap: 8px; font-size: 11px; font-weight: 700;">
+                <span style="color: #10B981; background: #ECFDF5; padding: 2px 8px; border-radius: 6px;">W: {wins}</span>
+                <span style="color: #EF4444; background: #FEF2F2; padding: 2px 8px; border-radius: 6px;">L: {losses}</span>
+                <span style="color: #F59E0B; background: #FFFBEB; padding: 2px 8px; border-radius: 6px;">P: {pending}</span>
+            </div>
+        </div>
+        """
 
-        fig = go.Figure(data=[go.Pie(
-            labels=labels,
-            values=values,
-            hole=.65,
-            marker=dict(colors=colors)
-        )])
-        fig.update_layout(
-            title=dict(text=titulo, font=dict(size=12, color='#065F46', family='Segoe UI')),
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font=dict(color='#0F172A', size=10),
-            height=180,
-            margin=dict(l=10, r=10, t=30, b=10),
-            showlegend=False
-        )
-        return fig
-
-    fig_nfl = crear_dona_verde("EFECTIVIDAD NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
-    fig_mlb = crear_dona_verde("EFECTIVIDAD MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
-    fig_fut = crear_dona_verde("EFECTIVIDAD FÚTBOL", stats['FUTBOL']['wins'], stats['FUTBOL']['losses'], stats['FUTBOL']['pending'])
+    kpi_nfl_html = crear_kpi_card("Récord NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
+    kpi_mlb_html = crear_kpi_card("Récord MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
+    kpi_fut_html = crear_kpi_card("Récord Fútbol", stats['FUTBOL']['wins'], stats['FUTBOL']['losses'], stats['FUTBOL']['pending'])
 
     html_header = f"""
     <div style="background: #FFFFFF; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 4px 12px rgba(16,185,129,0.1);">
@@ -969,51 +957,31 @@ def generar_dashboard_completo():
     </div>
     """
 
-    return html_header, html_tables, fig_nfl, fig_mlb, fig_fut
-
-# CSS Personalizado para los botones con imágenes transparentes
-css_custom = """
-.nav-logo-btn {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    cursor: pointer !important;
-    transition: transform 0.2s ease, opacity 0.2s ease !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-}
-.nav-logo-btn:hover {
-    transform: scale(1.12) !important;
-    opacity: 0.85 !important;
-}
-"""
+    return html_header, html_tables, kpi_nfl_html, kpi_mlb_html, kpi_fut_html
 
 # =========================================
 # INTERFAZ GRÁFICA (GRADIO BLOCKS)
 # =========================================
-with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald"), css=css_custom) as app_mana:
+with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
 
     with gr.Column(visible=True) as vista_home:
         gr.Markdown("""
-        <div style="text-align: center; padding: 10px 0 5px 0;">
+        <div style="text-align: center; padding: 10px 0 15px 0;">
             <h1 style="font-size: 36px; font-weight: 900; color: #065F46; margin: 0; letter-spacing: 1px;">LA MAÑA PICKS</h1>
             <p style="font-size: 13px; font-weight: 700; color: #10B981; margin-top: 2px;">ANALIZANDO CON LA MAÑA QUE NOS HACE GANAR. JUEGA CON ESTADÍSTICAS Y CON MAÑA.</p>
         </div>
         """)
 
-        # BANNER HORIZONTALE DE LOGOS INTERACTIVOS (MENÚ SUPERIOR)
-        with gr.Row(elem_id="navbar_logos"):
-            btn_premier = gr.Button(f'<img src="{LOGOS_LIGAS["Premier League"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
-            btn_laliga = gr.Button(f'<img src="{LOGOS_LIGAS["LaLiga EA Sports"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
-            btn_bundesliga = gr.Button(f'<img src="{LOGOS_LIGAS["Bundesliga"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
-            btn_seriea = gr.Button(f'<img src="{LOGOS_LIGAS["Serie A"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
-            btn_champions = gr.Button(f'<img src="{LOGOS_LIGAS["Champions League"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
-            btn_nations = gr.Button(f'<img src="{LOGOS_LIGAS["UEFA Nations League"]}" style="height: 50px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
-            btn_nfl = gr.Button(f'<img src="{LOGOS_LIGAS["NFL"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
-            btn_mlb = gr.Button(f'<img src="{LOGOS_LIGAS["MLB"]}" style="height: 55px; width: auto; object-fit: contain;" />', elem_classes="nav-logo-btn")
+        # BOTONES DE LOGOS OFICIALES USANDO COMPONENTES DE IMAGEN GRADIO
+        with gr.Row():
+            img_btn_premier = gr.Image(value=LOGOS_LIGAS["Premier League"], show_label=False, interactive=False, height=65, width=65, container=False)
+            img_btn_laliga = gr.Image(value=LOGOS_LIGAS["LaLiga EA Sports"], show_label=False, interactive=False, height=65, width=65, container=False)
+            img_btn_bundesliga = gr.Image(value=LOGOS_LIGAS["Bundesliga"], show_label=False, interactive=False, height=65, width=65, container=False)
+            img_btn_seriea = gr.Image(value=LOGOS_LIGAS["Serie A"], show_label=False, interactive=False, height=65, width=65, container=False)
+            img_btn_champions = gr.Image(value=LOGOS_LIGAS["Champions League"], show_label=False, interactive=False, height=65, width=65, container=False)
+            img_btn_nations = gr.Image(value=LOGOS_LIGAS["UEFA Nations League"], show_label=False, interactive=False, height=65, width=65, container=False)
+            img_btn_nfl = gr.Image(value=LOGOS_LIGAS["NFL"], show_label=False, interactive=False, height=65, width=65, container=False)
+            img_btn_mlb = gr.Image(value=LOGOS_LIGAS["MLB"], show_label=False, interactive=False, height=65, width=65, container=False)
 
         gr.Markdown("<br>")
 
@@ -1029,9 +997,9 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 html_header_out = gr.HTML()
 
                 with gr.Row():
-                    plot_nfl_out = gr.Plot(show_label=False)
-                    plot_mlb_out = gr.Plot(show_label=False)
-                    plot_fut_out = gr.Plot(show_label=False)
+                    kpi_nfl_out = gr.HTML()
+                    kpi_mlb_out = gr.HTML()
+                    kpi_fut_out = gr.HTML()
 
         html_historial_out = gr.HTML()
 
@@ -1331,12 +1299,13 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             gr.update(label=f"Cuota {vis_inicial} (2)")
         )
 
-    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_nations.click(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
-    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    # Eventos de Clic en las imágenes de las ligas
+    img_btn_premier.select(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    img_btn_laliga.select(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    img_btn_bundesliga.select(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    img_btn_seriea.select(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    img_btn_champions.select(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
+    img_btn_nations.select(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=[vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis])
 
     def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
     def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
@@ -1344,12 +1313,12 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         h_head, h_hist, f_nfl, f_mlb, f_fut = generar_dashboard_completo()
         return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, h_hist, f_nfl, f_mlb, f_fut
 
-    btn_nfl.click(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
-    btn_mlb.click(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
+    img_btn_nfl.select(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
+    img_btn_mlb.select(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
 
-    btn_volver_nfl.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
-    btn_volver_mlb.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
-    btn_volver_fut.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+    btn_volver_nfl.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
+    btn_volver_mlb.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
+    btn_volver_fut.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
 
     drop_fut_loc.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
     drop_fut_vis.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
@@ -1362,8 +1331,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     btn_auto_api.click(fn=auto_cargar_pitchers_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, lbl_api_status])
 
-    btn_direct_win.click(fn=lambda idx: cambiar_estado_directo(idx, "WIN"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
-    btn_direct_loss.click(fn=lambda idx: cambiar_estado_directo(idx, "LOSS"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+    btn_direct_win.click(fn=lambda idx: cambiar_estado_directo(idx, "WIN"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
+    btn_direct_loss.click(fn=lambda idx: cambiar_estado_directo(idx, "LOSS"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
 
     btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_nfl_cuota_ml_loc, num_nfl_cuota_ml_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis, num_nfl_tot, num_nfl_cuota_tot_over, num_nfl_cuota_tot_under], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match])
     btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_mlb_tot, num_linea_team_loc, num_cuota_team_loc_over, num_cuota_team_loc_under, num_linea_team_vis, num_cuota_team_vis_over, num_cuota_team_vis_under, num_cuota_nrfi, num_cuota_yrfi], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match])
@@ -1404,7 +1373,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_save_prop_nfl.click(fn=lambda text: fn_save_generic_prop("NFL", text), inputs=[st_prop_nfl_rec_text], outputs=[lbl_save_prop_nfl])
     btn_save_prop_fut.click(fn=lambda text: fn_save_generic_prop("FÚTBOL", text), inputs=[st_prop_fut_rec_text], outputs=[lbl_save_prop_fut])
 
-    app_mana.load(fn=generar_dashboard_completo, outputs=[html_header_out, html_historial_out, plot_nfl_out, plot_mlb_out, plot_fut_out])
+    app_mana.load(fn=generar_dashboard_completo, outputs=[html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
 
 # Configuración de puerto para Render / Servidores Web
 if __name__ == "__main__":
