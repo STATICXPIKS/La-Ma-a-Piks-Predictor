@@ -229,17 +229,49 @@ for eq, d in EQUIPOS_MLB.items():
 
 lista_mlb_nombres = sorted(list(EQUIPOS_MLB.keys()))
 
+# DICCIONARIO COMPLETO Y ESTÁTICO CON LOS 32 EQUIPOS DE LA NFL
+DICT_NFL_COMPLETO = {
+    "Arizona Cardinals": {"abbr": "ARI", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png", "off": 21.5, "def": 24.2},
+    "Atlanta Falcons": {"abbr": "ATL", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png", "off": 22.8, "def": 21.9},
+    "Baltimore Ravens": {"abbr": "BAL", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png", "off": 27.1, "def": 18.5},
+    "Buffalo Bills": {"abbr": "BUF", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png", "off": 26.5, "def": 19.2},
+    "Carolina Panthers": {"abbr": "CAR", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/car.png", "off": 16.2, "def": 25.8},
+    "Chicago Bears": {"abbr": "CHI", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png", "off": 20.1, "def": 22.3},
+    "Cincinnati Bengals": {"abbr": "CIN", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png", "off": 24.8, "def": 23.1},
+    "Cleveland Browns": {"abbr": "CLE", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png", "off": 19.5, "def": 21.0},
+    "Dallas Cowboys": {"abbr": "DAL", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png", "off": 26.2, "def": 22.1},
+    "Denver Broncos": {"abbr": "DEN", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png", "off": 21.0, "def": 20.5},
+    "Detroit Lions": {"abbr": "DET", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png", "off": 28.5, "def": 20.2},
+    "Green Bay Packers": {"abbr": "GB", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png", "off": 24.5, "def": 21.0},
+    "Houston Texans": {"abbr": "HOU", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png", "off": 23.1, "def": 19.8},
+    "Indianapolis Colts": {"abbr": "IND", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png", "off": 22.4, "def": 23.5},
+    "Jacksonville Jaguars": {"abbr": "JAX", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png", "off": 21.2, "def": 23.8},
+    "Kansas City Chiefs": {"abbr": "KC", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png", "off": 25.8, "def": 17.5},
+    "Las Vegas Raiders": {"abbr": "LV", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png", "off": 18.2, "def": 24.1},
+    "Los Angeles Chargers": {"abbr": "LAC", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png", "off": 22.0, "def": 19.2},
+    "Los Angeles Rams": {"abbr": "LAR", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png", "off": 23.8, "def": 22.5},
+    "Miami Dolphins": {"abbr": "MIA", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png", "off": 25.0, "def": 22.8},
+    "Minnesota Vikings": {"abbr": "MIN", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png", "off": 24.1, "def": 20.4},
+    "New England Patriots": {"abbr": "NE", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png", "off": 17.1, "def": 22.0},
+    "New Orleans Saints": {"abbr": "NO", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/no.png", "off": 22.5, "def": 21.8},
+    "New York Giants": {"abbr": "NYG", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png", "off": 17.8, "def": 23.9},
+    "New York Jets": {"abbr": "NYJ", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png", "off": 18.0, "def": 19.8},
+    "Philadelphia Eagles": {"abbr": "PHI", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png", "off": 26.1, "def": 20.8},
+    "Pittsburgh Steelers": {"abbr": "PIT", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png", "off": 20.5, "def": 18.8},
+    "San Francisco 49ers": {"abbr": "SF", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png", "off": 27.8, "def": 19.1},
+    "Seattle Seahawks": {"abbr": "SEA", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png", "off": 22.9, "def": 22.4},
+    "Tampa Bay Buccaneers": {"abbr": "TB", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png", "off": 24.2, "def": 22.0},
+    "Tennessee Titans": {"abbr": "TEN", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png", "off": 18.9, "def": 23.1},
+    "Washington Commanders": {"abbr": "WAS", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/was.png", "off": 24.8, "def": 23.5}
+}
+
+lista_nfl_nombres = sorted(list(DICT_NFL_COMPLETO.keys()))
+dict_nfl_nombres = {k: v["abbr"] for k, v in DICT_NFL_COMPLETO.items()}
+dict_nfl_logos = {v["abbr"]: v["logo"] for k, v in DICT_NFL_COMPLETO.items()}
+
 # =========================================
 # MODELOS DE ENTRENAMIENTO IA
 # =========================================
-# Ratings estáticos calibrados de respaldo para la NFL (Evita fallos por falta de memoria)
-NFL_RATINGS_STABLE = {
-    'DET': {'off': 26.8, 'def': 20.2}, 'NYJ': {'off': 17.5, 'def': 19.8},
-    'GB': {'off': 23.5, 'def': 21.0}, 'DAL': {'off': 25.2, 'def': 21.5},
-    'KC': {'off': 24.8, 'def': 18.2}, 'SF': {'off': 27.5, 'def': 19.1},
-    'BAL': {'off': 26.1, 'def': 18.5}, 'PHI': {'off': 25.5, 'def': 20.8}
-}
-
 try:
     schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
     df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
@@ -264,24 +296,8 @@ try:
 
     model_nfl_sp = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_sp)
     model_nfl_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_tot)
-
-    equipos_info = nfl.load_teams().to_pandas() if hasattr(nfl.load_teams(), 'to_pandas') else nfl.load_teams()
-    equipos_nfl = equipos_info[equipos_info['team_abbr'].isin(stats_nfl.index)].copy()
-    dict_nfl_nombres = dict(zip(equipos_nfl['team_name'], equipos_nfl['team_abbr']))
-    dict_nfl_logos = dict(zip(equipos_nfl['team_abbr'], equipos_nfl['team_logo_espn']))
-    lista_nfl_nombres = sorted(list(dict_nfl_nombres.keys()))
 except Exception:
-    lista_nfl_nombres = ["Detroit Lions", "New York Jets", "Green Bay Packers", "Dallas Cowboys"]
-    dict_nfl_nombres = {
-        "Detroit Lions": "DET", "New York Jets": "NYJ",
-        "Green Bay Packers": "GB", "Dallas Cowboys": "DAL"
-    }
-    dict_nfl_logos = {
-        "DET": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
-        "NYJ": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
-        "GB": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
-        "DAL": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"
-    }
+    pass
 
 np.random.seed(42)
 X_fut_sim, y_fut_diff, y_fut_tot = [], [], []
@@ -797,17 +813,16 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     logo_loc = dict_nfl_logos.get(local, "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
     logo_vis = dict_nfl_logos.get(visita, "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
-    # Forzado de ratings reales para evitar el fallback estático erróneo
-    off_loc = stats_nfl.loc[local, 'off_rating'] if local in stats_nfl.index else NFL_RATINGS_STABLE.get(local, {}).get('off', 25.0)
-    def_loc = stats_nfl.loc[local, 'def_rating'] if local in stats_nfl.index else NFL_RATINGS_STABLE.get(local, {}).get('def', 20.0)
-    off_vis = stats_nfl.loc[visita, 'off_rating'] if visita in stats_nfl.index else NFL_RATINGS_STABLE.get(visita, {}).get('off', 18.0)
-    def_vis = stats_nfl.loc[visita, 'def_rating'] if visita in stats_nfl.index else NFL_RATINGS_STABLE.get(visita, {}).get('def', 20.0)
+    off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 25.0)
+    def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.0)
+    off_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 18.0)
+    def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 20.0)
 
     try:
         input_data = pd.DataFrame([[off_loc, def_loc, off_vis, def_vis]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
         pred_spread, pred_total = float(model_nfl_sp.predict(input_data)[0]), float(model_nfl_tot.predict(input_data)[0])
     except Exception:
-        pred_spread, pred_total = 7.5, 48.0
+        pred_spread, pred_total = (off_loc - def_vis) - (off_vis - def_loc), (off_loc + off_vis)
 
     pts_local_est = round(max(3.0, (pred_total + pred_spread) / 2), 1)
     pts_visita_est = round(max(3.0, (pred_total - pred_spread) / 2), 1)
@@ -1285,10 +1300,10 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         return logo_loc, logo_vis, gr.update(label=f"Cuota {nombre_loc} (1)"), gr.update(label=f"Cuota {nombre_vis} (2)")
 
     def actualizar_interfaz_nfl(nombre_loc, nombre_vis):
-        loc = dict_nfl_nombres.get(nombre_loc, "DET")
-        vis = dict_nfl_nombres.get(nombre_vis, "NYJ")
-        logo_loc = dict_nfl_logos.get(loc, "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
-        logo_vis = dict_nfl_logos.get(vis, "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
+        loc = DICT_NFL_COMPLETO.get(nombre_loc, {}).get("abbr", "DET")
+        vis = DICT_NFL_COMPLETO.get(nombre_vis, {}).get("abbr", "NYJ")
+        logo_loc = DICT_NFL_COMPLETO.get(nombre_loc, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
+        logo_vis = DICT_NFL_COMPLETO.get(nombre_vis, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
         return (
             logo_loc, logo_vis,
             gr.update(label=f"Cuota ML {nombre_loc}"),
