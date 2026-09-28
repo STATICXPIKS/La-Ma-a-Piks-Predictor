@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 import gradio as gr
+import nflreadpy as nfl
 from scipy.stats import norm
 
 # =========================================
@@ -288,21 +289,46 @@ DICT_NFL_COMPLETO = {
 lista_nfl_nombres = sorted(list(DICT_NFL_COMPLETO.keys()))
 
 # =========================================
-# MODELOS DE ENTRENAMIENTO IA
+# MODELOS DE ENTRENAMIENTO IA CON NFLREADPY
 # =========================================
-np.random.seed(42)
-X_nfl_sim, y_nfl_sp, y_nfl_tot = [], [], []
-for _ in range(800):
-    o_l, d_l = np.random.normal(24, 3), np.random.normal(21, 3)
-    o_v, d_v = np.random.normal(22, 3), np.random.normal(21, 3)
-    p_loc = o_l - d_v + 2.5 + np.random.normal(0, 3)
-    p_vis = o_v - d_l + np.random.normal(0, 3)
-    X_nfl_sim.append([o_l, d_l, o_v, d_v])
-    y_nfl_sp.append(p_loc - p_vis)
-    y_nfl_tot.append(max(10, p_loc + p_vis))
+try:
+    schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
+    df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
+    df_played = df_sched[df_sched['result'].notnull()].copy()
 
-model_nfl_sp = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_sp)
-model_nfl_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_tot)
+    home_stats = df_played.groupby('home_team').agg(pts_favor_local=('home_score', 'mean'), pts_contra_local=('away_score', 'mean'))
+    away_stats = df_played.groupby('away_team').agg(pts_favor_visita=('away_score', 'mean'), pts_contra_visita=('home_score', 'mean'))
+    stats_nfl = home_stats.join(away_stats)
+    stats_nfl['off_rating'] = (stats_nfl['pts_favor_local'] + stats_nfl['pts_favor_visita']) / 2
+    stats_nfl['def_rating'] = (stats_nfl['pts_contra_local'] + stats_nfl['pts_contra_visita']) / 2
+
+    features_nfl = df_played.copy()
+    features_nfl['home_off'] = features_nfl['home_team'].map(stats_nfl['off_rating'])
+    features_nfl['home_def'] = features_nfl['home_team'].map(stats_nfl['def_rating'])
+    features_nfl['away_off'] = features_nfl['away_team'].map(stats_nfl['off_rating'])
+    features_nfl['away_def'] = features_nfl['away_team'].map(stats_nfl['def_rating'])
+    features_nfl['total_score'] = features_nfl['home_score'] + features_nfl['away_score']
+
+    X_nfl = features_nfl[['home_off', 'home_def', 'away_off', 'away_def']].dropna()
+    y_nfl_sp = features_nfl.loc[X_nfl.index, 'result']
+    y_nfl_tot = features_nfl.loc[X_nfl.index, 'total_score']
+
+    model_nfl_sp = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_sp)
+    model_nfl_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_tot)
+except Exception:
+    np.random.seed(42)
+    X_nfl_sim, y_nfl_sp, y_nfl_tot = [], [], []
+    for _ in range(800):
+        o_l, d_l = np.random.normal(24, 3), np.random.normal(21, 3)
+        o_v, d_v = np.random.normal(22, 3), np.random.normal(21, 3)
+        p_loc = o_l - d_v + 2.5 + np.random.normal(0, 3)
+        p_vis = o_v - d_l + np.random.normal(0, 3)
+        X_nfl_sim.append([o_l, d_l, o_v, d_v])
+        y_nfl_sp.append(p_loc - p_vis)
+        y_nfl_tot.append(max(10, p_loc + p_vis))
+
+    model_nfl_sp = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_sp)
+    model_nfl_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_tot)
 
 X_fut_sim, y_fut_diff, y_fut_tot = [], [], []
 for _ in range(800):
