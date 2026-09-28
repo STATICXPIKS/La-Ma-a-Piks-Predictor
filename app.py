@@ -23,6 +23,21 @@ SUPABASE_HEADERS = {
 
 DB_FILE = "historial_la_mana_picks.json"
 
+# MAPPING OFICIAL DE IDs DE EQUIPOS NFL (ESPN)
+NFL_TEAM_IDS = {
+    "Arizona Cardinals": 22, "Atlanta Falcons": 1, "Baltimore Ravens": 33,
+    "Buffalo Bills": 2, "Carolina Panthers": 29, "Chicago Bears": 3,
+    "Cincinnati Bengals": 4, "Cleveland Browns": 5, "Dallas Cowboys": 6,
+    "Denver Broncos": 7, "Detroit Lions": 8, "Green Bay Packers": 9,
+    "Houston Texans": 34, "Indianapolis Colts": 11, "Jacksonville Jaguars": 30,
+    "Kansas City Chiefs": 12, "Las Vegas Raiders": 13, "Los Angeles Chargers": 24,
+    "Los Angeles Rams": 14, "Miami Dolphins": 15, "Minnesota Vikings": 16,
+    "New England Patriots": 17, "New Orleans Saints": 18, "New York Giants": 19,
+    "New York Jets": 20, "Philadelphia Eagles": 21, "Pittsburgh Steelers": 23,
+    "San Francisco 49ers": 25, "Seattle Seahawks": 26, "Tampa Bay Buccaneers": 27,
+    "Tennessee Titans": 10, "Washington Commanders": 28
+}
+
 # =========================================
 # GESTIÓN DE BASE DE DATOS PERMANENTE
 # =========================================
@@ -99,40 +114,62 @@ def calcular_metricas_historial():
     return stats, tot_wins, tot_loss, tot_global, pct_global
 
 # =========================================
-# MOTOR AUTOMÁTICO DE LESIONADOS (ESPN API)
+# REPORTE ESTRUCTURADO DE LESIONES (ESPN CORE API)
 # =========================================
-def obtener_reporte_lesionados_espn(deporte, nombre_equipo):
-    equipo_query = nombre_equipo.lower().split()[-1]
-    sport_path = "football/nfl" if deporte == "NFL" else "baseball/mlb"
-    url_news = f"https://site.api.espn.com/apis/site/v2/sports/{sport_path}/news"
+def obtener_lesionados_oficiales_nfl(nombre_equipo):
+    team_id = NFL_TEAM_IDS.get(nombre_equipo)
+    if not team_id:
+        return 0.0, 0.0, f"<div style='font-size:11px; color:#64748B;'>⚪ Sin ID de equipo para {nombre_equipo}</div>"
+
+    url_injuries = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/teams/{team_id}/injuries"
     
-    bajas_encontradas = []
     penalización_off = 0.0
     penalización_def = 0.0
+    lista_jugadores = []
 
     try:
-        r = requests.get(url_news, timeout=3)
+        r = requests.get(url_injuries, timeout=3)
         if r.status_code == 200:
-            articles = r.json().get("articles", [])
-            for art in articles:
-                headline = art.get("headline", "")
-                description = art.get("description", "")
-                texto_full = f"{headline} {description}".lower()
-                
-                if equipo_query in texto_full and any(k in texto_full for k in ["out", "injured", "ir", "doubtful", "injury", "baja", "lesion"]):
-                    if "quarterback" in texto_full or " qb " in texto_full or "pitcher" in texto_full:
-                        penalización_off += 3.5
-                        bajas_encontradas.append(f"<b>Baja Clave (Titular):</b> {headline[:60]}...")
-                    else:
-                        penalización_off += 1.2
-                        bajas_encontradas.append(f"<b>Jugador en Duda:</b> {headline[:50]}...")
-    except Exception:
-        pass
+            items = r.json().get("items", [])
+            for item in items[:8]: # Revisar los primeros reportados
+                ref_url = item.get("$ref")
+                if ref_url:
+                    r_detail = requests.get(ref_url, timeout=2)
+                    if r_detail.status_code == 200:
+                        data_inj = r_detail.json()
+                        status = data_inj.get("status", "").upper()
+                        
+                        # Extraer atleta
+                        ath_ref = data_inj.get("athlete", {}).get("$ref", "")
+                        nombre_ath = "Jugador"
+                        posicion = "NFL"
+                        if ath_ref:
+                            r_ath = requests.get(ath_ref, timeout=2)
+                            if r_ath.status_code == 200:
+                                d_ath = r_ath.json()
+                                nombre_ath = d_ath.get("displayName", "Jugador")
+                                posicion = d_ath.get("position", {}).get("abbreviation", "NFL")
 
-    if not bajas_encontradas:
-        reporte_html = f"<div style='font-size: 11px; color: #10B981;'>🟢 Sin reporte de bajas críticas reciente para {nombre_equipo}.</div>"
+                        if status in ["OUT", "INJURED RESERVE", "IR", "DOUBTFUL"]:
+                            if posicion in ["QB"]:
+                                penalización_off += 4.0
+                                lista_jugadores.append(f"❌ <b>{nombre_ath} ({posicion}): OUT</b> [-4.0 pts Off]")
+                            elif posicion in ["WR", "RB", "TE", "OT"]:
+                                penalización_off += 1.5
+                                lista_jugadores.append(f"⚠️ <b>{nombre_ath} ({posicion}): {status}</b> [-1.5 pts Off]")
+                            elif posicion in ["CB", "DE", "LB", "S"]:
+                                penalización_def += 1.5
+                                lista_jugadores.append(f"🛡️ <b>{nombre_ath} ({posicion}): {status}</b> [+1.5 pts Def Concedidos]")
+                            else:
+                                penalización_off += 0.5
+                                lista_jugadores.append(f"🔸 {nombre_ath} ({posicion}): {status}")
+    except Exception as e:
+        print(f"Error consultando API de lesiones: {e}")
+
+    if not lista_jugadores:
+        reporte_html = f"<div style='font-size:11px; color:#10B981;'>🟢 <b>{nombre_equipo}:</b> Plantilla Titular Completa (Sin Bajas Críticas en Reporte Oficial)</div>"
     else:
-        reporte_html = f"<div style='font-size: 11px; color: #D97706;'>⚠️ <b>Reporte de Lesiones ({nombre_equipo}):</b><br/>" + "<br/>".join(bajas_encontradas[:2]) + "</div>"
+        reporte_html = f"<div style='font-size:11px; color:#D97706;'>🚨 <b>Bajas Confirmadas ({nombre_equipo}):</b><br/>" + "<br/>".join(lista_jugadores) + "</div>"
 
     return penalización_off, penalización_def, reporte_html
 
@@ -700,11 +737,8 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     loc_d, vis_d = EQUIPOS_MLB[nombre_local], EQUIPOS_MLB[nombre_visita]
     logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
 
-    pen_loc_off, pen_loc_def, r_loc_inj = obtener_reporte_lesionados_espn("MLB", nombre_local)
-    pen_vis_off, pen_vis_def, r_vis_inj = obtener_reporte_lesionados_espn("MLB", nombre_visita)
-
-    wrc_loc_adj = max(70, loc_d['wRC_plus'] - (pen_loc_off * 3))
-    wrc_vis_adj = max(70, vis_d['wRC_plus'] - (pen_vis_off * 3))
+    wrc_loc_adj = loc_d['wRC_plus']
+    wrc_vis_adj = vis_d['wRC_plus']
 
     era_efectiva_vis = (float(xera_vis) * 0.60) + (float(era_bp_vis) * 0.40)
     whip_efectivo_vis = (float(whip_vis) * 0.60) + (float(whip_bp_vis) * 0.40)
@@ -811,11 +845,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
             <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 76.5%</div>
         </div>
 
-        <div style="background: #F8FAFC; border-radius: 14px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
-            {r_loc_inj}
-            {r_vis_inj}
-        </div>
-
         <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -863,8 +892,8 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     logo_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
     logo_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
-    pen_loc_off, pen_loc_def, r_loc_inj = obtener_reporte_lesionados_espn("NFL", nombre_local)
-    pen_vis_off, pen_vis_def, r_vis_inj = obtener_reporte_lesionados_espn("NFL", nombre_visita)
+    pen_loc_off, pen_loc_def, r_loc_inj = obtener_lesionados_oficiales_nfl(nombre_local)
+    pen_vis_off, pen_vis_def, r_vis_inj = obtener_lesionados_oficiales_nfl(nombre_visita)
 
     off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5) - pen_loc_off
     def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.5) + pen_loc_def
