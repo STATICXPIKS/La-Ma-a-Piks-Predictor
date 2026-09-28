@@ -8,14 +8,29 @@ import xgboost as xgb
 import gradio as gr
 import nflreadpy as nfl
 from scipy.stats import norm
+from supabase import create_client, Client
 
-# Archivo de base de datos local en el servidor
+# =========================================
+# CONFIGURACIÓN DE SUPABASE (BD PERMANENTE)
+# =========================================
+SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co"
+SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj"
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 DB_FILE = "historial_la_mana_picks.json"
 
 # =========================================
-# GESTIÓN DE BASE DE DATOS E HISTORIAL
+# GESTIÓN DE BASE DE DATOS PERMANENTE
 # =========================================
 def cargar_historial_db():
+    try:
+        response = supabase.table("historial_picks").select("*").order("id", desc=False).execute()
+        if response.data:
+            return response.data
+    except Exception as e:
+        print(f"Error al leer Supabase: {e}")
+    
+    # Fallback local en caso de error
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -24,36 +39,37 @@ def cargar_historial_db():
             return []
     return []
 
-def guardar_historial_db(datos):
-    try:
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(datos, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Error al guardar: {e}")
-
 def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
-    historial = cargar_historial_db()
     nuevo_item = {
-        "id": len(historial) + 1,
         "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "deporte": deporte,
         "partido": partido,
         "seleccion": seleccion,
         "tipo_pick": tipo_pick,
-        "cuota": cuota,
+        "cuota": float(cuota),
         "ventaja_ev": ventaja_ev,
         "estado": "PENDING"
     }
-    historial.append(nuevo_item)
-    guardar_historial_db(historial)
+    
+    try:
+        supabase.table("historial_picks").insert(nuevo_item).execute()
+    except Exception as e:
+        print(f"Error al guardar en Supabase: {e}")
+        # Fallback local
+        historial = cargar_historial_db()
+        nuevo_item["id"] = len(historial) + 1
+        historial.append(nuevo_item)
+        try:
+            with open(DB_FILE, "w", encoding="utf-8") as f:
+                json.dump(historial, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
 
 def cambiar_estado_directo(pick_id, nuevo_estado):
-    historial = cargar_historial_db()
-    for item in historial:
-        if item.get("id") == pick_id:
-            item["estado"] = nuevo_estado
-            break
-    guardar_historial_db(historial)
+    try:
+        supabase.table("historial_picks").update({"estado": nuevo_estado}).eq("id", int(pick_id)).execute()
+    except Exception as e:
+        print(f"Error al actualizar Supabase: {e}")
     return generar_dashboard_completo()
 
 def calcular_metricas_historial():
@@ -229,7 +245,6 @@ for eq, d in EQUIPOS_MLB.items():
 
 lista_mlb_nombres = sorted(list(EQUIPOS_MLB.keys()))
 
-# DICCIONARIO COMPLETO Y ESTÁTICO CON LOS 32 EQUIPOS DE LA NFL
 DICT_NFL_COMPLETO = {
     "Arizona Cardinals": {"abbr": "ARI", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png", "off": 21.5, "def": 24.2},
     "Atlanta Falcons": {"abbr": "ATL", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png", "off": 22.8, "def": 21.9},
@@ -808,10 +823,10 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, pick_5_str, pick_6_str, pick_7_str, f"{nombre_local} vs {nombre_visita}"
 
 def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under):
-    local = dict_nfl_nombres.get(nombre_local, "DET")
-    visita = dict_nfl_nombres.get(nombre_visita, "NYJ")
-    logo_loc = dict_nfl_logos.get(local, "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
-    logo_vis = dict_nfl_logos.get(visita, "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
+    local = DICT_NFL_COMPLETO.get(nombre_local, {}).get("abbr", "DET")
+    visita = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("abbr", "NYJ")
+    logo_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
+    logo_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
     off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 25.0)
     def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.0)
