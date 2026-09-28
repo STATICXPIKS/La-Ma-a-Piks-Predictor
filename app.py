@@ -291,44 +291,19 @@ lista_nfl_nombres = sorted(list(DICT_NFL_COMPLETO.keys()))
 # =========================================
 # MODELOS DE ENTRENAMIENTO IA CON NFLREADPY
 # =========================================
-try:
-    schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
-    df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
-    df_played = df_sched[df_sched['result'].notnull()].copy()
+np.random.seed(42)
+X_nfl_sim, y_nfl_sp, y_nfl_tot = [], [], []
+for _ in range(800):
+    o_l, d_l = np.random.normal(24, 3), np.random.normal(21, 3)
+    o_v, d_v = np.random.normal(22, 3), np.random.normal(21, 3)
+    p_loc = (o_l * 0.6) + (d_v * 0.4) + 1.5 + np.random.normal(0, 2)
+    p_vis = (o_v * 0.6) + (d_l * 0.4) + np.random.normal(0, 2)
+    X_nfl_sim.append([o_l, d_l, o_v, d_v])
+    y_nfl_sp.append(p_loc - p_vis)
+    y_nfl_tot.append(p_loc + p_vis)
 
-    home_stats = df_played.groupby('home_team').agg(pts_favor_local=('home_score', 'mean'), pts_contra_local=('away_score', 'mean'))
-    away_stats = df_played.groupby('away_team').agg(pts_favor_visita=('away_score', 'mean'), pts_contra_visita=('home_score', 'mean'))
-    stats_nfl = home_stats.join(away_stats)
-    stats_nfl['off_rating'] = (stats_nfl['pts_favor_local'] + stats_nfl['pts_favor_visita']) / 2
-    stats_nfl['def_rating'] = (stats_nfl['pts_contra_local'] + stats_nfl['pts_contra_visita']) / 2
-
-    features_nfl = df_played.copy()
-    features_nfl['home_off'] = features_nfl['home_team'].map(stats_nfl['off_rating'])
-    features_nfl['home_def'] = features_nfl['home_team'].map(stats_nfl['def_rating'])
-    features_nfl['away_off'] = features_nfl['away_team'].map(stats_nfl['off_rating'])
-    features_nfl['away_def'] = features_nfl['away_team'].map(stats_nfl['def_rating'])
-    features_nfl['total_score'] = features_nfl['home_score'] + features_nfl['away_score']
-
-    X_nfl = features_nfl[['home_off', 'home_def', 'away_off', 'away_def']].dropna()
-    y_nfl_sp = features_nfl.loc[X_nfl.index, 'result']
-    y_nfl_tot = features_nfl.loc[X_nfl.index, 'total_score']
-
-    model_nfl_sp = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_sp)
-    model_nfl_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_tot)
-except Exception:
-    np.random.seed(42)
-    X_nfl_sim, y_nfl_sp, y_nfl_tot = [], [], []
-    for _ in range(800):
-        o_l, d_l = np.random.normal(24, 3), np.random.normal(21, 3)
-        o_v, d_v = np.random.normal(22, 3), np.random.normal(21, 3)
-        p_loc = o_l - d_v + 2.5 + np.random.normal(0, 3)
-        p_vis = o_v - d_l + np.random.normal(0, 3)
-        X_nfl_sim.append([o_l, d_l, o_v, d_v])
-        y_nfl_sp.append(p_loc - p_vis)
-        y_nfl_tot.append(max(10, p_loc + p_vis))
-
-    model_nfl_sp = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_sp)
-    model_nfl_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_tot)
+model_nfl_sp = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_sp)
+model_nfl_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_tot)
 
 X_fut_sim, y_fut_diff, y_fut_tot = [], [], []
 for _ in range(800):
@@ -840,19 +815,22 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     logo_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
     logo_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
-    off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 25.0)
-    def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.0)
-    off_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 18.0)
-    def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 20.0)
+    off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5)
+    def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.5)
+    off_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0)
+    def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 21.5)
 
+    input_data = pd.DataFrame([[off_loc, def_loc, off_vis, def_vis]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
+    
     try:
-        input_data = pd.DataFrame([[off_loc, def_loc, off_vis, def_vis]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
-        pred_spread, pred_total = float(model_nfl_sp.predict(input_data)[0]), float(model_nfl_tot.predict(input_data)[0])
+        pred_spread = float(model_nfl_sp.predict(input_data)[0])
+        pred_total = float(model_nfl_tot.predict(input_data)[0])
     except Exception:
-        pred_spread, pred_total = (off_loc - def_vis) - (off_vis - def_loc), (off_loc + off_vis)
+        pred_spread = (off_loc - def_vis) - (off_vis - def_loc)
+        pred_total = (off_loc + off_vis)
 
-    pts_local_est = round(max(3.0, (pred_total + pred_spread) / 2), 1)
-    pts_visita_est = round(max(3.0, (pred_total - pred_spread) / 2), 1)
+    pts_local_est = round(max(10.0, (pred_total + pred_spread) / 2), 1)
+    pts_visita_est = round(max(10.0, (pred_total - pred_spread) / 2), 1)
 
     diff_pts = pts_local_est - pts_visita_est
     prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 10.5) * 100))))
@@ -902,13 +880,14 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
         pick_2_str = f"{sp_fav_name} Spread ({sp_fav_val}) @ {sp_fav_cuota} — Probabilidad: {sp_fav_prob}% | Ventaja: {sp_fav_edge}% EV"
         badge_2 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ ({sp_fav_edge}% EV)</span>'
 
-    dif_total = pred_total - float(linea_total)
+    tot_est_real = pts_local_est + pts_visita_est
+    dif_total = tot_est_real - float(linea_total)
     tipo_tot = "OVER" if dif_total >= 0 else "UNDER"
     cuota_tot_fav = cuota_tot_over if tipo_tot == "OVER" else cuota_tot_under
     prob_tot = min(88, int(50 + abs(dif_total) * 4))
     edge_tot = round(prob_tot - ((1 / float(cuota_tot_fav)) * 100), 1) if float(cuota_tot_fav) > 1 else 0.0
 
-    pick_3_str = f"{tipo_tot} de {linea_total} pts @ {cuota_tot_fav} — Probabilidad: {prob_tot}% (Proyección: {pred_total:.1f} pts)"
+    pick_3_str = f"{tipo_tot} de {linea_total} pts @ {cuota_tot_fav} — Probabilidad: {prob_tot}% (Proyección: {tot_est_real:.1f} pts)"
     badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_tot}% EV)</span>' if edge_tot >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_tot}% EV)</span>'
 
     pick_4_str = ""
