@@ -8,29 +8,35 @@ import xgboost as xgb
 import gradio as gr
 import nflreadpy as nfl
 from scipy.stats import norm
-from supabase import create_client, Client
 
 # =========================================
-# CONFIGURACIÓN DE SUPABASE (BD PERMANENTE)
+# CONFIGURACIÓN DE SUPABASE (VÍA HTTP REST)
 # =========================================
 SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co"
 SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj"
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+SUPABASE_HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
+
 DB_FILE = "historial_la_mana_picks.json"
 
 # =========================================
-# GESTIÓN DE BASE DE DATOS PERMANENTE
+# GESTIÓN DE BASE DE DATOS PERMANENTE HTTP
 # =========================================
 def cargar_historial_db():
     try:
-        response = supabase.table("historial_picks").select("*").order("id", desc=False).execute()
-        if response.data:
-            return response.data
+        url = f"{SUPABASE_URL}/rest/v1/historial_picks?select=*&order=id.asc"
+        res = requests.get(url, headers=SUPABASE_HEADERS, timeout=5)
+        if res.status_code == 200:
+            return res.json()
     except Exception as e:
-        print(f"Error al leer Supabase: {e}")
+        print(f"Error HTTP leyendo Supabase: {e}")
     
-    # Fallback local en caso de error
+    # Fallback local en caso de desconexión
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -52,10 +58,11 @@ def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
     }
     
     try:
-        supabase.table("historial_picks").insert(nuevo_item).execute()
+        url = f"{SUPABASE_URL}/rest/v1/historial_picks"
+        requests.post(url, headers=SUPABASE_HEADERS, json=nuevo_item, timeout=5)
     except Exception as e:
-        print(f"Error al guardar en Supabase: {e}")
-        # Fallback local
+        print(f"Error HTTP guardando en Supabase: {e}")
+        # Respaldar localmente si falla red
         historial = cargar_historial_db()
         nuevo_item["id"] = len(historial) + 1
         historial.append(nuevo_item)
@@ -67,9 +74,10 @@ def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
 
 def cambiar_estado_directo(pick_id, nuevo_estado):
     try:
-        supabase.table("historial_picks").update({"estado": nuevo_estado}).eq("id", int(pick_id)).execute()
+        url = f"{SUPABASE_URL}/rest/v1/historial_picks?id=eq.{int(pick_id)}"
+        requests.patch(url, headers=SUPABASE_HEADERS, json={"estado": nuevo_estado}, timeout=5)
     except Exception as e:
-        print(f"Error al actualizar Supabase: {e}")
+        print(f"Error HTTP actualizando en Supabase: {e}")
     return generar_dashboard_completo()
 
 def calcular_metricas_historial():
