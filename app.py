@@ -23,7 +23,6 @@ SUPABASE_HEADERS = {
 
 DB_FILE = "historial_la_mana_picks.json"
 
-# MAPPING OFICIAL DE IDs DE EQUIPOS NFL (ESPN)
 NFL_TEAM_IDS = {
     "Arizona Cardinals": 22, "Atlanta Falcons": 1, "Baltimore Ravens": 33,
     "Buffalo Bills": 2, "Carolina Panthers": 29, "Chicago Bears": 3,
@@ -90,6 +89,8 @@ def cambiar_estado_directo(pick_id, nuevo_estado):
         requests.patch(url, headers=SUPABASE_HEADERS, json={"estado": nuevo_estado}, timeout=5)
     except Exception as e:
         print(f"Error HTTP actualizando en Supabase: {e}")
+    
+    recalibrar_modelos_auto()
     return generar_dashboard_completo()
 
 def calcular_metricas_historial():
@@ -114,6 +115,30 @@ def calcular_metricas_historial():
     return stats, tot_wins, tot_loss, tot_global, pct_global
 
 # =========================================
+# FASE 2: MOTOR DE AUTO-APRENDIZAJE (SELF-LEARNING)
+# =========================================
+FACTOR_AJUSTE_AUTO = {"NFL": 1.0, "MLB": 1.0, "FUTBOL": 1.0}
+
+def recalibrar_modelos_auto():
+    global FACTOR_AJUSTE_AUTO
+    stats, _, _, _, _ = calcular_metricas_historial()
+    
+    for dep in ["NFL", "MLB", "FUTBOL"]:
+        w = stats[dep]["wins"]
+        l = stats[dep]["losses"]
+        tot = w + l
+        if tot >= 5:
+            win_rate = w / tot
+            if win_rate < 0.55:
+                FACTOR_AJUSTE_AUTO[dep] = 0.92  # Ajusta conservadoramente ante rachas negativas
+            elif win_rate > 0.70:
+                FACTOR_AJUSTE_AUTO[dep] = 1.08  # Aumenta ponderación en rachas positivas
+            else:
+                FACTOR_AJUSTE_AUTO[dep] = 1.0
+        else:
+            FACTOR_AJUSTE_AUTO[dep] = 1.0
+
+# =========================================
 # REPORTE ESTRUCTURADO DE LESIONES (ESPN CORE API)
 # =========================================
 def obtener_lesionados_oficiales_nfl(nombre_equipo):
@@ -131,7 +156,7 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
         r = requests.get(url_injuries, timeout=3)
         if r.status_code == 200:
             items = r.json().get("items", [])
-            for item in items[:8]: # Revisar los primeros reportados
+            for item in items[:8]:
                 ref_url = item.get("$ref")
                 if ref_url:
                     r_detail = requests.get(ref_url, timeout=2)
@@ -139,7 +164,6 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
                         data_inj = r_detail.json()
                         status = data_inj.get("status", "").upper()
                         
-                        # Extraer atleta
                         ath_ref = data_inj.get("athlete", {}).get("$ref", "")
                         nombre_ath = "Jugador"
                         posicion = "NFL"
@@ -167,7 +191,7 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
         print(f"Error consultando API de lesiones: {e}")
 
     if not lista_jugadores:
-        reporte_html = f"<div style='font-size:11px; color:#10B981;'>🟢 <b>{nombre_equipo}:</b> Plantilla Titular Completa (Sin Bajas Críticas en Reporte Oficial)</div>"
+        reporte_html = f"<div style='font-size:11px; color:#10B981;'>🟢 <b>{nombre_equipo}:</b> Plantilla Titular Completa (Sin Bajas Críticas)</div>"
     else:
         reporte_html = f"<div style='font-size:11px; color:#D97706;'>🚨 <b>Bajas Confirmadas ({nombre_equipo}):</b><br/>" + "<br/>".join(lista_jugadores) + "</div>"
 
@@ -216,7 +240,6 @@ LALIGA_DICT = {
 }
 
 NATIONS_LEAGUE_DICT = {
-    # LIGA A
     "España": "https://a.espncdn.com/i/teamlogos/countries/500/esp.png", "Francia": "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
     "Alemania": "https://a.espncdn.com/i/teamlogos/countries/500/ger.png", "Inglaterra": "https://a.espncdn.com/i/teamlogos/countries/500/eng.png",
     "Portugal": "https://a.espncdn.com/i/teamlogos/countries/500/por.png", "Italia": "https://a.espncdn.com/i/teamlogos/countries/500/ita.png",
@@ -224,67 +247,23 @@ NATIONS_LEAGUE_DICT = {
     "Croacia": "https://a.espncdn.com/i/teamlogos/countries/500/cro.png", "Dinamarca": "https://a.espncdn.com/i/teamlogos/countries/500/den.png",
     "Suiza": "https://a.espncdn.com/i/teamlogos/countries/500/sui.png", "Austria": "https://a.espncdn.com/i/teamlogos/countries/500/aut.png",
     "Hungría": "https://a.espncdn.com/i/teamlogos/countries/500/hun.png", "Polonia": "https://a.espncdn.com/i/teamlogos/countries/500/pol.png",
-    "Escocia": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png", "Serbia": "https://a.espncdn.com/i/teamlogos/countries/500/srb.png",
-    # LIGA B
-    "Israel": "https://a.espncdn.com/i/teamlogos/countries/500/isr.png", "Bosnia y Herzegovina": "https://a.espncdn.com/i/teamlogos/countries/500/bih.png",
-    "República Checa": "https://a.espncdn.com/i/teamlogos/countries/500/cze.png", "Gales": "https://a.espncdn.com/i/teamlogos/countries/500/wal.png",
-    "Finlandia": "https://a.espncdn.com/i/teamlogos/countries/500/fin.png", "Ucrania": "https://a.espncdn.com/i/teamlogos/countries/500/ukr.png",
-    "Islandia": "https://a.espncdn.com/i/teamlogos/countries/500/isl.png", "Noruega": "https://a.espncdn.com/i/teamlogos/countries/500/nor.png",
-    "Eslovenia": "https://a.espncdn.com/i/teamlogos/countries/500/svn.png", "Irlanda": "https://a.espncdn.com/i/teamlogos/countries/500/irl.png",
-    "Albania": "https://a.espncdn.com/i/teamlogos/countries/500/alb.png", "Georgia": "https://a.espncdn.com/i/teamlogos/countries/500/geo.png",
-    "Grecia": "https://a.espncdn.com/i/teamlogos/countries/500/gre.png", "Turquía": "https://a.espncdn.com/i/teamlogos/countries/500/tur.png",
-    "Kazajistán": "https://a.espncdn.com/i/teamlogos/countries/500/kaz.png", "Montenegro": "https://a.espncdn.com/i/teamlogos/countries/500/mne.png",
-    # LIGA C
-    "Suecia": "https://a.espncdn.com/i/teamlogos/countries/500/swe.png", "Rumanía": "https://a.espncdn.com/i/teamlogos/countries/500/rou.png",
-    "Armenia": "https://a.espncdn.com/i/teamlogos/countries/500/arm.png", "Luxemburgo": "https://a.espncdn.com/i/teamlogos/countries/500/lux.png",
-    "Azerbaiyán": "https://a.espncdn.com/i/teamlogos/countries/500/aze.png", "Bulgaria": "https://a.espncdn.com/i/teamlogos/countries/500/bul.png",
-    "Islas Feroe": "https://a.espncdn.com/i/teamlogos/countries/500/fro.png", "Macedonia del Norte": "https://a.espncdn.com/i/teamlogos/countries/500/mkd.png",
-    "Eslovaquia": "https://a.espncdn.com/i/teamlogos/countries/500/svk.png", "Irlanda del Norte": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
-    "Chipre": "https://a.espncdn.com/i/teamlogos/countries/500/cyp.png", "Bielorrusia": "https://a.espncdn.com/i/teamlogos/countries/500/blr.png",
-    "Lituania": "https://a.espncdn.com/i/teamlogos/countries/500/ltu.png", "Estonia": "https://a.espncdn.com/i/teamlogos/countries/500/est.png",
-    "Letonia": "https://a.espncdn.com/i/teamlogos/countries/500/lva.png", "Kosovo": "https://a.espncdn.com/i/teamlogos/countries/500/kvx.png",
-    # LIGA D
-    "Moldavia": "https://a.espncdn.com/i/teamlogos/countries/500/mda.png", "Malta": "https://a.espncdn.com/i/teamlogos/countries/500/mlt.png",
-    "Andorra": "https://a.espncdn.com/i/teamlogos/countries/500/and.png", "San Marino": "https://a.espncdn.com/i/teamlogos/countries/500/smr.png",
-    "Liechtenstein": "https://a.espncdn.com/i/teamlogos/countries/500/lie.png", "Gibraltar": "https://a.espncdn.com/i/teamlogos/countries/500/gib.png"
+    "Escocia": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png", "Serbia": "https://a.espncdn.com/i/teamlogos/countries/500/srb.png"
 }
 
 BUNDESLIGA_DICT = {
     "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png", "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
     "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
-    "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png", "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png",
-    "SC Freiburg": "https://a.espncdn.com/i/teamlogos/soccer/500/126.png", "Union Berlin": "https://a.espncdn.com/i/teamlogos/soccer/500/130.png",
-    "Borussia Mönchengladbach": "https://a.espncdn.com/i/teamlogos/soccer/500/128.png", "Werder Bremen": "https://a.espncdn.com/i/teamlogos/soccer/500/137.png",
-    "FC Augsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/3812.png", "TSG Hoffenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/7911.png",
-    "Mainz 05": "https://a.espncdn.com/i/teamlogos/soccer/500/129.png", "VfL Wolfsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/138.png",
-    "Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png", "VfL Bochum": "https://a.espncdn.com/i/teamlogos/soccer/500/123.png",
-    "St. Pauli": "https://a.espncdn.com/i/teamlogos/soccer/500/268.png", "Holstein Kiel": "https://a.espncdn.com/i/teamlogos/soccer/500/8066.png"
+    "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png", "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png"
 }
 
 SERIE_A_DICT = {
     "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png", "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
-    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png", "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png",
-    "AS Roma": "https://a.espncdn.com/i/teamlogos/soccer/500/104.png", "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
-    "Lazio": "https://a.espncdn.com/i/teamlogos/soccer/500/112.png", "Fiorentina": "https://a.espncdn.com/i/teamlogos/soccer/500/109.png",
-    "Bologna": "https://a.espncdn.com/i/teamlogos/soccer/500/107.png", "Torino": "https://a.espncdn.com/i/teamlogos/soccer/500/239.png",
-    "Monza": "https://a.espncdn.com/i/teamlogos/soccer/500/3614.png", "Genoa": "https://a.espncdn.com/i/teamlogos/soccer/500/3263.png",
-    "Parma": "https://a.espncdn.com/i/teamlogos/soccer/500/113.png", "Udinese": "https://a.espncdn.com/i/teamlogos/soccer/500/118.png",
-    "Cagliari": "https://a.espncdn.com/i/teamlogos/soccer/500/108.png", "Hellas Verona": "https://a.espncdn.com/i/teamlogos/soccer/500/238.png",
-    "Empoli": "https://a.espncdn.com/i/teamlogos/soccer/500/240.png", "Lecce": "https://a.espncdn.com/i/teamlogos/soccer/500/3452.png",
-    "Como 1907": "https://a.espncdn.com/i/teamlogos/soccer/500/2625.png", "Venezia": "https://a.espncdn.com/i/teamlogos/soccer/500/2744.png"
+    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png", "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png"
 }
 
 CHAMPIONS_DICT = {
     "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png", "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
-    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png", "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
-    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png", "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
-    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png", "Paris Saint-Germain": "https://a.espncdn.com/i/teamlogos/soccer/500/160.png",
-    "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png", "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
-    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
-    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png", "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
-    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png", "PSV Eindhoven": "https://a.espncdn.com/i/teamlogos/soccer/500/148.png",
-    "Feyenoord": "https://a.espncdn.com/i/teamlogos/soccer/500/142.png", "Sporting CP": "https://a.espncdn.com/i/teamlogos/soccer/500/300.png",
-    "Benfica": "https://a.espncdn.com/i/teamlogos/soccer/500/294.png", "Club Brujas": "https://a.espncdn.com/i/teamlogos/soccer/500/2282.png"
+    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png", "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png"
 }
 
 EQUIPOS_MLB = {
@@ -406,6 +385,9 @@ for _ in range(800):
 
 model_mlb_diff = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_diff)
 model_mlb_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
+
+# Inicializar calibración automática
+recalibrar_modelos_auto()
 
 # =========================================
 # FUNCIONES DE SIMULACIÓN Y APIS
@@ -647,7 +629,9 @@ def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_e
     logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
 
     mod_fatiga = 0.90 if "Sí" in fatiga_eur else 1.0
-    input_vector = [[1.8 * mod_fatiga, 1.0, 1.4, 1.2]]
+    mod_auto = FACTOR_AJUSTE_AUTO.get("FUTBOL", 1.0)
+    
+    input_vector = [[1.8 * mod_fatiga * mod_auto, 1.0, 1.4, 1.2]]
     diff_goles = float(model_fut_diff.predict(input_vector)[0])
     tot_goles = float(model_fut_tot.predict(input_vector)[0])
 
@@ -737,8 +721,9 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     loc_d, vis_d = EQUIPOS_MLB[nombre_local], EQUIPOS_MLB[nombre_visita]
     logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
 
-    wrc_loc_adj = loc_d['wRC_plus']
-    wrc_vis_adj = vis_d['wRC_plus']
+    mod_auto = FACTOR_AJUSTE_AUTO.get("MLB", 1.0)
+    wrc_loc_adj = loc_d['wRC_plus'] * mod_auto
+    wrc_vis_adj = vis_d['wRC_plus'] * mod_auto
 
     era_efectiva_vis = (float(xera_vis) * 0.60) + (float(era_bp_vis) * 0.40)
     whip_efectivo_vis = (float(whip_vis) * 0.60) + (float(whip_bp_vis) * 0.40)
@@ -895,9 +880,11 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     pen_loc_off, pen_loc_def, r_loc_inj = obtener_lesionados_oficiales_nfl(nombre_local)
     pen_vis_off, pen_vis_def, r_vis_inj = obtener_lesionados_oficiales_nfl(nombre_visita)
 
-    off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5) - pen_loc_off
+    mod_auto = FACTOR_AJUSTE_AUTO.get("NFL", 1.0)
+
+    off_loc = (DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5) - pen_loc_off) * mod_auto
     def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.5) + pen_loc_def
-    off_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0) - pen_vis_off
+    off_vis = (DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0) - pen_vis_off) * mod_auto
     def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 21.5) + pen_vis_def
 
     input_data = pd.DataFrame([[off_loc, def_loc, off_vis, def_vis]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
@@ -1458,6 +1445,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
     def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
     def volver_home():
+        recalibrar_modelos_auto()
         h_head, h_hist, f_nfl, f_mlb, f_fut = generar_dashboard_completo()
         return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, h_hist, f_nfl, f_mlb, f_fut
 
