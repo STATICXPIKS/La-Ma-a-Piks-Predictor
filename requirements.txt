@@ -1,5 +1,6 @@
 gradio
 xgboost
+scikit-learn
 pandas
 numpy
 scipy
