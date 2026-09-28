@@ -98,67 +98,45 @@ def calcular_metricas_historial():
     stats = {
         "NFL": {"wins": 0, "losses": 0, "pending": 0},
         "MLB": {"wins": 0, "losses": 0, "pending": 0},
-        "LIGA MX": {"wins": 0, "losses": 0, "pending": 0},
-        "PREMIER LEAGUE": {"wins": 0, "losses": 0, "pending": 0},
-        "LALIGA": {"wins": 0, "losses": 0, "pending": 0},
-        "BUNDESLIGA": {"wins": 0, "losses": 0, "pending": 0},
-        "SERIE A": {"wins": 0, "losses": 0, "pending": 0},
-        "CHAMPIONS LEAGUE": {"wins": 0, "losses": 0, "pending": 0},
-        "NATIONS LEAGUE": {"wins": 0, "losses": 0, "pending": 0}
+        "FUTBOL": {"wins": 0, "losses": 0, "pending": 0}
     }
-    
     for item in historial:
         dep = str(item.get("deporte", "")).upper()
         est = item.get("estado", "PENDING")
-        
-        if "NFL" in dep: key = "NFL"
-        elif "MLB" in dep: key = "MLB"
-        elif "LIGA MX" in dep: key = "LIGA MX"
-        elif "PREMIER" in dep: key = "PREMIER LEAGUE"
-        elif "LALIGA" in dep: key = "LALIGA"
-        elif "BUNDESLIGA" in dep: key = "BUNDESLIGA"
-        elif "SERIE A" in dep: key = "SERIE A"
-        elif "CHAMPIONS" in dep: key = "CHAMPIONS LEAGUE"
-        elif "NATIONS" in dep: key = "NATIONS LEAGUE"
-        else: key = "LIGA MX"
-            
+        key = "NFL" if "NFL" in dep else ("MLB" if "MLB" in dep else "FUTBOL")
         if est == "WIN": stats[key]["wins"] += 1
         elif est == "LOSS": stats[key]["losses"] += 1
         elif est == "PENDING": stats[key]["pending"] += 1
 
-    tot_wins = sum(s["wins"] for s in stats.values())
-    tot_loss = sum(s["losses"] for s in stats.values())
+    tot_wins = stats["NFL"]["wins"] + stats["MLB"]["wins"] + stats["FUTBOL"]["wins"]
+    tot_loss = stats["NFL"]["losses"] + stats["MLB"]["losses"] + stats["FUTBOL"]["losses"]
     tot_global = tot_wins + tot_loss
     pct_global = round((tot_wins / tot_global) * 100, 1) if tot_global > 0 else 0.0
     return stats, tot_wins, tot_loss, tot_global, pct_global
 
 # =========================================
-# FASE 2: MOTOR DE AUTO-APRENDIZAJE
+# FASE 2: MOTOR DE AUTO-APRENDIZAJE (SELF-LEARNING)
 # =========================================
-FACTOR_AJUSTE_AUTO = {
-    "NFL": 1.0, "MLB": 1.0, "LIGA MX": 1.0, "PREMIER LEAGUE": 1.0, 
-    "LALIGA": 1.0, "BUNDESLIGA": 1.0, "SERIE A": 1.0, 
-    "CHAMPIONS LEAGUE": 1.0, "NATIONS LEAGUE": 1.0
-}
+FACTOR_AJUSTE_AUTO = {"NFL": 1.0, "MLB": 1.0, "FUTBOL": 1.0}
 
 def recalibrar_modelos_auto():
     global FACTOR_AJUSTE_AUTO
     stats, _, _, _, _ = calcular_metricas_historial()
     
-    for key in FACTOR_AJUSTE_AUTO.keys():
-        w = stats.get(key, {}).get("wins", 0)
-        l = stats.get(key, {}).get("losses", 0)
+    for dep in ["NFL", "MLB", "FUTBOL"]:
+        w = stats[dep]["wins"]
+        l = stats[dep]["losses"]
         tot = w + l
-        if tot >= 4:
+        if tot >= 5:
             win_rate = w / tot
             if win_rate < 0.55:
-                FACTOR_AJUSTE_AUTO[key] = 0.92
+                FACTOR_AJUSTE_AUTO[dep] = 0.92  # Ajusta conservadoramente ante rachas negativas
             elif win_rate > 0.70:
-                FACTOR_AJUSTE_AUTO[key] = 1.08
+                FACTOR_AJUSTE_AUTO[dep] = 1.08  # Aumenta ponderación en rachas positivas
             else:
-                FACTOR_AJUSTE_AUTO[key] = 1.0
+                FACTOR_AJUSTE_AUTO[dep] = 1.0
         else:
-            FACTOR_AJUSTE_AUTO[key] = 1.0
+            FACTOR_AJUSTE_AUTO[dep] = 1.0
 
 # =========================================
 # REPORTE ESTRUCTURADO DE LESIONES (ESPN CORE API)
@@ -169,7 +147,9 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
         return 0.0, 0.0, f"<div style='font-size:11px; color:#64748B;'>⚪ Sin ID de equipo para {nombre_equipo}</div>"
 
     url_injuries = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/teams/{team_id}/injuries"
-    penalización_off, penalización_def = 0.0, 0.0
+    
+    penalización_off = 0.0
+    penalización_def = 0.0
     lista_jugadores = []
 
     try:
@@ -183,8 +163,10 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
                     if r_detail.status_code == 200:
                         data_inj = r_detail.json()
                         status = data_inj.get("status", "").upper()
+                        
                         ath_ref = data_inj.get("athlete", {}).get("$ref", "")
-                        nombre_ath, posicion = "Jugador", "NFL"
+                        nombre_ath = "Jugador"
+                        posicion = "NFL"
                         if ath_ref:
                             r_ath = requests.get(ath_ref, timeout=2)
                             if r_ath.status_code == 200:
@@ -216,12 +198,11 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
     return penalización_off, penalización_def, reporte_html
 
 # =========================================
-# LOGOS Y DICCIONARIOS OFICIALES
+# LOGOS Y DICCIONARIOS DE EQUIPOS
 # =========================================
 NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
 
 LOGOS_LIGAS = {
-    "Liga MX": "https://a.espncdn.com/i/leaguelogos/soccer/500/202.png",
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
     "LaLiga EA Sports": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
     "UEFA Nations League": NATIONS_TROPHY_SVG,
@@ -230,27 +211,6 @@ LOGOS_LIGAS = {
     "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg"
-}
-
-LIGA_MX_DICT = {
-    "Toluca": "https://a.espncdn.com/i/teamlogos/soccer/500/234.png",
-    "América": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
-    "Guadalajara": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
-    "Querétaro": "https://a.espncdn.com/i/teamlogos/soccer/500/7115.png",
-    "León": "https://a.espncdn.com/i/teamlogos/soccer/500/7112.png",
-    "Atlas": "https://a.espncdn.com/i/teamlogos/soccer/500/226.png",
-    "Cruz Azul": "https://a.espncdn.com/i/teamlogos/soccer/500/229.png",
-    "Tijuana": "https://a.espncdn.com/i/teamlogos/soccer/500/7116.png",
-    "Puebla": "https://a.espncdn.com/i/teamlogos/soccer/500/7114.png",
-    "Monterrey": "https://a.espncdn.com/i/teamlogos/soccer/500/231.png",
-    "Pachuca": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png",
-    "Pumas UNAM": "https://a.espncdn.com/i/teamlogos/soccer/500/233.png",
-    "Atlético de San Luis": "https://a.espncdn.com/i/teamlogos/soccer/500/20063.png",
-    "Atlante": "https://a.espncdn.com/i/teamlogos/soccer/500/225.png",
-    "Tigres UANL": "https://a.espncdn.com/i/teamlogos/soccer/500/230.png",
-    "Santos": "https://a.espncdn.com/i/teamlogos/soccer/500/235.png",
-    "Necaxa": "https://a.espncdn.com/i/teamlogos/soccer/500/7113.png",
-    "FC Juárez": "https://a.espncdn.com/i/teamlogos/soccer/500/17851.png"
 }
 
 PREMIER_DICT = {
@@ -282,12 +242,18 @@ LALIGA_DICT = {
 NATIONS_LEAGUE_DICT = {
     "España": "https://a.espncdn.com/i/teamlogos/countries/500/esp.png", "Francia": "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
     "Alemania": "https://a.espncdn.com/i/teamlogos/countries/500/ger.png", "Inglaterra": "https://a.espncdn.com/i/teamlogos/countries/500/eng.png",
-    "Portugal": "https://a.espncdn.com/i/teamlogos/countries/500/por.png", "Italia": "https://a.espncdn.com/i/teamlogos/countries/500/ita.png"
+    "Portugal": "https://a.espncdn.com/i/teamlogos/countries/500/por.png", "Italia": "https://a.espncdn.com/i/teamlogos/countries/500/ita.png",
+    "Países Bajos": "https://a.espncdn.com/i/teamlogos/countries/500/ned.png", "Bélgica": "https://a.espncdn.com/i/teamlogos/countries/500/bel.png",
+    "Croacia": "https://a.espncdn.com/i/teamlogos/countries/500/cro.png", "Dinamarca": "https://a.espncdn.com/i/teamlogos/countries/500/den.png",
+    "Suiza": "https://a.espncdn.com/i/teamlogos/countries/500/sui.png", "Austria": "https://a.espncdn.com/i/teamlogos/countries/500/aut.png",
+    "Hungría": "https://a.espncdn.com/i/teamlogos/countries/500/hun.png", "Polonia": "https://a.espncdn.com/i/teamlogos/countries/500/pol.png",
+    "Escocia": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png", "Serbia": "https://a.espncdn.com/i/teamlogos/countries/500/srb.png"
 }
 
 BUNDESLIGA_DICT = {
     "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png", "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
-    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png"
+    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
+    "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png", "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png"
 }
 
 SERIE_A_DICT = {
@@ -420,6 +386,7 @@ for _ in range(800):
 model_mlb_diff = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_diff)
 model_mlb_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
 
+# Inicializar calibración automática
 recalibrar_modelos_auto()
 
 # =========================================
@@ -658,12 +625,11 @@ def simular_prop_futbol(nombre_item, tipo_prop, linea_casino, cuota_over, cuota_
     return html_prop, rec_str
 
 def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, cuota_btts_si, cuota_btts_no, linea_goles, fatiga_eur, dict_actual):
-    logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/202.png")
-    logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/202.png")
+    logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+    logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
 
     mod_fatiga = 0.90 if "Sí" in fatiga_eur else 1.0
-    key_auto = "LIGA MX" if "MX" in liga.upper() else ("PREMIER LEAGUE" if "PREMIER" in liga.upper() else "LALIGA")
-    mod_auto = FACTOR_AJUSTE_AUTO.get(key_auto, 1.0)
+    mod_auto = FACTOR_AJUSTE_AUTO.get("FUTBOL", 1.0)
     
     input_vector = [[1.8 * mod_fatiga * mod_auto, 1.0, 1.4, 1.2]]
     diff_goles = float(model_fut_diff.predict(input_vector)[0])
@@ -1044,26 +1010,21 @@ def generar_dashboard_completo():
         total = wins + losses
         pct = round((wins / total) * 100, 1) if total > 0 else 0.0
         return f"""
-        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center; min-width: 110px;">
-            <div style="font-size: 10px; font-weight: 800; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</div>
-            <div style="font-size: 24px; font-weight: 900; color: #10B981; margin: 2px 0;">{pct}%</div>
-            <div style="display: flex; justify-content: center; gap: 4px; font-size: 9px; font-weight: 700;">
-                <span style="color: #10B981; background: #ECFDF5; padding: 1px 5px; border-radius: 4px;">W:{wins}</span>
-                <span style="color: #EF4444; background: #FEF2F2; padding: 1px 5px; border-radius: 4px;">L:{losses}</span>
-                <span style="color: #F59E0B; background: #FFFBEB; padding: 1px 5px; border-radius: 4px;">P:{pending}</span>
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center;">
+            <div style="font-size: 12px; font-weight: 800; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</div>
+            <div style="font-size: 32px; font-weight: 900; color: #10B981; margin: 4px 0;">{pct}%</div>
+            <div style="font-size: 11px; font-weight: 700; color: #64748B; margin-bottom: 6px;">Efectividad {titulo}</div>
+            <div style="display: flex; justify-content: center; gap: 8px; font-size: 11px; font-weight: 700;">
+                <span style="color: #10B981; background: #ECFDF5; padding: 2px 8px; border-radius: 6px;">W: {wins}</span>
+                <span style="color: #EF4444; background: #FEF2F2; padding: 2px 8px; border-radius: 6px;">L: {losses}</span>
+                <span style="color: #F59E0B; background: #FFFBEB; padding: 2px 8px; border-radius: 6px;">P: {pending}</span>
             </div>
         </div>
         """
 
-    kpi_mx_html = crear_kpi_card("Liga MX", stats['LIGA MX']['wins'], stats['LIGA MX']['losses'], stats['LIGA MX']['pending'])
-    kpi_premier_html = crear_kpi_card("Premier League", stats['PREMIER LEAGUE']['wins'], stats['PREMIER LEAGUE']['losses'], stats['PREMIER LEAGUE']['pending'])
-    kpi_laliga_html = crear_kpi_card("LaLiga", stats['LALIGA']['wins'], stats['LALIGA']['losses'], stats['LALIGA']['pending'])
-    kpi_bundesliga_html = crear_kpi_card("Bundesliga", stats['BUNDESLIGA']['wins'], stats['BUNDESLIGA']['losses'], stats['BUNDESLIGA']['pending'])
-    kpi_seriea_html = crear_kpi_card("Serie A", stats['SERIE A']['wins'], stats['SERIE A']['losses'], stats['SERIE A']['pending'])
-    kpi_champions_html = crear_kpi_card("Champions", stats['CHAMPIONS LEAGUE']['wins'], stats['CHAMPIONS LEAGUE']['losses'], stats['CHAMPIONS LEAGUE']['pending'])
-    kpi_nations_html = crear_kpi_card("Nations League", stats['NATIONS LEAGUE']['wins'], stats['NATIONS LEAGUE']['losses'], stats['NATIONS LEAGUE']['pending'])
-    kpi_nfl_html = crear_kpi_card("NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
-    kpi_mlb_html = crear_kpi_card("MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
+    kpi_nfl_html = crear_kpi_card("Récord NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
+    kpi_mlb_html = crear_kpi_card("Récord MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
+    kpi_fut_html = crear_kpi_card("Récord Fútbol", stats['FUTBOL']['wins'], stats['FUTBOL']['losses'], stats['FUTBOL']['pending'])
 
     html_header = f"""
     <div style="background: #FFFFFF; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 4px 12px rgba(16,185,129,0.1);">
@@ -1105,7 +1066,7 @@ def generar_dashboard_completo():
     </div>
     """
 
-    return html_header, html_tables, kpi_mx_html, kpi_premier_html, kpi_laliga_html, kpi_bundesliga_html, kpi_seriea_html, kpi_champions_html, kpi_nations_html, kpi_nfl_html, kpi_mlb_html
+    return html_header, html_tables, kpi_nfl_html, kpi_mlb_html, kpi_fut_html
 
 def render_logo_html(url, height=55):
     return f"""<div style="display: flex; justify-content: center; align-items: center; height: 60px; margin-bottom: 4px;">
@@ -1126,39 +1087,35 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         """)
 
         with gr.Row():
-            with gr.Column(scale=1, min_width=85):
-                gr.HTML(render_logo_html(LOGOS_LIGAS["Liga MX"]))
-                btn_ligamx = gr.Button("Analizar ➔", variant="primary", size="sm")
-
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Premier League"]))
                 btn_premier = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["LaLiga EA Sports"]))
                 btn_laliga = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Bundesliga"]))
                 btn_bundesliga = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Serie A"]))
                 btn_seriea = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Champions League"]))
                 btn_champions = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"], height=55))
                 btn_nations = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["NFL"]))
                 btn_nfl = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=85):
+            with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["MLB"]))
                 btn_mlb = gr.Button("Analizar ➔", variant="primary", size="sm")
 
@@ -1176,15 +1133,9 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 html_header_out = gr.HTML()
 
                 with gr.Row():
-                    kpi_mx_out = gr.HTML()
-                    kpi_premier_out = gr.HTML()
-                    kpi_laliga_out = gr.HTML()
-                    kpi_bundesliga_out = gr.HTML()
-                    kpi_seriea_out = gr.HTML()
-                    kpi_champions_out = gr.HTML()
-                    kpi_nations_out = gr.HTML()
                     kpi_nfl_out = gr.HTML()
                     kpi_mlb_out = gr.HTML()
+                    kpi_fut_out = gr.HTML()
 
         html_historial_out = gr.HTML()
 
@@ -1198,20 +1149,20 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 with gr.Row():
                     with gr.Column(scale=1):
                         with gr.Row():
-                            drop_fut_loc = gr.Dropdown(choices=list(LIGA_MX_DICT.keys()), value="Toluca", label="Equipo Local", scale=3)
-                            img_fut_loc = gr.Image(value=LIGA_MX_DICT["Toluca"], label="Local", width=50, height=50, show_label=False, scale=1)
+                            drop_fut_loc = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Arsenal", label="Equipo Local", scale=3)
+                            img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"], label="Local", width=50, height=50, show_label=False, scale=1)
 
                         with gr.Row():
-                            drop_fut_vis = gr.Dropdown(choices=list(LIGA_MX_DICT.keys()), value="América", label="Equipo Visitante", scale=3)
-                            img_fut_vis = gr.Image(value=LIGA_MX_DICT["América"], label="Visitante", width=50, height=50, show_label=False, scale=1)
+                            drop_fut_vis = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Chelsea", label="Equipo Visitante", scale=3)
+                            img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=50, height=50, show_label=False, scale=1)
 
-                        drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Concachampions/Móvil hace 3 días)"], value="No (Semana normal)", label="¿Fatiga / Carga de Partidos?")
+                        drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Champions/Europa League hace 3 días)"], value="No (Semana normal)", label="¿Fatiga Europea?")
 
                         gr.Markdown("#### ⚽ Cuotas 1X2 (Casino)")
                         with gr.Row():
-                            num_fut_c_loc = gr.Number(value=1.85, label="Cuota Local (1)")
+                            num_fut_c_loc = gr.Number(value=1.85, label="Cuota Arsenal (1)")
                             num_fut_c_emp = gr.Number(value=3.60, label="Cuota Empate (X)")
-                            num_fut_c_vis = gr.Number(value=4.20, label="Cuota Visitante (2)")
+                            num_fut_c_vis = gr.Number(value=4.20, label="Cuota Chelsea (2)")
 
                         gr.Markdown("#### ⚽ Cuotas Ambos Anotan (BTTS)")
                         with gr.Row():
@@ -1416,12 +1367,12 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                         out_prop_mlb = gr.HTML()
                         st_prop_rec_text = gr.State("")
 
-    st_liga_activa = gr.State("Liga MX")
-    st_dict_futbol_actual = gr.State(LIGA_MX_DICT)
+    st_liga_activa = gr.State("Premier League")
+    st_dict_futbol_actual = gr.State(PREMIER_DICT)
 
     def actualizar_interfaz_fut(nombre_loc, nombre_vis, dict_actual):
-        logo_loc = dict_actual.get(nombre_loc, "https://a.espncdn.com/i/leaguelogos/soccer/500/202.png")
-        logo_vis = dict_actual.get(nombre_vis, "https://a.espncdn.com/i/leaguelogos/soccer/500/202.png")
+        logo_loc = dict_actual.get(nombre_loc, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        logo_vis = dict_actual.get(nombre_vis, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
         return logo_loc, logo_vis, gr.update(label=f"Cuota {nombre_loc} (1)"), gr.update(label=f"Cuota {nombre_vis} (2)")
 
     def actualizar_interfaz_nfl(nombre_loc, nombre_vis):
@@ -1484,7 +1435,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     outputs_liga_futbol = [vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis]
 
-    btn_ligamx.click(fn=lambda: cambiar_a_liga_futbol(LIGA_MX_DICT, "Liga MX"), outputs=outputs_liga_futbol)
     btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=outputs_liga_futbol)
     btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=outputs_liga_futbol)
     btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=outputs_liga_futbol)
@@ -1496,17 +1446,15 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
     def volver_home():
         recalibrar_modelos_auto()
-        h_head, h_hist, f_mx, f_premier, f_laliga, f_bundes, f_seriea, f_champ, f_nations, f_nfl, f_mlb = generar_dashboard_completo()
-        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, h_hist, f_mx, f_premier, f_laliga, f_bundes, f_seriea, f_champ, f_nations, f_nfl, f_mlb
+        h_head, h_hist, f_nfl, f_mlb, f_fut = generar_dashboard_completo()
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, h_hist, f_nfl, f_mlb, f_fut
 
     btn_nfl.click(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
     btn_mlb.click(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
 
-    outputs_volver = [vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_mx_out, kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, kpi_seriea_out, kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out]
-
-    btn_volver_nfl.click(fn=volver_home, outputs=outputs_volver)
-    btn_volver_mlb.click(fn=volver_home, outputs=outputs_volver)
-    btn_volver_fut.click(fn=volver_home, outputs=outputs_volver)
+    btn_volver_nfl.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
+    btn_volver_mlb.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
+    btn_volver_fut.click(fn=volver_home, outputs=[vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
 
     drop_fut_loc.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
     drop_fut_vis.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
@@ -1519,10 +1467,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     btn_auto_api.click(fn=auto_cargar_pitchers_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, lbl_api_status])
 
-    outputs_directos = [html_header_out, html_historial_out, kpi_mx_out, kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, kpi_seriea_out, kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out]
-
-    btn_direct_win.click(fn=lambda idx: cambiar_estado_directo(idx, "WIN"), inputs=[num_input_id], outputs=outputs_directos)
-    btn_direct_loss.click(fn=lambda idx: cambiar_estado_directo(idx, "LOSS"), inputs=[num_input_id], outputs=outputs_directos)
+    btn_direct_win.click(fn=lambda idx: cambiar_estado_directo(idx, "WIN"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
+    btn_direct_loss.click(fn=lambda idx: cambiar_estado_directo(idx, "LOSS"), inputs=[num_input_id], outputs=[html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
 
     btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_nfl_cuota_ml_loc, num_nfl_cuota_ml_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis, num_nfl_tot, num_nfl_cuota_tot_over, num_nfl_cuota_tot_under], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match])
     btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_mlb_tot, num_linea_team_loc, num_cuota_team_loc_over, num_cuota_team_loc_under, num_linea_team_vis, num_cuota_team_vis_over, num_cuota_team_vis_under, num_cuota_nrfi, num_cuota_yrfi], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match])
@@ -1563,7 +1509,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_save_prop_nfl.click(fn=lambda text: fn_save_generic_prop("NFL", text), inputs=[st_prop_nfl_rec_text], outputs=[lbl_save_prop_nfl])
     btn_save_prop_fut.click(fn=lambda text: fn_save_generic_prop("FÚTBOL", text), inputs=[st_prop_fut_rec_text], outputs=[lbl_save_prop_fut])
 
-    app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos[2:] + [html_header_out, html_historial_out])
+    app_mana.load(fn=generar_dashboard_completo, outputs=[html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
 
 if __name__ == "__main__":
     app_mana.launch(server_name="0.0.0.0", server_port=7860)
