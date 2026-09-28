@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 import gradio as gr
-import nflreadpy as nfl
 from scipy.stats import norm
 
 # =========================================
@@ -98,6 +97,44 @@ def calcular_metricas_historial():
     tot_global = tot_wins + tot_loss
     pct_global = round((tot_wins / tot_global) * 100, 1) if tot_global > 0 else 0.0
     return stats, tot_wins, tot_loss, tot_global, pct_global
+
+# =========================================
+# MOTOR AUTOMÁTICO DE LESIONADOS (ESPN API)
+# =========================================
+def obtener_reporte_lesionados_espn(deporte, nombre_equipo):
+    equipo_query = nombre_equipo.lower().split()[-1]
+    sport_path = "football/nfl" if deporte == "NFL" else "baseball/mlb"
+    url_news = f"https://site.api.espn.com/apis/site/v2/sports/{sport_path}/news"
+    
+    bajas_encontradas = []
+    penalización_off = 0.0
+    penalización_def = 0.0
+
+    try:
+        r = requests.get(url_news, timeout=3)
+        if r.status_code == 200:
+            articles = r.json().get("articles", [])
+            for art in articles:
+                headline = art.get("headline", "")
+                description = art.get("description", "")
+                texto_full = f"{headline} {description}".lower()
+                
+                if equipo_query in texto_full and any(k in texto_full for k in ["out", "injured", "ir", "doubtful", "injury", "baja", "lesion"]):
+                    if "quarterback" in texto_full or " qb " in texto_full or "pitcher" in texto_full:
+                        penalización_off += 3.5
+                        bajas_encontradas.append(f"<b>Baja Clave (Titular):</b> {headline[:60]}...")
+                    else:
+                        penalización_off += 1.2
+                        bajas_encontradas.append(f"<b>Jugador en Duda:</b> {headline[:50]}...")
+    except Exception:
+        pass
+
+    if not bajas_encontradas:
+        reporte_html = f"<div style='font-size: 11px; color: #10B981;'>🟢 Sin reporte de bajas críticas reciente para {nombre_equipo}.</div>"
+    else:
+        reporte_html = f"<div style='font-size: 11px; color: #D97706;'>⚠️ <b>Reporte de Lesiones ({nombre_equipo}):</b><br/>" + "<br/>".join(bajas_encontradas[:2]) + "</div>"
+
+    return penalización_off, penalización_def, reporte_html
 
 # =========================================
 # LOGOS Y DICCIONARIOS DE EQUIPOS
@@ -289,7 +326,7 @@ DICT_NFL_COMPLETO = {
 lista_nfl_nombres = sorted(list(DICT_NFL_COMPLETO.keys()))
 
 # =========================================
-# MODELOS DE ENTRENAMIENTO IA CON NFLREADPY
+# MODELOS DE ENTRENAMIENTO IA
 # =========================================
 np.random.seed(42)
 X_nfl_sim, y_nfl_sp, y_nfl_tot = [], [], []
@@ -663,13 +700,19 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     loc_d, vis_d = EQUIPOS_MLB[nombre_local], EQUIPOS_MLB[nombre_visita]
     logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
 
+    pen_loc_off, pen_loc_def, r_loc_inj = obtener_reporte_lesionados_espn("MLB", nombre_local)
+    pen_vis_off, pen_vis_def, r_vis_inj = obtener_reporte_lesionados_espn("MLB", nombre_visita)
+
+    wrc_loc_adj = max(70, loc_d['wRC_plus'] - (pen_loc_off * 3))
+    wrc_vis_adj = max(70, vis_d['wRC_plus'] - (pen_vis_off * 3))
+
     era_efectiva_vis = (float(xera_vis) * 0.60) + (float(era_bp_vis) * 0.40)
     whip_efectivo_vis = (float(whip_vis) * 0.60) + (float(whip_bp_vis) * 0.40)
 
     era_efectiva_loc = (float(xera_loc) * 0.60) + (float(era_bp_loc) * 0.40)
     whip_efectivo_loc = (float(whip_loc) * 0.60) + (float(whip_bp_loc) * 0.40)
 
-    input_vector = [[loc_d['wRC_plus'], vis_d['wRC_plus'], era_efectiva_loc, era_efectiva_vis, whip_efectivo_loc, whip_efectivo_vis, loc_d['park_factor']]]
+    input_vector = [[wrc_loc_adj, wrc_vis_adj, era_efectiva_loc, era_efectiva_vis, whip_efectivo_loc, whip_efectivo_vis, loc_d['park_factor']]]
     diff_carreras, tot_carreras = float(model_mlb_diff.predict(input_vector)[0]), float(model_mlb_tot.predict(input_vector)[0])
 
     carreras_loc = max(0.5, (tot_carreras + diff_carreras) / 2)
@@ -768,6 +811,11 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
             <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 76.5%</div>
         </div>
 
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
+            {r_loc_inj}
+            {r_vis_inj}
+        </div>
+
         <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -815,10 +863,13 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     logo_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
     logo_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
-    off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5)
-    def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.5)
-    off_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0)
-    def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 21.5)
+    pen_loc_off, pen_loc_def, r_loc_inj = obtener_reporte_lesionados_espn("NFL", nombre_local)
+    pen_vis_off, pen_vis_def, r_vis_inj = obtener_reporte_lesionados_espn("NFL", nombre_visita)
+
+    off_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5) - pen_loc_off
+    def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.5) + pen_loc_def
+    off_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0) - pen_vis_off
+    def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 21.5) + pen_vis_def
 
     input_data = pd.DataFrame([[off_loc, def_loc, off_vis, def_vis]], columns=['home_off', 'home_def', 'away_off', 'away_def'])
     
@@ -897,6 +948,11 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
             <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL ESTADÍSTICO CALIBRADO</div>
             <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 78.0%</div>
+        </div>
+
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
+            {r_loc_inj}
+            {r_vis_inj}
         </div>
 
         <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
