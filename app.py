@@ -1,14 +1,3 @@
-# =========================================================
-# 1. INSTALACIÓN AUTOMÁTICA DE DEPENDENCIAS EN GOOGLE COLAB
-# =========================================================
-import sys
-import subprocess
-
-libs = ["gradio", "pandas", "numpy", "xgboost", "scikit-learn", "requests", "scipy"]
-print("⏳ Verificando e instalando librerías...")
-subprocess.check_call([sys.executable, "-m", "pip", "install", "-q"] + libs)
-print("✅ Librerías instaladas.")
-
 import os
 import json
 import requests
@@ -19,9 +8,6 @@ import numpy as np
 import xgboost as xgb
 import gradio as gr
 from scipy.stats import norm
-
-# Liberar puertos previo en Colab
-gr.close_all()
 
 # =========================================
 # CONFIGURACIÓN DE SUPABASE (VÍA HTTP REST)
@@ -1037,14 +1023,12 @@ def crear_barra_cristal_3d(titulo, wins, losses, pending):
     total = wins + losses
     pct = round((wins / total) * 100, 1) if total > 0 else 0.0
     
-    # CSS & HTML de Barra 3D Cristalina (Glassmorphism + 3D Gradient)
     return f"""
     <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 10px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8); text-align: center; font-family: 'Segoe UI', system-ui, sans-serif;">
         <div style="font-size: 10px; font-weight: 800; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{titulo}</div>
         
         <div style="font-size: 22px; font-weight: 900; color: #059669; margin: 2px 0;">{pct}%</div>
         
-        <!-- BARRA DE CRISTAL 3D -->
         <div style="position: relative; width: 100%; height: 12px; background: rgba(226, 232, 240, 0.6); border-radius: 20px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(255,255,255,0.8); border: 1px solid rgba(203, 213, 225, 0.5); margin: 6px 0 8px 0;">
             <div style="width: {pct}%; height: 100%; background: linear-gradient(180deg, rgba(52, 211, 153, 0.95) 0%, rgba(16, 185, 129, 0.9) 50%, rgba(5, 150, 105, 1) 100%); border-radius: 20px; box-shadow: inset 0 2px 3px rgba(255,255,255,0.6), 0 2px 6px rgba(16,185,129,0.4); transition: width 0.8s ease-in-out;">
             </div>
@@ -1059,7 +1043,6 @@ def crear_barra_cristal_3d(titulo, wins, losses, pending):
     """
 
 def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
-    # Grados de la aguja (-90 deg a +90 deg)
     angulo = -90 + (pct_global / 100.0) * 180
     rad = math.radians(angulo)
     x2 = 100 + 65 * math.cos(rad)
@@ -1069,15 +1052,12 @@ def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
     <div style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 2px solid #10B981; border-radius: 20px; padding: 16px 20px; text-align: center; box-shadow: 0 10px 25px rgba(16,185,129,0.12), inset 0 1px 0 rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif;">
         <div style="font-size: 13px; font-weight: 800; color: #065F46; letter-spacing: 1px; margin-bottom: 2px;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
         
-        <!-- SVG VELOCÍMETRO / TACÓMETRO 3D -->
         <div style="position: relative; width: 200px; height: 110px; margin: 4px 0;">
             <svg width="200" height="110" viewBox="0 0 200 110">
                 <defs>
-                    <!-- Sombras 3D -->
                     <filter id="shadow3d" x="-10%" y="-10%" width="120%" height="120%">
                         <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.15"/>
                     </filter>
-                    <!-- Gradiente del Arco (Rojo -> Amarillo -> Verde) -->
                     <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stop-color="#EF4444" />
                         <stop offset="35%" stop-color="#F59E0B" />
@@ -1086,20 +1066,16 @@ def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
                     </linearGradient>
                 </defs>
 
-                <!-- Fondo del Tacómetro con relieve 3D -->
                 <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#E2E8F0" stroke-width="22" stroke-linecap="round" filter="url(#shadow3d)" />
                 <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGradient)" stroke-width="18" stroke-linecap="round" />
                 
-                # Marcas de escala
                 <line x1="20" y1="100" x2="32" y2="100" stroke="#FFF" stroke-width="2"/>
                 <line x1="100" y1="20" x2="100" y2="32" stroke="#FFF" stroke-width="2"/>
                 <line x1="180" y1="100" x2="168" y2="100" stroke="#FFF" stroke-width="2"/>
 
-                <!-- Aguja 3D Roce -->
                 <line x1="100" y1="100" x2="{x2}" y2="{y2}" stroke="#DC2626" stroke-width="5" stroke-linecap="round" filter="url(#shadow3d)"/>
                 <line x1="100" y1="100" x2="{x2}" y2="{y2}" stroke="#EF4444" stroke-width="3" stroke-linecap="round"/>
                 
-                <!-- Centro de la Aguja 3D -->
                 <circle cx="100" cy="100" r="10" fill="#1E293B" filter="url(#shadow3d)"/>
                 <circle cx="100" cy="100" r="5" fill="#EF4444"/>
             </svg>
@@ -1622,5 +1598,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
 
+# Lanzamiento para Colab/Render
 if __name__ == "__main__":
     app_mana.launch(share=True)
