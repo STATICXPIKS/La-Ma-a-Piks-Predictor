@@ -216,7 +216,7 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
     return penalización_off, penalización_def, reporte_html
 
 # =========================================
-# LOGOS Y DICCIONARIOS OFICIALES CORREGIDOS
+# LOGOS Y DICCIONARIOS OFICIALES
 # =========================================
 NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
 
@@ -232,24 +232,23 @@ LOGOS_LIGAS = {
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg"
 }
 
-# MAPEO 100% PRECISO DE ESCUDOS ESPN DE LA LIGA MX
 LIGA_MX_DICT = {
     "Toluca": "https://a.espncdn.com/i/teamlogos/soccer/500/234.png",
     "América": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
     "Guadalajara": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
-    "Querétaro": "https://a.espncdn.com/i/teamlogos/soccer/500/3162.png",
+    "Querétaro": "https://a.espncdn.com/i/teamlogos/soccer/500/7115.png",
     "León": "https://a.espncdn.com/i/teamlogos/soccer/500/7112.png",
     "Atlas": "https://a.espncdn.com/i/teamlogos/soccer/500/226.png",
     "Cruz Azul": "https://a.espncdn.com/i/teamlogos/soccer/500/229.png",
-    "Tijuana": "https://a.espncdn.com/i/teamlogos/soccer/500/12724.png",
-    "Puebla": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png",
+    "Tijuana": "https://a.espncdn.com/i/teamlogos/soccer/500/7116.png",
+    "Puebla": "https://a.espncdn.com/i/teamlogos/soccer/500/7114.png",
     "Monterrey": "https://a.espncdn.com/i/teamlogos/soccer/500/231.png",
-    "Pachuca": "https://a.espncdn.com/i/teamlogos/soccer/500/235.png",
+    "Pachuca": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png",
     "Pumas UNAM": "https://a.espncdn.com/i/teamlogos/soccer/500/233.png",
     "Atlético de San Luis": "https://a.espncdn.com/i/teamlogos/soccer/500/20063.png",
     "Atlante": "https://a.espncdn.com/i/teamlogos/soccer/500/225.png",
     "Tigres UANL": "https://a.espncdn.com/i/teamlogos/soccer/500/230.png",
-    "Santos": "https://a.espncdn.com/i/teamlogos/soccer/500/7115.png",
+    "Santos": "https://a.espncdn.com/i/teamlogos/soccer/500/235.png",
     "Necaxa": "https://a.espncdn.com/i/teamlogos/soccer/500/7113.png",
     "FC Juárez": "https://a.espncdn.com/i/teamlogos/soccer/500/17851.png"
 }
@@ -1045,32 +1044,32 @@ def generar_dashboard_completo():
         total = wins + losses
         pct = round((wins / total) * 100, 1) if total > 0 else 0.0
         return f"""
-        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); text-align: center;">
-            <div style="font-size: 10px; font-weight: 800; color: #065F46; text-transform: uppercase;">{titulo}</div>
-            <div style="font-size: 20px; font-weight: 900; color: #10B981; margin: 1px 0;">{pct}%</div>
-            <div style="display: flex; justify-content: center; gap: 3px; font-size: 8px; font-weight: 700;">
-                <span style="color: #10B981; background: #ECFDF5; padding: 1px 4px; border-radius: 3px;">W:{wins}</span>
-                <span style="color: #EF4444; background: #FEF2F2; padding: 1px 4px; border-radius: 3px;">L:{losses}</span>
-                <span style="color: #F59E0B; background: #FFFBEB; padding: 1px 4px; border-radius: 3px;">P:{pending}</span>
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center; min-width: 110px;">
+            <div style="font-size: 10px; font-weight: 800; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</div>
+            <div style="font-size: 24px; font-weight: 900; color: #10B981; margin: 2px 0;">{pct}%</div>
+            <div style="display: flex; justify-content: center; gap: 4px; font-size: 9px; font-weight: 700;">
+                <span style="color: #10B981; background: #ECFDF5; padding: 1px 5px; border-radius: 4px;">W:{wins}</span>
+                <span style="color: #EF4444; background: #FEF2F2; padding: 1px 5px; border-radius: 4px;">L:{losses}</span>
+                <span style="color: #F59E0B; background: #FFFBEB; padding: 1px 5px; border-radius: 4px;">P:{pending}</span>
             </div>
         </div>
         """
 
     kpi_mx_html = crear_kpi_card("Liga MX", stats['LIGA MX']['wins'], stats['LIGA MX']['losses'], stats['LIGA MX']['pending'])
-    kpi_premier_html = crear_kpi_card("Premier", stats['PREMIER LEAGUE']['wins'], stats['PREMIER LEAGUE']['losses'], stats['PREMIER LEAGUE']['pending'])
+    kpi_premier_html = crear_kpi_card("Premier League", stats['PREMIER LEAGUE']['wins'], stats['PREMIER LEAGUE']['losses'], stats['PREMIER LEAGUE']['pending'])
     kpi_laliga_html = crear_kpi_card("LaLiga", stats['LALIGA']['wins'], stats['LALIGA']['losses'], stats['LALIGA']['pending'])
     kpi_bundesliga_html = crear_kpi_card("Bundesliga", stats['BUNDESLIGA']['wins'], stats['BUNDESLIGA']['losses'], stats['BUNDESLIGA']['pending'])
     kpi_seriea_html = crear_kpi_card("Serie A", stats['SERIE A']['wins'], stats['SERIE A']['losses'], stats['SERIE A']['pending'])
     kpi_champions_html = crear_kpi_card("Champions", stats['CHAMPIONS LEAGUE']['wins'], stats['CHAMPIONS LEAGUE']['losses'], stats['CHAMPIONS LEAGUE']['pending'])
-    kpi_nations_html = crear_kpi_card("Nations", stats['NATIONS LEAGUE']['wins'], stats['NATIONS LEAGUE']['losses'], stats['NATIONS LEAGUE']['pending'])
+    kpi_nations_html = crear_kpi_card("Nations League", stats['NATIONS LEAGUE']['wins'], stats['NATIONS LEAGUE']['losses'], stats['NATIONS LEAGUE']['pending'])
     kpi_nfl_html = crear_kpi_card("NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
     kpi_mlb_html = crear_kpi_card("MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
 
     html_header = f"""
-    <div style="background: #FFFFFF; border: 2px solid #10B981; border-radius: 16px; padding: 16px; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 12px rgba(16,185,129,0.1);">
-        <div style="font-size: 13px; font-weight: 800; color: #065F46; letter-spacing: 1px;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
-        <div style="font-size: 42px; font-weight: 900; color: #10B981; margin: 1px 0;">{pct_global}%</div>
-        <div style="font-size: 11px; font-weight: 700; color: #64748B;">
+    <div style="background: #FFFFFF; border: 2px solid #10B981; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 4px 12px rgba(16,185,129,0.1);">
+        <div style="font-size: 15px; font-weight: 800; color: #065F46; letter-spacing: 1px;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
+        <div style="font-size: 52px; font-weight: 900; color: #10B981; margin: 2px 0;">{pct_global}%</div>
+        <div style="font-size: 13px; font-weight: 700; color: #64748B;">
             Récord Registrado: <span style="color:#10B981;">{tot_wins} WINS</span> / <span style="color:#EF4444;">{tot_loss} LOSSES</span> (Total: {tot_global} Picks)
         </div>
     </div>
@@ -1083,31 +1082,33 @@ def generar_dashboard_completo():
 
     def render_lista_html(titulo, lista, color_hex):
         html_b = f"""
-        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
-            <div style="font-size: 12px; font-weight: 800; color: {color_hex}; margin-bottom: 6px;">{titulo} ({len(lista)})</div>
-            <div style="max-height: 180px; overflow-y: auto; font-size: 11px; color: #334155;">
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px; margin-bottom: 10px;">
+            <div style="font-size: 13px; font-weight: 800; color: {color_hex}; margin-bottom: 8px;">{titulo} ({len(lista)})</div>
+            <div style="max-height: 220px; overflow-y: auto; font-size: 11px; color: #334155;">
         """
         if not lista:
-            html_b += "<i style='color: #94A3B8;'>No hay picks.</i>"
+            html_b += "<i style='color: #94A3B8;'>No hay picks en este estado.</i>"
         else:
             for item in reversed(lista):
-                html_b += f"<div style='margin-bottom: 4px; border-bottom: 1px solid #F1F5F9; padding-bottom: 2px;'>• <b>[#{item['id']} - {item['deporte']}]</b> {item['partido']} — <i>{item['seleccion']}</i></div>"
+                html_b += f"<div style='margin-bottom: 6px; border-bottom: 1px solid #F1F5F9; padding-bottom: 4px;'>• <b>[#{item['id']} - {item['deporte']}]</b> {item['partido']} — <i>{item['seleccion']}</i></div>"
         html_b += "</div></div>"
         return html_b
 
     html_tables = f"""
-    <div style="margin-top: 10px;">
-        <div style="font-size: 13px; font-weight: 900; color: #065F46; margin-bottom: 8px;">📋 TABLERO HISTÓRICO DE CONTROL</div>
-        {render_lista_html("⏳ PICKS PENDIENTES", pending_items, "#F59E0B")}
-        {render_lista_html("✅ APUESTAS GANADAS (WIN)", win_items, "#10B981")}
-        {render_lista_html("❌ APUESTAS PERDIDAS (LOSS)", loss_items, "#EF4444")}
+    <div style="margin-top: 15px;">
+        <div style="font-size: 15px; font-weight: 900; color: #065F46; margin-bottom: 10px;">📋 TABLERO HISTÓRICO DE CONTROL Y SEGUIMIENTO</div>
+        <div style="display: flex; gap: 12px;">
+            <div style="flex: 1;">{render_lista_html("⏳ PICKS PENDIENTES", pending_items, "#F59E0B")}</div>
+            <div style="flex: 1;">{render_lista_html("✅ APUESTAS GANADAS (WIN)", win_items, "#10B981")}</div>
+            <div style="flex: 1;">{render_lista_html("❌ APUESTAS PERDIDAS (LOSS)", loss_items, "#EF4444")}</div>
+        </div>
     </div>
     """
 
     return html_header, html_tables, kpi_mx_html, kpi_premier_html, kpi_laliga_html, kpi_bundesliga_html, kpi_seriea_html, kpi_champions_html, kpi_nations_html, kpi_nfl_html, kpi_mlb_html
 
-def render_logo_html(url, height=50):
-    return f"""<div style="display: flex; justify-content: center; align-items: center; height: 55px; margin-bottom: 4px;">
+def render_logo_html(url, height=55):
+    return f"""<div style="display: flex; justify-content: center; align-items: center; height: 60px; margin-bottom: 4px;">
         <img src="{url}" style="max-height: {height}px; width: auto; object-fit: contain;" />
     </div>"""
 
@@ -1125,46 +1126,45 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         """)
 
         with gr.Row():
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Liga MX"]))
                 btn_ligamx = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Premier League"]))
                 btn_premier = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["LaLiga EA Sports"]))
                 btn_laliga = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Bundesliga"]))
                 btn_bundesliga = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Serie A"]))
                 btn_seriea = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Champions League"]))
                 btn_champions = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
-                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"], height=45))
+            with gr.Column(scale=1, min_width=85):
+                gr.HTML(render_logo_html(LOGOS_LIGAS["UEFA Nations League"], height=55))
                 btn_nations = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["NFL"]))
                 btn_nfl = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-            with gr.Column(scale=1, min_width=80):
+            with gr.Column(scale=1, min_width=85):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["MLB"]))
                 btn_mlb = gr.Button("Analizar ➔", variant="primary", size="sm")
 
         gr.Markdown("<br>")
 
         with gr.Row():
-            # COLUMNA IZQUIERDA: GESTOR POR ID + TABLAS HISTÓRICAS DEBAJO
             with gr.Column(scale=1):
                 gr.Markdown("### 🛠️ **Gestor Directo por ID**")
                 num_input_id = gr.Number(value=1, label="Ingresa # ID del Pick", precision=0)
@@ -1172,29 +1172,21 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                     btn_direct_win = gr.Button("✅ Marcar WIN", variant="primary")
                     btn_direct_loss = gr.Button("❌ Marcar LOSS", variant="secondary")
 
-                html_historial_out = gr.HTML()
-
-            # COLUMNA DERECHA: HEADER Y TARJETAS ORDENADAS EN FILAS DE 3 A 4
             with gr.Column(scale=2):
                 html_header_out = gr.HTML()
 
-                # FILA 1 DE RÉCORDS
                 with gr.Row():
                     kpi_mx_out = gr.HTML()
                     kpi_premier_out = gr.HTML()
                     kpi_laliga_out = gr.HTML()
                     kpi_bundesliga_out = gr.HTML()
-
-                # FILA 2 DE RÉCORDS
-                with gr.Row():
                     kpi_seriea_out = gr.HTML()
                     kpi_champions_out = gr.HTML()
                     kpi_nations_out = gr.HTML()
-
-                # FILA 3 DE RÉCORDS
-                with gr.Row():
                     kpi_nfl_out = gr.HTML()
                     kpi_mlb_out = gr.HTML()
+
+        html_historial_out = gr.HTML()
 
     with gr.Column(visible=False) as vista_fut:
         with gr.Row():
@@ -1510,12 +1502,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_nfl.click(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
     btn_mlb.click(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
 
-    outputs_volver = [
-        vista_home, vista_nfl, vista_mlb, vista_fut, 
-        html_header_out, html_historial_out, 
-        kpi_mx_out, kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, 
-        kpi_seriea_out, kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out
-    ]
+    outputs_volver = [vista_home, vista_nfl, vista_mlb, vista_fut, html_header_out, html_historial_out, kpi_mx_out, kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, kpi_seriea_out, kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out]
 
     btn_volver_nfl.click(fn=volver_home, outputs=outputs_volver)
     btn_volver_mlb.click(fn=volver_home, outputs=outputs_volver)
@@ -1532,11 +1519,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     btn_auto_api.click(fn=auto_cargar_pitchers_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, lbl_api_status])
 
-    outputs_directos = [
-        html_header_out, html_historial_out, 
-        kpi_mx_out, kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, 
-        kpi_seriea_out, kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out
-    ]
+    outputs_directos = [html_header_out, html_historial_out, kpi_mx_out, kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, kpi_seriea_out, kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out]
 
     btn_direct_win.click(fn=lambda idx: cambiar_estado_directo(idx, "WIN"), inputs=[num_input_id], outputs=outputs_directos)
     btn_direct_loss.click(fn=lambda idx: cambiar_estado_directo(idx, "LOSS"), inputs=[num_input_id], outputs=outputs_directos)
