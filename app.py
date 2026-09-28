@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 import gradio as gr
-import nflreadpy as nfl
 from scipy.stats import norm
 
 # =========================================
@@ -25,7 +24,7 @@ SUPABASE_HEADERS = {
 DB_FILE = "historial_la_mana_picks.json"
 
 # =========================================
-# GESTIÓN DE BASE DE DATOS PERMANENTE HTTP
+# GESTIÓN DE BASE DE DATOS PERMANENTE
 # =========================================
 def cargar_historial_db():
     try:
@@ -36,7 +35,6 @@ def cargar_historial_db():
     except Exception as e:
         print(f"Error HTTP leyendo Supabase: {e}")
     
-    # Fallback local en caso de desconexión
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -62,7 +60,6 @@ def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
         requests.post(url, headers=SUPABASE_HEADERS, json=nuevo_item, timeout=5)
     except Exception as e:
         print(f"Error HTTP guardando en Supabase: {e}")
-        # Respaldar localmente si falla red
         historial = cargar_historial_db()
         nuevo_item["id"] = len(historial) + 1
         historial.append(nuevo_item)
@@ -289,40 +286,24 @@ DICT_NFL_COMPLETO = {
 }
 
 lista_nfl_nombres = sorted(list(DICT_NFL_COMPLETO.keys()))
-dict_nfl_nombres = {k: v["abbr"] for k, v in DICT_NFL_COMPLETO.items()}
-dict_nfl_logos = {v["abbr"]: v["logo"] for k, v in DICT_NFL_COMPLETO.items()}
 
 # =========================================
 # MODELOS DE ENTRENAMIENTO IA
 # =========================================
-try:
-    schedules = nfl.load_schedules(seasons=[2023, 2024, 2025])
-    df_sched = schedules.to_pandas() if hasattr(schedules, 'to_pandas') else schedules
-    df_played = df_sched[df_sched['result'].notnull()].copy()
-
-    home_stats = df_played.groupby('home_team').agg(pts_favor_local=('home_score', 'mean'), pts_contra_local=('away_score', 'mean'))
-    away_stats = df_played.groupby('away_team').agg(pts_favor_visita=('away_score', 'mean'), pts_contra_visita=('home_score', 'mean'))
-    stats_nfl = home_stats.join(away_stats)
-    stats_nfl['off_rating'] = (stats_nfl['pts_favor_local'] + stats_nfl['pts_favor_visita']) / 2
-    stats_nfl['def_rating'] = (stats_nfl['pts_contra_local'] + stats_nfl['pts_contra_visita']) / 2
-
-    features_nfl = df_played.copy()
-    features_nfl['home_off'] = features_nfl['home_team'].map(stats_nfl['off_rating'])
-    features_nfl['home_def'] = features_nfl['home_team'].map(stats_nfl['def_rating'])
-    features_nfl['away_off'] = features_nfl['away_team'].map(stats_nfl['off_rating'])
-    features_nfl['away_def'] = features_nfl['away_team'].map(stats_nfl['def_rating'])
-    features_nfl['total_score'] = features_nfl['home_score'] + features_nfl['away_score']
-
-    X_nfl = features_nfl[['home_off', 'home_def', 'away_off', 'away_def']].dropna()
-    y_nfl_sp = features_nfl.loc[X_nfl.index, 'result']
-    y_nfl_tot = features_nfl.loc[X_nfl.index, 'total_score']
-
-    model_nfl_sp = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_sp)
-    model_nfl_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl, y_nfl_tot)
-except Exception:
-    pass
-
 np.random.seed(42)
+X_nfl_sim, y_nfl_sp, y_nfl_tot = [], [], []
+for _ in range(800):
+    o_l, d_l = np.random.normal(24, 3), np.random.normal(21, 3)
+    o_v, d_v = np.random.normal(22, 3), np.random.normal(21, 3)
+    p_loc = o_l - d_v + 2.5 + np.random.normal(0, 3)
+    p_vis = o_v - d_l + np.random.normal(0, 3)
+    X_nfl_sim.append([o_l, d_l, o_v, d_v])
+    y_nfl_sp.append(p_loc - p_vis)
+    y_nfl_tot.append(max(10, p_loc + p_vis))
+
+model_nfl_sp = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_sp)
+model_nfl_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_nfl_sim, y_nfl_tot)
+
 X_fut_sim, y_fut_diff, y_fut_tot = [], [], []
 for _ in range(800):
     xg_loc, xga_loc = np.random.normal(1.8, 0.4), np.random.normal(1.0, 0.3)
@@ -333,10 +314,9 @@ for _ in range(800):
     y_fut_diff.append(goles_loc - goles_vis)
     y_fut_tot.append(goles_loc + goles_vis)
 
-model_fut_diff = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_fut_sim, y_fut_diff)
-model_fut_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_fut_sim, y_fut_tot)
+model_fut_diff = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_fut_sim, y_fut_diff)
+model_fut_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_fut_sim, y_fut_tot)
 
-np.random.seed(42)
 X_mlb_sim, y_mlb_diff, y_mlb_tot = [], [], []
 for _ in range(800):
     wrc_loc, wrc_vis = np.random.normal(102, 10), np.random.normal(102, 10)
@@ -349,8 +329,8 @@ for _ in range(800):
     y_mlb_diff.append(carreras_loc - carreras_vis)
     y_mlb_tot.append(carreras_loc + carreras_vis)
 
-model_mlb_diff = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_diff)
-model_mlb_tot = xgb.XGBRegressor(n_estimators=100, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
+model_mlb_diff = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_diff)
+model_mlb_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
 
 # =========================================
 # FUNCIONES DE SIMULACIÓN Y APIS
@@ -831,8 +811,6 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, pick_5_str, pick_6_str, pick_7_str, f"{nombre_local} vs {nombre_visita}"
 
 def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under):
-    local = DICT_NFL_COMPLETO.get(nombre_local, {}).get("abbr", "DET")
-    visita = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("abbr", "NYJ")
     logo_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
     logo_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
 
@@ -1013,7 +991,6 @@ def generar_dashboard_completo():
 
     return html_header, html_tables, kpi_nfl_html, kpi_mlb_html, kpi_fut_html
 
-# Auxiliar para mostrar el logo HTML limpio
 def render_logo_html(url, height=55):
     return f"""<div style="display: flex; justify-content: center; align-items: center; height: 60px; margin-bottom: 4px;">
         <img src="{url}" style="max-height: {height}px; width: auto; object-fit: contain;" />
@@ -1032,7 +1009,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         </div>
         """)
 
-        # COLUMNAS DE LOGO + BOTÓN PEQUEÑO DEBAJO
         with gr.Row():
             with gr.Column(scale=1, min_width=90):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Premier League"]))
@@ -1323,8 +1299,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         return logo_loc, logo_vis, gr.update(label=f"Cuota {nombre_loc} (1)"), gr.update(label=f"Cuota {nombre_vis} (2)")
 
     def actualizar_interfaz_nfl(nombre_loc, nombre_vis):
-        loc = DICT_NFL_COMPLETO.get(nombre_loc, {}).get("abbr", "DET")
-        vis = DICT_NFL_COMPLETO.get(nombre_vis, {}).get("abbr", "NYJ")
         logo_loc = DICT_NFL_COMPLETO.get(nombre_loc, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
         logo_vis = DICT_NFL_COMPLETO.get(nombre_vis, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
         return (
@@ -1382,7 +1356,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             gr.update(label=f"Cuota {vis_inicial} (2)")
         )
 
-    # Eventos de Clic
     outputs_liga_futbol = [vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis]
 
     btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=outputs_liga_futbol)
@@ -1460,6 +1433,5 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     app_mana.load(fn=generar_dashboard_completo, outputs=[html_header_out, html_historial_out, kpi_nfl_out, kpi_mlb_out, kpi_fut_out])
 
-# Configuración de puerto para Render / Servidores Web
 if __name__ == "__main__":
     app_mana.launch(server_name="0.0.0.0", server_port=7860)
