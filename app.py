@@ -219,7 +219,7 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
 # =========================================
 # LOGOS Y DICCIONARIOS DE EQUIPOS
 # =========================================
-NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
+NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
 
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
@@ -1017,39 +1017,51 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
 
 # =========================================================
-# GENERADORES DE COMPONENTES 3D (BARRA DE CRISTAL & TACÓMETRO)
+# GENERADORES DE COMPONENTES 3D (BARRAS TRICOLOR & TACÓMETRO CORREGIDO)
 # =========================================================
-def crear_barra_cristal_3d(titulo, wins, losses, pending):
+def crear_grafica_barras_3d(titulo, wins, losses, pending):
     total = wins + losses
     pct = round((wins / total) * 100, 1) if total > 0 else 0.0
     
+    # Calcular alturas de barras relativas (máximo 40px)
+    max_val = max(wins, losses, pending, 1)
+    h_l = max(6, int((losses / max_val) * 38))
+    h_p = max(6, int((pending / max_val) * 38))
+    h_w = max(6, int((wins / max_val) * 38))
+
     return f"""
-    <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 10px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8); text-align: center; font-family: 'Segoe UI', system-ui, sans-serif;">
+    <div style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 16px; padding: 10px 6px; box-shadow: 0 6px 16px rgba(0,0,0,0.04); text-align: center; font-family: 'Segoe UI', system-ui, sans-serif;">
         <div style="font-size: 10px; font-weight: 800; color: #065F46; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{titulo}</div>
         
-        <div style="font-size: 22px; font-weight: 900; color: #059669; margin: 2px 0;">{pct}%</div>
+        <div style="font-size: 20px; font-weight: 900; color: #059669; margin: 1px 0;">{pct}%</div>
         
-        <div style="position: relative; width: 100%; height: 12px; background: rgba(226, 232, 240, 0.6); border-radius: 20px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(255,255,255,0.8); border: 1px solid rgba(203, 213, 225, 0.5); margin: 6px 0 8px 0;">
-            <div style="width: {pct}%; height: 100%; background: linear-gradient(180deg, rgba(52, 211, 153, 0.95) 0%, rgba(16, 185, 129, 0.9) 50%, rgba(5, 150, 105, 1) 100%); border-radius: 20px; box-shadow: inset 0 2px 3px rgba(255,255,255,0.6), 0 2px 6px rgba(16,185,129,0.4); transition: width 0.8s ease-in-out;">
-            </div>
+        <!-- MINI GRÁFICA DE BARRAS 3D (ROJA - NARANJA - VERDE) -->
+        <div style="display: flex; justify-content: center; align-items: flex-end; gap: 8px; height: 42px; margin: 6px 0; padding: 0 8px;">
+            <!-- BARRA ROJA (LOSS) -->
+            <div style="width: 14px; height: {h_l}px; background: linear-gradient(180deg, #F87171 0%, #EF4444 60%, #B91C1C 100%); border-radius: 3px; box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset 1px 1px 1px rgba(255,255,255,0.6);" title="Losses: {losses}"></div>
+            <!-- BARRA NARANJA (PENDING) -->
+            <div style="width: 14px; height: {h_p}px; background: linear-gradient(180deg, #FBBF24 0%, #F59E0B 60%, #B45309 100%); border-radius: 3px; box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset 1px 1px 1px rgba(255,255,255,0.6);" title="Pending: {pending}"></div>
+            <!-- BARRA VERDE (WIN) -->
+            <div style="width: 14px; height: {h_w}px; background: linear-gradient(180deg, #34D399 0%, #10B981 60%, #047857 100%); border-radius: 3px; box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset 1px 1px 1px rgba(255,255,255,0.6);" title="Wins: {wins}"></div>
         </div>
 
         <div style="display: flex; justify-content: center; gap: 3px; font-size: 8px; font-weight: 700;">
-            <span style="color: #059669; background: #ECFDF5; padding: 2px 5px; border-radius: 4px; border: 1px solid #A7F3D0;">W:{wins}</span>
-            <span style="color: #EF4444; background: #FEF2F2; padding: 2px 5px; border-radius: 4px; border: 1px solid #FECACA;">L:{losses}</span>
-            <span style="color: #D97706; background: #FFFBEB; padding: 2px 5px; border-radius: 4px; border: 1px solid #FDE68A;">P:{pending}</span>
+            <span style="color: #059669; background: #ECFDF5; padding: 1px 4px; border-radius: 3px; border: 1px solid #A7F3D0;">W:{wins}</span>
+            <span style="color: #EF4444; background: #FEF2F2; padding: 1px 4px; border-radius: 3px; border: 1px solid #FECACA;">L:{losses}</span>
+            <span style="color: #D97706; background: #FFFBEB; padding: 1px 4px; border-radius: 3px; border: 1px solid #FDE68A;">P:{pending}</span>
         </div>
     </div>
     """
 
 def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
-    angulo = -90 + (pct_global / 100.0) * 180
-    rad = math.radians(angulo)
-    x2 = 100 + 65 * math.cos(rad)
-    y2 = 100 + 65 * math.sin(rad)
+    # Corrección de la aguja: 0% -> 180° (Extremo Izquierdo), 100% -> 0° (Extremo Derecho)
+    # Por tanto: Ángulo en Radianes = PI * (1 - pct/100)
+    angulo_rad = math.pi * (1.0 - (pct_global / 100.0))
+    x2 = 100 + 65 * math.cos(angulo_rad)
+    y2 = 100 - 65 * math.sin(angulo_rad)
 
     svg_gauge = f"""
-    <div style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 2px solid #10B981; border-radius: 20px; padding: 16px 20px; text-align: center; box-shadow: 0 10px 25px rgba(16,185,129,0.12), inset 0 1px 0 rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif;">
+    <div style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 2px solid #10B981; border-radius: 20px; padding: 16px 20px; text-align: center; box-shadow: 0 10px 25px rgba(16,185,129,0.12); display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif;">
         <div style="font-size: 13px; font-weight: 800; color: #065F46; letter-spacing: 1px; margin-bottom: 2px;">EFECTIVIDAD GLOBAL Y RÉCORD</div>
         
         <div style="position: relative; width: 200px; height: 110px; margin: 4px 0;">
@@ -1060,22 +1072,26 @@ def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
                     </filter>
                     <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stop-color="#EF4444" />
-                        <stop offset="35%" stop-color="#F59E0B" />
-                        <stop offset="70%" stop-color="#10B981" />
+                        <stop offset="45%" stop-color="#F59E0B" />
+                        <stop offset="75%" stop-color="#10B981" />
                         <stop offset="100%" stop-color="#059669" />
                     </linearGradient>
                 </defs>
 
+                <!-- Fondo Arco 3D -->
                 <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#E2E8F0" stroke-width="22" stroke-linecap="round" filter="url(#shadow3d)" />
                 <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGradient)" stroke-width="18" stroke-linecap="round" />
                 
+                <!-- Marcas 0%, 50%, 100% -->
                 <line x1="20" y1="100" x2="32" y2="100" stroke="#FFF" stroke-width="2"/>
                 <line x1="100" y1="20" x2="100" y2="32" stroke="#FFF" stroke-width="2"/>
                 <line x1="180" y1="100" x2="168" y2="100" stroke="#FFF" stroke-width="2"/>
 
+                <!-- Aguja apuntando a la posición real -->
                 <line x1="100" y1="100" x2="{x2}" y2="{y2}" stroke="#DC2626" stroke-width="5" stroke-linecap="round" filter="url(#shadow3d)"/>
                 <line x1="100" y1="100" x2="{x2}" y2="{y2}" stroke="#EF4444" stroke-width="3" stroke-linecap="round"/>
                 
+                <!-- Centro Aguja -->
                 <circle cx="100" cy="100" r="10" fill="#1E293B" filter="url(#shadow3d)"/>
                 <circle cx="100" cy="100" r="5" fill="#EF4444"/>
             </svg>
@@ -1092,14 +1108,14 @@ def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
 def generar_dashboard_completo():
     stats, tot_wins, tot_loss, tot_global, pct_global = calcular_metricas_historial()
 
-    kpi_premier_html = crear_barra_cristal_3d("Record Premier", stats['PREMIER LEAGUE']['wins'], stats['PREMIER LEAGUE']['losses'], stats['PREMIER LEAGUE']['pending'])
-    kpi_laliga_html = crear_barra_cristal_3d("Record LaLiga", stats['LALIGA']['wins'], stats['LALIGA']['losses'], stats['LALIGA']['pending'])
-    kpi_bundesliga_html = crear_barra_cristal_3d("Record Bundesliga", stats['BUNDESLIGA']['wins'], stats['BUNDESLIGA']['losses'], stats['BUNDESLIGA']['pending'])
-    kpi_seriea_html = crear_barra_cristal_3d("Record Serie A", stats['SERIE A']['wins'], stats['SERIE A']['losses'], stats['SERIE A']['pending'])
-    kpi_champions_html = crear_barra_cristal_3d("Record Champions", stats['CHAMPIONS LEAGUE']['wins'], stats['CHAMPIONS LEAGUE']['losses'], stats['CHAMPIONS LEAGUE']['pending'])
-    kpi_nations_html = crear_barra_cristal_3d("Record Nationals", stats['NATIONS LEAGUE']['wins'], stats['NATIONS LEAGUE']['losses'], stats['NATIONS LEAGUE']['pending'])
-    kpi_nfl_html = crear_barra_cristal_3d("Récord NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
-    kpi_mlb_html = crear_barra_cristal_3d("Récord MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
+    kpi_premier_html = crear_grafica_barras_3d("Record Premier", stats['PREMIER LEAGUE']['wins'], stats['PREMIER LEAGUE']['losses'], stats['PREMIER LEAGUE']['pending'])
+    kpi_laliga_html = crear_grafica_barras_3d("Record LaLiga", stats['LALIGA']['wins'], stats['LALIGA']['losses'], stats['LALIGA']['pending'])
+    kpi_bundesliga_html = crear_grafica_barras_3d("Record Bundesliga", stats['BUNDESLIGA']['wins'], stats['BUNDESLIGA']['losses'], stats['BUNDESLIGA']['pending'])
+    kpi_seriea_html = crear_grafica_barras_3d("Record Serie A", stats['SERIE A']['wins'], stats['SERIE A']['losses'], stats['SERIE A']['pending'])
+    kpi_champions_html = crear_grafica_barras_3d("Record Champions", stats['CHAMPIONS LEAGUE']['wins'], stats['CHAMPIONS LEAGUE']['losses'], stats['CHAMPIONS LEAGUE']['pending'])
+    kpi_nations_html = crear_grafica_barras_3d("Record Nationals", stats['NATIONS LEAGUE']['wins'], stats['NATIONS LEAGUE']['losses'], stats['NATIONS LEAGUE']['pending'])
+    kpi_nfl_html = crear_grafica_barras_3d("Récord NFL", stats['NFL']['wins'], stats['NFL']['losses'], stats['NFL']['pending'])
+    kpi_mlb_html = crear_grafica_barras_3d("Récord MLB", stats['MLB']['wins'], stats['MLB']['losses'], stats['MLB']['pending'])
 
     html_header = crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global)
 
@@ -1180,7 +1196,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 gr.HTML(render_logo_html(LOGOS_LIGAS["MLB"]))
                 btn_mlb = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-        # FILA 2: BARRAS CRISTALINAS 3D POR LIGA
+        # FILA 2: MINI HISTOGRAMAS 3D TRICOLOR POR LIGA
         with gr.Row():
             kpi_premier_out = gr.HTML()
             kpi_laliga_out = gr.HTML()
@@ -1598,7 +1614,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
 
-# Vinculación dinámica de puerto para Render / Colab
+# Vinculación de puerto para Render / Colab
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     app_mana.launch(server_name="0.0.0.0", server_port=port)
