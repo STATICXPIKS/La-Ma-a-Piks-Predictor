@@ -1598,6 +1598,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
 
-# Lanzamiento para Colab/Render
+# Vinculación dinámica de puerto para Render / Colab
 if __name__ == "__main__":
-    app_mana.launch(share=True)
+    port = int(os.environ.get("PORT", 7860))
+    app_mana.launch(server_name="0.0.0.0", server_port=port)
