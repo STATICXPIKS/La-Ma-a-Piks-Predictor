@@ -1,9 +1,8 @@
 gradio
+xgboost
 pandas
 numpy
-xgboost
-scikit-learn
-requests
-plotly
-nflreadpy
 scipy
+requests
+nflreadpy
+supabase
