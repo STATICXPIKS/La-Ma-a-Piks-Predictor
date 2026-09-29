@@ -99,7 +99,6 @@ def calcular_metricas_historial():
     stats = {
         "NFL": {"wins": 0, "losses": 0, "pending": 0},
         "MLB": {"wins": 0, "losses": 0, "pending": 0},
-        "LIGA MX": {"wins": 0, "losses": 0, "pending": 0},
         "PREMIER LEAGUE": {"wins": 0, "losses": 0, "pending": 0},
         "LALIGA": {"wins": 0, "losses": 0, "pending": 0},
         "BUNDESLIGA": {"wins": 0, "losses": 0, "pending": 0},
@@ -114,7 +113,6 @@ def calcular_metricas_historial():
         
         if "NFL" in dep: key = "NFL"
         elif "MLB" in dep: key = "MLB"
-        elif "LIGA MX" in dep: key = "LIGA MX"
         elif "PREMIER" in dep: key = "PREMIER LEAGUE"
         elif "LALIGA" in dep: key = "LALIGA"
         elif "BUNDESLIGA" in dep: key = "BUNDESLIGA"
@@ -137,7 +135,7 @@ def calcular_metricas_historial():
 # FASE 2: MOTOR DE AUTO-APRENDIZAJE
 # =========================================
 FACTOR_AJUSTE_AUTO = {
-    "NFL": 1.0, "MLB": 1.0, "LIGA MX": 1.0, "PREMIER LEAGUE": 1.0, 
+    "NFL": 1.0, "MLB": 1.0, "PREMIER LEAGUE": 1.0, 
     "LALIGA": 1.0, "BUNDESLIGA": 1.0, "SERIE A": 1.0, 
     "CHAMPIONS LEAGUE": 1.0, "NATIONS LEAGUE": 1.0
 }
@@ -217,9 +215,9 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
     return penalización_off, penalización_def, reporte_html
 
 # =========================================
-# LOGOS Y DICCIONARIOS DE EQUIPOS
+# LOGOS Y DICCIONARIOS COMPLETOS Y EXACTOS
 # =========================================
-NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
+NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
 
 LOGOS_LIGAS = {
     "Premier League": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
@@ -233,51 +231,194 @@ LOGOS_LIGAS = {
 }
 
 PREMIER_DICT = {
-    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png", "Aston Villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
-    "AFC Bournemouth": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png", "Brentford": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png",
-    "Brighton & Hove Albion": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png", "Chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
-    "Crystal Palace": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png", "Everton": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png",
-    "Fulham": "https://a.espncdn.com/i/teamlogos/soccer/500/370.png", "Ipswich Town": "https://a.espncdn.com/i/teamlogos/soccer/500/373.png",
-    "Leicester City": "https://a.espncdn.com/i/teamlogos/soccer/500/375.png", "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
-    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png", "Manchester United": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
-    "Newcastle United": "https://a.espncdn.com/i/teamlogos/soccer/500/361.png", "Nottingham Forest": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png",
-    "Southampton": "https://a.espncdn.com/i/teamlogos/soccer/500/376.png", "Tottenham Hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
-    "West Ham United": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png", "Wolverhampton": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png"
+    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png", 
+    "Aston Villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
+    "AFC Bournemouth": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png", 
+    "Brentford": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png",
+    "Brighton & Hove Albion": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png", 
+    "Chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
+    "Crystal Palace": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png", 
+    "Everton": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png",
+    "Fulham": "https://a.espncdn.com/i/teamlogos/soccer/500/370.png", 
+    "Ipswich Town": "https://a.espncdn.com/i/teamlogos/soccer/500/373.png",
+    "Leicester City": "https://a.espncdn.com/i/teamlogos/soccer/500/375.png", 
+    "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
+    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png", 
+    "Manchester United": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
+    "Newcastle United": "https://a.espncdn.com/i/teamlogos/soccer/500/361.png", 
+    "Nottingham Forest": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png",
+    "Southampton": "https://a.espncdn.com/i/teamlogos/soccer/500/376.png", 
+    "Tottenham Hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
+    "West Ham United": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png", 
+    "Wolverhampton": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png"
 }
 
 LALIGA_DICT = {
-    "Athletic Club": "https://a.espncdn.com/i/teamlogos/soccer/500/93.png", "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
-    "CA Osasuna": "https://a.espncdn.com/i/teamlogos/soccer/500/97.png", "CD Leganés": "https://a.espncdn.com/i/teamlogos/soccer/500/9855.png",
-    "Celta de Vigo": "https://a.espncdn.com/i/teamlogos/soccer/500/85.png", "Deportivo Alavés": "https://a.espncdn.com/i/teamlogos/soccer/500/96.png",
-    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png", "Getafe CF": "https://a.espncdn.com/i/teamlogos/soccer/500/2922.png",
-    "Girona FC": "https://a.espncdn.com/i/teamlogos/soccer/500/9812.png", "Rayo Vallecano": "https://a.espncdn.com/i/teamlogos/soccer/500/101.png",
-    "RCD Espanyol": "https://a.espncdn.com/i/teamlogos/soccer/500/88.png", "RCD Mallorca": "https://a.espncdn.com/i/teamlogos/soccer/500/84.png",
-    "Real Betis": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png", "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
-    "Real Sociedad": "https://a.espncdn.com/i/teamlogos/soccer/500/89.png", "Sevilla FC": "https://a.espncdn.com/i/teamlogos/soccer/500/243.png",
-    "Valencia CF": "https://a.espncdn.com/i/teamlogos/soccer/500/94.png", "Real Valladolid": "https://a.espncdn.com/i/teamlogos/soccer/500/95.png",
-    "Villarreal CF": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png", "UD Las Palmas": "https://a.espncdn.com/i/teamlogos/soccer/500/98.png"
+    "Athletic Club": "https://a.espncdn.com/i/teamlogos/soccer/500/93.png", 
+    "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
+    "CA Osasuna": "https://a.espncdn.com/i/teamlogos/soccer/500/97.png", 
+    "CD Leganés": "https://a.espncdn.com/i/teamlogos/soccer/500/9855.png",
+    "Celta de Vigo": "https://a.espncdn.com/i/teamlogos/soccer/500/85.png", 
+    "Deportivo Alavés": "https://a.espncdn.com/i/teamlogos/soccer/500/96.png",
+    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png", 
+    "Getafe CF": "https://a.espncdn.com/i/teamlogos/soccer/500/2922.png",
+    "Girona FC": "https://a.espncdn.com/i/teamlogos/soccer/500/9812.png", 
+    "Rayo Vallecano": "https://a.espncdn.com/i/teamlogos/soccer/500/101.png",
+    "RCD Espanyol": "https://a.espncdn.com/i/teamlogos/soccer/500/88.png", 
+    "RCD Mallorca": "https://a.espncdn.com/i/teamlogos/soccer/500/84.png",
+    "Real Betis": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png", 
+    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
+    "Real Sociedad": "https://a.espncdn.com/i/teamlogos/soccer/500/89.png", 
+    "Sevilla FC": "https://a.espncdn.com/i/teamlogos/soccer/500/243.png",
+    "Valencia CF": "https://a.espncdn.com/i/teamlogos/soccer/500/94.png", 
+    "Real Valladolid": "https://a.espncdn.com/i/teamlogos/soccer/500/95.png",
+    "Villarreal CF": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png", 
+    "UD Las Palmas": "https://a.espncdn.com/i/teamlogos/soccer/500/98.png"
 }
 
 NATIONS_LEAGUE_DICT = {
-    "España": "https://a.espncdn.com/i/teamlogos/countries/500/esp.png", "Francia": "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
-    "Alemania": "https://a.espncdn.com/i/teamlogos/countries/500/ger.png", "Inglaterra": "https://a.espncdn.com/i/teamlogos/countries/500/eng.png",
-    "Portugal": "https://a.espncdn.com/i/teamlogos/countries/500/por.png", "Italia": "https://a.espncdn.com/i/teamlogos/countries/500/ita.png",
-    "Países Bajos": "https://a.espncdn.com/i/teamlogos/countries/500/ned.png", "Bélgica": "https://a.espncdn.com/i/teamlogos/countries/500/bel.png"
+    # LIGA A
+    "España": "https://a.espncdn.com/i/teamlogos/countries/500/esp.png",
+    "Francia": "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
+    "Alemania": "https://a.espncdn.com/i/teamlogos/countries/500/ger.png",
+    "Inglaterra": "https://a.espncdn.com/i/teamlogos/countries/500/eng.png",
+    "Portugal": "https://a.espncdn.com/i/teamlogos/countries/500/por.png",
+    "Italia": "https://a.espncdn.com/i/teamlogos/countries/500/ita.png",
+    "Países Bajos": "https://a.espncdn.com/i/teamlogos/countries/500/ned.png",
+    "Bélgica": "https://a.espncdn.com/i/teamlogos/countries/500/bel.png",
+    "Croacia": "https://a.espncdn.com/i/teamlogos/countries/500/cro.png",
+    "Dinamarca": "https://a.espncdn.com/i/teamlogos/countries/500/den.png",
+    "Suiza": "https://a.espncdn.com/i/teamlogos/countries/500/sui.png",
+    "Austria": "https://a.espncdn.com/i/teamlogos/countries/500/aut.png",
+    "Hungría": "https://a.espncdn.com/i/teamlogos/countries/500/hun.png",
+    "Polonia": "https://a.espncdn.com/i/teamlogos/countries/500/pol.png",
+    "Escocia": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png",
+    "Serbia": "https://a.espncdn.com/i/teamlogos/countries/500/srb.png",
+    # LIGA B
+    "Israel": "https://a.espncdn.com/i/teamlogos/countries/500/isr.png",
+    "Bosnia y Herzegovina": "https://a.espncdn.com/i/teamlogos/countries/500/bih.png",
+    "República Checa": "https://a.espncdn.com/i/teamlogos/countries/500/cze.png",
+    "Gales": "https://a.espncdn.com/i/teamlogos/countries/500/wal.png",
+    "Finlandia": "https://a.espncdn.com/i/teamlogos/countries/500/fin.png",
+    "Ucrania": "https://a.espncdn.com/i/teamlogos/countries/500/ukr.png",
+    "Islandia": "https://a.espncdn.com/i/teamlogos/countries/500/isl.png",
+    "Noruega": "https://a.espncdn.com/i/teamlogos/countries/500/nor.png",
+    "Eslovenia": "https://a.espncdn.com/i/teamlogos/countries/500/svn.png",
+    "Irlanda": "https://a.espncdn.com/i/teamlogos/countries/500/irl.png",
+    "Albania": "https://a.espncdn.com/i/teamlogos/countries/500/alb.png",
+    "Georgia": "https://a.espncdn.com/i/teamlogos/countries/500/geo.png",
+    "Grecia": "https://a.espncdn.com/i/teamlogos/countries/500/gre.png",
+    "Turquía": "https://a.espncdn.com/i/teamlogos/countries/500/tur.png",
+    "Kazajistán": "https://a.espncdn.com/i/teamlogos/countries/500/kaz.png",
+    "Montenegro": "https://a.espncdn.com/i/teamlogos/countries/500/mne.png",
+    # LIGA C
+    "Suecia": "https://a.espncdn.com/i/teamlogos/countries/500/swe.png",
+    "Rumanía": "https://a.espncdn.com/i/teamlogos/countries/500/rou.png",
+    "Armenia": "https://a.espncdn.com/i/teamlogos/countries/500/arm.png",
+    "Luxemburgo": "https://a.espncdn.com/i/teamlogos/countries/500/lux.png",
+    "Azerbaiyán": "https://a.espncdn.com/i/teamlogos/countries/500/aze.png",
+    "Bulgaria": "https://a.espncdn.com/i/teamlogos/countries/500/bul.png",
+    "Islas Feroe": "https://a.espncdn.com/i/teamlogos/countries/500/fro.png",
+    "Macedonia del Norte": "https://a.espncdn.com/i/teamlogos/countries/500/mkd.png",
+    "Eslovaquia": "https://a.espncdn.com/i/teamlogos/countries/500/svk.png",
+    "Irlanda del Norte": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+    "Chipre": "https://a.espncdn.com/i/teamlogos/countries/500/cyp.png",
+    "Bielorrusia": "https://a.espncdn.com/i/teamlogos/countries/500/blr.png",
+    "Lituania": "https://a.espncdn.com/i/teamlogos/countries/500/ltu.png",
+    "Estonia": "https://a.espncdn.com/i/teamlogos/countries/500/est.png",
+    "Letonia": "https://a.espncdn.com/i/teamlogos/countries/500/lva.png",
+    "Kosovo": "https://a.espncdn.com/i/teamlogos/countries/500/kvx.png",
+    # LIGA D
+    "Moldavia": "https://a.espncdn.com/i/teamlogos/countries/500/mda.png",
+    "Malta": "https://a.espncdn.com/i/teamlogos/countries/500/mlt.png",
+    "Andorra": "https://a.espncdn.com/i/teamlogos/countries/500/and.png", 
+    "San Marino": "https://a.espncdn.com/i/teamlogos/countries/500/smr.png",
+    "Liechtenstein": "https://a.espncdn.com/i/teamlogos/countries/500/lie.png",
+    "Gibraltar": "https://a.espncdn.com/i/teamlogos/countries/500/gib.png"
 }
 
 BUNDESLIGA_DICT = {
-    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png", "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
-    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png"
+    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
+    "Bayer Leverkusen": "https://a.espncdn.com/i/teamlogos/soccer/500/131.png",
+    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png", 
+    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
+    "Eintracht Frankfurt": "https://a.espncdn.com/i/teamlogos/soccer/500/125.png", 
+    "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png",
+    "SC Freiburg": "https://a.espncdn.com/i/teamlogos/soccer/500/126.png", 
+    "Union Berlin": "https://a.espncdn.com/i/teamlogos/soccer/500/130.png",
+    "Borussia Mönchengladbach": "https://a.espncdn.com/i/teamlogos/soccer/500/128.png", 
+    "Werder Bremen": "https://a.espncdn.com/i/teamlogos/soccer/500/137.png",
+    "FC Augsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/3812.png", 
+    "TSG Hoffenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/7911.png",
+    "Mainz 05": "https://a.espncdn.com/i/teamlogos/soccer/500/129.png", 
+    "VfL Wolfsburgo": "https://a.espncdn.com/i/teamlogos/soccer/500/138.png",
+    "Heidenheim": "https://a.espncdn.com/i/teamlogos/soccer/500/10363.png", 
+    "VfL Bochum": "https://a.espncdn.com/i/teamlogos/soccer/500/123.png",
+    "St. Pauli": "https://a.espncdn.com/i/teamlogos/soccer/500/268.png", 
+    "Holstein Kiel": "https://a.espncdn.com/i/teamlogos/soccer/500/8066.png"
 }
 
 SERIE_A_DICT = {
-    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png", "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
-    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png", "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png"
+    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png",
+    "Juventus": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
+    "AC Milan": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
+    "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png",
+    "AS Roma": "https://a.espncdn.com/i/teamlogos/soccer/500/104.png",
+    "Atalanta": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
+    "Lazio": "https://a.espncdn.com/i/teamlogos/soccer/500/112.png",
+    "Fiorentina": "https://a.espncdn.com/i/teamlogos/soccer/500/109.png",
+    "Bologna": "https://a.espncdn.com/i/teamlogos/soccer/500/107.png",
+    "Torino": "https://a.espncdn.com/i/teamlogos/soccer/500/239.png",
+    "Monza": "https://a.espncdn.com/i/teamlogos/soccer/500/3614.png",
+    "Genoa": "https://a.espncdn.com/i/teamlogos/soccer/500/3263.png",
+    "Parma": "https://a.espncdn.com/i/teamlogos/soccer/500/113.png",
+    "Udinese": "https://a.espncdn.com/i/teamlogos/soccer/500/118.png",
+    "Cagliari": "https://a.espncdn.com/i/teamlogos/soccer/500/108.png", 
+    "Hellas Verona": "https://a.espncdn.com/i/teamlogos/soccer/500/238.png",
+    "Empoli": "https://a.espncdn.com/i/teamlogos/soccer/500/240.png",
+    "Lecce": "https://a.espncdn.com/i/teamlogos/soccer/500/3452.png",
+    "Como 1907": "https://a.espncdn.com/i/teamlogos/soccer/500/2625.png",
+    "Venezia": "https://a.espncdn.com/i/teamlogos/soccer/500/2744.png"
 }
 
+# LOS 36 CLUBES COMPLETOS DE LA CHAMPIONS LEAGUE SEGÚN TUS TABLAS
 CHAMPIONS_DICT = {
-    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png", "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
-    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png", "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png"
+    "Paris Saint-Germain": "https://a.espncdn.com/i/teamlogos/soccer/500/160.png",
+    "Bayern Múnich": "https://a.espncdn.com/i/teamlogos/soccer/500/132.png",
+    "FC Barcelona": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
+    "Manchester United": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
+    "Como 1907": "https://a.espncdn.com/i/teamlogos/soccer/500/2625.png",
+    "Sporting CP": "https://a.espncdn.com/i/teamlogos/soccer/500/300.png",
+    "VfB Stuttgart": "https://a.espncdn.com/i/teamlogos/soccer/500/134.png",
+    "Manchester City": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
+    "Aston Villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
+    "RC Lens": "https://a.espncdn.com/i/teamlogos/soccer/500/166.png",
+    "Real Betis": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png",
+    "Borussia Dortmund": "https://a.espncdn.com/i/teamlogos/soccer/500/124.png",
+    "Liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
+    "Real Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
+    "Arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
+    "AEK Athens": "https://a.espncdn.com/i/teamlogos/soccer/500/448.png",
+    "AS Roma": "https://a.espncdn.com/i/teamlogos/soccer/500/104.png",
+    "Shakhtar Donetsk": "https://a.espncdn.com/i/teamlogos/soccer/500/438.png",
+    "Fenerbahçe": "https://a.espncdn.com/i/teamlogos/soccer/500/436.png",
+    "PSV Eindhoven": "https://a.espncdn.com/i/teamlogos/soccer/500/148.png",
+    "Villarreal CF": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png",
+    "Club Brujas": "https://a.espncdn.com/i/teamlogos/soccer/500/2282.png",
+    "Lille OSC": "https://a.espncdn.com/i/teamlogos/soccer/500/162.png",
+    "Slavia Praha": "https://a.espncdn.com/i/teamlogos/soccer/500/439.png",
+    "Atlético de Madrid": "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png",
+    "Inter de Milán": "https://a.espncdn.com/i/teamlogos/soccer/500/110.png",
+    "LASK": "https://a.espncdn.com/i/teamlogos/soccer/500/3282.png",
+    "Napoli": "https://a.espncdn.com/i/teamlogos/soccer/500/114.png",
+    "Galatasaray": "https://a.espncdn.com/i/teamlogos/soccer/500/437.png",
+    "Viking FK": "https://a.espncdn.com/i/teamlogos/soccer/500/2324.png",
+    "FC Porto": "https://a.espncdn.com/i/teamlogos/soccer/500/298.png",
+    "RB Leipzig": "https://a.espncdn.com/i/teamlogos/soccer/500/11420.png",
+    "Feyenoord": "https://a.espncdn.com/i/teamlogos/soccer/500/142.png",
+    "Sabah FK": "https://a.espncdn.com/i/teamlogos/soccer/500/20340.png",
+    "Slovan Bratislava": "https://a.espncdn.com/i/teamlogos/soccer/500/2322.png",
+    "Bodø/Glimt": "https://a.espncdn.com/i/teamlogos/soccer/500/10365.png"
 }
 
 EQUIPOS_MLB = {
@@ -1017,13 +1158,12 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
 
 # =========================================================
-# GENERADORES DE COMPONENTES 3D (BARRAS TRICOLOR & TACÓMETRO CORREGIDO)
+# GENERADORES DE COMPONENTES 3D
 # =========================================================
 def crear_grafica_barras_3d(titulo, wins, losses, pending):
     total = wins + losses
     pct = round((wins / total) * 100, 1) if total > 0 else 0.0
     
-    # Calcular alturas de barras relativas (máximo 40px)
     max_val = max(wins, losses, pending, 1)
     h_l = max(6, int((losses / max_val) * 38))
     h_p = max(6, int((pending / max_val) * 38))
@@ -1035,13 +1175,9 @@ def crear_grafica_barras_3d(titulo, wins, losses, pending):
         
         <div style="font-size: 20px; font-weight: 900; color: #059669; margin: 1px 0;">{pct}%</div>
         
-        <!-- MINI GRÁFICA DE BARRAS 3D (ROJA - NARANJA - VERDE) -->
         <div style="display: flex; justify-content: center; align-items: flex-end; gap: 8px; height: 42px; margin: 6px 0; padding: 0 8px;">
-            <!-- BARRA ROJA (LOSS) -->
             <div style="width: 14px; height: {h_l}px; background: linear-gradient(180deg, #F87171 0%, #EF4444 60%, #B91C1C 100%); border-radius: 3px; box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset 1px 1px 1px rgba(255,255,255,0.6);" title="Losses: {losses}"></div>
-            <!-- BARRA NARANJA (PENDING) -->
             <div style="width: 14px; height: {h_p}px; background: linear-gradient(180deg, #FBBF24 0%, #F59E0B 60%, #B45309 100%); border-radius: 3px; box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset 1px 1px 1px rgba(255,255,255,0.6);" title="Pending: {pending}"></div>
-            <!-- BARRA VERDE (WIN) -->
             <div style="width: 14px; height: {h_w}px; background: linear-gradient(180deg, #34D399 0%, #10B981 60%, #047857 100%); border-radius: 3px; box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset 1px 1px 1px rgba(255,255,255,0.6);" title="Wins: {wins}"></div>
         </div>
 
@@ -1054,8 +1190,6 @@ def crear_grafica_barras_3d(titulo, wins, losses, pending):
     """
 
 def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
-    # Corrección de la aguja: 0% -> 180° (Extremo Izquierdo), 100% -> 0° (Extremo Derecho)
-    # Por tanto: Ángulo en Radianes = PI * (1 - pct/100)
     angulo_rad = math.pi * (1.0 - (pct_global / 100.0))
     x2 = 100 + 65 * math.cos(angulo_rad)
     y2 = 100 - 65 * math.sin(angulo_rad)
@@ -1078,20 +1212,16 @@ def crear_velocimetro_3d(pct_global, tot_wins, tot_loss, tot_global):
                     </linearGradient>
                 </defs>
 
-                <!-- Fondo Arco 3D -->
                 <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#E2E8F0" stroke-width="22" stroke-linecap="round" filter="url(#shadow3d)" />
                 <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGradient)" stroke-width="18" stroke-linecap="round" />
                 
-                <!-- Marcas 0%, 50%, 100% -->
                 <line x1="20" y1="100" x2="32" y2="100" stroke="#FFF" stroke-width="2"/>
                 <line x1="100" y1="20" x2="100" y2="32" stroke="#FFF" stroke-width="2"/>
                 <line x1="180" y1="100" x2="168" y2="100" stroke="#FFF" stroke-width="2"/>
 
-                <!-- Aguja apuntando a la posición real -->
                 <line x1="100" y1="100" x2="{x2}" y2="{y2}" stroke="#DC2626" stroke-width="5" stroke-linecap="round" filter="url(#shadow3d)"/>
                 <line x1="100" y1="100" x2="{x2}" y2="{y2}" stroke="#EF4444" stroke-width="3" stroke-linecap="round"/>
                 
-                <!-- Centro Aguja -->
                 <circle cx="100" cy="100" r="10" fill="#1E293B" filter="url(#shadow3d)"/>
                 <circle cx="100" cy="100" r="5" fill="#EF4444"/>
             </svg>
@@ -1196,7 +1326,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 gr.HTML(render_logo_html(LOGOS_LIGAS["MLB"]))
                 btn_mlb = gr.Button("Analizar ➔", variant="primary", size="sm")
 
-        # FILA 2: MINI HISTOGRAMAS 3D TRICOLOR POR LIGA
+        # FILA 2: MINI HISTOGRAMAS TRICOLOR POR LIGA
         with gr.Row():
             kpi_premier_out = gr.HTML()
             kpi_laliga_out = gr.HTML()
@@ -1358,7 +1488,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     with gr.Column(visible=False) as vista_mlb:
         with gr.Row():
-            btn_volver_mlb = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
+            btn_volver_mlb = gr.Button("⬅️️ Volver al Menú Principal", variant="secondary", scale=1)
             gr.Markdown("## ⚾ **Área de Análisis: MLB Sabermétrica (Full Game, F5, NRFI, Team Totals & Props)**", scale=4)
 
         with gr.Tabs():
