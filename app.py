@@ -9,6 +9,9 @@ import xgboost as xgb
 import gradio as gr
 from scipy.stats import norm
 
+# Liberar puertos previo en Colab/Render
+gr.close_all()
+
 # =========================================
 # CONFIGURACIÓN DE SUPABASE (VÍA HTTP REST)
 # =========================================
@@ -215,7 +218,7 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
     return penalización_off, penalización_def, reporte_html
 
 # =========================================
-# LOGOS Y DICCIONARIOS DE EQUIPOS
+# LOGOS Y DICCIONARIOS ORIGINALES Y COMPLETOS
 # =========================================
 NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
 
@@ -277,7 +280,7 @@ LALIGA_DICT = {
 }
 
 NATIONS_LEAGUE_DICT = {
-    # GRUPO A
+    # LIGA A
     "España": "https://a.espncdn.com/i/teamlogos/countries/500/esp.png",
     "Francia": "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
     "Alemania": "https://a.espncdn.com/i/teamlogos/countries/500/ger.png",
@@ -294,7 +297,7 @@ NATIONS_LEAGUE_DICT = {
     "Polonia": "https://a.espncdn.com/i/teamlogos/countries/500/pol.png",
     "Escocia": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png",
     "Serbia": "https://a.espncdn.com/i/teamlogos/countries/500/srb.png",
-    # GRUPO B
+    # LIGA B
     "Israel": "https://a.espncdn.com/i/teamlogos/countries/500/isr.png",
     "Bosnia y Herzegovina": "https://a.espncdn.com/i/teamlogos/countries/500/bih.png",
     "República Checa": "https://a.espncdn.com/i/teamlogos/countries/500/cze.png",
@@ -311,7 +314,7 @@ NATIONS_LEAGUE_DICT = {
     "Turquía": "https://a.espncdn.com/i/teamlogos/countries/500/tur.png",
     "Kazajistán": "https://a.espncdn.com/i/teamlogos/countries/500/kaz.png",
     "Montenegro": "https://a.espncdn.com/i/teamlogos/countries/500/mne.png",
-    # GRUPO C
+    # LIGA C
     "Suecia": "https://a.espncdn.com/i/teamlogos/countries/500/swe.png",
     "Rumanía": "https://a.espncdn.com/i/teamlogos/countries/500/rou.png",
     "Armenia": "https://a.espncdn.com/i/teamlogos/countries/500/arm.png",
@@ -328,7 +331,7 @@ NATIONS_LEAGUE_DICT = {
     "Estonia": "https://a.espncdn.com/i/teamlogos/countries/500/est.png",
     "Letonia": "https://a.espncdn.com/i/teamlogos/countries/500/lva.png",
     "Kosovo": "https://a.espncdn.com/i/teamlogos/countries/500/kvx.png",
-    # GRUPO D
+    # LIGA D
     "Moldavia": "https://a.espncdn.com/i/teamlogos/countries/500/mda.png",
     "Malta": "https://a.espncdn.com/i/teamlogos/countries/500/mlt.png",
     "Andorra": "https://a.espncdn.com/i/teamlogos/countries/500/and.png", 
@@ -419,6 +422,7 @@ CHAMPIONS_DICT = {
     "Slovan Bratislava": "https://a.espncdn.com/i/teamlogos/soccer/500/2322.png",
     "Bodø/Glimt": "https://a.espncdn.com/i/teamlogos/soccer/500/10365.png"
 }
+
 EQUIPOS_MLB = {
     "Arizona Diamondbacks": {"abbr": "ari", "id": 109, "wRC_plus": 105, "park_factor": 1.02},
     "Atlanta Braves": {"abbr": "atl", "id": 144, "wRC_plus": 115, "park_factor": 1.01},
@@ -777,41 +781,37 @@ def simular_prop_futbol(nombre_item, tipo_prop, linea_casino, cuota_over, cuota_
     return html_prop, rec_str
 
 def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, cuota_btts_si, cuota_btts_no, linea_goles, cuota_goles_over, cuota_goles_under, fatiga_eur, dict_actual):
-    data_loc = dict_actual.get(nombre_local, {})
-    data_vis = dict_actual.get(nombre_visita, {})
-    
-    logo_loc = data_loc.get("logo", "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png") if isinstance(data_loc, dict) else "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png"
-    logo_vis = data_vis.get("logo", "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png") if isinstance(data_vis, dict) else "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png"
+    logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+    logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
 
-    # 1. CÁLCULO DE xG DEPORTIVO INDEPENDIENTE (Ataque Local vs Defensa Visitante)
-    att_loc = data_loc.get("att", 1.5) if isinstance(data_loc, dict) else 1.5
-    def_loc = data_loc.get("def", 1.2) if isinstance(data_loc, dict) else 1.2
-    
-    att_vis = data_vis.get("att", 1.3) if isinstance(data_vis, dict) else 1.3
-    def_vis = data_vis.get("def", 1.3) if isinstance(data_vis, dict) else 1.3
-
-    mod_fatiga = 0.88 if "Sí" in fatiga_eur else 1.0
-    mod_auto = FACTOR_AJUSTE_AUTO.get("PREMIER LEAGUE", 1.0)
-
-    # Ventaja de localía promedio (1.15x) + Cruzamiento puro de fuerza de ataque vs defensa
-    goles_loc = max(0.2, round((att_loc * def_vis * 1.15 * mod_fatiga * mod_auto) / 1.3, 1))
-    goles_vis = max(0.2, round((att_vis * def_loc * mod_auto) / 1.3, 1))
-
-    # 2. PROBABILIDADES REALES DEL MODELO (Basadas en xG Deportivo)
-    tot_goles_model = goles_loc + goles_vis
-    diff_goles_model = goles_loc - goles_vis
-
-    prob_win_local = int(round(min(92, max(8, 50 + diff_goles_model * 22))))
-    prob_win_visita = int(round(min(92, max(8, 50 - diff_goles_model * 22))))
-    prob_empate = max(10, 100 - prob_win_local - prob_win_visita)
-
-    # 3. MÁRGENES DE VALOR ESPERADO (+EV) COMPARANDO MODELO VS MOMIOS DEL CASINO
     c_loc, c_emp, c_vis = float(cuota_loc), float(cuota_emp), float(cuota_vis)
-    c_over, c_under = float(cuota_goles_over), float(cuota_goles_under)
+    c_over_goles, c_under_goles = float(cuota_goles_over), float(cuota_goles_under)
+    
+    # 1. PROBABILIDADES IMPLÍCITAS Y REALES CALCULADAS DESDE LOS MOMIOS DEL CASINO
+    inv_loc = 1.0 / c_loc if c_loc > 1 else 0.5
+    inv_emp = 1.0 / c_emp if c_emp > 1 else 0.25
+    inv_vis = 1.0 / c_vis if c_vis > 1 else 0.25
+    suma_inv = inv_loc + inv_emp + inv_vis
 
-    prob_impl_loc = (1.0 / c_loc) * 100 if c_loc > 1 else 50.0
-    edge_loc = round(prob_win_local - prob_impl_loc, 1)
+    prob_win_local = int(round((inv_loc / suma_inv) * 100))
+    prob_win_visita = int(round((inv_vis / suma_inv) * 100))
+    prob_empate = max(5, 100 - prob_win_local - prob_win_visita)
 
+    # 2. INFERENCIA DINÁMICA DE GOLES ESPERADOS (xG)
+    inv_over = 1.0 / c_over_goles if c_over_goles > 1 else 0.5
+    inv_under = 1.0 / c_under_goles if c_under_goles > 1 else 0.5
+    prob_over_goles = inv_over / (inv_over + inv_under)
+
+    tot_goles_est = float(linea_goles) + (prob_over_goles - 0.5) * 1.5
+    
+    mod_fatiga = 0.90 if "Sí" in fatiga_eur else 1.0
+    tot_goles_est *= mod_fatiga
+
+    ratio_fortaleza = (inv_loc / (inv_loc + inv_vis)) if (inv_loc + inv_vis) > 0 else 0.5
+    goles_loc = max(0.2, round(tot_goles_est * ratio_fortaleza, 1))
+    goles_vis = max(0.2, round(tot_goles_est * (1.0 - ratio_fortaleza), 1))
+
+    # 3. AMBOS ANOTAN (BTTS)
     prob_no_gol_loc = np.exp(-goles_loc)
     prob_no_gol_vis = np.exp(-goles_vis)
     prob_btts_si = int(round((1 - prob_no_gol_loc) * (1 - prob_no_gol_vis) * 100))
@@ -823,14 +823,13 @@ def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_e
     edge_btts_s = round(prob_btts_si - ((1 / c_btts_s) * 100), 1)
     edge_btts_n = round(prob_btts_no - ((1 / c_btts_n) * 100), 1)
 
-    prob_over_model = int(round(min(90, max(10, 50 + (tot_goles_model - float(linea_goles)) * 25))))
-    edge_over = round(prob_over_model - ((1 / c_over) * 100), 1) if c_over > 1 else 0.0
+    edge_loc = round(prob_win_local - (inv_loc * 100), 1)
 
     badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_loc}% EV)</span>' if edge_loc >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
-    pick_1_str = f"Gana {nombre_local} (1X2) @ {cuota_loc} — Probabilidad Modelo: {prob_win_local}% | Ventaja: +{edge_loc}% EV"
+    pick_1_str = f"Gana {nombre_local} (1X2) @ {cuota_loc} — Probabilidad: {prob_win_local}%"
     pick_2_str = f"Doble Oportunidad: {nombre_local} o Empate (1X)"
-    pick_3_str = f"{'OVER' if tot_goles_model>=float(linea_goles) else 'UNDER'} de {linea_goles} Goles Totales @ {c_over if tot_goles_model>=float(linea_goles) else c_under}"
+    pick_3_str = f"{'OVER' if prob_over_goles>=0.5 else 'UNDER'} de {linea_goles} Goles Totales @ {c_over_goles if prob_over_goles>=0.5 else c_under_goles}"
 
     if edge_btts_s >= edge_btts_n and edge_btts_s >= 2.0:
         pick_4_str = f"Ambos Anotan: SÍ @ {c_btts_s} — Probabilidad: {prob_btts_si}% | Ventaja: +{edge_btts_s}% EV"
@@ -1384,11 +1383,11 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                     with gr.Column(scale=1):
                         with gr.Row():
                             drop_fut_loc = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Arsenal", label="Equipo Local", scale=3)
-                            img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"]["logo"], label="Local", width=50, height=50, show_label=False, scale=1)
+                            img_fut_loc = gr.Image(value=PREMIER_DICT["Arsenal"], label="Local", width=50, height=50, show_label=False, scale=1)
 
                         with gr.Row():
                             drop_fut_vis = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Chelsea", label="Equipo Visitante", scale=3)
-                            img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"]["logo"], label="Visitante", width=50, height=50, show_label=False, scale=1)
+                            img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=50, height=50, show_label=False, scale=1)
 
                         drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Champions/Europa League hace 3 días)"], value="No (Semana normal)", label="¿Fatiga Europea?")
 
@@ -1507,7 +1506,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     with gr.Column(visible=False) as vista_mlb:
         with gr.Row():
-            btn_volver_mlb = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
+            btn_volver_mlb = gr.Button("⬅️️ Volver al Menú Principal", variant="secondary", scale=1)
             gr.Markdown("## ⚾ **Área de Análisis: MLB Sabermétrica (Full Game, F5, NRFI, Team Totals & Props)**", scale=4)
 
         with gr.Tabs():
@@ -1610,10 +1609,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     st_dict_futbol_actual = gr.State(PREMIER_DICT)
 
     def actualizar_interfaz_fut(nombre_loc, nombre_vis, dict_actual):
-        d_loc = dict_actual.get(nombre_loc, {})
-        d_vis = dict_actual.get(nombre_vis, {})
-        logo_loc = d_loc.get("logo", "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png") if isinstance(d_loc, dict) else "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png"
-        logo_vis = d_vis.get("logo", "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png") if isinstance(d_vis, dict) else "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png"
+        logo_loc = dict_actual.get(nombre_loc, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        logo_vis = dict_actual.get(nombre_vis, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
         return logo_loc, logo_vis, gr.update(label=f"Cuota {nombre_loc} (1)"), gr.update(label=f"Cuota {nombre_vis} (2)")
 
     def actualizar_interfaz_nfl(nombre_loc, nombre_vis):
@@ -1660,10 +1657,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         loc_inicial = eqs[0]
         vis_inicial = eqs[1] if len(eqs) > 1 else eqs[0]
 
-        d_loc = diccionario_liga.get(loc_inicial, {})
-        d_vis = diccionario_liga.get(vis_inicial, {})
-        logo_loc = d_loc.get("logo", "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png") if isinstance(d_loc, dict) else "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png"
-        logo_vis = d_vis.get("logo", "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png") if isinstance(d_vis, dict) else "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png"
+        logo_loc = diccionario_liga.get(loc_inicial, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        logo_vis = diccionario_liga.get(vis_inicial, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
 
         return (
             gr.update(visible=False),
@@ -1773,4 +1768,4 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 # Vinculación de puerto para Render / Colab
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
-    app_mana.launch(server_name="0.0.0.0", server_port=port)
+    app_mana.launch(share=True, server_name="0.0.0.0", server_port=port)
