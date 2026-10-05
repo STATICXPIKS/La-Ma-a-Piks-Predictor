@@ -9,7 +9,7 @@ import xgboost as xgb
 import gradio as gr
 from scipy.stats import norm, poisson
 
-# Liberar puertos previos en Colab/Render
+# Liberar puertos previos
 gr.close_all()
 
 # =========================================
@@ -41,7 +41,6 @@ NFL_TEAM_IDS = {
     "Tennessee Titans": 10, "Washington Commanders": 28
 }
 
-# MAPEO DE COMPETENCIAS PARA API DE ESPN
 ESPN_SOCCER_LEAGUES = {
     "Premier League": "eng.1",
     "LaLiga EA Sports": "esp.1",
@@ -51,7 +50,6 @@ ESPN_SOCCER_LEAGUES = {
     "UEFA Nations League": "uefa.nations"
 }
 
-# Cache local para optimizar peticiones a la API
 STAT_CACHE_SOCCER = {}
 
 # =========================================
@@ -148,7 +146,7 @@ def calcular_metricas_historial():
     return stats, tot_wins, tot_loss, tot_global, pct_global
 
 # =========================================
-# FASE 2: MOTOR DE AUTO-APRENDIZAJE
+# MOTOR DE AUTO-APRENDIZAJE
 # =========================================
 FACTOR_AJUSTE_AUTO = {
     "NFL": 1.0, "MLB": 1.0, "PREMIER LEAGUE": 1.0, 
@@ -541,7 +539,6 @@ def obtener_estadisticas_soccer_api(nombre_liga, nombre_equipo):
                         if nombre_equipo.lower() in disp_name.lower() or disp_name.lower() in nombre_equipo.lower() or nombre_equipo.lower() in sh_name.lower():
                             t_id = t_info.get("id")
                             if t_id:
-                                # Consultar últimos resultados del equipo
                                 url_t = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{code_league}/teams/{t_id}/schedule"
                                 r_sched = requests.get(url_t, timeout=3)
                                 if r_sched.status_code == 200:
@@ -565,6 +562,52 @@ def obtener_estadisticas_soccer_api(nombre_liga, nombre_equipo):
     res = (max(0.5, goles_fFavor), max(0.5, goles_contra))
     STAT_CACHE_SOCCER[cache_key] = res
     return res
+
+# =========================================
+# FUNCIÓN AUTO-CARGAR PITCHERS MLB EN VIVO
+# =========================================
+def auto_cargar_pitchers_mlb(nombre_local, nombre_visita):
+    id_loc = EQUIPOS_MLB[nombre_local]["id"]
+    id_vis = EQUIPOS_MLB[nombre_visita]["id"]
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    url_sched = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={hoy}&endDate={hoy}&hydrate=probablePitcher"
+    p_loc_name, era_loc, whip_loc = "Abridor Local", 3.80, 1.20
+    p_vis_name, era_vis, whip_vis = "Abridor Visitante", 3.80, 1.20
+
+    try:
+        r = requests.get(url_sched, timeout=4)
+        if r.status_code == 200:
+            data = r.json()
+            dates = data.get("dates", [])
+            if dates:
+                games = dates[0].get("games", [])
+                for g in games:
+                    h_id = g.get("teams", {}).get("home", {}).get("team", {}).get("id")
+                    a_id = g.get("teams", {}).get("away", {}).get("team", {}).get("id")
+                    if h_id == id_loc or a_id == id_loc:
+                        p_loc_data = g.get("teams", {}).get("home", {}).get("probablePitcher", {})
+                        p_vis_data = g.get("teams", {}).get("away", {}).get("probablePitcher", {})
+                        p_loc_id, p_vis_id = p_loc_data.get("id"), p_vis_data.get("id")
+                        if p_loc_data.get("fullName"): p_loc_name = p_loc_data.get("fullName")
+                        if p_vis_data.get("fullName"): p_vis_name = p_vis_data.get("fullName")
+
+                        if p_loc_id:
+                            r_p1 = requests.get(f"https://statsapi.mlb.com/api/v1/people/{p_loc_id}?hydrate=stats(group=[pitching],type=[season])", timeout=3)
+                            if r_p1.status_code == 200:
+                                st1 = r_p1.json().get("people", [{}])[0].get("stats", [{}])[0].get("splits", [{}])[0].get("stat", {})
+                                era_loc, whip_loc = float(st1.get("era", 3.80)), float(st1.get("whip", 1.20))
+
+                        if p_vis_id:
+                            r_p2 = requests.get(f"https://statsapi.mlb.com/api/v1/people/{p_vis_id}?hydrate=stats(group=[pitching],type=[season])", timeout=3)
+                            if r_p2.status_code == 200:
+                                st2 = r_p2.json().get("people", [{}])[0].get("stats", [{}])[0].get("splits", [{}])[0].get("stat", {})
+                                era_vis, whip_vis = float(st2.get("era", 3.80)), float(st2.get("whip", 1.20))
+                        break
+    except Exception:
+        pass
+
+    status_msg = f"🟢 MLB API: {p_loc_name} ({era_loc} ERA) vs {p_vis_name} ({era_vis} ERA)"
+    return era_loc, whip_loc, era_vis, whip_vis, status_msg
 
 # =========================================
 # MODELOS DE ENTRENAMIENTO IA
@@ -614,7 +657,7 @@ model_mlb_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=
 recalibrar_modelos_auto()
 
 # =========================================
-# FUNCIONES DE SIMULACIÓN POISSON & APIS
+# FUNCIONES DE SIMULACIÓN
 # =========================================
 def simular_player_prop_mlb(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under, era_rival, whip_rival):
     linea = float(linea_casino)
@@ -816,7 +859,6 @@ def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_e
     gf_loc, gc_loc = obtener_estadisticas_soccer_api(liga, nombre_local)
     gf_vis, gc_vis = obtener_estadisticas_soccer_api(liga, nombre_visita)
 
-    # Promedio histórico de goles por liga
     prom_liga = 1.35
     mod_fatiga = 0.88 if "Sí" in fatiga_eur else 1.0
     mod_auto = FACTOR_AJUSTE_AUTO.get(liga.upper(), 1.0)
@@ -827,7 +869,6 @@ def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_e
     att_vis = gf_vis / prom_liga
     def_loc = gc_loc / prom_liga
 
-    # Factor localía (1.12x)
     xG_loc = max(0.2, round(att_loc * def_vis * prom_liga * 1.12 * mod_fatiga * mod_auto, 2))
     xG_vis = max(0.2, round(att_vis * def_loc * prom_liga * mod_auto, 2))
 
@@ -1505,7 +1546,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     with gr.Column(visible=False) as vista_nfl:
         with gr.Row():
-            btn_volver_nfl = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
+            btn_volver_nfl = gr.Button("⬅️️ Volver al Menú Principal", variant="secondary", scale=1)
             gr.Markdown("## 🏈 **Área de Análisis: NFL (32 Equipos)**", scale=4)
 
         with gr.Tabs():
