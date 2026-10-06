@@ -2290,3 +2290,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_save_prop_nba.click(fn=lambda text: fn_save_generic_prop("NBA", text), inputs=[st_prop_nba_rec_text], outputs=[lbl_save_prop_nba])
 
     app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
+
+# Vinculación de puerto para Render / Colab
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+    app_mana.launch(share=True, server_name="0.0.0.0", server_port=port)
