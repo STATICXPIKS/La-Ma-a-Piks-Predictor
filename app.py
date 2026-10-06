@@ -307,7 +307,7 @@ LOGOS_LIGAS = {
     "Serie A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg",
-    "NBA": "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png"
+    "NBA": "https://upload.wikimedia.org/wikipedia/en/0/03/National_Basketball_Association_logo.svg"
 }
 
 PREMIER_DICT = {
