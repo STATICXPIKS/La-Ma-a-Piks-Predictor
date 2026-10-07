@@ -496,6 +496,9 @@ CHAMPIONS_DICT = {
     "Bodø/Glimt": "https://a.espncdn.com/i/teamlogos/soccer/500/10365.png"
 }
 
+# =========================================
+# DICCIONARIO NBA Y PARÁMETROS AVANZADOS
+# =========================================
 NBA_DICT = {
     "Atlanta Hawks": {"abbr": "atl", "logo": "https://a.espncdn.com/i/teamlogos/nba/500/atl.png", "pace": 101.2, "hca": 2.2},
     "Boston Celtics": {"abbr": "bos", "logo": "https://a.espncdn.com/i/teamlogos/nba/500/bos.png", "pace": 98.8, "hca": 2.8},
@@ -780,208 +783,138 @@ model_mlb_diff = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth
 model_mlb_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
 
 recalibrar_modelos_auto()
+
 # =========================================================
-# MOTOR MULTIVARIABLE DE FÚTBOL (9 GRUPOS ANALÍTICOS)
+# MOTOR AVANZADO DE POSESIONES Y EFICIENCIA NBA
 # =========================================================
-def simular_partido_futbol_9grupos(
-    liga, nombre_local, nombre_visita,
-    xg_loc_casa, xga_loc_casa, xg_vis_fuera, xga_vis_fuera,
-    pts_ult5_loc, pts_ult5_vis,
-    shots_target_loc, big_chances_conced_vis,
-    bajas_loc, bajas_vis, descanso_dias_loc, descanso_dias_vis, cambio_dt,
-    cuota_loc, cuota_emp, cuota_vis, cuota_btts_s, cuota_btts_n,
-    cuota_o15, cuota_o25, cuota_o35, cuota_u25, cuota_ht_o05,
-    dict_actual
-):
-    logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
-    logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+def simular_partido_nba(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under, descanso_option):
+    logo_loc = NBA_DICT.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
+    logo_vis = NBA_DICT.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
 
-    base_xg_loc = (float(xg_loc_casa) * 0.65) + (float(xga_vis_fuera) * 0.35)
-    base_xg_vis = (float(xg_vis_fuera) * 0.65) + (float(xga_loc_casa) * 0.35)
+    pen_loc_off, pen_loc_def, r_loc_inj = obtener_lesionados_oficiales_nba(nombre_local)
+    pen_vis_off, pen_vis_def, r_vis_inj = obtener_lesionados_oficiales_nba(nombre_visita)
 
-    mod_forma_loc = 1.0 + ((float(pts_ult5_loc) - 7.5) / 50.0)
-    mod_forma_vis = 1.0 + ((float(pts_ult5_vis) - 7.5) / 50.0)
+    pf_loc, pc_loc = obtener_estadisticas_nba_api(nombre_local)
+    pf_vis, pc_vis = obtener_estadisticas_nba_api(nombre_visita)
 
-    conv_ataque_loc = 1.0 + ((float(shots_target_loc) - 4.5) * 0.03)
-    vuln_defensa_vis = 1.0 + ((float(big_chances_conced_vis) - 1.8) * 0.04)
+    pace_loc = NBA_DICT.get(nombre_local, {}).get("pace", 99.0)
+    pace_vis = NBA_DICT.get(nombre_visita, {}).get("pace", 99.0)
+    pace_liga = 99.2
 
-    mod_bajas_loc = max(0.65, 1.0 - (int(bajas_loc) * 0.07))
-    mod_bajas_vis = max(0.65, 1.0 - (int(bajas_vis) * 0.07))
-    mod_dt = 1.05 if "Sí" in cambio_dt else 1.0
+    # 1. Proyección Exacta de Posesiones (Pace)
+    pace_proyectado = (pace_loc * pace_vis) / pace_liga
 
-    mod_fatiga_loc = 0.90 if float(descanso_dias_loc) < 3.5 else 1.0
-    mod_fatiga_vis = 0.90 if float(descanso_dias_vis) < 3.5 else 1.0
+    # 2. Eficiencia Ofensiva (ORTG) y Defensiva (DRTG) por 100 Posesiones
+    ortg_loc = ((pf_loc / pace_loc) * 100) - pen_loc_off
+    drtg_loc = ((pc_loc / pace_loc) * 100) + pen_loc_def
 
-    mod_auto = FACTOR_AJUSTE_AUTO.get(liga.upper(), 1.0)
+    ortg_vis = ((pf_vis / pace_vis) * 100) - pen_vis_off
+    drtg_vis = ((pc_vis / pace_vis) * 100) + pen_vis_def
 
-    lambda_loc = max(0.2, round(base_xg_loc * mod_forma_loc * conv_ataque_loc * vuln_defensa_vis * mod_bajas_loc * mod_dt * mod_fatiga_loc * mod_auto, 2))
-    lambda_vis = max(0.2, round(base_xg_vis * mod_forma_vis * mod_bajas_vis * mod_fatiga_vis * mod_auto, 2))
+    media_ortg_liga = 114.0
 
-    max_goles = 7
-    p_loc = [poisson.pmf(i, lambda_loc) for i in range(max_goles)]
-    p_vis = [poisson.pmf(j, lambda_vis) for j in range(max_goles)]
+    # 3. Factor Carga de Viaje y B2B
+    pen_descanso_loc = -3.2 if "Local" in descanso_option else 0.0
+    pen_descanso_vis = -3.2 if "Visitante" in descanso_option else 0.0
 
-    prob_win_loc, prob_emp, prob_win_vis = 0.0, 0.0, 0.0
-    prob_o15, prob_o25, prob_o35 = 0.0, 0.0, 0.0
-    prob_btts = 0.0
+    # 4. Localía Dinámica y Altitud (HCA)
+    hca_loc = NBA_DICT.get(nombre_local, {}).get("hca", 2.3)
 
-    for i in range(max_goles):
-        for j in range(max_goles):
-            prob = p_loc[i] * p_vis[j]
-            if i > j: prob_win_loc += prob
-            elif i == j: prob_emp += prob
-            else: prob_win_vis += prob
+    # 5. Cruzar Ortg vs Drtg Ajustado
+    off_efectiva_loc = (ortg_loc * drtg_vis) / media_ortg_liga
+    off_efectiva_vis = (ortg_vis * drtg_loc) / media_ortg_liga
 
-            if (i + j) > 1.5: prob_o15 += prob
-            if (i + j) > 2.5: prob_o25 += prob
-            if (i + j) > 3.5: prob_o35 += prob
-            if i > 0 and j > 0: prob_btts += prob
+    pts_loc_est = round(((off_efectiva_loc / 100) * pace_proyectado) + hca_loc + pen_descanso_loc, 1)
+    pts_vis_est = round(((off_efectiva_vis / 100) * pace_proyectado) + pen_descanso_vis, 1)
 
-    lambda_ht = (lambda_loc + lambda_vis) * 0.43
-    prob_ht_o05 = round((1.0 - poisson.pmf(0, lambda_ht)) * 100, 1)
+    diff_pts = pts_loc_est - pts_vis_est
+    prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 11.2) * 100))))
+    prob_win_visita = 100 - prob_win_local
 
-    pct_loc = int(round(prob_win_loc * 100))
-    pct_vis = int(round(prob_win_vis * 100))
-    pct_emp = max(5, 100 - pct_loc - pct_vis)
+    prob_impl_ml_loc = (1 / float(cuota_ml_loc)) * 100 if float(cuota_ml_loc) > 1 else 50.0
+    prob_impl_ml_vis = (1 / float(cuota_ml_vis)) * 100 if float(cuota_ml_vis) > 1 else 50.0
 
-    pct_o15, pct_o25, pct_o35 = int(round(prob_o15 * 100)), int(round(prob_o25 * 100)), int(round(prob_o35 * 100))
-    pct_btts = int(round(prob_btts * 100))
+    edge_ml_loc = round(prob_win_local - prob_impl_ml_loc, 1)
+    edge_ml_vis = round(prob_win_visita - prob_impl_ml_vis, 1)
 
-    c_loc, c_vis = float(cuota_loc), float(cuota_vis)
-    ev_loc = round(pct_loc - ((1.0 / c_loc) * 100 if c_loc > 1 else 50.0), 1)
-    ev_vis = round(pct_vis - ((1.0 / c_vis) * 100 if c_vis > 1 else 50.0), 1)
-
-    if ev_loc >= ev_vis and ev_loc >= 2.0:
-        pick_1_str = f"Gana {nombre_local} (1X2) @ {cuota_loc} — Probabilidad: {pct_loc}% | Ventaja: +{ev_loc}% EV"
-        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{ev_loc}% EV)</span>'
-    elif ev_vis > ev_loc and ev_vis >= 2.0:
-        pick_1_str = f"Gana {nombre_visita} (1X2) @ {cuota_vis} — Probabilidad: {pct_vis}% | Ventaja: +{ev_vis}% EV"
-        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{ev_vis}% EV)</span>'
+    if edge_ml_loc >= edge_ml_vis and edge_ml_loc >= 3.0:
+        pick_1_str = f"{nombre_local} ML @ {cuota_ml_loc} — Probabilidad: {prob_win_local}% | Ventaja: +{edge_ml_loc}% EV"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_loc}% EV)</span>'
+    elif edge_ml_vis > edge_ml_loc and edge_ml_vis >= 3.0:
+        pick_1_str = f"{nombre_visita} ML @ {cuota_ml_vis} — Probabilidad: {prob_win_visita}% | Ventaja: +{edge_ml_vis}% EV"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_vis}% EV)</span>'
     else:
-        fav_n = nombre_local if pct_loc >= pct_vis else nombre_visita
-        pick_1_str = f"Gana {fav_n} (1X2) — Probabilidad: {max(pct_loc, pct_vis)}%"
-        badge_1 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+        fav_name = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
+        fav_prob = max(prob_win_local, prob_win_visita)
+        fav_cuota = cuota_ml_loc if prob_win_local >= prob_win_visita else cuota_ml_vis
+        fav_edge = max(edge_ml_loc, edge_ml_vis)
+        pick_1_str = f"{fav_name} ML @ {fav_cuota} — Probabilidad: {fav_prob}% | Ventaja: {fav_edge}% EV"
+        badge_1 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
-    pick_2_str = f"Doble Oportunidad: {nombre_local if pct_loc >= pct_vis else nombre_visita} o Empate"
+    p_cubre_sp_loc = round(norm.cdf((diff_pts + float(sp_loc_val)) / 11.2) * 100, 1)
+    p_cubre_sp_vis = round(norm.cdf(((-diff_pts) + float(sp_vis_val)) / 11.2) * 100, 1)
 
-    c_o25 = float(cuota_o25) if float(cuota_o25) > 1 else 1.85
-    ev_o25 = round(pct_o25 - ((1.0 / c_o25) * 100), 1)
-    if ev_o25 >= 2.0:
-        pick_3_str = f"OVER 2.5 Goles @ {c_o25} — Probabilidad: {pct_o25}% | Ventaja: +{ev_o25}% EV"
-        badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{ev_o25}% EV)</span>'
-    else:
-        pick_3_str = f"UNDER 2.5 Goles @ {cuota_u25} — Probabilidad: {100 - pct_o25}%"
-        badge_3 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+    prob_impl_sp_loc = (1 / float(cuota_sp_loc)) * 100 if float(cuota_sp_loc) > 1 else 50.0
+    edge_sp_loc = round(p_cubre_sp_loc - prob_impl_sp_loc, 1)
 
-    c_btts = float(cuota_btts_s) if float(cuota_btts_s) > 1 else 1.80
-    ev_btts = round(pct_btts - ((1.0 / c_btts) * 100), 1)
-    pick_4_str = f"Ambos Anotan (BTTS): SÍ @ {c_btts} — Probabilidad: {pct_btts}% | Ventaja: +{ev_btts}% EV"
-    badge_4 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{ev_btts}% EV)</span>' if ev_btts >= 2.0 else '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+    pick_2_str = f"{nombre_local if p_cubre_sp_loc >= p_cubre_sp_vis else nombre_visita} Spread ({sp_loc_val if p_cubre_sp_loc >= p_cubre_sp_vis else sp_vis_val}) @ {cuota_sp_loc if p_cubre_sp_loc >= p_cubre_sp_vis else cuota_sp_vis}"
+    badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_sp_loc}% EV)</span>' if edge_sp_loc >= 2.5 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
-    c_ht = float(cuota_ht_o05) if float(cuota_ht_o05) > 1 else 1.40
-    ev_ht = round(prob_ht_o05 - ((1.0 / c_ht) * 100), 1)
-    pick_5_str = f"Gol en 1.ª Parte (Over 0.5 HT) @ {c_ht} — Probabilidad: {prob_ht_o05}% | Ventaja: +{ev_ht}% EV"
+    tot_est_real = pts_loc_est + pts_vis_est
+    dif_total = tot_est_real - float(linea_total)
+    tipo_tot = "OVER" if dif_total >= 0 else "UNDER"
+    cuota_tot_fav = cuota_tot_over if tipo_tot == "OVER" else cuota_tot_under
+    prob_tot = min(88, int(50 + abs(dif_total) * 3.5))
+
+    pick_3_str = f"{tipo_tot} de {linea_total} pts @ {cuota_tot_fav} — Probabilidad: {prob_tot}% (Proyección: {tot_est_real:.1f} pts en {pace_proyectado:.1f} pos)"
+    badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if abs(dif_total) >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
     html_out = f"""
     <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MOTOR FÚTBOL MULTIVARIABLE (9 GRUPOS)</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD PONDERADA: 79.8%</div>
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MOTOR SABERMÉTRICO DE POSESIONES (PACE & EPM)</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 78.2%</div>
+        </div>
+
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
+            {r_loc_inj}
+            {r_vis_inj}
         </div>
 
         <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({lambda_vis:.2f} xG Proyectado)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_vis_est:.1f} pts | Ortg: {ortg_vis:.1f})</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{pct_vis}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({lambda_loc:.2f} xG Proyectado)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_loc_est:.1f} pts | Ortg: {ortg_loc:.1f})</span>
                 </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{pct_loc}%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
             </div>
-            <div style="text-align: center; font-size: 12px; font-weight: 700; color: #64748B;">Probabilidad de Empate: {pct_emp}%</div>
+            <div style="text-align: center; font-size: 11px; font-weight: 700; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 6px;">
+                Ritmo Proyectado: {pace_proyectado:.1f} Posesiones | HCA Local: +{hca_loc} pts
+            </div>
         </div>
 
-        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES Y MERCADOS DE GOLES (GRUPO 7)</div>
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</div>
         <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Ganador Directo (1X2): {pick_1_str}</div></div>{badge_1}
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div>{badge_1}
         </div>
         <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Línea de Goles: {pick_3_str}</div></div>{badge_3}
-        </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Ambos Anotan (BTTS): {pick_4_str}</div></div>{badge_4}
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Spread Recomendado: {pick_2_str}</div></div>{badge_2}
         </div>
         <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">4. Primera Mitad: {pick_5_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales (O/U): {pick_3_str}</div></div>{badge_3}
         </div>
     </div>
     """
-    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, pick_5_str, f"{nombre_local} vs {nombre_visita}"
-
-def simular_player_prop_nba(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under):
-    linea = float(linea_casino)
-    c_over, c_under = float(cuota_over), float(cuota_under)
-
-    if "Puntos" in tipo_prop:
-        proyeccion = round(24.5 + np.random.normal(0, 3.5), 1)
-        unidad = "Pts"
-    elif "Rebotes" in tipo_prop:
-        proyeccion = round(7.5 + np.random.normal(0, 1.2), 1)
-        unidad = "Reb"
-    elif "Asistencias" in tipo_prop:
-        proyeccion = round(6.2 + np.random.normal(0, 1.1), 1)
-        unidad = "Ast"
-    elif "Triples" in tipo_prop:
-        proyeccion = round(2.8 + np.random.normal(0, 0.5), 1)
-        unidad = "3PM"
-    else:
-        proyeccion = round(34.5 + np.random.normal(0, 4.0), 1)
-        unidad = "PRA"
-
-    prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 12)))
-    prob_under = 100 - prob_over
-
-    prob_impl_over = (1 / c_over) * 100 if c_over > 1 else 50.0
-    ev_over = round(prob_over - prob_impl_over, 1)
-
-    if ev_over >= 2.0:
-        rec_str = f"OVER de {linea} {unidad} para {nombre_jugador} @ {c_over}"
-        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET OVER 🔥 (+{ev_over}% EV)</span>'
-    else:
-        rec_str = f"UNDER de {linea} {unidad} para {nombre_jugador} @ {c_under}"
-        badge = '<span style="background: #3B82F6; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">MAYBE ⚡</span>'
-
-    html_prop = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #0F172A;">
-        <div style="font-size: 16px; font-weight: 900; color: #065F46; border-bottom: 1px solid #ECFDF5; padding-bottom: 8px; margin-bottom: 12px;">
-            🏀 ANÁLISIS DE PLAYER PROP NBA: {nombre_jugador.upper()} ({tipo_prop})
-        </div>
-        <div style="background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <div style="font-size: 13px; color: #64748B;">Proyección del Modelo:</div>
-                <div style="font-size: 24px; font-weight: 900; color: #059669;">{proyeccion} {unidad}</div>
-            </div>
-            <div style="text-align: right;">
-                <div style="font-size: 13px; color: #64748B;">Línea de Casino:</div>
-                <div style="font-size: 24px; font-weight: 900; color: #0F172A;">{linea}</div>
-            </div>
-        </div>
-        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <div style="font-size: 14px; font-weight: 800; color: #064E3B;">{rec_str}</div>
-            </div>
-            {badge}
-        </div>
-    </div>
-    """
-    return html_prop, rec_str
+    return html_out, pick_1_str, pick_2_str, pick_3_str, "", f"{nombre_local} vs {nombre_visita}"
 
 def simular_player_prop_mlb(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under, era_rival, whip_rival):
     linea = float(linea_casino)
@@ -1172,6 +1105,199 @@ def simular_prop_futbol(nombre_item, tipo_prop, linea_casino, cuota_over, cuota_
     """
     return html_prop, rec_str
 
+def simular_partido_futbol(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, cuota_btts_si, cuota_btts_no, linea_goles, cuota_goles_over, cuota_goles_under, fatiga_eur, dict_actual):
+    logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+    logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+
+    gf_loc, gc_loc = obtener_estadisticas_soccer_api(liga, nombre_local)
+    gf_vis, gc_vis = obtener_estadisticas_soccer_api(liga, nombre_visita)
+
+    prom_liga = 1.35
+    mod_fatiga = 0.88 if "Sí" in fatiga_eur else 1.0
+    mod_auto = FACTOR_AJUSTE_AUTO.get(liga.upper(), 1.0)
+
+    att_loc = gf_loc / prom_liga
+    def_vis = gc_vis / prom_liga
+    att_vis = gf_vis / prom_liga
+    def_loc = gc_loc / prom_liga
+
+    xG_loc = max(0.2, round(att_loc * def_vis * prom_liga * 1.12 * mod_fatiga * mod_auto, 2))
+    xG_vis = max(0.2, round(att_vis * def_loc * prom_liga * mod_auto, 2))
+
+    max_goles = 7
+    p_loc = [poisson.pmf(i, xG_loc) for i in range(max_goles)]
+    p_vis = [poisson.pmf(j, xG_vis) for j in range(max_goles)]
+
+    prob_win_local, prob_empate, prob_win_visita = 0.0, 0.0, 0.0
+    prob_over_line, prob_btts_si = 0.0, 0.0
+    linea_g = float(linea_goles)
+
+    for i in range(max_goles):
+        for j in range(max_goles):
+            prob_mat = p_loc[i] * p_vis[j]
+            if i > j: prob_win_local += prob_mat
+            elif i == j: prob_empate += prob_mat
+            else: prob_win_visita += prob_mat
+
+            if (i + j) > linea_g:
+                prob_over_line += prob_mat
+
+            if i > 0 and j > 0:
+                prob_btts_si += prob_mat
+
+    prob_loc_pct = int(round(prob_win_local * 100))
+    prob_vis_pct = int(round(prob_win_visita * 100))
+    prob_emp_pct = max(5, 100 - prob_loc_pct - prob_vis_pct)
+
+    prob_over_pct = int(round(prob_over_line * 100))
+    prob_btts_pct = int(round(prob_btts_si * 100))
+    prob_btts_no_pct = 100 - prob_btts_pct
+
+    c_loc, c_vis = float(cuota_loc), float(cuota_vis)
+    c_over, c_under = float(cuota_goles_over), float(cuota_goles_under)
+    c_btts_s, c_btts_n = float(cuota_btts_si), float(cuota_btts_no)
+
+    ev_loc = round(prob_loc_pct - ((1.0 / c_loc) * 100 if c_loc > 1 else 50.0), 1)
+    ev_vis = round(prob_vis_pct - ((1.0 / c_vis) * 100 if c_vis > 1 else 50.0), 1)
+
+    if ev_loc >= ev_vis and ev_loc >= 2.0:
+        pick_1_str = f"Gana {nombre_local} (1X2) @ {cuota_loc} — Probabilidad Modelo: {prob_loc_pct}% | Ventaja: +{ev_loc}% EV"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{ev_loc}% EV)</span>'
+    elif ev_vis > ev_loc and ev_vis >= 2.0:
+        pick_1_str = f"Gana {nombre_visita} (1X2) @ {cuota_vis} — Probabilidad Modelo: {prob_vis_pct}% | Ventaja: +{ev_vis}% EV"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{ev_vis}% EV)</span>'
+    else:
+        fav_n = nombre_local if prob_loc_pct >= prob_vis_pct else nombre_visita
+        fav_p = max(prob_loc_pct, prob_vis_pct)
+        fav_c = c_loc if prob_loc_pct >= prob_vis_pct else c_vis
+        fav_ev = max(ev_loc, ev_vis)
+        pick_1_str = f"Gana {fav_n} (1X2) @ {fav_c} — Probabilidad Modelo: {fav_p}% | Ventaja: {fav_ev}% EV"
+        badge_1 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+
+    pick_2_str = f"Doble Oportunidad: {nombre_local if prob_loc_pct >= prob_vis_pct else nombre_visita} o Empate"
+
+    ev_over = round(prob_over_pct - ((1.0 / c_over) * 100 if c_over > 1 else 50.0), 1)
+    ev_under = round((100 - prob_over_pct) - ((1.0 / c_under) * 100 if c_under > 1 else 50.0), 1)
+
+    if ev_over >= ev_under and ev_over >= 2.0:
+        pick_3_str = f"OVER de {linea_goles} Goles @ {c_over} — Probabilidad: {prob_over_pct}% | Ventaja: +{ev_over}% EV"
+    else:
+        pick_3_str = f"UNDER de {linea_goles} Goles @ {c_under} — Probabilidad: {100 - prob_over_pct}% | Ventaja: {ev_under}% EV"
+
+    ev_btts_s = round(prob_btts_pct - ((1.0 / c_btts_s) * 100 if c_btts_s > 1 else 50.0), 1)
+    ev_btts_n = round(prob_btts_no_pct - ((1.0 / c_btts_n) * 100 if c_btts_n > 1 else 50.0), 1)
+
+    if ev_btts_s >= ev_btts_n and ev_btts_s >= 2.0:
+        pick_4_str = f"Ambos Anotan: SÍ @ {c_btts_s} — Probabilidad: {prob_btts_pct}% | Ventaja: +{ev_btts_s}% EV"
+        badge_btts = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 SÍ (+{ev_btts_s}% EV)</span>'
+    elif ev_btts_n > ev_btts_s and ev_btts_n >= 2.0:
+        pick_4_str = f"Ambos Anotan: NO @ {c_btts_n} — Probabilidad: {prob_btts_no_pct}% | Ventaja: +{ev_btts_n}% EV"
+        badge_btts = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 NO (+{ev_btts_n}% EV)</span>'
+    else:
+        pick_4_str = f"Ambos Anotan: {'SÍ' if prob_btts_pct>=50 else 'NO'} — Probabilidad: {max(prob_btts_pct, prob_btts_no_pct)}%"
+        badge_btts = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+
+    html_out = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO POISSON & API EN VIVO ({liga.upper()})</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD POISSON: 75.4%</div>
+        </div>
+
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({xG_vis:.2f} xG)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_vis_pct}%</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({xG_loc:.2f} xG)</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_loc_pct}%</span>
+            </div>
+            <div style="text-align: center; font-size: 12px; font-weight: 700; color: #64748B;">Probabilidad de Empate: {prob_emp_pct}%</div>
+        </div>
+
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Ganador Directo: {pick_1_str}</div></div>{badge_1}
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Doble Oportunidad: {pick_2_str}</div></div><span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales: {pick_3_str}</div></div><span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">4. Ambos Anotan (BTTS): {pick_4_str}</div></div>{badge_btts}
+        </div>
+    </div>
+    """
+    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
+
+def simular_player_prop_nba(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under):
+    linea = float(linea_casino)
+    c_over, c_under = float(cuota_over), float(cuota_under)
+
+    if "Puntos" in tipo_prop:
+        proyeccion = round(24.5 + np.random.normal(0, 3.5), 1)
+        unidad = "Pts"
+    elif "Rebotes" in tipo_prop:
+        proyeccion = round(7.5 + np.random.normal(0, 1.2), 1)
+        unidad = "Reb"
+    elif "Asistencias" in tipo_prop:
+        proyeccion = round(6.2 + np.random.normal(0, 1.1), 1)
+        unidad = "Ast"
+    elif "Triples" in tipo_prop:
+        proyeccion = round(2.8 + np.random.normal(0, 0.5), 1)
+        unidad = "3PM"
+    else:
+        proyeccion = round(34.5 + np.random.normal(0, 4.0), 1)
+        unidad = "PRA"
+
+    prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 12)))
+    prob_under = 100 - prob_over
+
+    prob_impl_over = (1 / c_over) * 100 if c_over > 1 else 50.0
+    ev_over = round(prob_over - prob_impl_over, 1)
+
+    if ev_over >= 2.0:
+        rec_str = f"OVER de {linea} {unidad} para {nombre_jugador} @ {c_over}"
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET OVER 🔥 (+{ev_over}% EV)</span>'
+    else:
+        rec_str = f"UNDER de {linea} {unidad} para {nombre_jugador} @ {c_under}"
+        badge = '<span style="background: #3B82F6; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">MAYBE ⚡</span>'
+
+    html_prop = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="font-size: 16px; font-weight: 900; color: #065F46; border-bottom: 1px solid #ECFDF5; padding-bottom: 8px; margin-bottom: 12px;">
+            🏀 ANÁLISIS DE PLAYER PROP NBA: {nombre_jugador.upper()} ({tipo_prop})
+        </div>
+        <div style="background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 13px; color: #64748B;">Proyección del Modelo:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #059669;">{proyeccion} {unidad}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 13px; color: #64748B;">Línea de Casino:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #0F172A;">{linea}</div>
+            </div>
+        </div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 14px; font-weight: 800; color: #064E3B;">{rec_str}</div>
+            </div>
+            {badge}
+        </div>
+    </div>
+    """
+    return html_prop, rec_str
+
 def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_loc, era_bp_loc, whip_bp_loc, xera_vis, whip_vis, era_bp_vis, whip_bp_vis, cuota_loc_dec, cuota_vis_dec, rl_loc_val, cuota_rl_loc, rl_vis_val, cuota_rl_vis, cuota_f5_loc, cuota_f5_vis, linea_tot_carreras, linea_team_loc, cuota_team_loc_over, cuota_team_loc_under, linea_team_vis, cuota_team_vis_over, cuota_team_vis_under, cuota_nrfi, cuota_yrfi):
     loc_d, vis_d = EQUIPOS_MLB[nombre_local], EQUIPOS_MLB[nombre_visita]
     logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
@@ -1342,6 +1468,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     off_vis = (DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0) - pen_vis_off) * mod_auto
     def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 21.5) + pen_vis_def
 
+    # Pasar matriz pura de NumPy para evitar advertencias de nombres de columnas en XGBoost
     input_data = [[off_loc, def_loc, off_vis, def_vis]]
     
     try:
@@ -1594,6 +1721,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         </div>
         """)
 
+        # FILA 1: BOTONES DE LIGAS (ARRIBA)
         with gr.Row():
             with gr.Column(scale=1, min_width=75):
                 gr.HTML(render_logo_html(LOGOS_LIGAS["Premier League"]))
@@ -1631,6 +1759,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                 gr.HTML(render_logo_html(LOGOS_LIGAS["NBA"]))
                 btn_nba = gr.Button("Analizar ➔", variant="primary", size="sm")
 
+        # FILA 2: MINI HISTOGRAMAS TRICOLOR POR LIGA
         with gr.Row():
             kpi_premier_out = gr.HTML()
             kpi_laliga_out = gr.HTML()
@@ -1644,6 +1773,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
         gr.Markdown("<br>")
 
+        # FILA 3: GESTOR POR ID (IZQUIERDA) Y VELOCÍMETRO 3D (DERECHA)
         with gr.Row():
             with gr.Column(scale=1):
                 gr.Markdown("### 🛠️ **Gestor Directo por ID**")
@@ -1657,19 +1787,20 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
         gr.Markdown("### 📋 **TABLERO HISTÓRICO DE CONTROL Y SEGUIMIENTO**")
 
+        # FILA 4: TABLERO EN 3 COLUMNAS ABAJO DE TODO
         with gr.Row():
             html_pending_out = gr.HTML()
             html_wins_out = gr.HTML()
             html_losses_out = gr.HTML()
 
-    # VISTA FÚTBOL MULTIVARIABLE (9 GRUPOS ANALÍTICOS)
+    # VISTA FÚTBOL
     with gr.Column(visible=False) as vista_fut:
         with gr.Row():
             btn_volver_fut = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
-            txt_titulo_liga = gr.Markdown("## ⚽ **Área de Análisis de Fútbol (Motor 9 Grupos)**", scale=4)
+            txt_titulo_liga = gr.Markdown("## ⚽ **Área de Análisis de Fútbol**", scale=4)
 
         with gr.Tabs():
-            with gr.TabItem("📊 Análisis Multivariable de Partido"):
+            with gr.TabItem("📊 Análisis de Partido"):
                 with gr.Row():
                     with gr.Column(scale=1):
                         with gr.Row():
@@ -1680,59 +1811,35 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                             drop_fut_vis = gr.Dropdown(choices=list(PREMIER_DICT.keys()), value="Chelsea", label="Equipo Visitante", scale=3)
                             img_fut_vis = gr.Image(value=PREMIER_DICT["Chelsea"], label="Visitante", width=50, height=50, show_label=False, scale=1)
 
-                        gr.Markdown("#### ⚽ **1 & 2. Expected Goals (xG) & Concedidos (xGA)**")
-                        with gr.Row():
-                            num_xg_loc_casa = gr.Number(value=1.95, label="xG Local (En Casa)")
-                            num_xga_loc_casa = gr.Number(value=0.85, label="xGA Concedido Local")
-                        with gr.Row():
-                            num_xg_vis_fuera = gr.Number(value=1.45, label="xG Visitante (Fuera)")
-                            num_xga_vis_fuera = gr.Number(value=1.30, label="xGA Concedido Visitante")
+                        drop_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Jugó Champions/Europa League hace 3 días)"], value="No (Semana normal)", label="¿Fatiga Europea?")
 
-                        gr.Markdown("#### 📈 **3 & 4. Forma Reciente & Puntos (Últimos 5 Partidos)**")
+                        gr.Markdown("#### ⚽ Cuotas 1X2 (Casino)")
                         with gr.Row():
-                            num_pts_ult5_loc = gr.Number(value=11.0, label="Pts Últimos 5 (Local - máx 15)")
-                            num_pts_ult5_vis = gr.Number(value=7.0, label="Pts Últimos 5 (Visitante - máx 15)")
-
-                        gr.Markdown("#### 🎯 **5 & 6. Ataque & Defensa (Métricas de Calidad)**")
-                        with gr.Row():
-                            num_shots_target_loc = gr.Number(value=5.5, label="Tiros a Puerta/Juego (Local)")
-                            num_big_chances_conced_vis = gr.Number(value=2.1, label="Grandes Ocasiones Concedidas (Visitante)")
-
-                        gr.Markdown("#### 👥 **8 & 9. Bajas Clave, DT & Calendario (Fatiga)**")
-                        with gr.Row():
-                            num_bajas_loc = gr.Number(value=1, label="Bajas Titulares (Local)")
-                            num_bajas_vis = gr.Number(value=2, label="Bajas Titulares (Visitante)")
-                        with gr.Row():
-                            num_descanso_dias_loc = gr.Number(value=6.0, label="Días Descanso (Local)")
-                            num_descanso_dias_vis = gr.Number(value=3.0, label="Días Descanso (Visitante)")
-                        drop_cambio_dt = gr.Dropdown(choices=["No", "Sí (Estreno de DT en Local)"], value="No", label="¿Efecto Entrenador Nuevo?")
-
-                        gr.Markdown("#### 🔥 **7. Cuotas de Casino (1X2, BTTS & Over/Under)**")
-                        with gr.Row():
-                            num_fut_c_loc = gr.Number(value=1.85, label="Cuota Local (1)")
+                            num_fut_c_loc = gr.Number(value=1.85, label="Cuota Arsenal (1)")
                             num_fut_c_emp = gr.Number(value=3.60, label="Cuota Empate (X)")
-                            num_fut_c_vis = gr.Number(value=4.20, label="Cuota Visitante (2)")
-                        with gr.Row():
-                            num_fut_c_btts_si = gr.Number(value=1.80, label="Cuota BTTS SÍ")
-                            num_fut_c_btts_no = gr.Number(value=1.95, label="Cuota BTTS NO")
-                        with gr.Row():
-                            num_fut_c_o15 = gr.Number(value=1.28, label="Cuota Over 1.5")
-                            num_fut_c_o25 = gr.Number(value=1.85, label="Cuota Over 2.5")
-                            num_fut_c_o35 = gr.Number(value=3.20, label="Cuota Over 3.5")
-                        with gr.Row():
-                            num_fut_c_u25 = gr.Number(value=1.95, label="Cuota Under 2.5")
-                            num_fut_c_ht_o05 = gr.Number(value=1.40, label="Cuota HT Over 0.5 (1.ª Mitad)")
+                            num_fut_c_vis = gr.Number(value=4.20, label="Cuota Chelsea (2)")
 
-                        btn_sim_fut = gr.Button("Simular Partido Fútbol (9 Grupos) 🚀", variant="primary")
+                        gr.Markdown("#### ⚽ Cuotas Ambos Anotan (BTTS)")
+                        with gr.Row():
+                            num_fut_c_btts_si = gr.Number(value=1.80, label="Cuota Ambos Anotan: SÍ")
+                            num_fut_c_btts_no = gr.Number(value=1.95, label="Cuota Ambos Anotan: NO")
+
+                        gr.Markdown("#### ⚽ Línea de Goles y Cuotas (Over/Under)")
+                        num_fut_linea_tot = gr.Number(value=2.5, label="Línea Total Goles (O/U)")
+                        with gr.Row():
+                            num_fut_c_over = gr.Number(value=1.85, label="Cuota OVER")
+                            num_fut_c_under = gr.Number(value=1.95, label="Cuota UNDER")
+
+                        btn_sim_fut = gr.Button("Simular Partido 🚀", variant="primary")
 
                         gr.Markdown("---")
-                        rad_pick_fut = gr.Radio(choices=["Selección 1 (1X2)", "Selección 2 (Doble Op.)", "Selección 3 (Over/Under 2.5)", "Selección 4 (BTTS)", "Selección 5 (Gol HT)"], label="Pick a guardar")
+                        rad_pick_fut = gr.Radio(choices=["Selección 1 (1X2)", "Selección 2 (Doble Op.)", "Selección 3 (Totales)", "Selección 4 (Ambos Anotan BTTS)"], label="Pick a guardar")
                         btn_save_fut = gr.Button("Guardar Pick en Historial 💾", variant="secondary")
                         lbl_save_fut = gr.Markdown("")
 
                     with gr.Column(scale=2):
                         out_fut = gr.HTML()
-                        st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match = gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State("")
+                        st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match = gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State("")
 
             with gr.TabItem("⚽ Córners & Props de Jugador"):
                 with gr.Row():
@@ -2136,23 +2243,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_nfl_cuota_ml_loc, num_nfl_cuota_ml_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis, num_nfl_tot, num_nfl_cuota_tot_over, num_nfl_cuota_tot_under], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match])
     btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_mlb_tot, num_linea_team_loc, num_cuota_team_loc_over, num_cuota_team_loc_under, num_linea_team_vis, num_cuota_team_vis_over, num_cuota_team_vis_under, num_cuota_nrfi, num_cuota_yrfi], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match])
-    
-    # Vinculación del simulador Multivariable de Fútbol (9 Grupos)
-    btn_sim_fut.click(
-        fn=simular_partido_futbol_9grupos,
-        inputs=[
-            st_liga_activa, drop_fut_loc, drop_fut_vis,
-            num_xg_loc_casa, num_xga_loc_casa, num_xg_vis_fuera, num_xga_vis_fuera,
-            num_pts_ult5_loc, num_pts_ult5_vis,
-            num_shots_target_loc, num_big_chances_conced_vis,
-            num_bajas_loc, num_bajas_vis, num_descanso_dias_loc, num_descanso_dias_vis, drop_cambio_dt,
-            num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_c_btts_si, num_fut_c_btts_no,
-            num_fut_c_o15, num_fut_c_o25, num_fut_c_o35, num_fut_c_u25, num_fut_c_ht_o05,
-            st_dict_futbol_actual
-        ],
-        outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match]
-    )
-
+    btn_sim_fut.click(fn=simular_partido_futbol, inputs=[st_liga_activa, drop_fut_loc, drop_fut_vis, num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_c_btts_si, num_fut_c_btts_no, num_fut_linea_tot, num_fut_c_over, num_fut_c_under, drop_fatiga, st_dict_futbol_actual], outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match])
     btn_sim_nba.click(fn=simular_partido_nba, inputs=[drop_nba_loc, drop_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis, num_nba_tot, num_nba_cuota_tot_over, num_nba_cuota_tot_under, drop_descanso_nba], outputs=[out_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match])
 
     btn_sim_prop.click(fn=simular_player_prop_mlb, inputs=[txt_prop_player_name, drop_prop_type, num_prop_line, num_prop_cuota_over, num_prop_cuota_under, num_xera_vis, num_whip_vis], outputs=[out_prop_mlb, st_prop_rec_text])
@@ -2172,10 +2263,10 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         guardar_pick_db("MLB", match, sel_text, radio_sel, 1.90, "+5.2%")
         return f"✅ Pick de MLB guardado: {sel_text}"
 
-    def fn_save_pick_fut(radio_sel, p1, p2, p3, p4, p5, match, liga):
+    def fn_save_pick_fut(radio_sel, p1, p2, p3, p4, match, liga):
         if not match: return "⚠️ Primero debes simular el partido."
-        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else (p4 if "4" in radio_sel else p5)))
-        guardar_pick_db(f"FÚTBOL ({liga})", match, sel_text, radio_sel, 1.85, "+4.5%")
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else p4))
+        guardar_pick_db(f"FÚTBOL ({liga})", match, sel_text, radio_sel, 1.85, "+4.2%")
         return f"✅ Pick de {liga} guardado: {sel_text}"
 
     def fn_save_pick_nba(radio_sel, p1, p2, p3, p4, match):
@@ -2191,7 +2282,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     btn_save_nfl.click(fn=fn_save_pick_nfl, inputs=[rad_pick_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match], outputs=[lbl_save_nfl])
     btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match], outputs=[lbl_save_mlb])
-    btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
+    btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
     btn_save_nba.click(fn=fn_save_pick_nba, inputs=[rad_pick_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match], outputs=[lbl_save_nba])
 
     btn_save_prop_mlb.click(fn=lambda text: fn_save_generic_prop("MLB", text), inputs=[st_prop_rec_text], outputs=[lbl_save_prop_mlb])
