@@ -780,7 +780,6 @@ model_mlb_diff = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth
 model_mlb_tot = xgb.XGBRegressor(n_estimators=80, learning_rate=0.03, max_depth=3, random_state=42).fit(X_mlb_sim, y_mlb_tot)
 
 recalibrar_modelos_auto()
-
 # =========================================================
 # MOTOR MULTIVARIABLE DE FÚTBOL (9 GRUPOS ANALÍTICOS)
 # =========================================================
@@ -1459,133 +1458,9 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     """
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
 
-def simular_partido_nba(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under, descanso_option):
-    logo_loc = NBA_DICT.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
-    logo_vis = NBA_DICT.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
-
-    pen_loc_off, pen_loc_def, r_loc_inj = obtener_lesionados_oficiales_nba(nombre_local)
-    pen_vis_off, pen_vis_def, r_vis_inj = obtener_lesionados_oficiales_nba(nombre_visita)
-
-    pf_loc, pc_loc = obtener_estadisticas_nba_api(nombre_local)
-    pf_vis, pc_vis = obtener_estadisticas_nba_api(nombre_visita)
-
-    pace_loc = NBA_DICT.get(nombre_local, {}).get("pace", 99.0)
-    pace_vis = NBA_DICT.get(nombre_visita, {}).get("pace", 99.0)
-    pace_liga = 99.2
-
-    pace_proyectado = (pace_loc * pace_vis) / pace_liga
-
-    ortg_loc = ((pf_loc / pace_loc) * 100) - pen_loc_off
-    drtg_loc = ((pc_loc / pace_loc) * 100) + pen_loc_def
-
-    ortg_vis = ((pf_vis / pace_vis) * 100) - pen_vis_off
-    drtg_vis = ((pc_vis / pace_vis) * 100) + pen_vis_def
-
-    media_ortg_liga = 114.0
-
-    pen_descanso_loc = -3.2 if "Local" in descanso_option else 0.0
-    pen_descanso_vis = -3.2 if "Visitante" in descanso_option else 0.0
-
-    hca_loc = NBA_DICT.get(nombre_local, {}).get("hca", 2.3)
-
-    off_efectiva_loc = (ortg_loc * drtg_vis) / media_ortg_liga
-    off_efectiva_vis = (ortg_vis * drtg_loc) / media_ortg_liga
-
-    pts_loc_est = round(((off_efectiva_loc / 100) * pace_proyectado) + hca_loc + pen_descanso_loc, 1)
-    pts_vis_est = round(((off_efectiva_vis / 100) * pace_proyectado) + pen_descanso_vis, 1)
-
-    diff_pts = pts_loc_est - pts_vis_est
-    prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 11.2) * 100))))
-    prob_win_visita = 100 - prob_win_local
-
-    prob_impl_ml_loc = (1 / float(cuota_ml_loc)) * 100 if float(cuota_ml_loc) > 1 else 50.0
-    prob_impl_ml_vis = (1 / float(cuota_ml_vis)) * 100 if float(cuota_ml_vis) > 1 else 50.0
-
-    edge_ml_loc = round(prob_win_local - prob_impl_ml_loc, 1)
-    edge_ml_vis = round(prob_win_visita - prob_impl_ml_vis, 1)
-
-    if edge_ml_loc >= edge_ml_vis and edge_ml_loc >= 3.0:
-        pick_1_str = f"{nombre_local} ML @ {cuota_ml_loc} — Probabilidad: {prob_win_local}% | Ventaja: +{edge_ml_loc}% EV"
-        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_loc}% EV)</span>'
-    elif edge_ml_vis > edge_ml_loc and edge_ml_vis >= 3.0:
-        pick_1_str = f"{nombre_visita} ML @ {cuota_ml_vis} — Probabilidad: {prob_win_visita}% | Ventaja: +{edge_ml_vis}% EV"
-        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_vis}% EV)</span>'
-    else:
-        fav_name = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
-        fav_prob = max(prob_win_local, prob_win_visita)
-        fav_cuota = cuota_ml_loc if prob_win_local >= prob_win_visita else cuota_ml_vis
-        fav_edge = max(edge_ml_loc, edge_ml_vis)
-        pick_1_str = f"{fav_name} ML @ {fav_cuota} — Probabilidad: {fav_prob}% | Ventaja: {fav_edge}% EV"
-        badge_1 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
-
-    p_cubre_sp_loc = round(norm.cdf((diff_pts + float(sp_loc_val)) / 11.2) * 100, 1)
-    p_cubre_sp_vis = round(norm.cdf(((-diff_pts) + float(sp_vis_val)) / 11.2) * 100, 1)
-
-    prob_impl_sp_loc = (1 / float(cuota_sp_loc)) * 100 if float(cuota_sp_loc) > 1 else 50.0
-    edge_sp_loc = round(p_cubre_sp_loc - prob_impl_sp_loc, 1)
-
-    pick_2_str = f"{nombre_local if p_cubre_sp_loc >= p_cubre_sp_vis else nombre_visita} Spread ({sp_loc_val if p_cubre_sp_loc >= p_cubre_sp_vis else sp_vis_val}) @ {cuota_sp_loc if p_cubre_sp_loc >= p_cubre_sp_vis else cuota_sp_vis}"
-    badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_sp_loc}% EV)</span>' if edge_sp_loc >= 2.5 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
-
-    tot_est_real = pts_loc_est + pts_vis_est
-    dif_total = tot_est_real - float(linea_total)
-    tipo_tot = "OVER" if dif_total >= 0 else "UNDER"
-    cuota_tot_fav = cuota_tot_over if tipo_tot == "OVER" else cuota_tot_under
-    prob_tot = min(88, int(50 + abs(dif_total) * 3.5))
-
-    pick_3_str = f"{tipo_tot} de {linea_total} pts @ {cuota_tot_fav} — Probabilidad: {prob_tot}% (Proyección: {tot_est_real:.1f} pts en {pace_proyectado:.1f} pos)"
-    badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if abs(dif_total) >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
-
-    html_out = f"""
-    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MOTOR SABERMÉTRICO DE POSESIONES (PACE & EPM)</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 78.2%</div>
-        </div>
-
-        <div style="background: #F8FAFC; border-radius: 14px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
-            {r_loc_inj}
-            {r_vis_inj}
-        </div>
-
-        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_vis_est:.1f} pts | Ortg: {ortg_vis:.1f})</span>
-                </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_loc_est:.1f} pts | Ortg: {ortg_loc:.1f})</span>
-                </div>
-                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
-            </div>
-            <div style="text-align: center; font-size: 11px; font-weight: 700; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 6px;">
-                Ritmo Proyectado: {pace_proyectado:.1f} Posesiones | HCA Local: +{hca_loc} pts
-            </div>
-        </div>
-
-        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</div>
-        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div>{badge_1}
-        </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Spread Recomendado: {pick_2_str}</div></div>{badge_2}
-        </div>
-        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales (O/U): {pick_3_str}</div></div>{badge_3}
-        </div>
-    </div>
-    """
-    return html_out, pick_1_str, pick_2_str, pick_3_str, "", f"{nombre_local} vs {nombre_visita}"
-
 # =========================================================
 # GENERADORES DE COMPONENTES 3D
-# =========================================================
+# =========================================
 def crear_grafica_barras_3d(titulo, wins, losses, pending):
     total = wins + losses
     pct = round((wins / total) * 100, 1) if total > 0 else 0.0
@@ -1705,7 +1580,8 @@ def render_logo_html(url, height=50):
     return f"""<div style="display: flex; justify-content: center; align-items: center; height: 55px; margin-bottom: 4px;">
         <img src="{url}" style="max-height: {height}px; width: auto; object-fit: contain;" />
     </div>"""
-    # =========================================
+
+# =========================================
 # INTERFAZ GRÁFICA (GRADIO BLOCKS)
 # =========================================
 with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
@@ -1951,3 +1827,382 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
             gr.Markdown("## ⚾ **Área de Análisis: MLB Sabermétrica (Full Game, F5, NRFI, Team Totals & Props)**", scale=4)
 
         with gr.Tabs():
+            with gr.TabItem("📊 Análisis de Partido"):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        with gr.Row():
+                            drop_mlb_loc = gr.Dropdown(choices=lista_mlb_nombres, value="New York Yankees", label="Equipo Local", scale=3)
+                            img_mlb_loc = gr.Image(value=EQUIPOS_MLB["New York Yankees"]["logo"], label="Local", width=50, height=50, show_label=False, scale=1)
+
+                        with gr.Row():
+                            drop_mlb_vis = gr.Dropdown(choices=lista_mlb_nombres, value="Tampa Bay Rays", label="Equipo Visitante", scale=3)
+                            img_mlb_vis = gr.Image(value=EQUIPOS_MLB["Tampa Bay Rays"]["logo"], label="Visitante", width=50, height=50, show_label=False, scale=1)
+
+                        btn_auto_api = gr.Button("🔄 Cargar Abridores en Vivo (MLB API)", variant="secondary")
+                        lbl_api_status = gr.Markdown("🟢 Listo para sincronizar")
+
+                        lbl_hdr_loc = gr.Markdown("#### ⚾ Abridor y Bullpen New York Yankees")
+                        with gr.Row():
+                            num_xera_loc = gr.Number(value=2.95, label="ERA Abridor New York Yankees")
+                            num_whip_loc = gr.Number(value=1.13, label="WHIP Abridor New York Yankees")
+                        with gr.Row():
+                            num_era_bp_loc = gr.Number(value=3.40, label="ERA Bullpen New York Yankees")
+                            num_whip_bp_loc = gr.Number(value=1.18, label="WHIP Bullpen New York Yankees")
+
+                        lbl_hdr_vis = gr.Markdown("#### ⚾ Abridor y Bullpen Tampa Bay Rays")
+                        with gr.Row():
+                            num_xera_vis = gr.Number(value=2.94, label="ERA Abridor Tampa Bay Rays")
+                            num_whip_vis = gr.Number(value=1.07, label="WHIP Abridor Tampa Bay Rays")
+                        with gr.Row():
+                            num_era_bp_vis = gr.Number(value=3.80, label="ERA Bullpen Tampa Bay Rays")
+                            num_whip_bp_vis = gr.Number(value=1.25, label="WHIP Bullpen Tampa Bay Rays")
+
+                        gr.Markdown("#### ⚾ Cuotas Moneyline")
+                        with gr.Row():
+                            num_mlb_cuota_loc = gr.Number(value=1.76, label="Cuota ML New York Yankees")
+                            num_mlb_cuota_vis = gr.Number(value=2.04, label="Cuota ML Tampa Bay Rays")
+
+                        gr.Markdown("#### ⚾ Run Line / Hándicap")
+                        with gr.Row():
+                            num_rl_loc_val = gr.Number(value=-1.5, label="Run Line New York Yankees")
+                            num_cuota_rl_loc = gr.Number(value=2.70, label="Cuota RL New York Yankees")
+                        with gr.Row():
+                            num_rl_vis_val = gr.Number(value=+1.5, label="Run Line Tampa Bay Rays")
+                            num_cuota_rl_vis = gr.Number(value=1.44, label="Cuota RL Tampa Bay Rays")
+
+                        gr.Markdown("#### ⚾ Cuotas Primeras 5 Entradas (F5 ML)")
+                        with gr.Row():
+                            num_f5_cuota_loc = gr.Number(value=1.80, label="Cuota F5 New York Yankees ML")
+                            num_f5_cuota_vis = gr.Number(value=1.95, label="Cuota F5 Tampa Bay Rays ML")
+
+                        gr.Markdown("#### ⚾ Mercado 1er Inning (NRFI / YRFI)")
+                        with gr.Row():
+                            num_cuota_nrfi = gr.Number(value=1.85, label="Cuota NRFI (No Carrera 1er Inning)")
+                            num_cuota_yrfi = gr.Number(value=1.95, label="Cuota YRFI (Sí Carrera 1er Inning)")
+
+                        num_mlb_tot = gr.Number(value=8.5, label="Línea Total Carreras Juego Completo")
+
+                        gr.Markdown("#### ⚾ Carreras Totales por Equipo (Team Totals)")
+                        with gr.Row():
+                            num_linea_team_loc = gr.Number(value=4.5, label="Línea Carreras New York Yankees")
+                            num_cuota_team_loc_over = gr.Number(value=1.85, label="Cuota OVER")
+                            num_cuota_team_loc_under = gr.Number(value=1.95, label="Cuota UNDER")
+                        with gr.Row():
+                            num_linea_team_vis = gr.Number(value=3.5, label="Línea Carreras Tampa Bay Rays")
+                            num_cuota_team_vis_over = gr.Number(value=1.85, label="Cuota OVER")
+                            num_cuota_team_vis_under = gr.Number(value=1.95, label="Cuota UNDER")
+
+                        btn_sim_mlb = gr.Button("Simular Partido MLB 🚀", variant="primary")
+
+                        gr.Markdown("---")
+                        rad_pick_mlb = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Run Line)", "Selección 3 (F5 ML)", "Selección 4 (NRFI/YRFI)", "Selección 5 (Team Total Local)", "Selección 6 (Team Total Visitante)", "Selección 7 (Total Juego)"], label="Pick a guardar")
+                        btn_save_mlb = gr.Button("Guardar Pick MLB 💾", variant="secondary")
+                        lbl_save_mlb = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_mlb = gr.HTML()
+                        st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match = gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+            with gr.TabItem("👤 Player Props MLB (Pitchers & Bateadores)"):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        txt_prop_player_name = gr.Textbox(value="Jared Jones", label="Nombre del Jugador")
+                        drop_prop_type = gr.Dropdown(choices=["Ponches (Ks) - Pitcher", "Outs Registrados - Pitcher", "Hits (H) - Bateador", "H+R+RBI - Bateador"], value="Ponches (Ks) - Pitcher", label="Tipo de Prop")
+                        num_prop_line = gr.Number(value=5.5, label="Línea de Casino (Over/Under)")
+                        with gr.Row():
+                            num_prop_cuota_over = gr.Number(value=1.85, label="Cuota OVER")
+                            num_prop_cuota_under = gr.Number(value=1.95, label="Cuota UNDER")
+                        btn_sim_prop = gr.Button("Analizar Player Prop 🚀", variant="primary")
+
+                        gr.Markdown("---")
+                        btn_save_prop_mlb = gr.Button("Guardar Prop en Historial 💾", variant="secondary")
+                        lbl_save_prop_mlb = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_prop_mlb = gr.HTML()
+                        st_prop_rec_text = gr.State("")
+
+    # VISTA NBA
+    with gr.Column(visible=False) as vista_nba:
+        with gr.Row():
+            btn_volver_nba = gr.Button("⬅️ Volver al Menú Principal", variant="secondary", scale=1)
+            gr.Markdown("## 🏀 **Área de Análisis: NBA (Motor de Posesiones, Pace & Lesiones EPM)**", scale=4)
+
+        with gr.Tabs():
+            with gr.TabItem("📊 Análisis de Partido"):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        with gr.Row():
+                            drop_nba_loc = gr.Dropdown(choices=lista_nba_nombres, value="Boston Celtics", label="Equipo Local", scale=3)
+                            img_nba_loc = gr.Image(value=NBA_DICT["Boston Celtics"]["logo"], label="Local", width=50, height=50, show_label=False, scale=1)
+
+                        with gr.Row():
+                            drop_nba_vis = gr.Dropdown(choices=lista_nba_nombres, value="Los Angeles Lakers", label="Equipo Visitante", scale=3)
+                            img_nba_vis = gr.Image(value=NBA_DICT["Los Angeles Lakers"]["logo"], label="Visitante", width=50, height=50, show_label=False, scale=1)
+
+                        drop_descanso_nba = gr.Dropdown(
+                            choices=["Sin Back-to-Back (Descanso Normal)", "Back-to-Back Local (Jugó Anoche)", "Back-to-Back Visitante (Jugó Anoche)"],
+                            value="Sin Back-to-Back (Descanso Normal)",
+                            label="¿Carga de Partidos / Descanso B2B?"
+                        )
+
+                        gr.Markdown("#### 🏀 Cuotas Moneyline (Ganador Directo)")
+                        with gr.Row():
+                            num_nba_cuota_ml_loc = gr.Number(value=1.45, label="Cuota ML Boston Celtics")
+                            num_nba_cuota_ml_vis = gr.Number(value=2.85, label="Cuota ML Los Angeles Lakers")
+
+                        gr.Markdown("#### 🏀 Spread / Hándicap (Casino)")
+                        with gr.Row():
+                            num_sp_nba_loc_val = gr.Number(value=-5.5, label="Spread Boston Celtics")
+                            num_cuota_sp_nba_loc = gr.Number(value=1.90, label="Cuota Spread Celtics")
+                        with gr.Row():
+                            num_sp_nba_vis_val = gr.Number(value=+5.5, label="Spread Los Angeles Lakers")
+                            num_cuota_sp_nba_vis = gr.Number(value=1.90, label="Cuota Spread Lakers")
+
+                        gr.Markdown("#### 🏀 Totales (Puntos Juego Completo)")
+                        num_nba_tot = gr.Number(value=224.5, label="Línea Total Puntos (O/U)")
+                        with gr.Row():
+                            num_nba_cuota_tot_over = gr.Number(value=1.87, label="Cuota OVER")
+                            num_nba_cuota_tot_under = gr.Number(value=1.87, label="Cuota UNDER")
+
+                        btn_sim_nba = gr.Button("Simular Partido NBA 🚀", variant="primary")
+
+                        gr.Markdown("---")
+                        rad_pick_nba = gr.Radio(choices=["Selección 1 (ML)", "Selección 2 (Spread)", "Selección 3 (Totales)"], label="Pick a guardar")
+                        btn_save_nba = gr.Button("Guardar Pick NBA 💾", variant="secondary")
+                        lbl_save_nba = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_nba = gr.HTML()
+                        st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match = gr.State(""), gr.State(""), gr.State(""), gr.State(""), gr.State("")
+
+            with gr.TabItem("👤 Player Props NBA"):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        txt_prop_nba_player = gr.Textbox(value="Jayson Tatum", label="Nombre del Jugador")
+                        drop_prop_nba_type = gr.Dropdown(choices=["Puntos (Pts)", "Rebotes (Reb)", "Asistencias (Ast)", "Triples (3PM)", "Puntos + Rebotes + Asistencias (PRA)"], value="Puntos (Pts)", label="Tipo de Prop")
+                        num_prop_nba_line = gr.Number(value=26.5, label="Línea de Casino")
+                        with gr.Row():
+                            num_prop_nba_cuota_over = gr.Number(value=1.85, label="Cuota OVER")
+                            num_prop_nba_cuota_under = gr.Number(value=1.95, label="Cuota UNDER")
+                        btn_sim_prop_nba = gr.Button("Analizar Prop NBA 🚀", variant="primary")
+
+                        gr.Markdown("---")
+                        btn_save_prop_nba = gr.Button("Guardar Prop NBA 💾", variant="secondary")
+                        lbl_save_prop_nba = gr.Markdown("")
+
+                    with gr.Column(scale=2):
+                        out_prop_nba = gr.HTML()
+                        st_prop_nba_rec_text = gr.State("")
+
+    st_liga_activa = gr.State("Premier League")
+    st_dict_futbol_actual = gr.State(PREMIER_DICT)
+
+    def actualizar_interfaz_fut(nombre_loc, nombre_vis, dict_actual):
+        logo_loc = dict_actual.get(nombre_loc, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        logo_vis = dict_actual.get(nombre_vis, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        return logo_loc, logo_vis, gr.update(label=f"Cuota {nombre_loc} (1)"), gr.update(label=f"Cuota {nombre_vis} (2)")
+
+    def actualizar_interfaz_nfl(nombre_loc, nombre_vis):
+        logo_loc = DICT_NFL_COMPLETO.get(nombre_loc, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
+        logo_vis = DICT_NFL_COMPLETO.get(nombre_vis, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
+        return (
+            logo_loc, logo_vis,
+            gr.update(label=f"Cuota ML {nombre_loc}"),
+            gr.update(label=f"Cuota ML {nombre_vis}"),
+            gr.update(label=f"Spread {nombre_loc}"),
+            gr.update(label=f"Cuota Spread {nombre_loc}"),
+            gr.update(label=f"Spread {nombre_vis}"),
+            gr.update(label=f"Cuota Spread {nombre_vis}")
+        )
+
+    def actualizar_interfaz_mlb(nombre_loc, nombre_vis):
+        logo_loc, logo_vis = EQUIPOS_MLB[nombre_loc]["logo"], EQUIPOS_MLB[nombre_vis]["logo"]
+        return (
+            logo_loc, logo_vis,
+            f"#### ⚾ Abridor y Bullpen {nombre_loc}",
+            f"#### ⚾ Abridor y Bullpen {nombre_vis}",
+            gr.update(label=f"ERA Abridor {nombre_loc}"),
+            gr.update(label=f"WHIP Abridor {nombre_loc}"),
+            gr.update(label=f"ERA Bullpen {nombre_loc}"),
+            gr.update(label=f"WHIP Bullpen {nombre_loc}"),
+            gr.update(label=f"ERA Abridor {nombre_vis}"),
+            gr.update(label=f"WHIP Abridor {nombre_vis}"),
+            gr.update(label=f"ERA Bullpen {nombre_vis}"),
+            gr.update(label=f"WHIP Bullpen {nombre_vis}"),
+            gr.update(label=f"Cuota ML {nombre_loc}"),
+            gr.update(label=f"Cuota ML {nombre_vis}"),
+            gr.update(label=f"Run Line {nombre_loc}"),
+            gr.update(label=f"Cuota RL {nombre_loc}"),
+            gr.update(label=f"Run Line {nombre_vis}"),
+            gr.update(label=f"Cuota RL {nombre_vis}"),
+            gr.update(label=f"Cuota F5 {nombre_loc} ML"),
+            gr.update(label=f"Cuota F5 {nombre_vis} ML"),
+            gr.update(label=f"Línea Carreras {nombre_loc}"),
+            gr.update(label=f"Línea Carreras {nombre_vis}")
+        )
+
+    def actualizar_interfaz_nba(nombre_loc, nombre_vis):
+        logo_loc = NBA_DICT.get(nombre_loc, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
+        logo_vis = NBA_DICT.get(nombre_vis, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
+        return (
+            logo_loc, logo_vis,
+            gr.update(label=f"Cuota ML {nombre_loc}"),
+            gr.update(label=f"Cuota ML {nombre_vis}"),
+            gr.update(label=f"Spread {nombre_loc}"),
+            gr.update(label=f"Cuota Spread {nombre_loc}"),
+            gr.update(label=f"Spread {nombre_vis}"),
+            gr.update(label=f"Cuota Spread {nombre_vis}")
+        )
+
+    def cambiar_a_liga_futbol(diccionario_liga, nombre_liga):
+        eqs = sorted(list(diccionario_liga.keys()))
+        loc_inicial = eqs[0]
+        vis_inicial = eqs[1] if len(eqs) > 1 else eqs[0]
+
+        logo_loc = diccionario_liga.get(loc_inicial, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+        logo_vis = diccionario_liga.get(vis_inicial, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+
+        return (
+            gr.update(visible=False),
+            gr.update(visible=True),
+            gr.update(choices=eqs, value=loc_inicial),
+            gr.update(choices=eqs, value=vis_inicial),
+            logo_loc,
+            logo_vis,
+            f"## ⚽ **Área de Análisis: {nombre_liga.upper()} ({len(eqs)} Equipos/Selecciones)**",
+            nombre_liga,
+            diccionario_liga,
+            gr.update(label=f"Cuota {loc_inicial} (1)"),
+            gr.update(label=f"Cuota {vis_inicial} (2)")
+        )
+
+    outputs_liga_futbol = [vista_home, vista_fut, drop_fut_loc, drop_fut_vis, img_fut_loc, img_fut_vis, txt_titulo_liga, st_liga_activa, st_dict_futbol_actual, num_fut_c_loc, num_fut_c_vis]
+
+    btn_premier.click(fn=lambda: cambiar_a_liga_futbol(PREMIER_DICT, "Premier League"), outputs=outputs_liga_futbol)
+    btn_laliga.click(fn=lambda: cambiar_a_liga_futbol(LALIGA_DICT, "LaLiga EA Sports"), outputs=outputs_liga_futbol)
+    btn_bundesliga.click(fn=lambda: cambiar_a_liga_futbol(BUNDESLIGA_DICT, "Bundesliga"), outputs=outputs_liga_futbol)
+    btn_seriea.click(fn=lambda: cambiar_a_liga_futbol(SERIE_A_DICT, "Serie A"), outputs=outputs_liga_futbol)
+    btn_champions.click(fn=lambda: cambiar_a_liga_futbol(CHAMPIONS_DICT, "Champions League"), outputs=outputs_liga_futbol)
+    btn_nations.click(fn=lambda: cambiar_a_liga_futbol(NATIONS_LEAGUE_DICT, "UEFA Nations League"), outputs=outputs_liga_futbol)
+
+    def abrir_nfl(): return gr.update(visible=False), gr.update(visible=True)
+    def abrir_mlb(): return gr.update(visible=False), gr.update(visible=True)
+    def abrir_nba(): return gr.update(visible=False), gr.update(visible=True)
+
+    def volver_home():
+        recalibrar_modelos_auto()
+        h_head, p_out, w_out, l_out, f_prem, f_lali, f_bund, f_seri, f_champ, f_nat, f_nfl, f_mlb, f_nba = generar_dashboard_completo()
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), h_head, p_out, w_out, l_out, f_prem, f_lali, f_bund, f_seri, f_champ, f_nat, f_nfl, f_mlb, f_nba
+
+    btn_nfl.click(fn=abrir_nfl, outputs=[vista_home, vista_nfl])
+    btn_mlb.click(fn=abrir_mlb, outputs=[vista_home, vista_mlb])
+    btn_nba.click(fn=abrir_nba, outputs=[vista_home, vista_nba])
+
+    outputs_volver = [
+        vista_home, vista_nfl, vista_mlb, vista_fut, vista_nba,
+        html_header_out, html_pending_out, html_wins_out, html_losses_out,
+        kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, kpi_seriea_out, 
+        kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out, kpi_nba_out
+    ]
+
+    btn_volver_nfl.click(fn=volver_home, outputs=outputs_volver)
+    btn_volver_mlb.click(fn=volver_home, outputs=outputs_volver)
+    btn_volver_fut.click(fn=volver_home, outputs=outputs_volver)
+    btn_volver_nba.click(fn=volver_home, outputs=outputs_volver)
+
+    drop_fut_loc.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
+    drop_fut_vis.change(fn=actualizar_interfaz_fut, inputs=[drop_fut_loc, drop_fut_vis, st_dict_futbol_actual], outputs=[img_fut_loc, img_fut_vis, num_fut_c_loc, num_fut_c_vis])
+
+    drop_nfl_loc.change(fn=actualizar_interfaz_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis, num_nfl_cuota_ml_loc, num_nfl_cuota_ml_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis])
+    drop_nfl_vis.change(fn=actualizar_interfaz_nfl, inputs=[drop_nfl_loc, drop_nfl_vis], outputs=[img_nfl_loc, img_nfl_vis, num_nfl_cuota_ml_loc, num_nfl_cuota_ml_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis])
+
+    drop_mlb_loc.change(fn=actualizar_interfaz_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis, lbl_hdr_loc, lbl_hdr_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_linea_team_loc, num_linea_team_vis])
+    drop_mlb_vis.change(fn=actualizar_interfaz_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[img_mlb_loc, img_mlb_vis, lbl_hdr_loc, lbl_hdr_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_linea_team_loc, num_linea_team_vis])
+
+    drop_nba_loc.change(fn=actualizar_interfaz_nba, inputs=[drop_nba_loc, drop_nba_vis], outputs=[img_nba_loc, img_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis])
+    drop_nba_vis.change(fn=actualizar_interfaz_nba, inputs=[drop_nba_loc, drop_nba_vis], outputs=[img_nba_loc, img_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis])
+
+    btn_auto_api.click(fn=auto_cargar_pitchers_mlb, inputs=[drop_mlb_loc, drop_mlb_vis], outputs=[num_xera_loc, num_whip_loc, num_xera_vis, num_whip_vis, lbl_api_status])
+
+    outputs_directos = [
+        html_header_out, html_pending_out, html_wins_out, html_losses_out,
+        kpi_premier_out, kpi_laliga_out, kpi_bundesliga_out, kpi_seriea_out, 
+        kpi_champions_out, kpi_nations_out, kpi_nfl_out, kpi_mlb_out, kpi_nba_out
+    ]
+
+    btn_direct_win.click(fn=lambda idx: cambiar_estado_directo(idx, "WIN"), inputs=[num_input_id], outputs=outputs_directos)
+    btn_direct_loss.click(fn=lambda idx: cambiar_estado_directo(idx, "LOSS"), inputs=[num_input_id], outputs=outputs_directos)
+
+    btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_nfl_cuota_ml_loc, num_nfl_cuota_ml_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis, num_nfl_tot, num_nfl_cuota_tot_over, num_nfl_cuota_tot_under], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match])
+    btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_mlb_tot, num_linea_team_loc, num_cuota_team_loc_over, num_cuota_team_loc_under, num_linea_team_vis, num_cuota_team_vis_over, num_cuota_team_vis_under, num_cuota_nrfi, num_cuota_yrfi], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match])
+    
+    # Vinculación del simulador Multivariable de Fútbol (9 Grupos)
+    btn_sim_fut.click(
+        fn=simular_partido_futbol_9grupos,
+        inputs=[
+            st_liga_activa, drop_fut_loc, drop_fut_vis,
+            num_xg_loc_casa, num_xga_loc_casa, num_xg_vis_fuera, num_xga_vis_fuera,
+            num_pts_ult5_loc, num_pts_ult5_vis,
+            num_shots_target_loc, num_big_chances_conced_vis,
+            num_bajas_loc, num_bajas_vis, num_descanso_dias_loc, num_descanso_dias_vis, drop_cambio_dt,
+            num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_c_btts_si, num_fut_c_btts_no,
+            num_fut_c_o15, num_fut_c_o25, num_fut_c_o35, num_fut_c_u25, num_fut_c_ht_o05,
+            st_dict_futbol_actual
+        ],
+        outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match]
+    )
+
+    btn_sim_nba.click(fn=simular_partido_nba, inputs=[drop_nba_loc, drop_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis, num_nba_tot, num_nba_cuota_tot_over, num_nba_cuota_tot_under, drop_descanso_nba], outputs=[out_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match])
+
+    btn_sim_prop.click(fn=simular_player_prop_mlb, inputs=[txt_prop_player_name, drop_prop_type, num_prop_line, num_prop_cuota_over, num_prop_cuota_under, num_xera_vis, num_whip_vis], outputs=[out_prop_mlb, st_prop_rec_text])
+    btn_sim_prop_nfl.click(fn=simular_player_prop_nfl, inputs=[txt_prop_nfl_player, drop_prop_nfl_type, num_prop_nfl_line, num_prop_nfl_cuota_over, num_prop_nfl_cuota_under], outputs=[out_prop_nfl, st_prop_nfl_rec_text])
+    btn_sim_prop_fut.click(fn=simular_prop_futbol, inputs=[txt_prop_fut_item, drop_prop_fut_type, num_prop_fut_line, num_prop_fut_cuota_over, num_prop_fut_cuota_under], outputs=[out_prop_fut, st_prop_fut_rec_text])
+    btn_sim_prop_nba.click(fn=simular_player_prop_nba, inputs=[txt_prop_nba_player, drop_prop_nba_type, num_prop_nba_line, num_prop_nba_cuota_over, num_prop_nba_cuota_under], outputs=[out_prop_nba, st_prop_nba_rec_text])
+
+    def fn_save_pick_nfl(radio_sel, p1, p2, p3, p4, match):
+        if not match: return "⚠️ Primero debes simular el partido."
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+        guardar_pick_db("NFL", match, sel_text, radio_sel, 1.90, "+4.5%")
+        return f"✅ Pick de NFL guardado: {sel_text}"
+
+    def fn_save_pick_mlb(radio_sel, p1, p2, p3, p4, p5, p6, p7, match):
+        if not match: return "⚠️ Primero debes simular el partido."
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else (p4 if "4" in radio_sel else (p5 if "5" in radio_sel else (p6 if "6" in radio_sel else p7)))))
+        guardar_pick_db("MLB", match, sel_text, radio_sel, 1.90, "+5.2%")
+        return f"✅ Pick de MLB guardado: {sel_text}"
+
+    def fn_save_pick_fut(radio_sel, p1, p2, p3, p4, p5, match, liga):
+        if not match: return "⚠️ Primero debes simular el partido."
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else (p4 if "4" in radio_sel else p5)))
+        guardar_pick_db(f"FÚTBOL ({liga})", match, sel_text, radio_sel, 1.85, "+4.5%")
+        return f"✅ Pick de {liga} guardado: {sel_text}"
+
+    def fn_save_pick_nba(radio_sel, p1, p2, p3, p4, match):
+        if not match: return "⚠️ Primero debes simular el partido."
+        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+        guardar_pick_db("NBA", match, sel_text, radio_sel, 1.90, "+4.8%")
+        return f"✅ Pick de NBA guardado: {sel_text}"
+
+    def fn_save_generic_prop(deporte, rec_text):
+        if not rec_text: return "⚠️ Primero debes analizar la Prop."
+        guardar_pick_db(f"{deporte} (PROP)", "Prop Individual", rec_text, "Player Prop", 1.85, "+5.0%")
+        return f"✅ Prop guardada: {rec_text}"
+
+    btn_save_nfl.click(fn=fn_save_pick_nfl, inputs=[rad_pick_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match], outputs=[lbl_save_nfl])
+    btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match], outputs=[lbl_save_mlb])
+    btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
+    btn_save_nba.click(fn=fn_save_pick_nba, inputs=[rad_pick_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match], outputs=[lbl_save_nba])
+
+    btn_save_prop_mlb.click(fn=lambda text: fn_save_generic_prop("MLB", text), inputs=[st_prop_rec_text], outputs=[lbl_save_prop_mlb])
+    btn_save_prop_nfl.click(fn=lambda text: fn_save_generic_prop("NFL", text), inputs=[st_prop_nfl_rec_text], outputs=[lbl_save_prop_nfl])
+    btn_save_prop_fut.click(fn=lambda text: fn_save_generic_prop("FÚTBOL", text), inputs=[st_prop_fut_rec_text], outputs=[lbl_save_prop_fut])
+    btn_save_prop_nba.click(fn=lambda text: fn_save_generic_prop("NBA", text), inputs=[st_prop_nba_rec_text], outputs=[lbl_save_prop_nba])
+
+    app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
+
+# Vinculación de puerto para Render / Colab / Producción
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+    is_colab = "COLAB_GPU" in os.environ or "GGL_SUPPRESS_SANDBOX_CHECK" in os.environ
+    app_mana.launch(share=is_colab, server_name="0.0.0.0", server_port=port)
