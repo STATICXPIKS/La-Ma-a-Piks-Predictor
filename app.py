@@ -2153,7 +2153,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
         outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match]
     )
 
-    btn_sim_nba.click(fn=simular_partido_nba, inputs=[drop_nba_loc, drop_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis, num_nba_tot, num_nba_cuota_tot_over, num_nba_cuota_tot_under, drop_descanso_nba], outputs=[out_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match])
 def simular_partido_nba(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under, descanso_option):
     logo_loc = NBA_DICT.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
     logo_vis = NBA_DICT.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
@@ -2277,6 +2276,9 @@ def simular_partido_nba(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis,
     </div>
     """
     return html_out, pick_1_str, pick_2_str, pick_3_str, "", f"{nombre_local} vs {nombre_visita}"
+
+btn_sim_nba.click(fn=simular_partido_nba, inputs=[drop_nba_loc, drop_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis, num_nba_tot, num_nba_cuota_tot_over, num_nba_cuota_tot_under, drop_descanso_nba], outputs=[out_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match])
+
     btn_sim_prop.click(fn=simular_player_prop_mlb, inputs=[txt_prop_player_name, drop_prop_type, num_prop_line, num_prop_cuota_over, num_prop_cuota_under, num_xera_vis, num_whip_vis], outputs=[out_prop_mlb, st_prop_rec_text])
     btn_sim_prop_nfl.click(fn=simular_player_prop_nfl, inputs=[txt_prop_nfl_player, drop_prop_nfl_type, num_prop_nfl_line, num_prop_nfl_cuota_over, num_prop_nfl_cuota_under], outputs=[out_prop_nfl, st_prop_nfl_rec_text])
     btn_sim_prop_fut.click(fn=simular_prop_futbol, inputs=[txt_prop_fut_item, drop_prop_fut_type, num_prop_fut_line, num_prop_fut_cuota_over, num_prop_fut_cuota_under], outputs=[out_prop_fut, st_prop_fut_rec_text])
