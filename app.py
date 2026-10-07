@@ -2283,39 +2283,39 @@ btn_sim_prop_nfl.click(fn=simular_player_prop_nfl, inputs=[txt_prop_nfl_player, 
 btn_sim_prop_fut.click(fn=simular_prop_futbol, inputs=[txt_prop_fut_item, drop_prop_fut_type, num_prop_fut_line, num_prop_fut_cuota_over, num_prop_fut_cuota_under], outputs=[out_prop_fut, st_prop_fut_rec_text])
 btn_sim_prop_nba.click(fn=simular_player_prop_nba, inputs=[txt_prop_nba_player, drop_prop_nba_type, num_prop_nba_line, num_prop_nba_cuota_over, num_prop_nba_cuota_under], outputs=[out_prop_nba, st_prop_nba_rec_text])
 
-    def fn_save_pick_nfl(radio_sel, p1, p2, p3, p4, match):
-        if not match: return "⚠️ Primero debes simular el partido."
-        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
-        guardar_pick_db("NFL", match, sel_text, radio_sel, 1.90, "+4.5%")
-        return f"✅ Pick de NFL guardado: {sel_text}"
+def fn_save_pick_nfl(radio_sel, p1, p2, p3, p4, match):
+    if not match: return "⚠️ Primero debes simular el partido."
+    sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+    guardar_pick_db("NFL", match, sel_text, radio_sel, 1.90, "+4.5%")
+    return f"✅ Pick de NFL guardado: {sel_text}"
 
-    def fn_save_pick_mlb(radio_sel, p1, p2, p3, p4, p5, p6, p7, match):
-        if not match: return "⚠️ Primero debes simular el partido."
-        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else (p4 if "4" in radio_sel else (p5 if "5" in radio_sel else (p6 if "6" in radio_sel else p7)))))
-        guardar_pick_db("MLB", match, sel_text, radio_sel, 1.90, "+5.2%")
-        return f"✅ Pick de MLB guardado: {sel_text}"
+def fn_save_pick_mlb(radio_sel, p1, p2, p3, p4, p5, p6, p7, match):
+    if not match: return "⚠️ Primero debes simular el partido."
+    sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else (p4 if "4" in radio_sel else (p5 if "5" in radio_sel else (p6 if "6" in radio_sel else p7)))))
+    guardar_pick_db("MLB", match, sel_text, radio_sel, 1.90, "+5.2%")
+    return f"✅ Pick de MLB guardado: {sel_text}"
 
-    def fn_save_pick_fut(radio_sel, p1, p2, p3, p4, p5, match, liga):
-        if not match: return "⚠️ Primero debes simular el partido."
-        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else (p4 if "4" in radio_sel else p5)))
-        guardar_pick_db(f"FÚTBOL ({liga})", match, sel_text, radio_sel, 1.85, "+4.5%")
-        return f"✅ Pick de {liga} guardado: {sel_text}"
+def fn_save_pick_fut(radio_sel, p1, p2, p3, p4, p5, match, liga):
+    if not match: return "⚠️ Primero debes simular el partido."
+    sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else (p3 if "3" in radio_sel else (p4 if "4" in radio_sel else p5)))
+    guardar_pick_db(f"FÚTBOL ({liga})", match, sel_text, radio_sel, 1.85, "+4.5%")
+    return f"✅ Pick de {liga} guardado: {sel_text}"
 
-    def fn_save_pick_nba(radio_sel, p1, p2, p3, p4, match):
-        if not match: return "⚠️ Primero debes simular el partido."
-        sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
-        guardar_pick_db("NBA", match, sel_text, radio_sel, 1.90, "+4.8%")
-        return f"✅ Pick de NBA guardado: {sel_text}"
+def fn_save_pick_nba(radio_sel, p1, p2, p3, p4, match):
+    if not match: return "⚠️ Primero debes simular el partido."
+    sel_text = p1 if "1" in radio_sel else (p2 if "2" in radio_sel else p3)
+    guardar_pick_db("NBA", match, sel_text, radio_sel, 1.90, "+4.8%")
+    return f"✅ Pick de NBA guardado: {sel_text}"
 
-    def fn_save_generic_prop(deporte, rec_text):
-        if not rec_text: return "⚠️ Primero debes analizar la Prop."
-        guardar_pick_db(f"{deporte} (PROP)", "Prop Individual", rec_text, "Player Prop", 1.85, "+5.0%")
-        return f"✅ Prop guardada: {rec_text}"
+def fn_save_generic_prop(deporte, rec_text):
+    if not rec_text: return "⚠️ Primero debes analizar la Prop."
+    guardar_pick_db(f"{deporte} (PROP)", "Prop Individual", rec_text, "Player Prop", 1.85, "+5.0%")
+    return f"✅ Prop guardada: {rec_text}"
 
-    btn_save_nfl.click(fn=fn_save_pick_nfl, inputs=[rad_pick_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match], outputs=[lbl_save_nfl])
-    btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match], outputs=[lbl_save_mlb])
-    btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
-    btn_save_nba.click(fn=fn_save_pick_nba, inputs=[rad_pick_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match], outputs=[lbl_save_nba])
+btn_save_nfl.click(fn=fn_save_pick_nfl, inputs=[rad_pick_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match], outputs=[lbl_save_nfl])
+btn_save_mlb.click(fn=fn_save_pick_mlb, inputs=[rad_pick_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match], outputs=[lbl_save_mlb])
+btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
+btn_save_nba.click(fn=fn_save_pick_nba, inputs=[rad_pick_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match], outputs=[lbl_save_nba])
 
 btn_save_prop_mlb.click(fn=lambda text: fn_save_generic_prop("MLB", text), inputs=[st_prop_rec_text], outputs=[lbl_save_prop_mlb])
 btn_save_prop_nfl.click(fn=lambda text: fn_save_generic_prop("NFL", text), inputs=[st_prop_nfl_rec_text], outputs=[lbl_save_prop_nfl])
