@@ -1105,40 +1105,23 @@ def simular_prop_futbol(nombre_item, tipo_prop, linea_casino, cuota_over, cuota_
     """
     return html_prop, rec_str
 
-def simular_partido_futbol_avanzado(
-    liga, local, visitante,
-    # Grupo 1 & 2: Goles y xG (Local/Visitante)
-    xg_loc_casa, xga_loc_casa, xg_vis_fuera, xga_vis_fuera,
-    # Grupo 3 & 4: Forma y Rendimiento
-    pts_ultimos5_loc, pts_ultimos5_vis,
-    # Grupo 5 & 6: Ataque y Defensa
-    big_chances_loc, big_chances_concedidas_vis,
-    # Grupo 8 & 9: Contexto, Bajas y Calendario
-    bajas_clave_loc, bajas_clave_vis, dias_descanso_loc, dias_descanso_vis,
-    # Cuotas de Casino (Grupo 7)
-    cuotas_mercados
-):
-    # 1. Base xG ponderada por condición Local/Visitante
-    base_xg_loc = (xg_loc_casa * 0.6) + (xga_vis_fuera * 0.4)
-    base_xg_vis = (xg_vis_fuera * 0.6) + (xga_loc_casa * 0.4)
-    
-    # 2. Factor de Forma (Últimos 5)
-    mod_forma_loc = 1.0 + ((pts_ultimos5_loc - 7.5) / 50.0) # 7.5 es la media neutral (15 pts posibles)
-    mod_forma_vis = 1.0 + ((pts_ultimos5_vis - 7.5) / 50.0)
-    
-    # 3. Factor Calendario / Fatiga (Grupo 9)
-    mod_fatiga_loc = 0.91 if dias_descanso_loc < 3 else 1.0
-    mod_fatiga_vis = 0.91 if dias_descanso_vis < 3 else 1.0
-    
-    # 4. Factor Bajas e Importancia (Grupo 8)
-    mod_bajas_loc = 1.0 - (bajas_clave_loc * 0.08) # -8% por cada jugador top ausente
-    mod_bajas_vis = 1.0 - (bajas_clave_vis * 0.08)
-    
-    # xG Final Ajustado
-    lambda_loc = max(0.2, base_xg_loc * mod_forma_loc * mod_fatiga_loc * mod_bajas_loc)
-    lambda_vis = max(0.2, base_xg_vis * mod_forma_vis * mod_fatiga_vis * mod_bajas_vis)
-    
-    # Matriz Poisson para resolver todos los mercados del Grupo 7 (Over 0.5 a 3.5, HT, BTTS)
+def simular_partido_futbol_avanzado(liga, nombre_local, nombre_visita, cuota_loc, cuota_emp, cuota_vis, cuota_btts_si, cuota_btts_no, linea_goles, cuota_goles_over, cuota_goles_under, fatiga_eur, dict_actual):
+    logo_loc = dict_actual.get(nombre_local, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+    logo_vis = dict_actual.get(nombre_visita, "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png")
+
+    gf_loc, gc_loc = obtener_estadisticas_soccer_api(liga, nombre_local)
+    gf_vis, gc_vis = obtener_estadisticas_soccer_api(liga, nombre_visita)
+
+    prom_liga = 1.35
+    mod_fatiga = 0.91 if "Sí" in str(fatiga_eur) else 1.0
+    mod_auto = FACTOR_AJUSTE_AUTO.get(str(liga).upper(), 1.0)
+
+    base_xg_loc = (gf_loc * 0.6) + (gc_vis * 0.4)
+    base_xg_vis = (gf_vis * 0.6) + (gc_loc * 0.4)
+
+    lambda_loc = max(0.2, base_xg_loc * mod_fatiga * mod_auto)
+    lambda_vis = max(0.2, base_xg_vis * mod_fatiga * mod_auto)
+
     max_goles = 7
     p_loc = [poisson.pmf(i, lambda_loc) for i in range(max_goles)]
     p_vis = [poisson.pmf(j, lambda_vis) for j in range(max_goles)]
@@ -1153,27 +1136,27 @@ def simular_partido_futbol_avanzado(
             elif i == j: prob_empate += p_mat
             else: prob_win_visita += p_mat
 
-            if (i + j) > 2.5: prob_over_25 += p_mat
+            if (i + j) > float(linea_goles): prob_over_25 += p_mat
             if i > 0 and j > 0: prob_btts_si += p_mat
 
     prob_loc_pct = int(round(prob_win_local * 100))
     prob_vis_pct = int(round(prob_win_visita * 100))
     prob_emp_pct = max(5, 100 - prob_loc_pct - prob_vis_pct)
 
-    c_loc = cuotas_mercados.get("1", 2.0) if isinstance(cuotas_mercados, dict) else 2.0
-    c_vis = cuotas_mercados.get("2", 2.0) if isinstance(cuotas_mercados, dict) else 2.0
+    c_loc = float(cuota_loc)
+    c_vis = float(cuota_vis)
     ev_loc = round(prob_loc_pct - ((1.0 / c_loc) * 100 if c_loc > 1 else 50.0), 1)
     ev_vis = round(prob_vis_pct - ((1.0 / c_vis) * 100 if c_vis > 1 else 50.0), 1)
 
-    pick_1_str = f"Gana {local} (1X2) @ {c_loc} — Prob: {prob_loc_pct}% | EV: +{ev_loc}%" if ev_loc >= ev_vis else f"Gana {visitante} (1X2) @ {c_vis} — Prob: {prob_vis_pct}% | EV: +{ev_vis}%"
-    pick_2_str = f"Doble Oportunidad: {local if prob_loc_pct >= prob_vis_pct else visitante} o Empate"
-    pick_3_str = f"OVER 2.5 Goles — Probabilidad: {int(round(prob_over_25 * 100))}%"
-    pick_4_str = f"Ambos Anotan SÍ — Probabilidad: {int(round(prob_btts_si * 100))}%"
+    pick_1_str = f"Gana {nombre_local} (1X2) @ {c_loc} — Prob: {prob_loc_pct}% | EV: +{ev_loc}%" if ev_loc >= ev_vis else f"Gana {nombre_visita} (1X2) @ {c_vis} — Prob: {prob_vis_pct}% | EV: +{ev_vis}%"
+    pick_2_str = f"Doble Oportunidad: {nombre_local if prob_loc_pct >= prob_vis_pct else nombre_visita} o Empate"
+    pick_3_str = f"OVER {linea_goles} Goles @ {cuota_goles_over} — Probabilidad: {int(round(prob_over_25 * 100))}%"
+    pick_4_str = f"Ambos Anotan SÍ @ {cuota_btts_si} — Probabilidad: {int(round(prob_btts_si * 100))}%"
 
     html_out = f"""
     <div style="font-family: system-ui; background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0;">
-        <h3 style="color: #065F46; margin-top:0;">LA MAÑA PICKS • MODELO XG & POISSON AVANZADO ({liga.upper()})</h3>
-        <p><b>{local}</b> (xG Adj: {lambda_loc:.2f}) vs <b>{visitante}</b> (xG Adj: {lambda_vis:.2f})</p>
+        <h3 style="color: #065F46; margin-top:0;">LA MAÑA PICKS • MODELO XG & POISSON AVANZADO ({str(liga).upper()})</h3>
+        <p><b>{nombre_local}</b> (xG Adj: {lambda_loc:.2f}) vs <b>{nombre_visita}</b> (xG Adj: {lambda_vis:.2f})</p>
         <p>Probabilidades: Local <b>{prob_loc_pct}%</b> | Empate <b>{prob_emp_pct}%</b> | Visitante <b>{prob_vis_pct}%</b></p>
         <hr/>
         <p><b>1. Ganador:</b> {pick_1_str}</p>
@@ -1182,7 +1165,7 @@ def simular_partido_futbol_avanzado(
         <p><b>4. BTTS:</b> {pick_4_str}</p>
     </div>
     """
-    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{local} vs {visitante}"
+    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
     
 def simular_player_prop_nba(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under):
     linea = float(linea_casino)
@@ -2187,7 +2170,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     btn_sim_nfl.click(fn=simular_partido_nfl_clasificado, inputs=[drop_nfl_loc, drop_nfl_vis, num_nfl_cuota_ml_loc, num_nfl_cuota_ml_vis, num_sp_loc_val, num_cuota_sp_loc, num_sp_vis_val, num_cuota_sp_vis, num_nfl_tot, num_nfl_cuota_tot_over, num_nfl_cuota_tot_under], outputs=[out_nfl, st_nfl_p1, st_nfl_p2, st_nfl_p3, st_nfl_p4, st_nfl_match])
     btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_mlb_tot, num_linea_team_loc, num_cuota_team_loc_over, num_cuota_team_loc_under, num_linea_team_vis, num_cuota_team_vis_over, num_cuota_team_vis_under, num_cuota_nrfi, num_cuota_yrfi], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match])
-    btn_sim_fut.click(fn=simular_partido_futbol, inputs=[st_liga_activa, drop_fut_loc, drop_fut_vis, num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_c_btts_si, num_fut_c_btts_no, num_fut_linea_tot, num_fut_c_over, num_fut_c_under, drop_fatiga, st_dict_futbol_actual], outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match])
+    btn_sim_fut.click(fn=simular_partido_futbol_avanzado, inputs=[st_liga_activa, drop_fut_loc, drop_fut_vis, num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_c_btts_si, num_fut_c_btts_no, num_fut_linea_tot, num_fut_c_over, num_fut_c_under, drop_fatiga, st_dict_futbol_actual], outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match])
     btn_sim_nba.click(fn=simular_partido_nba, inputs=[drop_nba_loc, drop_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis, num_nba_tot, num_nba_cuota_tot_over, num_nba_cuota_tot_under, drop_descanso_nba], outputs=[out_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match])
 
     btn_sim_prop.click(fn=simular_player_prop_mlb, inputs=[txt_prop_player_name, drop_prop_type, num_prop_line, num_prop_cuota_over, num_prop_cuota_under, num_xera_vis, num_whip_vis], outputs=[out_prop_mlb, st_prop_rec_text])
