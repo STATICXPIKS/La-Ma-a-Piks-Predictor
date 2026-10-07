@@ -2199,21 +2199,10 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_save_prop_fut.click(fn=lambda text: fn_save_generic_prop("FÚTBOL", text), inputs=[st_prop_fut_rec_text], outputs=[lbl_save_prop_fut])
     btn_save_prop_nba.click(fn=lambda text: fn_save_generic_prop("NBA", text), inputs=[st_prop_nba_rec_text], outputs=[lbl_save_prop_nba])
 
-# =========================================
-# LANZAMIENTO DEL SERVIDOR (COMPATIBLE CON RENDER)
-# =========================================
-if __name__ == "__main__":
-    # 1. Cargar datos del dashboard una vez dentro del hilo principal
     app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
 
-    # 2. Render asigna dinámicamente el puerto en os.environ["PORT"]
+# Vinculación de puerto para Render / Colab / Producción
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     is_colab = "COLAB_GPU" in os.environ or "GGL_SUPPRESS_SANDBOX_CHECK" in os.environ
-
-    # 3. Abrir puerto en 0.0.0.0 inmediatamente
-    app_mana.launch(
-        server_name="0.0.0.0",
-        server_port=port,
-        share=is_colab,
-        prevent_thread_lock=False
-    )
+    app_mana.launch(share=is_colab, server_name="0.0.0.0", server_port=port)
