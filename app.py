@@ -2194,15 +2194,23 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_save_fut.click(fn=fn_save_pick_fut, inputs=[rad_pick_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_p5, st_fut_match, st_liga_activa], outputs=[lbl_save_fut])
     btn_save_nba.click(fn=fn_save_pick_nba, inputs=[rad_pick_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match], outputs=[lbl_save_nba])
 
-    btn_save_prop_mlb.click(fn=lambda text: fn_save_generic_prop("MLB", text), inputs=[st_prop_rec_text], outputs=[lbl_save_prop_mlb])
+btn_save_prop_mlb.click(fn=lambda text: fn_save_generic_prop("MLB", text), inputs=[st_prop_rec_text], outputs=[lbl_save_prop_mlb])
     btn_save_prop_nfl.click(fn=lambda text: fn_save_generic_prop("NFL", text), inputs=[st_prop_nfl_rec_text], outputs=[lbl_save_prop_nfl])
     btn_save_prop_fut.click(fn=lambda text: fn_save_generic_prop("FÚTBOL", text), inputs=[st_prop_fut_rec_text], outputs=[lbl_save_prop_fut])
     btn_save_prop_nba.click(fn=lambda text: fn_save_generic_prop("NBA", text), inputs=[st_prop_nba_rec_text], outputs=[lbl_save_prop_nba])
 
-    app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
-
-# Vinculación de puerto para Render / Colab / Producción
+# =========================================
+# LANZAMIENTO DEL SERVIDOR (COMPATIBLE CON RENDER)
+# =========================================
 if __name__ == "__main__":
+    app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
+    
     port = int(os.environ.get("PORT", 7860))
     is_colab = "COLAB_GPU" in os.environ or "GGL_SUPPRESS_SANDBOX_CHECK" in os.environ
-    app_mana.launch(share=is_colab, server_name="0.0.0.0", server_port=port)
+    
+    app_mana.launch(
+        server_name="0.0.0.0",
+        server_port=port,
+        share=is_colab,
+        prevent_thread_lock=False
+    )
