@@ -1,7 +1,7 @@
-gradio
+gradio>=4.0.0
 xgboost
-scikit-learn
 pandas
 numpy
 scipy
 requests
+uvicorn
