@@ -2201,8 +2201,19 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 
     app_mana.load(fn=generar_dashboard_completo, outputs=outputs_directos)
 
-# Vinculación de puerto para Render / Colab / Producción
+# =========================================
+# LANZAMIENTO DEL SERVIDOR (COMPATIBLE CON RENDER)
+# =========================================
 if __name__ == "__main__":
+    # Render asigna dinámicamente un puerto en os.environ["PORT"]
     port = int(os.environ.get("PORT", 7860))
+    
+    # IMPORTANTE: Desactivar share=True en Render para no bloquear los puertos
     is_colab = "COLAB_GPU" in os.environ or "GGL_SUPPRESS_SANDBOX_CHECK" in os.environ
-    app_mana.launch(share=is_colab, server_name="0.0.0.0", server_port=port)
+    
+    app_mana.launch(
+        server_name="0.0.0.0",
+        server_port=port,
+        share=is_colab,
+        prevent_thread_lock=False
+    )
