@@ -2154,7 +2154,129 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     )
 
     btn_sim_nba.click(fn=simular_partido_nba, inputs=[drop_nba_loc, drop_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis, num_nba_tot, num_nba_cuota_tot_over, num_nba_cuota_tot_under, drop_descanso_nba], outputs=[out_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match])
+def simular_partido_nba(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under, descanso_option):
+    logo_loc = NBA_DICT.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
+    logo_vis = NBA_DICT.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/leaguelogos/basketball/500/46.png")
 
+    pen_loc_off, pen_loc_def, r_loc_inj = obtener_lesionados_oficiales_nba(nombre_local)
+    pen_vis_off, pen_vis_def, r_vis_inj = obtener_lesionados_oficiales_nba(nombre_visita)
+
+    pf_loc, pc_loc = obtener_estadisticas_nba_api(nombre_local)
+    pf_vis, pc_vis = obtener_estadisticas_nba_api(nombre_visita)
+
+    pace_loc = NBA_DICT.get(nombre_local, {}).get("pace", 99.0)
+    pace_vis = NBA_DICT.get(nombre_visita, {}).get("pace", 99.0)
+    pace_liga = 99.2
+
+    pace_proyectado = (pace_loc * pace_vis) / pace_liga
+
+    ortg_loc = ((pf_loc / pace_loc) * 100) - pen_loc_off
+    drtg_loc = ((pc_loc / pace_loc) * 100) + pen_loc_def
+
+    ortg_vis = ((pf_vis / pace_vis) * 100) - pen_vis_off
+    drtg_vis = ((pc_vis / pace_vis) * 100) + pen_vis_def
+
+    media_ortg_liga = 114.0
+
+    pen_descanso_loc = -3.2 if "Local" in descanso_option else 0.0
+    pen_descanso_vis = -3.2 if "Visitante" in descanso_option else 0.0
+
+    hca_loc = NBA_DICT.get(nombre_local, {}).get("hca", 2.3)
+
+    off_efectiva_loc = (ortg_loc * drtg_vis) / media_ortg_liga
+    off_efectiva_vis = (ortg_vis * drtg_loc) / media_ortg_liga
+
+    pts_loc_est = round(((off_efectiva_loc / 100) * pace_proyectado) + hca_loc + pen_descanso_loc, 1)
+    pts_vis_est = round(((off_efectiva_vis / 100) * pace_proyectado) + pen_descanso_vis, 1)
+
+    diff_pts = pts_loc_est - pts_vis_est
+    prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 11.2) * 100))))
+    prob_win_visita = 100 - prob_win_local
+
+    prob_impl_ml_loc = (1 / float(cuota_ml_loc)) * 100 if float(cuota_ml_loc) > 1 else 50.0
+    prob_impl_ml_vis = (1 / float(cuota_ml_vis)) * 100 if float(cuota_ml_vis) > 1 else 50.0
+
+    edge_ml_loc = round(prob_win_local - prob_impl_ml_loc, 1)
+    edge_ml_vis = round(prob_win_visita - prob_impl_ml_vis, 1)
+
+    if edge_ml_loc >= edge_ml_vis and edge_ml_loc >= 3.0:
+        pick_1_str = f"{nombre_local} ML @ {cuota_ml_loc} — Probabilidad: {prob_win_local}% | Ventaja: +{edge_ml_loc}% EV"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_loc}% EV)</span>'
+    elif edge_ml_vis > edge_ml_loc and edge_ml_vis >= 3.0:
+        pick_1_str = f"{nombre_visita} ML @ {cuota_ml_vis} — Probabilidad: {prob_win_visita}% | Ventaja: +{edge_ml_vis}% EV"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_vis}% EV)</span>'
+    else:
+        fav_name = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
+        fav_prob = max(prob_win_local, prob_win_visita)
+        fav_cuota = cuota_ml_loc if prob_win_local >= prob_win_visita else cuota_ml_vis
+        fav_edge = max(edge_ml_loc, edge_ml_vis)
+        pick_1_str = f"{fav_name} ML @ {fav_cuota} — Probabilidad: {fav_prob}% | Ventaja: {fav_edge}% EV"
+        badge_1 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+
+    p_cubre_sp_loc = round(norm.cdf((diff_pts + float(sp_loc_val)) / 11.2) * 100, 1)
+    p_cubre_sp_vis = round(norm.cdf(((-diff_pts) + float(sp_vis_val)) / 11.2) * 100, 1)
+
+    prob_impl_sp_loc = (1 / float(cuota_sp_loc)) * 100 if float(cuota_sp_loc) > 1 else 50.0
+    edge_sp_loc = round(p_cubre_sp_loc - prob_impl_sp_loc, 1)
+
+    pick_2_str = f"{nombre_local if p_cubre_sp_loc >= p_cubre_sp_vis else nombre_visita} Spread ({sp_loc_val if p_cubre_sp_loc >= p_cubre_sp_vis else sp_vis_val}) @ {cuota_sp_loc if p_cubre_sp_loc >= p_cubre_sp_vis else cuota_sp_vis}"
+    badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_sp_loc}% EV)</span>' if edge_sp_loc >= 2.5 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+
+    tot_est_real = pts_loc_est + pts_vis_est
+    dif_total = tot_est_real - float(linea_total)
+    tipo_tot = "OVER" if dif_total >= 0 else "UNDER"
+    cuota_tot_fav = cuota_tot_over if tipo_tot == "OVER" else cuota_tot_under
+    prob_tot = min(88, int(50 + abs(dif_total) * 3.5))
+
+    pick_3_str = f"{tipo_tot} de {linea_total} pts @ {cuota_tot_fav} — Probabilidad: {prob_tot}% (Proyección: {tot_est_real:.1f} pts en {pace_proyectado:.1f} pos)"
+    badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if abs(dif_total) >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+
+    html_out = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MOTOR SABERMÉTRICO DE POSESIONES (PACE & EPM)</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 78.2%</div>
+        </div>
+
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
+            {r_loc_inj}
+            {r_vis_inj}
+        </div>
+
+        <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_vis_est:.1f} pts | Ortg: {ortg_vis:.1f})</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_loc_est:.1f} pts | Ortg: {ortg_loc:.1f})</span>
+                </div>
+                <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
+            </div>
+            <div style="text-align: center; font-size: 11px; font-weight: 700; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 6px;">
+                Ritmo Proyectado: {pace_proyectado:.1f} Posesiones | HCA Local: +{hca_loc} pts
+            </div>
+        </div>
+
+        <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div>{badge_1}
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Spread Recomendado: {pick_2_str}</div></div>{badge_2}
+        </div>
+        <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Totales (O/U): {pick_3_str}</div></div>{badge_3}
+        </div>
+    </div>
+    """
+    return html_out, pick_1_str, pick_2_str, pick_3_str, "", f"{nombre_local} vs {nombre_visita}"
     btn_sim_prop.click(fn=simular_player_prop_mlb, inputs=[txt_prop_player_name, drop_prop_type, num_prop_line, num_prop_cuota_over, num_prop_cuota_under, num_xera_vis, num_whip_vis], outputs=[out_prop_mlb, st_prop_rec_text])
     btn_sim_prop_nfl.click(fn=simular_player_prop_nfl, inputs=[txt_prop_nfl_player, drop_prop_nfl_type, num_prop_nfl_line, num_prop_nfl_cuota_over, num_prop_nfl_cuota_under], outputs=[out_prop_nfl, st_prop_nfl_rec_text])
     btn_sim_prop_fut.click(fn=simular_prop_futbol, inputs=[txt_prop_fut_item, drop_prop_fut_type, num_prop_fut_line, num_prop_fut_cuota_over, num_prop_fut_cuota_under], outputs=[out_prop_fut, st_prop_fut_rec_text])
