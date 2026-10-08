@@ -201,45 +201,46 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
     lista_jugadores = []
 
     try:
-        r = requests.get(url_injuries, timeout=3)
+        r = requests.get(url_injuries, timeout=5)
         if r.status_code == 200:
             items = r.json().get("items", [])
-            for item in items[:8]:
+            for item in items:
                 ref_url = item.get("$ref")
                 if ref_url:
-                    r_detail = requests.get(ref_url, timeout=2)
+                    r_detail = requests.get(ref_url, timeout=3)
                     if r_detail.status_code == 200:
                         data_inj = r_detail.json()
                         status = data_inj.get("status", "").upper()
                         ath_ref = data_inj.get("athlete", {}).get("$ref", "")
                         nombre_ath, posicion = "Jugador", "NFL"
                         if ath_ref:
-                            r_ath = requests.get(ath_ref, timeout=2)
+                            r_ath = requests.get(ath_ref, timeout=3)
                             if r_ath.status_code == 200:
                                 d_ath = r_ath.json()
                                 nombre_ath = d_ath.get("displayName", "Jugador")
                                 posicion = d_ath.get("position", {}).get("abbreviation", "NFL")
 
-                        if status in ["OUT", "INJURED RESERVE", "IR", "DOUBTFUL"]:
-                            if posicion in ["QB"]:
-                                penalizacion_off += 4.0
-                                lista_jugadores.append(f"❌ <b>{nombre_ath} ({posicion}): OUT</b> [-4.0 pts Off]")
+                        if status in ["OUT", "INJURED RESERVE", "IR", "DOUBTFUL", "DNP"]:
+                            if posicion == "QB":
+                                penalizacion_off += 5.5
+                                lista_jugadores.append(f"❌ <b>{nombre_ath} ({posicion}): {status}</b> [-5.5 pts Off]")
                             elif posicion in ["WR", "RB", "TE", "OT"]:
                                 penalizacion_off += 1.5
                                 lista_jugadores.append(f"⚠️ <b>{nombre_ath} ({posicion}): {status}</b> [-1.5 pts Off]")
                             elif posicion in ["CB", "DE", "LB", "S"]:
                                 penalizacion_def += 1.5
-                                lista_jugadores.append(f"🛡️ <b>{nombre_ath} ({posicion}): {status}</b> [+1.5 pts Def Concedidos]")
-                            else:
-                                penalizacion_off += 0.5
-                                lista_jugadores.append(f"🔸 {nombre_ath} ({posicion}): {status}")
+                                lista_jugadores.append(f"🛡️ <b>{nombre_ath} ({posicion}): {status}</b> [+1.5 pts Def]")
+                        elif status in ["QUESTIONABLE", "LIMITED"]:
+                            if posicion == "QB":
+                                penalizacion_off += 2.0
+                                lista_jugadores.append(f"⚠️ <b>{nombre_ath} ({posicion}): QUESTIONABLE</b> [-2.0 pts Off]")
     except Exception as e:
         print(f"Error consultando API de lesiones NFL: {e}")
 
     if not lista_jugadores:
-        reporte_html = f"<div style='font-size:11px; color:#10B981;'>🟢 <b>{nombre_equipo}:</b> Plantilla Titular Completa</div>"
+        reporte_html = f"<div style='font-size:11px; color:#10B981;'>🟢 <b>{nombre_equipo}:</b> Plantilla Sin Bajas Reportadas</div>"
     else:
-        reporte_html = f"<div style='font-size:11px; color:#D97706;'>🚨 <b>Bajas Confirmadas ({nombre_equipo}):</b><br/>" + "<br/>".join(lista_jugadores) + "</div>"
+        reporte_html = f"<div style='font-size:11px; color:#D97706;'>🚨 <b>Bajas ({nombre_equipo}):</b><br/>" + "<br/>".join(lista_jugadores) + "</div>"
 
     return penalizacion_off, penalizacion_def, reporte_html
 
@@ -1303,126 +1304,80 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
 
     mod_auto = FACTOR_AJUSTE_AUTO.get("MLB", 1.0)
-    wrc_loc_adj = loc_d['wRC_plus'] * mod_auto
-    wrc_vis_adj = vis_d['wRC_plus'] * mod_auto
+    
+    wrc_loc = loc_d['wRC_plus'] * mod_auto
+    wrc_vis = vis_d['wRC_plus'] * mod_auto
 
-    era_efectiva_vis = (float(xera_vis) * 0.60) + (float(era_bp_vis) * 0.40)
-    whip_efectivo_vis = (float(whip_vis) * 0.60) + (float(whip_bp_vis) * 0.40)
+    pitching_loc = (float(xera_loc) * 0.65 + float(era_bp_loc) * 0.35) * (float(whip_loc) * 0.65 + float(whip_bp_loc) * 0.35) / 1.2
+    pitching_vis = (float(xera_vis) * 0.65 + float(era_bp_vis) * 0.35) * (float(whip_vis) * 0.65 + float(whip_bp_vis) * 0.35) / 1.2
 
-    era_efectiva_loc = (float(xera_loc) * 0.60) + (float(era_bp_loc) * 0.40)
-    whip_efectivo_loc = (float(whip_loc) * 0.60) + (float(whip_bp_loc) * 0.40)
+    carreras_loc = round(max(1.5, (wrc_loc / 100.0) * (pitching_vis / 3.8) * 4.2 * loc_d['park_factor']), 1)
+    carreras_vis = round(max(1.5, (wrc_vis / 100.0) * (pitching_loc / 3.8) * 4.0 * loc_d['park_factor']), 1)
 
-    input_vector = [[wrc_loc_adj, wrc_vis_adj, era_efectiva_loc, era_efectiva_vis, whip_efectivo_loc, whip_efectivo_vis, loc_d['park_factor']]]
-    diff_carreras, tot_carreras = float(model_mlb_diff.predict(input_vector)[0]), float(model_mlb_tot.predict(input_vector)[0])
+    tot_carreras = carreras_loc + carreras_vis
+    diff_carreras = carreras_loc - carreras_vis
 
-    carreras_loc = max(0.5, (tot_carreras + diff_carreras) / 2)
-    carreras_vis = max(0.5, (tot_carreras - diff_carreras) / 2)
-
-    carreras_f5_loc = round(carreras_loc * 0.55, 1)
-    carreras_f5_vis = round(carreras_vis * 0.55, 1)
-    diff_f5 = carreras_f5_loc - carreras_f5_vis
-
-    prob_win_local = int(round(100 / (1 + 10**(-diff_carreras / 2.0))))
+    prob_win_local = int(round(100 / (1 + 10**(-diff_carreras / 1.8))))
     prob_win_visita = 100 - prob_win_local
 
-    prob_f5_loc = int(round(100 / (1 + 10**(-diff_f5 / 1.1))))
-    prob_f5_vis = 100 - prob_f5_loc
+    prob_impl_ml_loc = (1 / float(cuota_loc_dec)) * 100 if float(cuota_loc_dec) > 1 else 50.0
+    prob_impl_ml_vis = (1 / float(cuota_vis_dec)) * 100 if float(cuota_vis_dec) > 1 else 50.0
 
-    equipo_fav = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
-    prob_fav = max(prob_win_local, prob_win_visita)
-    cuota_fav = cuota_loc_dec if prob_win_local >= prob_win_visita else cuota_vis_dec
-    prob_impl_ml = (1 / float(cuota_fav)) * 100 if float(cuota_fav) > 1 else 50.0
-    edge_ml = round(prob_fav - prob_impl_ml, 1)
+    edge_ml_loc = round(prob_win_local - prob_impl_ml_loc, 1)
+    edge_ml_vis = round(prob_win_visita - prob_impl_ml_vis, 1)
 
-    pick_1_str = f"{equipo_fav} ML @ {cuota_fav} — Probabilidad: {prob_fav}% | Ventaja: +{edge_ml}% EV"
-    badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml}% EV)</span>' if edge_ml >= 4.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_ml}% EV)</span>'
-
-    p_cubre_loc = round(100 / (1 + 10**(-(diff_carreras + float(rl_loc_val)) / 2.0)), 1)
-    p_cubre_vis = round(100 / (1 + 10**(-((-diff_carreras) + float(rl_vis_val)) / 2.0)), 1)
-    prob_impl_rl_loc = (1 / float(cuota_rl_loc)) * 100 if float(cuota_rl_loc) > 1 else 50.0
-    prob_impl_rl_vis = (1 / float(cuota_rl_vis)) * 100 if float(cuota_rl_vis) > 1 else 50.0
-    edge_rl_loc = round(p_cubre_loc - prob_impl_rl_loc, 1)
-    edge_rl_vis = round(p_cubre_vis - prob_impl_rl_vis, 1)
-
-    if edge_rl_loc >= edge_rl_vis and edge_rl_loc >= 2.0:
-        pick_2_str = f"{nombre_local} Run Line ({rl_loc_val}) @ {cuota_rl_loc} — Probabilidad: {p_cubre_loc}% | Ventaja: +{edge_rl_loc}% EV"
-        badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_rl_loc}% EV)</span>'
-    elif edge_rl_vis > edge_rl_loc and edge_rl_vis >= 2.0:
-        pick_2_str = f"{nombre_visita} Run Line ({rl_vis_val}) @ {cuota_rl_vis} — Probabilidad: {p_cubre_vis}% | Ventaja: +{edge_rl_vis}% EV"
-        badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_rl_vis}% EV)</span>'
+    if edge_ml_loc >= 3.5:
+        pick_1_str = f"{nombre_local} ML @ {cuota_loc_dec} — Prob: {prob_win_local}% | EV: +{edge_ml_loc}%"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_loc}% EV)</span>'
+    elif edge_ml_vis >= 3.5:
+        pick_1_str = f"{nombre_visita} ML @ {cuota_vis_dec} — Prob: {prob_win_visita}% | EV: +{edge_ml_vis}%"
+        badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_vis}% EV)</span>'
     else:
-        pick_2_str = f"{nombre_local if diff_carreras>=0 else nombre_visita} Run Line — Probabilidad: {max(p_cubre_loc, p_cubre_vis)}%"
-        badge_2 = '<span style="background: #EF4444; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">SKIP ❌</span>'
+        fav_n = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
+        fav_p = max(prob_win_local, prob_win_visita)
+        fav_c = cuota_loc_dec if prob_win_local >= prob_win_visita else cuota_vis_dec
+        pick_1_str = f"{fav_n} ML @ {fav_c} — Prob: {fav_p}%"
+        badge_1 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
-    fav_f5 = nombre_local if prob_f5_loc >= prob_f5_vis else nombre_visita
-    cuota_f5_fav = cuota_f5_loc if prob_f5_loc >= prob_f5_vis else cuota_f5_vis
-    prob_f5_fav = max(prob_f5_loc, prob_f5_vis)
-    edge_f5 = round(prob_f5_fav - ((1 / float(cuota_f5_fav)) * 100), 1) if float(cuota_f5_fav) > 1 else 0.0
-
-    pick_3_str = f"{fav_f5} Ganador F5 ML @ {cuota_f5_fav} — Probabilidad: {prob_f5_fav}% ({carreras_f5_loc:.1f} vs {carreras_f5_vis:.1f})"
-    badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_f5}% EV)</span>' if edge_f5 >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_f5}% EV)</span>'
+    pick_2_str = f"Run Line {nombre_local if diff_carreras>=0 else nombre_visita}"
+    badge_2 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+    pick_3_str = f"F5 ML {nombre_local if diff_carreras>=0 else nombre_visita}"
+    badge_3 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
     exp_carreras_1st = (float(xera_loc) + float(xera_vis)) / 9.0
     prob_nrfi = int(round(np.exp(-exp_carreras_1st) * 100))
-    prob_yrfi = 100 - prob_nrfi
+    pick_4_str = f"NRFI @ {cuota_nrfi} — Prob: {prob_nrfi}%"
+    badge_4 = '<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if prob_nrfi >= 60 else '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
-    c_nrfi = float(cuota_nrfi) if float(cuota_nrfi) > 1 else 1.85
-    c_yrfi = float(cuota_yrfi) if float(cuota_yrfi) > 1 else 1.95
-
-    edge_nrfi = round(prob_nrfi - ((1 / c_nrfi) * 100), 1)
-    edge_yrfi = round(prob_yrfi - ((1 / c_yrfi) * 100), 1)
-
-    if edge_nrfi >= edge_yrfi and edge_nrfi >= 2.0:
-        pick_4_str = f"NRFI (No Carrera 1er Inning) @ {c_nrfi} — Probabilidad: {prob_nrfi}% | Ventaja: +{edge_nrfi}% EV"
-        badge_4 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 NRFI (+{edge_nrfi}% EV)</span>'
-    elif edge_yrfi > edge_nrfi and edge_yrfi >= 2.0:
-        pick_4_str = f"YRFI (Sí Carrera 1er Inning) @ {c_yrfi} — Probabilidad: {prob_yrfi}% | Ventaja: +{edge_yrfi}% EV"
-        badge_4 = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET 🔥 YRFI (+{edge_yrfi}% EV)</span>'
-    else:
-        pick_4_str = f"1er Inning: {'NRFI' if prob_nrfi>=50 else 'YRFI'} — Probabilidad: {max(prob_nrfi, prob_yrfi)}%"
-        badge_4 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
-
-    dif_team_loc = carreras_loc - float(linea_team_loc)
-    tipo_team_loc = "OVER" if dif_team_loc >= 0 else "UNDER"
-    cuota_team_loc = cuota_team_loc_over if tipo_team_loc == "OVER" else cuota_team_loc_under
-    prob_team_loc = min(88, int(50 + abs(dif_team_loc) * 16))
-    edge_team_loc = round(prob_team_loc - ((1 / float(cuota_team_loc)) * 100), 1) if float(cuota_team_loc) > 1 else 0.0
-    pick_5_str = f"Team Total {nombre_local}: {tipo_team_loc} {linea_team_loc} @ {cuota_team_loc} — Probabilidad: {prob_team_loc}% (Proyección: {carreras_loc:.1f})"
-    badge_5 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_team_loc}% EV)</span>' if edge_team_loc >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_team_loc}% EV)</span>'
-
-    dif_team_vis = carreras_vis - float(linea_team_vis)
-    tipo_team_vis = "OVER" if dif_team_vis >= 0 else "UNDER"
-    cuota_team_vis = cuota_team_vis_over if tipo_team_vis == "OVER" else cuota_team_vis_under
-    prob_team_vis = min(88, int(50 + abs(dif_team_vis) * 16))
-    edge_team_vis = round(prob_team_vis - ((1 / float(cuota_team_vis)) * 100), 1) if float(cuota_team_vis) > 1 else 0.0
-    pick_6_str = f"Team Total {nombre_visita}: {tipo_team_vis} {linea_team_vis} @ {cuota_team_vis} — Probabilidad: {prob_team_vis}% (Proyección: {carreras_vis:.1f})"
-    badge_6 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_team_vis}% EV)</span>' if edge_team_vis >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_team_vis}% EV)</span>'
+    pick_5_str = f"Team Total {nombre_local}: {carreras_loc:.1f} carreras est."
+    badge_5 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+    pick_6_str = f"Team Total {nombre_visita}: {carreras_vis:.1f} carreras est."
+    badge_6 = '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
     dif_linea = tot_carreras - float(linea_tot_carreras)
     tipo_tot = "OVER" if dif_linea >= 0 else "UNDER"
-    prob_tot = min(85, int(50 + abs(dif_linea) * 12))
-    pick_7_str = f"{tipo_tot} de {linea_tot_carreras} Carreras Totales — Probabilidad: {prob_tot}% (Proyección: {tot_carreras:.1f})"
-    badge_7 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if abs(dif_linea) >= 0.8 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
+    pick_7_str = f"{tipo_tot} de {linea_tot_carreras} Carreras — Proyección: {tot_carreras:.1f}"
+    badge_7 = '<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if abs(dif_linea) >= 0.8 else '<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
     html_out = f"""
     <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO SABERMÉTRICO COMPLETO</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD +EV: 76.5%</div>
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO SABERMÉTRICO AJUSTADO</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">CALIBRADO</div>
         </div>
 
         <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({carreras_vis:.1f} carreras totales | {carreras_f5_vis:.1f} F5)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({carreras_vis:.1f} carreras est.)</span>
                 </div>
                 <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({carreras_loc:.1f} carreras totales | {carreras_f5_loc:.1f} F5)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({carreras_loc:.1f} carreras est.)</span>
                 </div>
                 <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
             </div>
@@ -1433,13 +1388,13 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
             <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Juego Completo: {pick_1_str}</div></div>{badge_1}
         </div>
         <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Run Line Recomendado (+EV): {pick_2_str}</div></div>{badge_2}
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">2. Run Line Recomendado: {pick_2_str}</div></div>{badge_2}
         </div>
         <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Primeras 5 Entradas (F5 ML): {pick_3_str}</div></div>{badge_3}
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">3. Primeras 5 Entradas (F5): {pick_3_str}</div></div>{badge_3}
         </div>
         <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">4. Mercado 1er Inning (NRFI/YRFI): {pick_4_str}</div></div>{badge_4}
+            <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">4. Mercado 1er Inning: {pick_4_str}</div></div>{badge_4}
         </div>
         <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <div><div style="font-size: 14px; font-weight: 800; color: #0F172A;">5. Total Carreras {nombre_local}: {pick_5_str}</div></div>{badge_5}
@@ -1455,34 +1410,27 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, pick_5_str, pick_6_str, pick_7_str, f"{nombre_local} vs {nombre_visita}"
 
 def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under):
-    logo_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/det.png")
-    logo_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("logo", "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png")
+    logo_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("logo", "")
+    logo_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("logo", "")
 
     pen_loc_off, pen_loc_def, r_loc_inj = obtener_lesionados_oficiales_nfl(nombre_local)
     pen_vis_off, pen_vis_def, r_vis_inj = obtener_lesionados_oficiales_nfl(nombre_visita)
 
     mod_auto = FACTOR_AJUSTE_AUTO.get("NFL", 1.0)
 
-    off_loc = (DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5) - pen_loc_off) * mod_auto
+    off_loc = max(10.0, (DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5) - pen_loc_off) * mod_auto)
     def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.5) + pen_loc_def
-    off_vis = (DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0) - pen_vis_off) * mod_auto
+    off_vis = max(10.0, (DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0) - pen_vis_off) * mod_auto)
     def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 21.5) + pen_vis_def
 
-    # Pasar matriz pura de NumPy para evitar advertencias de nombres de columnas en XGBoost
-    input_data = [[off_loc, def_loc, off_vis, def_vis]]
-    
-    try:
-        pred_spread = float(model_nfl_sp.predict(input_data)[0])
-        pred_total = float(model_nfl_tot.predict(input_data)[0])
-    except Exception:
-        pred_spread = (off_loc - def_vis) - (off_vis - def_loc)
-        pred_total = (off_loc + off_vis)
+    HCA = 2.5 
 
-    pts_local_est = round(max(10.0, (pred_total + pred_spread) / 2), 1)
-    pts_visita_est = round(max(10.0, (pred_total - pred_spread) / 2), 1)
+    pts_local_est = round(((off_loc + def_vis) / 2.0) + (HCA / 2.0), 1)
+    pts_visita_est = round(((off_vis + def_loc) / 2.0) - (HCA / 2.0), 1)
 
     diff_pts = pts_local_est - pts_visita_est
-    prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 10.5) * 100))))
+    
+    prob_win_local = int(round(min(96, max(4, norm.cdf(diff_pts / 13.5) * 100))))
     prob_win_visita = 100 - prob_win_local
 
     prob_impl_ml_loc = (1 / float(cuota_ml_loc)) * 100 if float(cuota_ml_loc) > 1 else 50.0
@@ -1491,61 +1439,49 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     edge_ml_loc = round(prob_win_local - prob_impl_ml_loc, 1)
     edge_ml_vis = round(prob_win_visita - prob_impl_ml_vis, 1)
 
-    if edge_ml_loc >= edge_ml_vis and edge_ml_loc >= 3.0:
-        pick_1_str = f"{nombre_local} ML @ {cuota_ml_loc} — Probabilidad: {prob_win_local}% | Ventaja: +{edge_ml_loc}% EV"
+    if edge_ml_loc >= 3.5:
+        pick_1_str = f"{nombre_local} ML @ {cuota_ml_loc} — Prob: {prob_win_local}% | EV: +{edge_ml_loc}%"
         badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_loc}% EV)</span>'
-    elif edge_ml_vis > edge_ml_loc and edge_ml_vis >= 3.0:
-        pick_1_str = f"{nombre_visita} ML @ {cuota_ml_vis} — Probabilidad: {prob_win_visita}% | Ventaja: +{edge_ml_vis}% EV"
+    elif edge_ml_vis >= 3.5:
+        pick_1_str = f"{nombre_visita} ML @ {cuota_ml_vis} — Prob: {prob_win_visita}% | EV: +{edge_ml_vis}%"
         badge_1 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_ml_vis}% EV)</span>'
     else:
         fav_name = nombre_local if prob_win_local >= prob_win_visita else nombre_visita
         fav_prob = max(prob_win_local, prob_win_visita)
         fav_cuota = cuota_ml_loc if prob_win_local >= prob_win_visita else cuota_ml_vis
-        fav_edge = max(edge_ml_loc, edge_ml_vis)
-        pick_1_str = f"{fav_name} ML @ {fav_cuota} — Probabilidad: {fav_prob}% | Ventaja: {fav_edge}% EV"
-        badge_1 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ ({fav_edge}% EV)</span>'
+        pick_1_str = f"{fav_name} ML @ {fav_cuota} — Prob: {fav_prob}%"
+        badge_1 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
-    p_cubre_sp_loc = round(norm.cdf((diff_pts + float(sp_loc_val)) / 10.5) * 100, 1)
-    p_cubre_sp_vis = round(norm.cdf(((-diff_pts) + float(sp_vis_val)) / 10.5) * 100, 1)
+    p_cubre_sp_loc = round(norm.cdf((diff_pts + float(sp_loc_val)) / 13.5) * 100, 1)
+    p_cubre_sp_vis = round(norm.cdf(((-diff_pts) + float(sp_vis_val)) / 13.5) * 100, 1)
 
-    prob_impl_sp_loc = (1 / float(cuota_sp_loc)) * 100 if float(cuota_sp_loc) > 1 else 50.0
-    prob_impl_sp_vis = (1 / float(cuota_sp_vis)) * 100 if float(cuota_sp_vis) > 1 else 50.0
+    edge_sp_loc = round(p_cubre_sp_loc - ((1 / float(cuota_sp_loc)) * 100), 1) if float(cuota_sp_loc) > 1 else 0
+    edge_sp_vis = round(p_cubre_sp_vis - ((1 / float(cuota_sp_vis)) * 100), 1) if float(cuota_sp_vis) > 1 else 0
 
-    edge_sp_loc = round(p_cubre_sp_loc - prob_impl_sp_loc, 1)
-    edge_sp_vis = round(p_cubre_sp_vis - prob_impl_sp_vis, 1)
-
-    if edge_sp_loc >= edge_sp_vis and edge_sp_loc >= 2.0:
-        pick_2_str = f"{nombre_local} Spread ({sp_loc_val}) @ {cuota_sp_loc} — Probabilidad: {p_cubre_sp_loc}% | Ventaja: +{edge_sp_loc}% EV"
+    if edge_sp_loc >= 3.0:
+        pick_2_str = f"{nombre_local} Spread ({sp_loc_val}) @ {cuota_sp_loc} — Prob: {p_cubre_sp_loc}% | EV: +{edge_sp_loc}%"
         badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_sp_loc}% EV)</span>'
-    elif edge_sp_vis > edge_sp_loc and edge_sp_vis >= 2.0:
-        pick_2_str = f"{nombre_visita} Spread ({sp_vis_val}) @ {cuota_sp_vis} — Probabilidad: {p_cubre_sp_vis}% | Ventaja: +{edge_sp_vis}% EV"
+    elif edge_sp_vis >= 3.0:
+        pick_2_str = f"{nombre_visita} Spread ({sp_vis_val}) @ {cuota_sp_vis} — Prob: {p_cubre_sp_vis}% | EV: +{edge_sp_vis}%"
         badge_2 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_sp_vis}% EV)</span>'
     else:
-        sp_fav_name = nombre_local if p_cubre_sp_loc >= p_cubre_sp_vis else nombre_visita
-        sp_fav_val = sp_loc_val if p_cubre_sp_loc >= p_cubre_sp_vis else sp_vis_val
-        sp_fav_cuota = cuota_sp_loc if p_cubre_sp_loc >= p_cubre_sp_vis else cuota_sp_vis
-        sp_fav_prob = max(p_cubre_sp_loc, p_cubre_sp_vis)
-        sp_fav_edge = max(edge_sp_loc, edge_sp_vis)
-        pick_2_str = f"{sp_fav_name} Spread ({sp_fav_val}) @ {sp_fav_cuota} — Probabilidad: {sp_fav_prob}% | Ventaja: {sp_fav_edge}% EV"
-        badge_2 = f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ ({sp_fav_edge}% EV)</span>'
+        pick_2_str = f"{nombre_local if diff_pts>=0 else nombre_visita} Spread"
+        badge_2 = '<span style="background: #EF4444; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">SKIP ❌</span>'
 
     tot_est_real = pts_local_est + pts_visita_est
     dif_total = tot_est_real - float(linea_total)
     tipo_tot = "OVER" if dif_total >= 0 else "UNDER"
     cuota_tot_fav = cuota_tot_over if tipo_tot == "OVER" else cuota_tot_under
-    prob_tot = min(88, int(50 + abs(dif_total) * 4))
-    edge_tot = round(prob_tot - ((1 / float(cuota_tot_fav)) * 100), 1) if float(cuota_tot_fav) > 1 else 0.0
+    prob_tot = min(85, int(50 + abs(dif_total) * 3))
 
-    pick_3_str = f"{tipo_tot} de {linea_total} pts @ {cuota_tot_fav} — Probabilidad: {prob_tot}% (Proyección: {tot_est_real:.1f} pts)"
-    badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥 (+{edge_tot}% EV)</span>' if edge_tot >= 3.0 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡ (+{edge_tot}% EV)</span>'
-
-    pick_4_str = ""
+    pick_3_str = f"{tipo_tot} de {linea_total} pts @ {cuota_tot_fav} — Prob: {prob_tot}% (Proyección: {tot_est_real:.1f} pts)"
+    badge_3 = f'<span style="background: #10B981; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">BET 🔥</span>' if abs(dif_total) >= 2.5 else f'<span style="background: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 10px;">MAYBE ⚡</span>'
 
     html_out = f"""
     <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL ESTADÍSTICO CALIBRADO</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">EFECTIVIDAD REAL: 78.0%</div>
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL ESTADÍSTICO RE-CALIBRADO</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">MODELO REAL</div>
         </div>
 
         <div style="background: #F8FAFC; border-radius: 14px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
@@ -1572,7 +1508,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
         </div>
 
         <div style="font-size: 13px; font-weight: 800; color: #065F46; margin-bottom: 10px;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</div>
-        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; margin-bottom: 8px; display: flex; justify-content: space-between; align- items: center;">
             <div><div style="font-size: 14px; font-weight: 800; color: #064E3B;">1. Moneyline Directo: {pick_1_str}</div></div>{badge_1}
         </div>
         <div style="background: #FFFFFF; border-radius: 10px; padding: 10px 14px; border: 1px solid #E2E8F0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -1583,7 +1519,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
         </div>
     </div>
     """
-    return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
+    return html_out, pick_1_str, pick_2_str, pick_3_str, "", f"{nombre_local} vs {nombre_visita}"
 
 # =========================================================
 # GENERADORES DE COMPONENTES 3D
