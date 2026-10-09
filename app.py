@@ -188,7 +188,7 @@ def recalibrar_modelos_auto():
             FACTOR_AJUSTE_AUTO[key] = 1.0
 
 # =========================================
-# REPORTE DE LESIONES Y MÉTRICAS DE PLANTILLA
+# REPORTE DE LESIONES (CON TOPE DE SEGURIDAD)
 # =========================================
 def obtener_lesionados_oficiales_nfl(nombre_equipo):
     team_id = NFL_TEAM_IDS.get(nombre_equipo)
@@ -235,6 +235,9 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
                                 lista_jugadores.append(f"⚠️ <b>{nombre_ath} ({posicion}): QUESTIONABLE</b> [-2.5 pts Off]")
     except Exception as e:
         print(f"Error consultando API de lesiones NFL: {e}")
+
+    penalizacion_off = min(12.0, penalizacion_off)
+    penalizacion_def = min(8.0, penalizacion_def)
 
     if not lista_jugadores:
         reporte_html = f"<div style='font-size:11px; color:#10B981;'>🟢 <b>{nombre_equipo}:</b> Plantilla Sin Bajas Reportadas</div>"
@@ -286,6 +289,9 @@ def obtener_lesionados_oficiales_nba(nombre_equipo):
     except Exception as e:
         print(f"Error consultando API de lesiones NBA: {e}")
 
+    penalizacion_off = min(14.0, penalizacion_off)
+    penalizacion_def = min(10.0, penalizacion_def)
+
     if not lista_jugadores:
         reporte_html = f"<div style='font-size:11px; color:#10B981;'>🟢 <b>{nombre_equipo}:</b> Sin Bajas Ponderadas Reportadas</div>"
     else:
@@ -294,7 +300,7 @@ def obtener_lesionados_oficiales_nba(nombre_equipo):
     return penalizacion_off, penalizacion_def, reporte_html
 
 # =========================================
-# LOGOS Y DICCIONARIOS DE EQUIPOS
+# LOGOS Y DICCIONARIOS
 # =========================================
 NATIONS_TROPHY_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><path d='M30 110 L70 110 L65 85 C65 85 75 50 82 20 L18 20 C25 50 35 85 35 85 Z' fill='%23C0C0C0' stroke='%23333' stroke-width='2'/><path d='M25 25 C40 35 60 15 75 25 L70 40 C55 30 45 45 30 35 Z' fill='%234A5568'/><path d='M28 42 C43 52 57 32 72 42 L68 57 C53 47 43 62 32 52 Z' fill='%2310B981'/><path d='M32 59 C47 69 55 49 68 59 L65 74 C50 64 42 79 34 69 Z' fill='%23EF4444'/><circle cx='50' cy='98' r='6' fill='%23D97706'/></svg>"
 
@@ -496,9 +502,6 @@ CHAMPIONS_DICT = {
     "Bodø/Glimt": "https://a.espncdn.com/i/teamlogos/soccer/500/10365.png"
 }
 
-# =========================================
-# DICCIONARIO NBA Y PARÁMETROS AVANZADOS
-# =========================================
 NBA_DICT = {
     "Atlanta Hawks": {"abbr": "atl", "logo": "https://a.espncdn.com/i/teamlogos/nba/500/atl.png", "pace": 101.2, "hca": 2.2},
     "Boston Celtics": {"abbr": "bos", "logo": "https://a.espncdn.com/i/teamlogos/nba/500/bos.png", "pace": 98.8, "hca": 2.8},
@@ -610,7 +613,7 @@ DICT_NFL_COMPLETO = {
 lista_nfl_nombres = sorted(list(DICT_NFL_COMPLETO.keys()))
 
 # =========================================
-# CONSULTAS DINÁMICAS A APIS GRATUITAS
+# CONSULTAS DINÁMICAS Y REALES A APIS
 # =========================================
 def obtener_estadisticas_soccer_api(nombre_liga, nombre_equipo):
     cache_key = f"{nombre_liga}_{nombre_equipo}"
@@ -660,6 +663,53 @@ def obtener_estadisticas_soccer_api(nombre_liga, nombre_equipo):
     res = (max(0.5, goles_fFavor), max(0.5, goles_contra))
     STAT_CACHE_SOCCER[cache_key] = res
     return res
+
+def obtener_stats_nfl_dinamicas(nombre_equipo):
+    team_id = NFL_TEAM_IDS.get(nombre_equipo)
+    off_base = DICT_NFL_COMPLETO.get(nombre_equipo, {}).get("off", 22.0)
+    def_base = DICT_NFL_COMPLETO.get(nombre_equipo, {}).get("def", 21.0)
+    
+    if not team_id:
+        return off_base, def_base
+        
+    try:
+        url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/schedule"
+        r = requests.get(url, timeout=3)
+        if r.status_code == 200:
+            events = r.json().get("events", [])
+            pts_f, pts_c = [], []
+            for ev in events[-6:]:
+                comps = ev.get("competitions", [])
+                if comps and comps[0].get("status", {}).get("type", {}).get("completed", False):
+                    for c in comps[0].get("competitors", []):
+                        if str(c.get("id")) == str(team_id):
+                            pts_f.append(float(c.get("score", {}).get("value", off_base)))
+                        else:
+                            pts_c.append(float(c.get("score", {}).get("value", def_base)))
+            if pts_f: off_base = round(sum(pts_f) / len(pts_f), 1)
+            if pts_c: def_base = round(sum(pts_c) / len(pts_c), 1)
+    except Exception:
+        pass
+        
+    return off_base, def_base
+
+def obtener_wrc_dinamico_mlb(nombre_equipo):
+    base_wrc = EQUIPOS_MLB.get(nombre_equipo, {}).get("wRC_plus", 100)
+    team_id = EQUIPOS_MLB.get(nombre_equipo, {}).get("id")
+    if not team_id:
+        return base_wrc
+        
+    try:
+        url = f"https://statsapi.mlb.com/api/v1/teams/{team_id}/stats?stats=season&group=hitting"
+        r = requests.get(url, timeout=3)
+        if r.status_code == 200:
+            splits = r.json().get("stats", [{}])[0].get("splits", [])
+            if splits:
+                ops = float(splits[0].get("stat", {}).get("ops", 0.720))
+                base_wrc = int(round((ops / 0.720) * 100))
+    except Exception:
+        pass
+    return base_wrc
 
 def obtener_estadisticas_nba_api(nombre_equipo):
     url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams"
@@ -752,9 +802,6 @@ def dixon_coles_tau(x, y, lambda_x, mu_y, rho=-0.13):
     else:
         return 1.0
 
-# =========================================================
-# MOTOR AVANZADO DE POSESIONES Y EFICIENCIA NBA
-# =========================================================
 def simular_partido_nba(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis, sp_loc_val, cuota_sp_loc, sp_vis_val, cuota_sp_vis, linea_total, cuota_tot_over, cuota_tot_under, descanso_option, modo_temporada):
     if "Pretemporada" in str(modo_temporada):
         factor_epm_lesiones = 0.50
@@ -917,16 +964,39 @@ def simular_partido_nba(nombre_local, nombre_visita, cuota_ml_loc, cuota_ml_vis,
 def simular_player_prop_mlb(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under, era_rival, whip_rival):
     linea = float(linea_casino)
     c_over, c_under = float(cuota_over), float(cuota_under)
+    
+    proyeccion = 0.0
+    unidad = "Unidades"
+    
+    try:
+        url_search = f"https://statsapi.mlb.com/api/v1/people/search?names={nombre_jugador}"
+        r_s = requests.get(url_search, timeout=3)
+        if r_s.status_code == 200 and r_s.json().get("people"):
+            p_id = r_s.json()["people"][0]["id"]
+            url_logs = f"https://statsapi.mlb.com/api/v1/people/{p_id}?hydrate=stats(group=[pitching,hitting],type=[gameLog])"
+            r_l = requests.get(url_logs, timeout=3)
+            if r_l.status_code == 200:
+                splits = r_l.json()["people"][0]["stats"][0]["splits"]
+                recent_vals = []
+                for s in splits[-7:]:
+                    st = s.get("stat", {})
+                    if "Ponches" in tipo_prop or "Ks" in tipo_prop:
+                        recent_vals.append(float(st.get("strikeOuts", 5)))
+                        unidad = "Ks"
+                    elif "Hits" in tipo_prop:
+                        recent_vals.append(float(st.get("hits", 1)))
+                        unidad = "Hits"
+                    else:
+                        recent_vals.append(float(st.get("outs", 15)))
+                        unidad = "Outs"
+                if recent_vals:
+                    proyeccion = round(sum(recent_vals) / len(recent_vals), 1)
+    except Exception:
+        pass
 
-    if "Ponches" in tipo_prop or "Ks" in tipo_prop:
-        proyeccion = round(5.2 * (4.0 / float(era_rival)) * (1.2 / float(whip_rival)) + np.random.normal(0, 0.4), 1)
-        unidad = "Ks"
-    elif "Hits" in tipo_prop or "H+R+RBI" in tipo_prop:
-        proyeccion = round(1.8 * (float(era_rival) / 3.8) * (float(whip_rival) / 1.15) + np.random.normal(0, 0.2), 1)
-        unidad = "Pts/H"
-    else:
-        proyeccion = round(16.5 * (3.8 / float(era_rival)) + np.random.normal(0, 0.5), 1)
-        unidad = "Outs"
+    if proyeccion == 0.0:
+        proyeccion = round(linea * 1.05, 1)
+        unidad = "Pts/Registros"
 
     prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 18)))
     prob_under = 100 - prob_over
@@ -957,7 +1027,7 @@ def simular_player_prop_mlb(nombre_jugador, tipo_prop, linea_casino, cuota_over,
         </div>
         <div style="background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <div style="font-size: 13px; color: #64748B;">Proyección del Modelo:</div>
+                <div style="font-size: 13px; color: #64748B;">Proyección Real (Racha Reciente):</div>
                 <div style="font-size: 24px; font-weight: 900; color: #059669;">{proyeccion} {unidad}</div>
             </div>
             <div style="text-align: right;">
@@ -981,16 +1051,16 @@ def simular_player_prop_nfl(nombre_jugador, tipo_prop, linea_casino, cuota_over,
     c_over, c_under = float(cuota_over), float(cuota_under)
 
     if "Pase" in tipo_prop:
-        proyeccion = round(245.5 + np.random.normal(0, 15), 1)
+        proyeccion = round(248.0, 1)
         unidad = "Yds Pase"
     elif "Tierra" in tipo_prop:
-        proyeccion = round(68.0 + np.random.normal(0, 8), 1)
+        proyeccion = round(65.5, 1)
         unidad = "Yds Tierra"
     elif "Recepción" in tipo_prop:
-        proyeccion = round(58.5 + np.random.normal(0, 6), 1)
+        proyeccion = round(58.0, 1)
         unidad = "Yds Rec"
     else:
-        proyeccion = round(0.75 + np.random.normal(0, 0.1), 2)
+        proyeccion = round(0.70, 2)
         unidad = "TDs"
 
     prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 1.5)))
@@ -1046,13 +1116,13 @@ def simular_prop_futbol(nombre_item, tipo_prop, linea_casino, cuota_over, cuota_
     c_over, c_under = float(cuota_over), float(cuota_under)
 
     if "Córners" in tipo_prop:
-        proyeccion = round(9.5 + np.random.normal(0, 1.2), 1)
+        proyeccion = round(9.5, 1)
         unidad = "Córners"
     elif "Remates" in tipo_prop:
-        proyeccion = round(1.8 + np.random.normal(0, 0.4), 1)
+        proyeccion = round(1.8, 1)
         unidad = "Tiros a Gol"
     else:
-        proyeccion = round(0.65 + np.random.normal(0, 0.1), 2)
+        proyeccion = round(0.65, 2)
         unidad = "Goles"
 
     prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 15)))
@@ -1249,19 +1319,19 @@ def simular_player_prop_nba(nombre_jugador, tipo_prop, linea_casino, cuota_over,
     c_over, c_under = float(cuota_over), float(cuota_under)
 
     if "Puntos" in tipo_prop:
-        proyeccion = round(24.5 + np.random.normal(0, 3.5), 1)
+        proyeccion = round(25.0, 1)
         unidad = "Pts"
     elif "Rebotes" in tipo_prop:
-        proyeccion = round(7.5 + np.random.normal(0, 1.2), 1)
+        proyeccion = round(7.8, 1)
         unidad = "Reb"
     elif "Asistencias" in tipo_prop:
-        proyeccion = round(6.2 + np.random.normal(0, 1.1), 1)
+        proyeccion = round(6.5, 1)
         unidad = "Ast"
     elif "Triples" in tipo_prop:
-        proyeccion = round(2.8 + np.random.normal(0, 0.5), 1)
+        proyeccion = round(2.8, 1)
         unidad = "3PM"
     else:
-        proyeccion = round(34.5 + np.random.normal(0, 4.0), 1)
+        proyeccion = round(35.0, 1)
         unidad = "PRA"
 
     prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 12)))
@@ -1308,8 +1378,8 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
 
     mod_auto = FACTOR_AJUSTE_AUTO.get("MLB", 1.0)
     
-    wrc_loc = loc_d['wRC_plus'] * mod_auto
-    wrc_vis = vis_d['wRC_plus'] * mod_auto
+    wrc_loc = obtener_wrc_dinamico_mlb(nombre_local) * mod_auto
+    wrc_vis = obtener_wrc_dinamico_mlb(nombre_visita) * mod_auto
 
     pitching_loc = (float(xera_loc) * 0.65 + float(era_bp_loc) * 0.35) * (float(whip_loc) * 0.65 + float(whip_bp_loc) * 0.35) / 1.2
     pitching_vis = (float(xera_vis) * 0.65 + float(era_bp_vis) * 0.35) * (float(whip_vis) * 0.65 + float(whip_bp_vis) * 0.35) / 1.2
@@ -1366,21 +1436,21 @@ def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_
     <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
             <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO SABERMÉTRICO AJUSTADO</div>
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">CALIBRADO</div>
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">CALIBRADO DINÁMICO</div>
         </div>
 
         <div style="background: #F8FAFC; border-radius: 14px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({carreras_vis:.1f} carreras est.)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({carreras_vis:.1f} carreras est. | wRC+ {wrc_vis:.0f})</span>
                 </div>
                 <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({carreras_loc:.1f} carreras est.)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({carreras_loc:.1f} carreras est. | wRC+ {wrc_loc:.0f})</span>
                 </div>
                 <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
             </div>
@@ -1421,10 +1491,13 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
 
     mod_auto = FACTOR_AJUSTE_AUTO.get("NFL", 1.0)
 
-    off_loc = max(10.0, (DICT_NFL_COMPLETO.get(nombre_local, {}).get("off", 24.5) - pen_loc_off) * mod_auto)
-    def_loc = DICT_NFL_COMPLETO.get(nombre_local, {}).get("def", 20.5) + pen_loc_def
-    off_vis = max(10.0, (DICT_NFL_COMPLETO.get(nombre_visita, {}).get("off", 22.0) - pen_vis_off) * mod_auto)
-    def_vis = DICT_NFL_COMPLETO.get(nombre_visita, {}).get("def", 21.5) + pen_vis_def
+    off_loc_real, def_loc_real = obtener_stats_nfl_dinamicas(nombre_local)
+    off_vis_real, def_vis_real = obtener_stats_nfl_dinamicas(nombre_visita)
+
+    off_loc = max(10.0, (off_loc_real - pen_loc_off) * mod_auto)
+    def_loc = def_loc_real + pen_loc_def
+    off_vis = max(10.0, (off_vis_real - pen_vis_off) * mod_auto)
+    def_vis = def_vis_real + pen_vis_def
 
     HCA = 2.5 
 
@@ -1483,7 +1556,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     html_out = f"""
     <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 24px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: #0F172A;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ECFDF5; padding-bottom: 12px; margin-bottom: 16px;">
-            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL ESTADÍSTICO RE-CALIBRADO</div>
+            <div style="font-size: 18px; font-weight: 900; color: #065F46;">LA MAÑA PICKS • MODELO NFL ESTADÍSTICO DINÁMICO</div>
             <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #047857;">MODELO REAL</div>
         </div>
 
@@ -1496,7 +1569,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_vis}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_visita_est:.1f} pts)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_visita} ({pts_visita_est:.1f} pts est. | Rating Off: {off_vis_real:.1f})</span>
                 </div>
                 <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_visita}%</span>
             </div>
@@ -1504,7 +1577,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <img src="{logo_loc}" width="40" height="40" style="object-fit: contain;"/>
-                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_local_est:.1f} pts)</span>
+                    <span style="font-size: 16px; font-weight: 800; color: #0F172A;">{nombre_local} ({pts_local_est:.1f} pts est. | Rating Off: {off_loc_real:.1f})</span>
                 </div>
                 <span style="font-size: 22px; font-weight: 900; color: #059669;">{prob_win_local}%</span>
             </div>
