@@ -1247,6 +1247,64 @@ def simular_partido_futbol_avanzado(liga, nombre_local, nombre_visita, cuota_loc
     """
     return html_out, pick_1_str, pick_2_str, pick_3_str, pick_4_str, f"{nombre_local} vs {nombre_visita}"
 
+def simular_player_prop_nba(nombre_jugador, tipo_prop, linea_casino, cuota_over, cuota_under):
+    linea = float(linea_casino)
+    c_over, c_under = float(cuota_over), float(cuota_under)
+
+    if "Puntos" in tipo_prop:
+        proyeccion = round(24.5 + np.random.normal(0, 3.5), 1)
+        unidad = "Pts"
+    elif "Rebotes" in tipo_prop:
+        proyeccion = round(7.5 + np.random.normal(0, 1.2), 1)
+        unidad = "Reb"
+    elif "Asistencias" in tipo_prop:
+        proyeccion = round(6.2 + np.random.normal(0, 1.1), 1)
+        unidad = "Ast"
+    elif "Triples" in tipo_prop:
+        proyeccion = round(2.8 + np.random.normal(0, 0.5), 1)
+        unidad = "3PM"
+    else:
+        proyeccion = round(34.5 + np.random.normal(0, 4.0), 1)
+        unidad = "PRA"
+
+    prob_over = int(min(90, max(10, 50 + (proyeccion - linea) * 12)))
+    prob_under = 100 - prob_over
+
+    prob_impl_over = (1 / c_over) * 100 if c_over > 1 else 50.0
+    ev_over = round(prob_over - prob_impl_over, 1)
+
+    if ev_over >= 2.0:
+        rec_str = f"OVER de {linea} {unidad} para {nombre_jugador} @ {c_over}"
+        badge = f'<span style="background: #10B981; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">BET OVER 🔥 (+{ev_over}% EV)</span>'
+    else:
+        rec_str = f"UNDER de {linea} {unidad} para {nombre_jugador} @ {c_under}"
+        badge = '<span style="background: #3B82F6; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px;">MAYBE ⚡</span>'
+
+    html_prop = f"""
+    <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #0F172A;">
+        <div style="font-size: 16px; font-weight: 900; color: #065F46; border-bottom: 1px solid #ECFDF5; padding-bottom: 8px; margin-bottom: 12px;">
+            🏀 ANÁLISIS DE PLAYER PROP NBA: {nombre_jugador.upper()} ({tipo_prop})
+        </div>
+        <div style="background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 13px; color: #64748B;">Proyección del Modelo:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #059669;">{proyeccion} {unidad}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 13px; color: #64748B;">Línea de Casino:</div>
+                <div style="font-size: 24px; font-weight: 900; color: #0F172A;">{linea}</div>
+            </div>
+        </div>
+        <div style="background: #ECFDF5; border-radius: 10px; padding: 10px 14px; border: 1px solid #10B981; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 14px; font-weight: 800; color: #064E3B;">{rec_str}</div>
+            </div>
+            {badge}
+        </div>
+    </div>
+    """
+    return html_prop, rec_str
+    
 def simular_partido_mlb_clasificado(nombre_local, nombre_visita, xera_loc, whip_loc, era_bp_loc, whip_bp_loc, xera_vis, whip_vis, era_bp_vis, whip_bp_vis, cuota_loc_dec, cuota_vis_dec, rl_loc_val, cuota_rl_loc, rl_vis_val, cuota_rl_vis, cuota_f5_loc, cuota_f5_vis, linea_tot_carreras, linea_team_loc, cuota_team_loc_over, cuota_team_loc_under, linea_team_vis, cuota_team_vis_over, cuota_team_vis_under, cuota_nrfi, cuota_yrfi):
     loc_d, vis_d = EQUIPOS_MLB[nombre_local], EQUIPOS_MLB[nombre_visita]
     logo_loc, logo_vis = loc_d["logo"], vis_d["logo"]
