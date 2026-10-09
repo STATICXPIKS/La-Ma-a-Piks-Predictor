@@ -2024,6 +2024,12 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
                             label="🏆 Fase / Tipo de Partido"
                         )
 
+                        drop_descanso_nba = gr.Dropdown(
+                            choices=["Sin Back-to-Back (Descanso Normal)", "Back-to-Back Local (Jugó Anoche)", "Back-to-Back Visitante (Jugó Anoche)"],
+                            value="Sin Back-to-Back (Descanso Normal)",
+                            label="¿Carga de Partidos / Descanso B2B?"
+                        )
+
                         gr.Markdown("#### 🏀 Cuotas Moneyline (Ganador Directo)")
                         with gr.Row():
                             num_nba_cuota_ml_loc = gr.Number(value=1.45, label="Cuota ML Boston Celtics")
@@ -2216,7 +2222,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
     btn_sim_mlb.click(fn=simular_partido_mlb_clasificado, inputs=[drop_mlb_loc, drop_mlb_vis, num_xera_loc, num_whip_loc, num_era_bp_loc, num_whip_bp_loc, num_xera_vis, num_whip_vis, num_era_bp_vis, num_whip_bp_vis, num_mlb_cuota_loc, num_mlb_cuota_vis, num_rl_loc_val, num_cuota_rl_loc, num_rl_vis_val, num_cuota_rl_vis, num_f5_cuota_loc, num_f5_cuota_vis, num_mlb_tot, num_linea_team_loc, num_cuota_team_loc_over, num_cuota_team_loc_under, num_linea_team_vis, num_cuota_team_vis_over, num_cuota_team_vis_under, num_cuota_nrfi, num_cuota_yrfi], outputs=[out_mlb, st_mlb_p1, st_mlb_p2, st_mlb_p3, st_mlb_p4, st_mlb_p5, st_mlb_p6, st_mlb_p7, st_mlb_match])
     btn_sim_fut.click(fn=simular_partido_futbol_avanzado, inputs=[st_liga_activa, drop_fut_loc, drop_fut_vis, num_fut_c_loc, num_fut_c_emp, num_fut_c_vis, num_fut_c_btts_si, num_fut_c_btts_no, num_fut_linea_tot, num_fut_c_over, num_fut_c_under, drop_fatiga, st_dict_futbol_actual], outputs=[out_fut, st_fut_p1, st_fut_p2, st_fut_p3, st_fut_p4, st_fut_match])
     btn_sim_nba.click(fn=simular_partido_nba, inputs=[drop_nba_loc, drop_nba_vis, num_nba_cuota_ml_loc, num_nba_cuota_ml_vis, num_sp_nba_loc_val, num_cuota_sp_nba_loc, num_sp_nba_vis_val, num_cuota_sp_nba_vis, num_nba_tot, num_nba_cuota_tot_over, num_nba_cuota_tot_under, drop_descanso_nba, drop_modo_nba], outputs=[out_nba, st_nba_p1, st_nba_p2, st_nba_p3, st_nba_p4, st_nba_match])
-
     btn_sim_prop.click(fn=simular_player_prop_mlb, inputs=[txt_prop_player_name, drop_prop_type, num_prop_line, num_prop_cuota_over, num_prop_cuota_under, num_xera_vis, num_whip_vis], outputs=[out_prop_mlb, st_prop_rec_text])
     btn_sim_prop_nfl.click(fn=simular_player_prop_nfl, inputs=[txt_prop_nfl_player, drop_prop_nfl_type, num_prop_nfl_line, num_prop_nfl_cuota_over, num_prop_nfl_cuota_under], outputs=[out_prop_nfl, st_prop_nfl_rec_text])
     btn_sim_prop_fut.click(fn=simular_prop_futbol, inputs=[txt_prop_fut_item, drop_prop_fut_type, num_prop_fut_line, num_prop_fut_cuota_over, num_prop_fut_cuota_under], outputs=[out_prop_fut, st_prop_fut_rec_text])
