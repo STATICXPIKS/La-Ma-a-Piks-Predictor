@@ -221,7 +221,7 @@ def obtener_lesionados_oficiales_nfl(nombre_equipo):
 
                         if status in ["OUT", "INJURED RESERVE", "IR", "DOUBTFUL", "DNP"]:
                             if posicion == "QB":
-                                penalizacion_off += 6.5  # Ajuste EPA para QB Titular
+                                penalizacion_off += 6.5
                                 lista_jugadores.append(f"❌ <b>{nombre_ath} ({posicion}): {status}</b> [-6.5 pts Off]")
                             elif posicion in ["WR", "RB", "TE", "OT"]:
                                 penalizacion_off += 1.5
@@ -642,7 +642,6 @@ def obtener_estadisticas_soccer_api(nombre_liga, nombre_equipo):
                                 if r_sched.status_code == 200:
                                     events = r_sched.json().get("events", [])
                                     gf_list, gc_list = [], []
-                                    # MUESTRA AMPLIADA A LOS ÚLTIMOS 10 PARTIDOS PARA MAYOR PRECISIÓN
                                     for ev in events[-10:]:
                                         comps = ev.get("competitions", [])
                                         if comps:
@@ -742,7 +741,6 @@ def auto_cargar_pitchers_mlb(nombre_local, nombre_visita):
 # MOTOR DE DIXON-COLES Y MODELOS PURE STAT
 # =========================================
 def dixon_coles_tau(x, y, lambda_x, mu_y, rho=-0.13):
-    """Corrección de probabilidad para marcadores de pocos goles en fútbol."""
     if x == 0 and y == 0:
         return 1.0 - (lambda_x * mu_y * rho)
     elif x == 0 and y == 1:
@@ -1132,7 +1130,6 @@ def simular_partido_futbol_avanzado(liga, nombre_local, nombre_visita, cuota_loc
     prob_over_line, prob_btts_si = 0.0, 0.0
     linea_g = float(linea_goles)
 
-    # MATRIZ DE DIXON-COLES (Ajuste para marcadores ajustados de fútbol)
     for i in range(max_goles):
         for j in range(max_goles):
             tau = dixon_coles_tau(i, j, xG_loc, xG_vis)
@@ -1527,7 +1524,7 @@ def simular_partido_nfl_clasificado(nombre_local, nombre_visita, cuota_ml_loc, c
     """
     return html_out, pick_1_str, pick_2_str, pick_3_str, "", f"{nombre_local} vs {nombre_visita}"
 
-    # =========================================
+# =========================================
 # GENERADORES DE COMPONENTES 3D
 # =========================================
 def crear_grafica_barras_3d(titulo, wins, losses, pending):
@@ -1653,7 +1650,7 @@ def render_logo_html(url, height=50):
 # =========================================
 # INTERFAZ GRÁFICA (GRADIO BLOCKS)
 # =========================================
-with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald")) as app_mana:
+with gr.Blocks(title="La Maña Picks") as app_mana:
 
     with gr.Column(visible=True) as vista_home:
         gr.Markdown("""
@@ -2244,4 +2241,9 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft(primary_hue="emerald
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     is_colab = "COLAB_GPU" in os.environ or "GGL_SUPPRESS_SANDBOX_CHECK" in os.environ
-    app_mana.launch(share=is_colab, server_name="0.0.0.0", server_port=port)
+    app_mana.launch(
+        share=is_colab, 
+        server_name="0.0.0.0", 
+        server_port=port,
+        theme=gr.themes.Soft(primary_hue="emerald")
+    )
