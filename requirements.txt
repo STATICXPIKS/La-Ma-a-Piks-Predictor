@@ -1,8 +1,6 @@
-gradio>=4.0.0
-xgboost
+Flask==3.0.0
+Flask-Cors==4.0.0
+requests
 pandas
 numpy
 scipy
-scikit-learn
-requests
-uvicorn
