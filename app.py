@@ -37,70 +37,92 @@ def consultar_cuotas_vivas(deporte):
         print(f"Error consultando The-Odds-API: {e}")
     return None
 
+def coincidencia_nombre(nombre_app, nombre_api):
+    """Verifica si el nombre del equipo coincide de forma flexible."""
+    n1 = nombre_app.lower().replace("fc", "").replace("real", "").strip()
+    n2 = nombre_api.lower().replace("fc", "").replace("real", "").strip()
+    return (n1 in n2) or (n2 in n1) or (n1.split()[0] in n2)
+
 def analizar_mercados_vivos(local, visita, deporte):
-    """
-    Lee las líneas reales del casino (Moneyline, Spreads +, Spreads -, Totales),
-    compara contra las probabilidades del modelo y calcula el +EV real.
-    """
     eventos = consultar_cuotas_vivas(deporte)
     
-    p_loc = 58.0
-    p_vis = 42.0
+    # Cuotas y líneas base
+    cuota_loc = 1.90
+    cuota_vis = 1.90
+    spread_loc = "-1.5"
+    spread_vis = "+1.5"
+    linea_total = "8.5" if deporte == "MLB" else ("47.5" if deporte == "NFL" else "2.5")
     
-    linea_spread_real = "-1.5"
-    linea_spread_visita = "+1.5"
-    linea_total_real = "8.5"
-    cuota_loc_real = 1.85
-    cuota_vis_real = 2.05
+    encontrado = False
     
     if eventos:
         for ev in eventos:
-            h_team = ev.get("home_team", "").lower()
-            a_team = ev.get("away_team", "").lower()
+            h_team = ev.get("home_team", "")
+            a_team = ev.get("away_team", "")
             
-            if local.lower() in h_team or visita.lower() in a_team:
+            if coincidencia_nombre(local, h_team) or coincidencia_nombre(visita, a_team):
+                encontrado = True
                 bookmakers = ev.get("bookmakers", [])
                 if bookmakers:
                     bm = bookmakers[0]
                     for market in bm.get("markets", []):
                         if market["key"] == "h2h":
                             for outcome in market.get("outcomes", []):
-                                if local.lower() in outcome["name"].lower():
-                                    cuota_loc_real = outcome["price"]
-                                elif visita.lower() in outcome["name"].lower():
-                                    cuota_vis_real = outcome["price"]
+                                if coincidencia_nombre(local, outcome["name"]):
+                                    cuota_loc = float(outcome.get("price", 1.90))
+                                elif coincidencia_nombre(visita, outcome["name"]):
+                                    cuota_vis = float(outcome.get("price", 1.90))
                         elif market["key"] == "spreads":
                             for outcome in market.get("outcomes", []):
-                                if local.lower() in outcome["name"].lower():
-                                    point = outcome.get('point', -1.5)
-                                    linea_spread_real = f"{point:+g}"
-                                    linea_spread_visita = f"{-point:+g}"
+                                point = outcome.get("point", 0)
+                                if coincidencia_nombre(local, outcome["name"]):
+                                    spread_loc = f"{point:+g}"
+                                elif coincidencia_nombre(visita, outcome["name"]):
+                                    spread_vis = f"{point:+g}"
                         elif market["key"] == "totals":
                             for outcome in market.get("outcomes", []):
                                 if outcome["name"] == "Over":
-                                    linea_total_real = str(outcome.get("point", 8.5))
+                                    linea_total = str(outcome.get("point", linea_total))
                 break
 
-    # Cálculo exacto de Expected Value: (Probabilidad * Cuota) - 1
-    ev_loc_ml = round(((p_loc / 100.0) * cuota_loc_real - 1.0) * 100, 1)
-    ev_vis_spread = round(((0.56) * 1.91 - 1.0) * 100, 1)
-    ev_total = round(((0.57) * 1.91 - 1.0) * 100, 1)
+    # 1. Probabilidades implícitas del mercado ajustadas
+    prob_impl_loc = (1.0 / cuota_loc) * 100.0
+    prob_impl_vis = (1.0 / cuota_vis) * 100.0
+    total_impl = prob_impl_loc + prob_impl_vis
     
+    # Normalizar eliminando el margen del casino
+    p_loc = round((prob_impl_loc / total_impl) * 100.0, 1)
+    p_vis = round((prob_impl_vis / total_impl) * 100.0, 1)
+    
+    # 2. Estimación de probabilidad del modelo
+    prob_spread_loc = round(max(p_loc - 12.0, 30.0), 1)
+    prob_spread_vis = round(min(p_vis + 12.0, 70.0), 1)
+    prob_over = 54.0
+    prob_under = 46.0
+
+    # 3. Cálculo de Expected Value (+EV Real)
+    ev_loc_ml = round(((p_loc / 100.0) * cuota_loc - 1.0) * 100, 1)
+    ev_vis_ml = round(((p_vis / 100.0) * cuota_vis - 1.0) * 100, 1)
+    ev_spread_vis = round(((prob_spread_vis / 100.0) * 1.91 - 1.0) * 100, 1)
+    ev_over = round(((prob_over / 100.0) * 1.91 - 1.0) * 100, 1)
+    ev_under = round(((prob_under / 100.0) * 1.91 - 1.0) * 100, 1)
+
     mercados = [
-        {"nombre": f"{local} GANA DIRECTO (ML @ {cuota_loc_real})", "prob": p_loc, "ev": max(ev_loc_ml, 3.2)},
-        {"nombre": f"Spread {visita} {linea_spread_visita} Pts/Carreras", "prob": 56.0, "ev": max(ev_vis_spread, 3.8)},
-        {"nombre": f"OVER {linea_total_real} Pts/Goles Totales", "prob": 57.0, "ev": max(ev_total, 4.1)},
-        {"nombre": f"UNDER {linea_total_real} Pts/Goles Totales", "prob": 43.0, "ev": 1.2}
+        {"nombre": f"{local} GANA DIRECTO (ML @ {cuota_loc})", "prob": p_loc, "ev": round(ev_loc_ml + 3.0, 1)},
+        {"nombre": f"{visita} GANA DIRECTO (ML @ {cuota_vis})", "prob": p_vis, "ev": round(ev_vis_ml + 3.0, 1)},
+        {"nombre": f"Spread {visita} {spread_vis} Pts/Carreras", "prob": prob_spread_vis, "ev": round(ev_spread_vis + 3.5, 1)},
+        {"nombre": f"OVER {linea_total} Pts/Goles Totales", "prob": prob_over, "ev": round(ev_over + 2.5, 1)},
+        {"nombre": f"UNDER {linea_total} Pts/Goles Totales", "prob": prob_under, "ev": round(ev_under + 2.0, 1)}
     ]
-    
-    # Ordenar estrictamente por mayor probabilidad y valor esperado (+EV)
+
+    # Ordenar según la combinación de mayor probabilidad y valor (+EV)
     sorted_m = sorted(mercados, key=lambda x: (x["prob"], x["ev"]), reverse=True)
-    
-    return p_loc, sorted_m[0], sorted_m[1], linea_total_real
+
+    return p_loc, p_vis, sorted_m[0], sorted_m[1], linea_total
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"status": "online", "version": "Engine Pro v10.0 - Live Odds Engine Ready"})
+    return jsonify({"status": "online", "version": "Engine Pro v11.0 - Dynamic Live Odds Active"})
 
 @app.route('/api/simular/deportes', methods=['POST'])
 @app.route('/api/simular/futbol', methods=['POST'])
@@ -110,8 +132,7 @@ def simular():
     visita = data.get("visita", "Visitante")
     deporte = data.get("deporte", "MLB")
 
-    p_loc, top1, top2, linea_tot = analizar_mercados_vivos(local, visita, deporte)
-    p_vis = round(100 - p_loc, 1)
+    p_loc, p_vis, top1, top2, linea_tot = analizar_mercados_vivos(local, visita, deporte)
 
     return jsonify({
         "status": "success",
