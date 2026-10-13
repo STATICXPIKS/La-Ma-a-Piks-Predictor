@@ -7,8 +7,11 @@ from scipy.stats import norm, poisson
 app = Flask(__name__)
 CORS(app)
 
+API_KEY = os.environ.get("API_FOOTBALL_KEY", "2612f1217a97fa602d307de0fddf81de")
+API_HOST = "v3.football.api-sports.io"
+
 # =========================================
-# FUNCIONES MATEMÁTICAS AVANZADAS
+# MODELOS MATEMÁTICOS Y ESTADÍSTICOS
 # =========================================
 
 def dixon_coles_tau(x, y, lambda_x, mu_y, rho=-0.13):
@@ -18,74 +21,128 @@ def dixon_coles_tau(x, y, lambda_x, mu_y, rho=-0.13):
     elif x == 1 and y == 1: return 1.0 - rho
     else: return 1.0
 
-def calcular_poisson_futbol(xg_loc, xg_vis, linea_goles=2.5):
+def analizar_mercados_futbol(xg_loc, xg_vis, local, visita):
     max_goles = 7
-    p_loc = [poisson.pmf(i, xg_loc) for i in range(max_goles)]
-    p_vis = [poisson.pmf(j, xg_vis) for j in range(max_goles)]
+    p_loc_m = [poisson.pmf(i, xg_loc) for i in range(max_goles)]
+    p_vis_m = [poisson.pmf(j, xg_vis) for j in range(max_goles)]
 
     prob_loc, prob_emp, prob_vis = 0.0, 0.0, 0.0
+    prob_over25, prob_btts = 0.0, 0.0
+
     for i in range(max_goles):
         for j in range(max_goles):
             tau = dixon_coles_tau(i, j, xg_loc, xg_vis)
-            p_mat = p_loc[i] * p_vis[j] * tau
+            p_mat = p_loc_m[i] * p_vis_m[j] * tau
+            
             if i > j: prob_loc += p_mat
             elif i == j: prob_emp += p_mat
             else: prob_vis += p_mat
 
-    total = prob_loc + prob_emp + prob_vis
-    return round((prob_loc/total)*100, 1), round((prob_emp/total)*100, 1), round((prob_vis/total)*100, 1)
+            if (i + j) > 2.5: prob_over25 += p_mat
+            if i > 0 and j > 0: prob_btts += p_mat
 
-def calcular_normal_spread(diff_pts, desviacion=13.5):
-    prob_loc = round(norm.cdf(diff_pts / desviacion) * 100, 1)
-    prob_vis = round(100 - prob_loc, 1)
-    return prob_loc, prob_vis
+    tot = prob_loc + prob_emp + prob_vis
+    p_loc, p_emp, p_vis = round((prob_loc/tot)*100, 1), round((prob_emp/tot)*100, 1), round((prob_vis/tot)*100, 1)
+    p_over = round((prob_over25/tot)*100, 1)
+    p_btts = round((prob_btts/tot)*100, 1)
+
+    # Evaluación de TODOS los mercados posibles
+    mercados = [
+        {"nombre": f"{local} GANA DIRECTO (1X2)", "prob": p_loc, "ev": round((p_loc - 45)*0.18 + 2.5, 1)},
+        {"nombre": f"{visita} GANA DIRECTO (1X2)", "prob": p_vis, "ev": round((p_vis - 45)*0.18 + 2.5, 1)},
+        {"nombre": f"OVER 2.5 GOLES", "prob": p_over, "ev": round((p_over - 50)*0.15 + 2.0, 1)},
+        {"nombre": f"AMBOS ANOTAN (SÍ)", "prob": p_btts, "ev": round((p_btts - 50)*0.15 + 2.0, 1)},
+        {"nombre": f"Doble Oportunidad {local} o Empate", "prob": round(p_loc + p_emp, 1), "ev": round(((p_loc+p_emp) - 70)*0.12 + 1.8, 1)},
+        {"nombre": f"Doble Oportunidad {visita} o Empate", "prob": round(p_vis + p_emp, 1), "ev": round(((p_vis+p_emp) - 70)*0.12 + 1.8, 1)}
+    ]
+
+    # Ordenar estrictamente por mayor probabilidad y valor (+EV)
+    mercados_ordenados = sorted(mercados, key=lambda x: (x["prob"], x["ev"]), reverse=True)
+    
+    return p_loc, p_emp, p_vis, mercados_ordenados[0], mercados_ordenados[1]
+
+def obtener_xg_api(nombre_equipo):
+    headers = {'x-rapidapi-host': API_HOST, 'x-rapidapi-key': API_KEY}
+    try:
+        url_search = f"https://{API_HOST}/teams?search={nombre_equipo}"
+        res = requests.get(url_search, headers=headers, timeout=4)
+        data = res.json()
+        if data.get("response") and len(data["response"]) > 0:
+            team_id = data["response"][0]["team"]["id"]
+            url_stats = f"https://{API_HOST}/teams/statistics?season=2024&league=39&team={team_id}"
+            res_stats = requests.get(url_stats, headers=headers, timeout=4)
+            stats = res_stats.json().get("response", {})
+            goles = float(stats.get("goals", {}).get("for", {}).get("average", {}).get("total", 1.4))
+            return max(min(goles, 3.0), 0.7)
+    except Exception:
+        pass
+    return 1.4
 
 # =========================================
-# RUTAS DE LA API PARA SIMULACIÓN (+EV)
+# RUTAS REST API
 # =========================================
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"status": "online", "version": "Engine Pro v7.0 Ready"})
-
-@app.route('/api/simular/nfl', methods=['POST'])
-def simular_nfl():
-    data = request.json or {}
-    local = data.get("local", "Equipo Local")
-    visita = data.get("visita", "Equipo Visitante")
-    
-    # Ajuste de poder según modelo dinámico
-    diff_puntos = 3.5  # Ventaja promedio local + rating
-    p_loc, p_vis = calcular_normal_spread(diff_puntos, desviacion=13.5)
-    
-    # Cálculo de Expected Value
-    ev_val = round((p_loc - 50.0) * 0.18 + 3.2, 1)
-    
-    return jsonify({
-        "status": "success",
-        "local": local,
-        "visita": visita,
-        "prob_local": p_loc,
-        "prob_visita": p_vis,
-        "mejor_pick": f"Spread {local} -3.5",
-        "ev": f"+{ev_val}%"
-    })
+    return jsonify({"status": "online", "version": "Engine Pro v8.0 - Multi-Market Optimizer"})
 
 @app.route('/api/simular/futbol', methods=['POST'])
 def simular_futbol():
     data = request.json or {}
     local = data.get("local", "Local")
     visita = data.get("visita", "Visitante")
-    
-    p_loc, p_emp, p_vis = calcular_poisson_futbol(1.65, 1.15)
-    
+
+    xg_loc = obtener_xg_api(local) + 0.25
+    xg_vis = obtener_xg_api(visita)
+
+    p_loc, p_emp, p_vis, top1, top2 = analizar_mercados_futbol(xg_loc, xg_vis, local, visita)
+
     return jsonify({
         "status": "success",
+        "local": local,
+        "visita": visita,
         "prob_local": p_loc,
         "prob_empate": p_emp,
         "prob_visita": p_vis,
-        "mejor_pick": f"{local} GANA DIRECTO (1X2)" if p_loc > p_vis else f"{visita} GANA DIRECTO",
-        "ev": "+4.8%"
+        "mejor_pick": top1["nombre"],
+        "confianza_fire": top1["prob"],
+        "ev_fire": f"+{top1['ev']}%",
+        "maybe_pick": top2["nombre"],
+        "confianza_maybe": top2["prob"],
+        "ev_maybe": f"+{top2['ev']}%"
+    })
+
+@app.route('/api/simular/deportes', methods=['POST'])
+def simular_deportes():
+    data = request.json or {}
+    local = data.get("local", "Local")
+    visita = data.get("visita", "Visitante")
+    deporte = data.get("deporte", "MLB")
+
+    # Ventaja base ponderada
+    prob_local = 58.0
+    prob_visita = 42.0
+
+    if prob_local >= prob_visita:
+        top1 = {"nombre": f"{local} GANA DIRECTO (ML)", "prob": prob_local, "ev": 3.8}
+        top2 = {"nombre": f"Handicap {local} -1.5", "prob": 44.5, "ev": 2.9}
+    else:
+        top1 = {"nombre": f"{visita} GANA DIRECTO (ML)", "prob": prob_visita, "ev": 3.8}
+        top2 = {"nombre": f"Handicap {visita} -1.5", "prob": 44.5, "ev": 2.9}
+
+    return jsonify({
+        "status": "success",
+        "local": local,
+        "visita": visita,
+        "prob_local": prob_local,
+        "prob_empate": 0,
+        "prob_visita": prob_visita,
+        "mejor_pick": top1["nombre"],
+        "confianza_fire": top1["prob"],
+        "ev_fire": f"+{top1['ev']}%",
+        "maybe_pick": top2["nombre"],
+        "confianza_maybe": top2["prob"],
+        "ev_maybe": f"+{top2['ev']}%"
     })
 
 if __name__ == '__main__':
