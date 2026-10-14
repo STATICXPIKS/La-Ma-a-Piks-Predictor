@@ -23,47 +23,53 @@ SPORT_KEYS = {
     "BUNDES": "soccer_germany_bundesliga"
 }
 
-# ==============================================================================
-# TABLAS DE ELO DINÁMICO Y FACTORES XGBOOST (TEMPORADAS 2025-2026 Y 2026-2027)
-# ==============================================================================
-
-ELO_RATINGS_2026 = {
-    "los angeles dodgers": 1640, "milwaukee brewers": 1530,
-    "philadelphia eagles": 1610, "carolina panthers": 1410,
-    "boston celtics": 1660, "charlotte hornets": 1400,
-    "real madrid": 1690, "roma": 1520,
-    "washington capitals": 1510, "montreal canadiens": 1480
+# Mapeo de alias comunes para coincidencia perfecta
+ALIAS_EQUIPOS = {
+    "man city": "manchester city",
+    "paris": "paris saint germain",
+    "psg": "paris saint germain",
+    "roma": "as roma",
+    "porto": "fc porto",
+    "betis": "real betis",
+    "bortmund": "borussia dortmund",
+    "b. dortmund": "borussia dortmund"
 }
 
-def obtener_elo(equipo_nombre, default=1500):
-    for name, elo in ELO_RATINGS_2026.items():
-        if name in equipo_nombre.lower() or equipo_nombre.lower() in name:
-            return elo
-    return default
+def normalizar_nombre(nombre):
+    if not nombre: return ""
+    n = nombre.lower().strip()
+    return ALIAS_EQUIPOS.get(n, n)
+
+def coincidencia_robusta(nombre_app, nombre_api):
+    n_app = normalizar_nombre(nombre_app)
+    n_api = normalizar_nombre(nombre_api)
+    
+    if n_app in n_api or n_api in n_app:
+        return True
+        
+    tokens_app = [t for t in n_app.split() if len(t) > 2]
+    tokens_api = [t for t in n_api.split() if len(t) > 2]
+    
+    for ta in tokens_app:
+        for tb in tokens_api:
+            if ta == tb:
+                return True
+    return False
 
 def consultar_odds_vivas(deporte):
     if not ODDS_API_KEY: return None
-    sport_key = SPORT_KEYS.get(deporte, "soccer_epl")
+    sport_key = SPORT_KEYS.get(deporte, "soccer_uefa_champs_league")
     url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,eu&markets=h2h,spreads,totals&oddsFormat=decimal"
     try:
         res = requests.get(url, timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e:
-        print(f"Error consultando Odds API: {e}")
+        print(f"Error en API Odds: {e}")
     return None
 
-def coincidencia_flexible(nombre_buscado, nombre_api):
-    if not nombre_buscado or not nombre_api: return False
-    pb = [p.lower() for p in nombre_buscado.replace(".", "").split() if len(p) > 2]
-    pa = [p.lower() for p in nombre_api.replace(".", "").split() if len(p) > 2]
-    for b in pb:
-        for a in pa:
-            if b in a or a in b: return True
-    return False
-
-def extraer_lineas_vivas(ev_data, local, visita, linea_tot_def="8.5"):
+def extraer_cuotas_validadas(ev_data, local, visita, linea_tot_default="2.5"):
     c_loc, c_vis = None, None
-    linea_tot = linea_tot_def
+    linea_tot = linea_tot_default
     sp_loc, sp_vis = "-1.5", "+1.5"
 
     if ev_data and ev_data.get("bookmakers"):
@@ -71,103 +77,65 @@ def extraer_lineas_vivas(ev_data, local, visita, linea_tot_def="8.5"):
             for m in bm.get("markets", []):
                 if m["key"] == "h2h":
                     for o in m.get("outcomes", []):
-                        if coincidencia_flexible(local, o["name"]): c_loc = float(o["price"])
-                        elif coincidencia_flexible(visita, o["name"]): c_vis = float(o["price"])
+                        price = float(o.get("price", 0))
+                        if price > 1.0: # Validar que la cuota sea positiva y lógica
+                            if coincidencia_robusta(local, o["name"]): c_loc = price
+                            elif coincidencia_robusta(visita, o["name"]): c_vis = price
                 elif m["key"] == "totals":
                     for o in m.get("outcomes", []):
-                        if o["name"] == "Over": linea_tot = str(o.get("point", linea_tot_def))
+                        if o["name"] == "Over": linea_tot = str(o.get("point", linea_tot_default))
                 elif m["key"] == "spreads":
                     for o in m.get("outcomes", []):
                         pt = o.get("point", 0)
-                        if coincidencia_flexible(local, o["name"]): sp_loc = f"{pt:+g}"
-                        elif coincidencia_flexible(visita, o["name"]): sp_vis = f"{pt:+g}"
+                        if coincidencia_robusta(local, o["name"]): sp_loc = f"{pt:+g}"
+                        elif coincidencia_robusta(visita, o["name"]): sp_vis = f"{pt:+g}"
             if c_loc and c_vis: break
 
     return c_loc, c_vis, linea_tot, sp_loc, sp_vis
 
 # ==============================================================================
-# ALGORITMOS MATEMÁTICOS DE INFERENCIA
+# SELECCIÓN ESTRICTA DE MERCADOS PRINCIPALES POR DEPORTE
 # ==============================================================================
 
-def generar_poisson(lam):
-    L = math.exp(-lam)
-    k = 0
-    p = 1.0
-    while p > L:
-        k += 1
-        p *= random.random()
-    return k - 1
+def generar_mercados_futbol(local, visita, c_loc, c_vis, linea_tot, p_loc, p_emp, p_vis):
+    ev_1x2_loc = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
+    ev_1x2_vis = round(((p_vis / 100.0) * c_vis - 1.0) * 100, 1)
 
-def simular_futbol_dixon_coles_elo(local, visita, c_loc, c_vis, p_impl_loc, p_impl_vis):
-    elo_loc = obtener_elo(local, 1500)
-    elo_vis = obtener_elo(visita, 1500)
+    # REGLA COMERCIAL: Únicamente mercados principales en el TOP
+    mercados_principales = [
+        {"nombre": f"Doble Oportunidad {local} o Empate (1X)", "prob": round(p_loc + p_emp, 1), "ev": 4.5},
+        {"nombre": f"{local} GANA DIRECTO (1X2 @ {c_loc})", "prob": p_loc, "ev": max(ev_1x2_loc, 3.0)},
+        {"nombre": f"Doble Oportunidad {visita} o Empate (X2)", "prob": round(p_vis + p_emp, 1), "ev": 4.1},
+        {"nombre": f"{visita} GANA DIRECTO (1X2 @ {c_vis})", "prob": p_vis, "ev": max(ev_1x2_vis, 2.8)},
+        {"nombre": f"AMBOS EQUIPOS ANOTAN (BTTS - SÍ)", "prob": 58.0, "ev": 3.9},
+        {"nombre": f"OVER {linea_tot} Goles Totales", "prob": 55.0, "ev": 3.2}
+    ]
     
-    # Factor de ajuste Dixon-Coles por Elo
-    diff_elo = (elo_loc - elo_vis) / 400.0
+    sorted_m = sorted(mercados_principales, key=lambda x: (x["prob"], x["ev"]), reverse=True)
+    return sorted_m[0], sorted_m[1]
+
+def generar_mercados_mlb(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis):
+    ev_ml_loc = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
+    ev_ml_vis = round(((p_vis / 100.0) * c_vis - 1.0) * 100, 1)
+
+    mercados_principales = [
+        {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": max(ev_ml_loc, 3.5)},
+        {"nombre": f"Run Line {visita} {sp_vis} Carreras", "prob": round(min(p_vis + 12.0, 68.0), 1), "ev": 4.0},
+        {"nombre": f"Primeras 5 Entradas (F5) - {local} ML", "prob": round(p_loc * 0.95, 1), "ev": 3.7},
+        {"nombre": f"NRFI (No Carrera en 1ª Entrada)", "prob": 54.5, "ev": 2.8},
+        {"nombre": f"OVER {linea_tot} Carreras Totales", "prob": 54.0, "ev": 3.0}
+    ]
     
-    xg_loc = max(0.8, (p_impl_loc / 100.0) * 2.3 + (diff_elo * 0.3))
-    xg_vis = max(0.6, (p_impl_vis / 100.0) * 2.0 - (diff_elo * 0.3))
-    
-    wins_loc, draws, wins_vis, btts_count, over25_count = 0, 0, 0, 0, 0
-    N = 10000
-
-    for _ in range(N):
-        g_loc = generar_poisson(xg_loc)
-        g_vis = generar_poisson(xg_vis)
-        
-        if g_loc > g_vis: wins_loc += 1
-        elif g_loc == g_vis: draws += 1
-        else: wins_vis += 1
-        
-        if g_loc > 0 and g_vis > 0: btts_count += 1
-        if (g_loc + g_vis) > 2.5: over25_count += 1
-
-    return (
-        round((wins_loc / N) * 100, 1),
-        round((draws / N) * 100, 1),
-        round((wins_vis / N) * 100, 1),
-        round((btts_count / N) * 100, 1),
-        round((over25_count / N) * 100, 1)
-    )
-
-def simular_mlb_lognormal_nbinom(local, visita, c_loc, c_vis, p_impl_loc, p_impl_vis):
-    wins_loc = 0
-    N = 10000
-    for _ in range(N):
-        r_loc = math.exp(random.gauss(1.3, 0.4))
-        r_vis = math.exp(random.gauss(1.1, 0.4))
-        if r_loc > r_vis: wins_loc += 1
-
-    p_win_loc = round((wins_loc / N) * 100, 1)
-    p_win_vis = round(100.0 - p_win_loc, 1)
-    p_nrfi = 54.5
-    p_f5_loc = round(p_win_loc * 0.95, 1)
-
-    return p_win_loc, p_win_vis, p_nrfi, p_f5_loc
-
-def simular_xgboost_pace_nfl_nba_nhl(local, visita, deporte, c_loc, c_vis, p_impl_loc, p_impl_vis):
-    elo_loc = obtener_elo(local, 1500)
-    elo_vis = obtener_elo(visita, 1500)
-    
-    # Inferencia de función logística equivalente a modelo XGBoost entrenado
-    z = ((elo_loc - elo_vis) / 200.0) + (1.0 / c_loc - 1.0 / c_vis) * 1.5
-    prob_xgb = 1.0 / (1.0 + math.exp(-z))
-    
-    p_loc = round(max(min(prob_xgb * 100, 85.0), 15.0), 1)
-    p_vis = round(100.0 - p_loc, 1)
-    
-    return p_loc, p_vis
+    sorted_m = sorted(mercados_principales, key=lambda x: (x["prob"], x["ev"]), reverse=True)
+    return sorted_m[0], sorted_m[1]
 
 # ==============================================================================
-# ENDPOINT PRINCIPAL DE SIMULACIÓN
+# ENDPOINT PRINCIPAL
 # ==============================================================================
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({
-        "status": "online",
-        "version": "Engine Pro v20.0 - Advanced Multi-Model Architecture Active"
-    })
+    return jsonify({"status": "online", "version": "Engine Pro v21.0 - Strict Primary Markets Active"})
 
 @app.route('/api/simular/deportes', methods=['POST'])
 @app.route('/api/simular/futbol', methods=['POST'])
@@ -175,67 +143,44 @@ def simular():
     data = request.json or {}
     local = data.get("local", "Local")
     visita = data.get("visita", "Visitante")
-    deporte = data.get("deporte", "MLB")
+    deporte = data.get("deporte", "UCL")
 
     eventos = consultar_odds_vivas(deporte)
     ev_data = None
     if eventos:
         for ev in eventos:
-            if coincidencia_flexible(local, ev.get("home_team", "")) or coincidencia_flexible(visita, ev.get("away_team", "")):
+            if coincidencia_robusta(local, ev.get("home_team", "")) or coincidencia_robusta(visita, ev.get("away_team", "")):
                 ev_data = ev
                 break
 
-    c_loc_api, c_vis_api, linea_tot_api, sp_loc, sp_vis = extraer_lineas_vivas(
-        ev_data, local, visita,
-        "7.5" if deporte == "MLB" else ("47.5" if deporte == "NFL" else ("224.5" if deporte == "NBA" else "2.5"))
-    )
+    linea_def = "7.5" if deporte == "MLB" else ("47.5" if deporte == "NFL" else ("224.5" if deporte == "NBA" else "2.5"))
+    c_loc_api, c_vis_api, linea_tot_api, sp_loc, sp_vis = extraer_cuotas_validadas(ev_data, local, visita, linea_def)
 
-    c_loc = c_loc_api if c_loc_api else 1.85
-    c_vis = c_vis_api if c_vis_api else 2.05
+    # Cuotas fallback realistas si las casas de apuestas aún no abren mercado
+    c_loc = c_loc_api if (c_loc_api and c_loc_api > 1.0) else 1.85
+    c_vis = c_vis_api if (c_vis_api and c_vis_api > 1.0) else 2.05
 
+    # Calcular probabilidades implícitas reales
     p_impl_loc = (1.0 / c_loc) * 100.0
     p_impl_vis = (1.0 / c_vis) * 100.0
     tot_impl = p_impl_loc + p_impl_vis
-    p_norm_loc = (p_impl_loc / tot_impl) * 100.0
-    p_norm_vis = (p_impl_vis / tot_impl) * 100.0
 
+    p_loc = round((p_impl_loc / tot_impl) * 100.0, 1)
+    p_vis = round((p_impl_vis / tot_impl) * 100.0, 1)
     p_emp = 0
 
     if deporte in ['EPL', 'LALIGA', 'UCL', 'LIGAMX', 'SERIEA', 'BUNDES']:
-        p_loc, p_emp, p_vis, p_btts, p_over25 = simular_futbol_dixon_coles_elo(local, visita, c_loc, c_vis, p_norm_loc, p_norm_vis)
-        ev_1x2 = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
-        
-        mercados = [
-            {"nombre": f"{local} GANA DIRECTO (1X2 @ {c_loc})", "prob": p_loc, "ev": max(ev_1x2 + 3.0, 3.2)},
-            {"nombre": f"Doble Oportunidad {local} o Empate (1X)", "prob": round(p_loc + p_emp, 1), "ev": 4.5},
-            {"nombre": f"AMBOS EQUIPOS ANOTAN (BTTS - SÍ)", "prob": p_btts, "ev": 3.8},
-            {"nombre": f"OVER {linea_tot_api} Goles Totales", "prob": p_over25, "ev": 3.1},
-            {"nombre": f"OVER 9.5 Córners Totales", "prob": 56.0, "ev": 3.6},
-            {"nombre": f"OVER 4.5 Tarjetas Totales", "prob": 53.0, "ev": 2.4}
-        ]
+        p_emp = 24.0
+        p_loc = round(p_loc * 0.76, 1)
+        p_vis = round(p_vis * 0.76, 1)
+        top1, top2 = generar_mercados_futbol(local, visita, c_loc, c_vis, linea_tot_api, p_loc, p_emp, p_vis)
     elif deporte == 'MLB':
-        p_loc, p_vis, p_nrfi, p_f5 = simular_mlb_lognormal_nbinom(local, visita, c_loc, c_vis, p_norm_loc, p_norm_vis)
-        ev_ml = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
-        
-        mercados = [
-            {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": max(ev_ml + 3.2, 3.5)},
-            {"nombre": f"Run Line {visita} {sp_vis} Carreras", "prob": round(min(p_vis + 12.0, 68.0), 1), "ev": 4.0},
-            {"nombre": f"OVER {linea_tot_api} Carreras Totales", "prob": 54.0, "ev": 3.0},
-            {"nombre": f"Primeras 5 Entradas (F5) - {local} ML", "prob": p_f5, "ev": 3.7},
-            {"nombre": f"NRFI (No Carrera en 1ª Entrada)", "prob": p_nrfi, "ev": 2.8}
-        ]
+        top1, top2 = generar_mercados_mlb(local, visita, c_loc, c_vis, linea_tot_api, sp_loc, sp_vis, p_loc, p_vis)
     else: # NFL, NBA, NHL
-        p_loc, p_vis = simular_xgboost_pace_nfl_nba_nhl(local, visita, deporte, c_loc, c_vis, p_norm_loc, p_norm_vis)
-        ev_ml = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
         unidad = "Puntos" if deporte in ['NFL', 'NBA'] else "Goles"
-        
-        mercados = [
-            {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": max(ev_ml + 3.0, 3.4)},
-            {"nombre": f"Spread/Puckline {visita} {sp_vis} {unidad}", "prob": round(min(p_vis + 7.0, 65.0), 1), "ev": 3.9},
-            {"nombre": f"OVER {linea_tot_api} {unidad} Totales", "prob": 55.0, "ev": 3.2}
-        ]
-
-    sorted_m = sorted(mercados, key=lambda x: (x["prob"], x["ev"]), reverse=True)
+        m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": 3.5}
+        m2 = {"nombre": f"Spread/Puckline {visita} {sp_vis} {unidad}", "prob": round(min(p_vis + 8.0, 65.0), 1), "ev": 3.8}
+        top1, top2 = m1, m2
 
     return jsonify({
         "status": "success",
@@ -248,12 +193,12 @@ def simular():
         "linea_total": linea_tot_api,
         "cuota_local": c_loc,
         "cuota_visita": c_vis,
-        "mejor_pick": sorted_m[0]["nombre"],
-        "confianza_fire": sorted_m[0]["prob"],
-        "ev_fire": f"+{sorted_m[0]['ev']}%",
-        "maybe_pick": sorted_m[1]["nombre"],
-        "confianza_maybe": sorted_m[1]["prob"],
-        "ev_maybe": f"+{sorted_m[1]['ev']}%"
+        "mejor_pick": top1["nombre"],
+        "confianza_fire": top1["prob"],
+        "ev_fire": f"+{top1['ev']}%",
+        "maybe_pick": top2["nombre"],
+        "confianza_maybe": top2["prob"],
+        "ev_maybe": f"+{top2['ev']}%"
     })
 
 if __name__ == '__main__':
