@@ -21,21 +21,101 @@ SPORT_KEYS = {
     "BUNDES": "soccer_germany_bundesliga"
 }
 
-def consultar_odds_vivas(deporte):
-    if not ODDS_API_KEY: return None
-    sport_key = SPORT_KEYS.get(deporte, "icehockey_nhl")
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,eu&markets=h2h,spreads,totals&oddsFormat=decimal"
-    try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200: return res.json()
-    except Exception as e:
-        print(f"Error en The-Odds-API: {e}")
-    return None
+# ==============================================================================
+# DICCIONARIO MAESTRO DE MAPEO UNIVERSAL (TODOS LOS DEPORTES Y LIGAS)
+# ==============================================================================
+MAPEO_EQUIPOS_API = {
+    # ⚽ FÚTBOL (UCL, EPL, LaLiga, Liga MX, Serie A, Bundesliga)
+    "man city": "manchester city",
+    "man utd": "manchester united",
+    "manchester utd": "manchester united",
+    "psg": "paris saint germain",
+    "paris": "paris saint germain",
+    "roma": "as roma",
+    "porto": "fc porto",
+    "betis": "real betis",
+    "real betis": "real betis",
+    "dortmund": "borussia dortmund",
+    "b. dortmund": "borussia dortmund",
+    "bortmund": "borussia dortmund",
+    "inter": "inter milan",
+    "milan": "ac milan",
+    "bayer leverkusen": "leverkusen",
+    "atletico": "atletico madrid",
+    "atl. madrid": "atletico madrid",
+    "ath bilbao": "athletic bilbao",
+    "athletic": "athletic bilbao",
+    "bodo/glimt": "bodø/glimt",
+    "bodo glimt": "bodø/glimt",
+    "feyenoord": "feyenoord",
+    "shakhtar": "shakhtar donetsk",
+    "aek": "aek athens",
+    "lask": "lask",
+    "como": "como 1907",
+
+    # 🏒 NHL (Hockey)
+    "caps": "washington capitals",
+    "capitals": "washington capitals",
+    "washington": "washington capitals",
+    "habs": "montreal canadiens",
+    "canadiens": "montreal canadiens",
+    "montreal": "montreal canadiens",
+    "avs": "colorado avalanche",
+    "colorado": "colorado avalanche",
+    "stars": "dallas stars",
+    "dallas": "dallas stars",
+    "rangers": "new york rangers",
+    "islanders": "new york islanders",
+    "devils": "new jersey devils",
+    "bruins": "boston bruins",
+    "maple leafs": "toronto maple leafs",
+    "leafs": "toronto maple leafs",
+    "oilers": "edmonton oilers",
+
+    # ⚾ MLB (Béisbol)
+    "dodgers": "los angeles dodgers",
+    "la dodgers": "los angeles dodgers",
+    "yankees": "new york yankees",
+    "ny yankees": "new york yankees",
+    "red sox": "boston red sox",
+    "boston": "boston red sox",
+    "astros": "houston astros",
+    "houston": "houston astros",
+    "brewers": "milwaukee brewers",
+    "padres": "san diego padres",
+    "braves": "atlanta braves",
+
+    # 🏀 NBA (Baloncesto)
+    "celtics": "boston celtics",
+    "lakers": "los angeles lakers",
+    "la lakers": "los angeles lakers",
+    "warriors": "golden state warriors",
+    "gsw": "golden state warriors",
+    "bucks": "milwaukee bucks",
+    "bulls": "chicago bulls",
+
+    # 🏈 NFL (Fútbol Americano)
+    "chiefs": "kansas city chiefs",
+    "eagles": "philadelphia eagles",
+    "cowboys": "dallas cowboys",
+    "49ers": "san francisco 49ers",
+    "niners": "san francisco 49ers",
+    "packers": "green bay packers",
+    "ravens": "baltimore ravens"
+}
+
+def normalizar_nombre(nombre):
+    if not nombre: return ""
+    clean = nombre.lower().strip()
+    return MAPEO_EQUIPOS_API.get(clean, clean)
 
 def coincidencia_dinamica(nombre_f, nombre_a):
     if not nombre_f or not nombre_a: return False
-    nf, na = nombre_f.lower().strip(), nombre_a.lower().strip()
+    nf = normalizar_nombre(nombre_f)
+    na = normalizar_nombre(nombre_a)
+    
     if nf in na or na in nf: return True
+    
     tf = [t for t in nf.replace(".", "").split() if len(t) > 2]
     ta = [t for t in na.replace(".", "").split() if len(t) > 2]
     for x in tf:
@@ -43,9 +123,20 @@ def coincidencia_dinamica(nombre_f, nombre_a):
             if x == y: return True
     return False
 
+def consultar_odds_vivas(deporte):
+    if not ODDS_API_KEY: return None
+    sport_key = SPORT_KEYS.get(deporte, "soccer_uefa_champs_league")
+    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,eu&markets=h2h,spreads,totals&oddsFormat=decimal"
+    try:
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200: return res.json()
+    except Exception as e:
+        print(f"Error consultando The-Odds-API para {deporte}: {e}")
+    return None
+
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"status": "online", "version": "Engine Pro v26.0 - Pure Unaltered Odds Active"})
+    return jsonify({"status": "online", "version": "Engine Pro v27.0 - Universal Team Mapping Active"})
 
 @app.route('/api/simular/deportes', methods=['POST'])
 @app.route('/api/simular/futbol', methods=['POST'])
@@ -53,7 +144,7 @@ def simular():
     data = request.json or {}
     local = data.get("local", "").strip()
     visita = data.get("visita", "").strip()
-    deporte = data.get("deporte", "NHL")
+    deporte = data.get("deporte", "UCL")
 
     eventos = consultar_odds_vivas(deporte)
     
@@ -66,6 +157,7 @@ def simular():
             h_team = ev.get("home_team", "")
             a_team = ev.get("away_team", "")
 
+            # Coincidencia robusta usando el mapa universal
             if coincidencia_dinamica(local, h_team) or coincidencia_dinamica(visita, a_team) or coincidencia_dinamica(local, a_team) or coincidencia_dinamica(visita, h_team):
                 for bm in ev.get("bookmakers", []):
                     for m in bm.get("markets", []):
