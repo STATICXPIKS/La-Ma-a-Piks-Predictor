@@ -29,29 +29,25 @@ def consultar_odds_vivas(deporte):
         res = requests.get(url, timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e:
-        print(f"Error consultando The-Odds-API para {deporte}: {e}")
+        print(f"Error consultando The-Odds-API: {e}")
     return None
 
 def coincidencia_dinamica(nombre_frontend, nombre_api):
     if not nombre_frontend or not nombre_api: return False
     f = nombre_frontend.lower().strip()
     a = nombre_api.lower().strip()
+    if f in a or a in f: return True
     
-    if f in a or a in f:
-        return True
-        
     tokens_f = [t for t in f.replace(".", "").split() if len(t) > 2]
     tokens_a = [t for t in a.replace(".", "").split() if len(t) > 2]
-    
     for tf in tokens_f:
         for ta in tokens_a:
-            if tf == ta:
-                return True
+            if tf == ta: return True
     return False
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"status": "online", "version": "Engine Pro v24.0 - Full Universal League Support Active"})
+    return jsonify({"status": "online", "version": "Engine Pro v25.0 - Production Port Fixed"})
 
 @app.route('/api/simular/deportes', methods=['POST'])
 @app.route('/api/simular/futbol', methods=['POST'])
@@ -62,17 +58,14 @@ def simular():
     deporte = data.get("deporte", "UCL")
 
     eventos = consultar_odds_vivas(deporte)
-    
     c_loc, c_vis = None, None
     linea_tot = "7.5" if deporte == "MLB" else ("47.5" if deporte == "NFL" else ("224.5" if deporte == "NBA" else "2.5"))
     sp_loc, sp_vis = "-1.5", "+1.5"
 
-    # Búsqueda dinámica en todos los eventos de la liga
     if eventos:
         for ev in eventos:
             h_team = ev.get("home_team", "")
             a_team = ev.get("away_team", "")
-
             if coincidencia_dinamica(local, h_team) or coincidencia_dinamica(visita, a_team):
                 for bm in ev.get("bookmakers", []):
                     for m in bm.get("markets", []):
@@ -93,12 +86,11 @@ def simular():
                     if c_loc and c_vis: break
             if c_loc and c_vis: break
 
-    # Validación de seguridad: si las casas aún no abren línea o el partido no es hoy/mañana
+    # Fallback seguro
     if not c_loc or not c_vis or c_loc <= 1.0 or c_vis <= 1.0:
         c_loc = 1.85
         c_vis = 2.05
 
-    # Probabilidades implícitas ajustadas
     p_impl_loc = (1.0 / c_loc) * 100.0
     p_impl_vis = (1.0 / c_vis) * 100.0
     tot_impl = p_impl_loc + p_impl_vis
@@ -111,15 +103,14 @@ def simular():
         p_emp = 24.0
         p_loc = round(p_loc * 0.76, 1)
         p_vis = round(p_vis * 0.76, 1)
-
-        # SELECCIÓN ESTRICTA DE MERCADOS PRINCIPALES DE FÚTBOL
         ev_1x2_loc = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
+        
         m1 = {"nombre": f"Doble Oportunidad {local} o Empate (1X)", "prob": round(p_loc + p_emp, 1), "ev": "+4.5%"}
         m2 = {"nombre": f"{local} GANA DIRECTO (1X2 @ {c_loc})", "prob": p_loc, "ev": f"+{max(ev_1x2_loc, 2.5)}%"}
     elif deporte == 'MLB':
         m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.5%"}
         m2 = {"nombre": f"Run Line {visita} {sp_vis} Carreras", "prob": round(min(p_vis + 12.0, 68.0), 1), "ev": "+4.0%"}
-    else: # NFL, NBA, NHL
+    else:
         unidad = "Puntos" if deporte in ['NFL', 'NBA'] else "Goles"
         m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.4%"}
         m2 = {"nombre": f"Spread/Puckline {visita} {sp_vis} {unidad}", "prob": round(min(p_vis + 8.0, 65.0), 1), "ev": "+3.8%"}
@@ -143,6 +134,8 @@ def simular():
         "ev_maybe": m2["ev"]
     })
 
+# Exposición de puerto global requerida por Gunicorn en Render
+port = int(os.environ.get("PORT", 5000))
+
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
