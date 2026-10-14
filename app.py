@@ -1,10 +1,7 @@
 import os
 import requests
 import numpy as np
-import pandas as pd
-from scipy.stats import poisson, nbinom, norm
-import xgboost as xgb
-import lightgbm as lgb
+from scipy.stats import poisson, nbinom
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -26,18 +23,6 @@ SPORT_KEYS = {
     "BUNDES": "soccer_germany_bundesliga"
 }
 
-# ==============================================================================
-# BASE DE DATOS ELO Y MODELOS ENTRENADOS (TEMPORADAS 2025-2026 Y 2026-2027)
-# ==============================================================================
-
-ELO_RATINGS_2026 = {
-    "los angeles dodgers": 1620, "milwaukee brewers": 1540,
-    "philadelphia eagles": 1590, "carolina panthers": 1420,
-    "boston celtics": 1650, "charlotte hornets": 1410,
-    "real madrid": 1680, "roma": 1510,
-    "seattle seahawks": 1530, "denver broncos": 1490
-}
-
 def consultar_odds_vivas(deporte):
     if not ODDS_API_KEY: return None
     sport_key = SPORT_KEYS.get(deporte, "soccer_epl")
@@ -46,7 +31,7 @@ def consultar_odds_vivas(deporte):
         res = requests.get(url, timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e:
-        print(f"Error en API Odds: {e}")
+        print(f"Error consultando Odds API: {e}")
     return None
 
 def coincidencia_flexible(nombre_buscado, nombre_api):
@@ -83,11 +68,10 @@ def extraer_lineas_vivas(ev_data, local, visita, linea_tot_def="8.5"):
     return c_loc, c_vis, linea_tot, sp_loc, sp_vis
 
 # ==============================================================================
-# MOTORES ALGORÍTMICOS AVANZADOS POR DEPORTE
+# MOTORES ALGORÍTMICOS ESPECIALIZADOS
 # ==============================================================================
 
 def simular_futbol_dixon_coles(c_loc, c_vis, p_impl_loc, p_impl_vis):
-    """Modelo Dixon-Coles + Distribución de Poisson + Monte Carlo (10,000 iteraciones)."""
     xg_loc = max(0.8, (p_impl_loc / 100.0) * 2.4)
     xg_vis = max(0.6, (p_impl_vis / 100.0) * 2.1)
     
@@ -104,7 +88,6 @@ def simular_futbol_dixon_coles(c_loc, c_vis, p_impl_loc, p_impl_vis):
     return p_win_loc, p_draw, p_win_vis, p_btts, p_over25
 
 def simular_mlb_binomial_negativa(c_loc, c_vis, p_impl_loc, p_impl_vis):
-    """Modelo Log-Normal de Carreras + Regresión Binomial Negativa para Ponches (K's)."""
     mu_k = 6.2
     var_k = 8.5
     p_nbinom = mu_k / var_k
@@ -123,28 +106,15 @@ def simular_mlb_binomial_negativa(c_loc, c_vis, p_impl_loc, p_impl_vis):
     
     return p_win_loc, p_win_vis, p_nrfi, p_f5_loc, prob_k_over
 
-def simular_xgboost_pace(c_loc, c_vis, deporte):
-    """Predicción impulsada por ensambles XGBoost / LightGBM y Pace Efficiency."""
-    features = np.array([[c_loc, c_vis, 1.0/c_loc, 1.0/c_vis]])
-    dtrain = xgb.DMatrix(features)
-    
-    # Simulación de ponderación XGBoost entrenado con datos 2025-2027
-    prob_raw = float(1.0 / (1.0 + np.exp(-(features[0][2] - features[0][3]) * 2.5)))
-    
-    p_loc = round(max(min(prob_raw * 100, 85.0), 15.0), 1)
-    p_vis = round(100.0 - p_loc, 1)
-    
-    return p_loc, p_vis
-
 # ==============================================================================
-# ENDPOINT PRINCIPAL DE PREDICCIÓN CON MACHINE LEARNING
+# ENDPOINT PRINCIPAL DE SIMULACIÓN
 # ==============================================================================
 
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({
         "status": "online",
-        "version": "Engine Pro v18.0 - Institutional ML Stack (XGBoost + LightGBM + Dixon-Coles Active)"
+        "version": "Engine Pro v18.1 - Optimized Institutional Stack Active"
     })
 
 @app.route('/api/simular/deportes', methods=['POST'])
@@ -155,7 +125,6 @@ def simular():
     visita = data.get("visita", "Visitante")
     deporte = data.get("deporte", "MLB")
 
-    # 1. Búsqueda de Cuotas Reales en Vivo
     eventos = consultar_odds_vivas(deporte)
     ev_data = None
     if eventos:
@@ -172,7 +141,6 @@ def simular():
     c_loc = c_loc_api if c_loc_api else 1.85
     c_vis = c_vis_api if c_vis_api else 2.05
 
-    # 2. Probabilidades implícitas ajustadas
     p_impl_loc = (1.0 / c_loc) * 100.0
     p_impl_vis = (1.0 / c_vis) * 100.0
     tot_impl = p_impl_loc + p_impl_vis
@@ -181,7 +149,6 @@ def simular():
 
     p_emp = 0
 
-    # 3. Ejecución del modelo específico según la pila algorítmica solicitada
     if deporte in ['EPL', 'LALIGA', 'UCL', 'LIGAMX', 'SERIEA', 'BUNDES']:
         p_loc, p_emp, p_vis, p_btts, p_over25 = simular_futbol_dixon_coles(c_loc, c_vis, p_norm_loc, p_norm_vis)
         ev_1x2 = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
@@ -206,7 +173,8 @@ def simular():
             {"nombre": f"NRFI (No Carrera en 1ª Entrada)", "prob": p_nrfi, "ev": 2.8}
         ]
     else: # NFL, NBA, NHL
-        p_loc, p_vis = simular_xgboost_pace(c_loc, c_vis, deporte)
+        p_loc = round(p_norm_loc, 1)
+        p_vis = round(p_norm_vis, 1)
         ev_ml = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
         unidad = "Puntos" if deporte in ['NFL', 'NBA'] else "Goles"
         
