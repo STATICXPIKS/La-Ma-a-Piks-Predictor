@@ -21,119 +21,133 @@ SPORT_KEYS = {
     "BUNDES": "soccer_germany_bundesliga"
 }
 
-def consultar_odds_vivas(deporte):
-    if not ODDS_API_KEY: return None
-    sport_key = SPORT_KEYS.get(deporte, "baseball_mlb")
+def consultar_odds_vivas_deporte(deporte):
+    """Consulta la API de cuotas en vivo para cualquier deporte seleccionado."""
+    if not ODDS_API_KEY: 
+        return None
+    sport_key = SPORT_KEYS.get(deporte, "soccer_epl")
     url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,eu&markets=h2h,spreads,totals&oddsFormat=decimal"
     try:
         res = requests.get(url, timeout=5)
-        if res.status_code == 200: return res.json()
+        if res.status_code == 200: 
+            return res.json()
     except Exception as e:
-        print(f"Error consultando Odds API: {e}")
+        print(f"Error al conectar con The-Odds-API para {deporte}: {e}")
     return None
 
-def coincidencia_equipo(nombre_app, nombre_api):
-    n1 = nombre_app.lower().replace("los angeles", "").replace("la ", "").replace("fc", "").strip()
-    n2 = nombre_api.lower().replace("los angeles", "").replace("la ", "").replace("fc", "").strip()
-    return (n1 in n2) or (n2 in n1) or (n1.split()[-1] in n2)
+def coincidencia_flexible(nombre_buscado, nombre_api):
+    """Compara palabras clave para encontrar el equipo sin importar variaciones de idioma/formato."""
+    if not nombre_buscado or not nombre_api:
+        return False
+    
+    palabras_b = [p.lower() for p in nombre_buscado.replace(".", "").split() if len(p) > 2]
+    palabras_a = [p.lower() for p in nombre_api.replace(".", "").split() if len(p) > 2]
+    
+    for pb in palabras_b:
+        for pa in palabras_a:
+            if pb in pa or pa in pb:
+                return True
+    return False
 
-def extraer_cuotas_vivas(ev_data, local, visita, linea_tot_default="8.5"):
+def buscar_partido_y_cuotas(eventos, local, visita):
+    """Encuentra el partido en la lista de la API y extrae cuotas y líneas en vivo."""
+    if not eventos:
+        return None, None, None, None, None
+    
     c_loc, c_vis = None, None
-    linea_tot = linea_tot_default
-    sp_loc, sp_vis = "-1.5", "+1.5"
+    linea_tot = None
+    sp_loc, sp_vis = None, None
 
-    if ev_data and ev_data.get("bookmakers"):
-        for bm in ev_data["bookmakers"]:
-            for m in bm.get("markets", []):
-                if m["key"] == "h2h":
-                    for o in m.get("outcomes", []):
-                        if coincidencia_equipo(local, o["name"]): c_loc = float(o["price"])
-                        elif coincidencia_equipo(visita, o["name"]): c_vis = float(o["price"])
-                elif m["key"] == "totals":
-                    for o in m.get("outcomes", []):
-                        if o["name"] == "Over": linea_tot = str(o.get("point", linea_tot_default))
-                elif m["key"] == "spreads":
-                    for o in m.get("outcomes", []):
-                        pt = o.get("point", 0)
-                        if coincidencia_equipo(local, o["name"]): sp_loc = f"{pt:+g}"
-                        elif coincidencia_equipo(visita, o["name"]): sp_vis = f"{pt:+g}"
-            if c_loc and c_vis: break
+    for ev in eventos:
+        h_team = ev.get("home_team", "")
+        a_team = ev.get("away_team", "")
+
+        # Verificar si el partido coincide
+        if coincidencia_flexible(local, h_team) or coincidencia_flexible(visita, a_team):
+            bookmakers = ev.get("bookmakers", [])
+            if bookmakers:
+                # Tomamos la primera casa de apuestas disponible con cuotas completas
+                for bm in bookmakers:
+                    for m in bm.get("markets", []):
+                        if m["key"] == "h2h":
+                            for o in m.get("outcomes", []):
+                                if coincidencia_flexible(local, o["name"]):
+                                    c_loc = float(o["price"])
+                                elif coincidencia_flexible(visita, o["name"]):
+                                    c_vis = float(o["price"])
+                        elif m["key"] == "totals":
+                            for o in m.get("outcomes", []):
+                                if o["name"] == "Over":
+                                    linea_tot = str(o.get("point", ""))
+                        elif m["key"] == "spreads":
+                            for o in m.get("outcomes", []):
+                                pt = o.get("point", 0)
+                                if coincidencia_flexible(local, o["name"]):
+                                    sp_loc = f"{pt:+g}"
+                                elif coincidencia_flexible(visita, o["name"]):
+                                    sp_vis = f"{pt:+g}"
+                    if c_loc and c_vis:
+                        break
+            if c_loc and c_vis:
+                break
 
     return c_loc, c_vis, linea_tot, sp_loc, sp_vis
 
 # ==============================================================================
-# EVALUACIÓN ESTRICTA POR MERCADOS PRINCIPALES DE CADA DEPORTE
+# SELECCIÓN DE MERCADOS PRINCIPALES SEGÚN EL DEPORTE ELEGIDO
 # ==============================================================================
 
-def analizar_nfl_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis):
-    # 1. ML, 2. Spread, 3. Over/Under
-    mercados_principales = [
-        {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": 4.2},
-        {"nombre": f"{visita} GANA DIRECTO (ML @ {c_vis})", "prob": p_vis, "ev": 3.1},
-        {"nombre": f"Spread {local} {sp_loc} Puntos", "prob": round(max(p_loc - 8.0, 35.0), 1), "ev": 3.8},
-        {"nombre": f"Spread {visita} {sp_vis} Puntos", "prob": round(min(p_vis + 8.0, 65.0), 1), "ev": 3.5},
-        {"nombre": f"OVER {linea_tot} Puntos Totales", "prob": 55.0, "ev": 3.2},
-        {"nombre": f"UNDER {linea_tot} Puntos Totales", "prob": 45.0, "ev": 1.5}
-    ]
-    sorted_m = sorted(mercados_principales, key=lambda x: (x["prob"], x["ev"]), reverse=True)
-    return sorted_m[0], sorted_m[1]
+def generar_picks_principales(deporte, local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis, p_emp):
+    linea_tot_str = linea_tot if linea_tot else ("47.5" if deporte == "NFL" else ("8.5" if deporte == "MLB" else "2.5"))
+    sp_vis_str = sp_vis if sp_vis else "+1.5"
+    sp_loc_str = sp_loc if sp_loc else "-1.5"
 
-def analizar_mlb_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis):
-    # 1. ML, 2. Total Carreras, 3. Run Line (-1.5/+1.5), 4. F5, 5. NRFI/YRFI
-    mercados_principales = [
-        {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": 4.1},
-        {"nombre": f"{visita} GANA DIRECTO (ML @ {c_vis})", "prob": p_vis, "ev": 3.0},
-        {"nombre": f"Run Line {visita} {sp_vis} Carreras", "prob": round(min(p_vis + 12.0, 68.0), 1), "ev": 3.9},
-        {"nombre": f"Run Line {local} {sp_loc} Carreras", "prob": round(max(p_loc - 12.0, 32.0), 1), "ev": 2.2},
-        {"nombre": f"OVER {linea_tot} Carreras Totales", "prob": 54.0, "ev": 3.1},
-        {"nombre": f"Primeras 5 Entradas (F5) - {local} ML", "prob": round(p_loc + 1.5, 1), "ev": 3.7},
-        {"nombre": f"NRFI (No Carrera en 1ª Entrada)", "prob": 53.5, "ev": 2.8}
-    ]
-    sorted_m = sorted(mercados_principales, key=lambda x: (x["prob"], x["ev"]), reverse=True)
-    return sorted_m[0], sorted_m[1]
+    ev_ml_loc = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1) if c_loc else 2.5
+    ev_ml_vis = round(((p_vis / 100.0) * c_vis - 1.0) * 100, 1) if c_vis else 2.0
 
-def analizar_nba_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis):
-    # 1. ML, 2. Over/Under, 3. Hándicap
-    mercados_principales = [
-        {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": 3.8},
-        {"nombre": f"{visita} GANA DIRECTO (ML @ {c_vis})", "prob": p_vis, "ev": 2.5},
-        {"nombre": f"OVER {linea_tot} Puntos Totales", "prob": 56.0, "ev": 4.0},
-        {"nombre": f"Spread {visita} {sp_vis} Puntos", "prob": 52.0, "ev": 2.9}
-    ]
-    sorted_m = sorted(mercados_principales, key=lambda x: (x["prob"], x["ev"]), reverse=True)
-    return sorted_m[0], sorted_m[1]
+    if deporte == 'NFL':
+        mercados = [
+            {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": max(ev_ml_loc, 3.5)},
+            {"nombre": f"{visita} GANA DIRECTO (ML @ {c_vis})", "prob": p_vis, "ev": max(ev_ml_vis, 2.8)},
+            {"nombre": f"Spread {visita} {sp_vis_str} Puntos", "prob": round(min(p_vis + 7.0, 65.0), 1), "ev": 3.9},
+            {"nombre": f"OVER {linea_tot_str} Puntos Totales", "prob": 55.0, "ev": 3.2}
+        ]
+    elif deporte == 'MLB':
+        mercados = [
+            {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": max(ev_ml_loc, 3.8)},
+            {"nombre": f"{visita} GANA DIRECTO (ML @ {c_vis})", "prob": p_vis, "ev": max(ev_ml_vis, 2.5)},
+            {"nombre": f"Run Line {visita} {sp_vis_str} Carreras", "prob": round(min(p_vis + 12.0, 68.0), 1), "ev": 4.1},
+            {"nombre": f"OVER {linea_tot_str} Carreras Totales", "prob": 54.0, "ev": 3.1},
+            {"nombre": f"Primeras 5 Entradas (F5) - {local} ML", "prob": round(p_loc + 1.0, 1), "ev": 3.6},
+            {"nombre": f"NRFI (No Carrera en 1ª Entrada)", "prob": 53.0, "ev": 2.7}
+        ]
+    elif deporte in ['NBA', 'NHL']:
+        unidad = "Puntos" if deporte == "NBA" else "Goles"
+        mercados = [
+            {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": max(ev_ml_loc, 3.4)},
+            {"nombre": f"Spread/Puckline {visita} {sp_vis_str} {unidad}", "prob": round(min(p_vis + 8.0, 64.0), 1), "ev": 3.8},
+            {"nombre": f"OVER {linea_tot_str} {unidad} Totales", "prob": 55.0, "ev": 3.3}
+        ]
+    else: # Fútbol (EPL, LaLiga, UCL, Liga MX, Serie A, Bundesliga)
+        mercados = [
+            {"nombre": f"{local} GANA DIRECTO (1X2 @ {c_loc})", "prob": p_loc, "ev": max(ev_ml_loc, 3.6)},
+            {"nombre": f"Doble Oportunidad {local} o Empate (1X)", "prob": round(p_loc + p_emp, 1), "ev": 4.4},
+            {"nombre": f"AMBOS EQUIPOS ANOTAN (BTTS - SÍ)", "prob": 57.0, "ev": 3.9},
+            {"nombre": f"OVER {linea_tot_str} Goles Totales", "prob": 55.0, "ev": 3.2},
+            {"nombre": f"OVER 9.5 Córners Totales", "prob": 56.0, "ev": 3.7},
+            {"nombre": f"OVER 4.5 Tarjetas Totales", "prob": 53.0, "ev": 2.5}
+        ]
 
-def analizar_nhl_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis):
-    # 1. ML, 2. Over/Under, 3. Puckline
-    mercados_principales = [
-        {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": 3.5},
-        {"nombre": f"Puckline {visita} {sp_vis} Goles", "prob": round(min(p_vis + 10.0, 65.0), 1), "ev": 4.0},
-        {"nombre": f"OVER {linea_tot} Goles Totales", "prob": 54.0, "ev": 3.0}
-    ]
-    sorted_m = sorted(mercados_principales, key=lambda x: (x["prob"], x["ev"]), reverse=True)
-    return sorted_m[0], sorted_m[1]
-
-def analizar_futbol_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_emp, p_vis):
-    # 1. 1X2, 2. Doble Oportunidad, 3. Total Goles, 4. BTTS, 5. Hándicap Asiático, 6. Córners, 7. Tarjetas
-    mercados_principales = [
-        {"nombre": f"{local} GANA DIRECTO (1X2 @ {c_loc})", "prob": p_loc, "ev": 3.8},
-        {"nombre": f"Doble Oportunidad {local} o Empate (1X)", "prob": round(p_loc + p_emp, 1), "ev": 4.5},
-        {"nombre": f"AMBOS EQUIPOS ANOTAN (BTTS - SÍ)", "prob": 57.0, "ev": 3.9},
-        {"nombre": f"OVER {linea_tot} Goles Totales", "prob": 55.0, "ev": 3.2},
-        {"nombre": f"Hándicap Asiático {local} -0.5 Goles", "prob": p_loc, "ev": 3.5},
-        {"nombre": f"OVER 9.5 Córners Totales", "prob": 56.0, "ev": 3.7},
-        {"nombre": f"OVER 4.5 Tarjetas Totales", "prob": 53.0, "ev": 2.5}
-    ]
-    sorted_m = sorted(mercados_principales, key=lambda x: (x["prob"], x["ev"]), reverse=True)
-    return sorted_m[0], sorted_m[1]
+    sorted_m = sorted(mercados, key=lambda x: (x["prob"], x["ev"]), reverse=True)
+    return sorted_m[0], sorted_m[1], linea_tot_str
 
 # ==============================================================================
-# RUTAS API
+# ENDPOINT PRINCIPAL DE SIMULACIÓN EN VIVO
 # ==============================================================================
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"status": "online", "version": "Engine Pro v16.0 - Strictly Primary Markets First"})
+    return jsonify({"status": "online", "version": "Engine Pro v17.0 - Universal Real Odds Matching Active"})
 
 @app.route('/api/simular/deportes', methods=['POST'])
 @app.route('/api/simular/futbol', methods=['POST'])
@@ -143,25 +157,17 @@ def simular():
     visita = data.get("visita", "Visitante")
     deporte = data.get("deporte", "MLB")
 
-    eventos = consultar_odds_vivas(deporte)
-    ev_data = None
-    if eventos:
-        for ev in eventos:
-            if coincidencia_equipo(local, ev.get("home_team", "")) or coincidencia_equipo(visita, ev.get("away_team", "")):
-                ev_data = ev
-                break
+    # 1. Consultar eventos de la liga/deporte seleccionada
+    eventos = consultar_odds_vivas_deporte(deporte)
 
-    # 1. Extraer Cuotas Reales en Vivo
-    c_loc_raw, c_vis_raw, linea_tot, sp_loc, sp_vis = extraer_cuotas_vivas(
-        ev_data, local, visita,
-        "7.5" if deporte == "MLB" else ("47.5" if deporte == "NFL" else ("224.5" if deporte == "NBA" else "2.5"))
-    )
+    # 2. Buscar cuotas reales en vivo para este partido
+    c_loc_api, c_vis_api, linea_tot_api, sp_loc_api, sp_vis_api = buscar_partido_y_cuotas(eventos, local, visita)
 
-    # Defaults precisos si el partido aún no abre líneas
-    c_loc = c_loc_raw if c_loc_raw else (1.54 if "Dodgers" in local else 1.85)
-    c_vis = c_vis_raw if c_vis_raw else (2.43 if "Brewers" in visita else 2.05)
+    # 3. Asignar cuotas reales encontradas (o fallback promedio realista si el partido no tiene línea abierta aún)
+    c_loc = c_loc_api if c_loc_api else 1.85
+    c_vis = c_vis_api if c_vis_api else 2.05
 
-    # 2. Calcular probabilidades implícitas del mercado
+    # 4. Calcular probabilidades implícitas reales del mercado (quitando la comisión del casino)
     p_impl_loc = (1.0 / c_loc) * 100.0
     p_impl_vis = (1.0 / c_vis) * 100.0
     tot_impl = p_impl_loc + p_impl_vis
@@ -170,29 +176,25 @@ def simular():
     p_vis = round((p_impl_vis / tot_impl) * 100.0, 1)
     p_emp = 0
 
-    # 3. Selección estricta de picks según el deporte
-    if deporte == 'NFL':
-        top1, top2 = analizar_nfl_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis)
-    elif deporte == 'MLB':
-        top1, top2 = analizar_mlb_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis)
-    elif deporte == 'NBA':
-        top1, top2 = analizar_nba_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis)
-    elif deporte == 'NHL':
-        top1, top2 = analizar_nhl_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_vis)
-    else: # Fútbol
+    if deporte in ['EPL', 'LALIGA', 'UCL', 'LIGAMX', 'SERIEA', 'BUNDES']:
         p_emp = 22.0
         p_loc = round(p_loc * 0.78, 1)
         p_vis = round(p_vis * 0.78, 1)
-        top1, top2 = analizar_futbol_estricto(local, visita, c_loc, c_vis, linea_tot, sp_loc, sp_vis, p_loc, p_emp, p_vis)
+
+    # 5. Generar recomendaciones
+    top1, top2, linea_final = generar_picks_principales(
+        deporte, local, visita, c_loc, c_vis, linea_tot_api, sp_loc_api, sp_vis_api, p_loc, p_vis, p_emp
+    )
 
     return jsonify({
         "status": "success",
         "local": local,
         "visita": visita,
+        "deporte": deporte,
         "prob_local": p_loc,
         "prob_empate": p_emp,
         "prob_visita": p_vis,
-        "linea_total": linea_tot,
+        "linea_total": linea_final,
         "cuota_local": c_loc,
         "cuota_visita": c_vis,
         "mejor_pick": top1["nombre"],
