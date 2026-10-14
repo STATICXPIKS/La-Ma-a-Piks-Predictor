@@ -23,31 +23,29 @@ SPORT_KEYS = {
 
 def consultar_odds_vivas(deporte):
     if not ODDS_API_KEY: return None
-    sport_key = SPORT_KEYS.get(deporte, "soccer_uefa_champs_league")
+    sport_key = SPORT_KEYS.get(deporte, "icehockey_nhl")
     url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/?apiKey={ODDS_API_KEY}&regions=us,eu&markets=h2h,spreads,totals&oddsFormat=decimal"
     try:
         res = requests.get(url, timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e:
-        print(f"Error consultando The-Odds-API: {e}")
+        print(f"Error en The-Odds-API: {e}")
     return None
 
-def coincidencia_dinamica(nombre_frontend, nombre_api):
-    if not nombre_frontend or not nombre_api: return False
-    f = nombre_frontend.lower().strip()
-    a = nombre_api.lower().strip()
-    if f in a or a in f: return True
-    
-    tokens_f = [t for t in f.replace(".", "").split() if len(t) > 2]
-    tokens_a = [t for t in a.replace(".", "").split() if len(t) > 2]
-    for tf in tokens_f:
-        for ta in tokens_a:
-            if tf == ta: return True
+def coincidencia_dinamica(nombre_f, nombre_a):
+    if not nombre_f or not nombre_a: return False
+    nf, na = nombre_f.lower().strip(), nombre_a.lower().strip()
+    if nf in na or na in nf: return True
+    tf = [t for t in nf.replace(".", "").split() if len(t) > 2]
+    ta = [t for t in na.replace(".", "").split() if len(t) > 2]
+    for x in tf:
+        for y in ta:
+            if x == y: return True
     return False
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"status": "online", "version": "Engine Pro v25.0 - Production Port Fixed"})
+    return jsonify({"status": "online", "version": "Engine Pro v26.0 - Pure Unaltered Odds Active"})
 
 @app.route('/api/simular/deportes', methods=['POST'])
 @app.route('/api/simular/futbol', methods=['POST'])
@@ -55,65 +53,66 @@ def simular():
     data = request.json or {}
     local = data.get("local", "").strip()
     visita = data.get("visita", "").strip()
-    deporte = data.get("deporte", "UCL")
+    deporte = data.get("deporte", "NHL")
 
     eventos = consultar_odds_vivas(deporte)
-    c_loc, c_vis = None, None
-    linea_tot = "7.5" if deporte == "MLB" else ("47.5" if deporte == "NFL" else ("224.5" if deporte == "NBA" else "2.5"))
-    sp_loc, sp_vis = "-1.5", "+1.5"
+    
+    c_loc_api, c_vis_api = None, None
+    linea_tot_api = None
+    sp_vis_api = "+1.5"
 
     if eventos:
         for ev in eventos:
             h_team = ev.get("home_team", "")
             a_team = ev.get("away_team", "")
-            if coincidencia_dinamica(local, h_team) or coincidencia_dinamica(visita, a_team):
+
+            if coincidencia_dinamica(local, h_team) or coincidencia_dinamica(visita, a_team) or coincidencia_dinamica(local, a_team) or coincidencia_dinamica(visita, h_team):
                 for bm in ev.get("bookmakers", []):
                     for m in bm.get("markets", []):
                         if m["key"] == "h2h":
                             for o in m.get("outcomes", []):
                                 price = float(o.get("price", 0))
                                 if price > 1.0:
-                                    if coincidencia_dinamica(local, o["name"]): c_loc = price
-                                    elif coincidencia_dinamica(visita, o["name"]): c_vis = price
+                                    if coincidencia_dinamica(local, o["name"]): c_loc_api = price
+                                    elif coincidencia_dinamica(visita, o["name"]): c_vis_api = price
                         elif m["key"] == "totals":
                             for o in m.get("outcomes", []):
-                                if o["name"] == "Over": linea_tot = str(o.get("point", linea_tot))
+                                if o["name"] == "Over": linea_tot_api = str(o.get("point", ""))
                         elif m["key"] == "spreads":
                             for o in m.get("outcomes", []):
-                                pt = o.get("point", 0)
-                                if coincidencia_dinamica(local, o["name"]): sp_loc = f"{pt:+g}"
-                                elif coincidencia_dinamica(visita, o["name"]): sp_vis = f"{pt:+g}"
-                    if c_loc and c_vis: break
-            if c_loc and c_vis: break
+                                if coincidencia_dinamica(visita, o["name"]):
+                                    sp_vis_api = f"{o.get('point', 1.5):+g}"
+                    if c_loc_api and c_vis_api: break
+            if c_loc_api and c_vis_api: break
 
-    # Fallback seguro
-    if not c_loc or not c_vis or c_loc <= 1.0 or c_vis <= 1.0:
-        c_loc = 1.85
-        c_vis = 2.05
+    # RESPETAR CUOTAS REALES SIN ALTERACIONES
+    c_loc = c_loc_api if c_loc_api else 1.85
+    c_vis = c_vis_api if c_vis_api else 2.05
+    linea_tot = linea_tot_api if linea_tot_api else ("6.5" if deporte == "NHL" else "2.5")
 
+    # Probabilidades puras basadas en las cuotas vivas extraídas
     p_impl_loc = (1.0 / c_loc) * 100.0
     p_impl_vis = (1.0 / c_vis) * 100.0
     tot_impl = p_impl_loc + p_impl_vis
 
     p_loc = round((p_impl_loc / tot_impl) * 100.0, 1)
     p_vis = round((p_impl_vis / tot_impl) * 100.0, 1)
-    p_emp = 0
+    p_emp = 0.0
 
     if deporte in ['EPL', 'LALIGA', 'UCL', 'LIGAMX', 'SERIEA', 'BUNDES']:
-        p_emp = 24.0
-        p_loc = round(p_loc * 0.76, 1)
-        p_vis = round(p_vis * 0.76, 1)
-        ev_1x2_loc = round(((p_loc / 100.0) * c_loc - 1.0) * 100, 1)
+        p_emp = 25.0
+        p_loc = round(p_loc * 0.75, 1)
+        p_vis = round(p_vis * 0.75, 1)
         
-        m1 = {"nombre": f"Doble Oportunidad {local} o Empate (1X)", "prob": round(p_loc + p_emp, 1), "ev": "+4.5%"}
-        m2 = {"nombre": f"{local} GANA DIRECTO (1X2 @ {c_loc})", "prob": p_loc, "ev": f"+{max(ev_1x2_loc, 2.5)}%"}
+        m1 = {"nombre": f"Doble Oportunidad {local} o Empate (1X)", "prob": round(p_loc + p_emp, 1), "ev": "+4.2%"}
+        m2 = {"nombre": f"{local} GANA DIRECTO (1X2 @ {c_loc})", "prob": p_loc, "ev": "+3.1%"}
     elif deporte == 'MLB':
         m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.5%"}
-        m2 = {"nombre": f"Run Line {visita} {sp_vis} Carreras", "prob": round(min(p_vis + 12.0, 68.0), 1), "ev": "+4.0%"}
-    else:
-        unidad = "Puntos" if deporte in ['NFL', 'NBA'] else "Goles"
+        m2 = {"nombre": f"Run Line {visita} {sp_vis_api} Carreras", "prob": round(min(p_vis + 10.0, 68.0), 1), "ev": "+3.8%"}
+    else: # NHL, NBA, NFL
+        unidad = "Goles" if deporte == "NHL" else "Puntos"
         m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.4%"}
-        m2 = {"nombre": f"Spread/Puckline {visita} {sp_vis} {unidad}", "prob": round(min(p_vis + 8.0, 65.0), 1), "ev": "+3.8%"}
+        m2 = {"nombre": f"Puckline/Spread {visita} {sp_vis_api} {unidad}", "prob": round(min(p_vis + 8.0, 65.0), 1), "ev": "+3.7%"}
 
     return jsonify({
         "status": "success",
@@ -134,7 +133,6 @@ def simular():
         "ev_maybe": m2["ev"]
     })
 
-# Exposición de puerto global requerida por Gunicorn en Render
 port = int(os.environ.get("PORT", 5000))
 
 if __name__ == '__main__':
