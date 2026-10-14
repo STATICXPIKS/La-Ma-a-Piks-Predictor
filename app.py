@@ -23,7 +23,7 @@ SPORT_KEYS = {
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"status": "online", "version": "Engine Pro v28.0 - Full Manual & Auto Odds Active"})
+    return jsonify({"status": "online", "version": "Engine Pro v29.0 - Dynamic Teams & Lines Fixed"})
 
 @app.route('/api/simular/deportes', methods=['POST'])
 @app.route('/api/simular/futbol', methods=['POST'])
@@ -31,16 +31,23 @@ def simular():
     data = request.json or {}
     local = data.get("local", "").strip() or "Local"
     visita = data.get("visita", "").strip() or "Visitante"
-    deporte = data.get("deporte", "UCL")
+    deporte = data.get("deporte", "NBA").upper()
 
-    # 1. RECIBIR CUOTAS MANUALES DEL FRONTEND SI EL USUARIO LAS ESCRIBE
     c_loc_user = data.get("cuota_local_user") or data.get("cuota_local")
     c_vis_user = data.get("cuota_visita_user") or data.get("cuota_visita")
     linea_tot_user = data.get("linea_total_user") or data.get("linea_total")
 
     c_loc = None
     c_vis = None
-    linea_tot = str(linea_tot_user) if linea_tot_user else ("6.5" if deporte == "NHL" else ("7.5" if deporte == "MLB" else "2.5"))
+    
+    # Línea por defecto según el deporte
+    lineas_default = {
+        "NBA": "222.5",
+        "NFL": "45.5",
+        "MLB": "8.5",
+        "NHL": "6.5"
+    }
+    linea_tot = str(linea_tot_user) if linea_tot_user else lineas_default.get(deporte, "2.5")
 
     if c_loc_user and c_vis_user:
         try:
@@ -52,12 +59,10 @@ def simular():
         except ValueError:
             pass
 
-    # 2. SI NO HAY CUOTAS MANUALES VÁLIDAS, USAR VALORES DE RESPALDO SEGUROS
     if not c_loc or not c_vis:
         c_loc = 1.85
         c_vis = 2.05
 
-    # 3. CÁLCULO DE PROBABILIDADES MATEMÁTICAS PURAS Y REALES
     p_impl_loc = (1.0 / c_loc) * 100.0
     p_impl_vis = (1.0 / c_vis) * 100.0
     tot_impl = p_impl_loc + p_impl_vis
@@ -66,7 +71,6 @@ def simular():
     p_vis = round((p_impl_vis / tot_impl) * 100.0, 1)
     p_emp = 0.0
 
-    # 4. MERCADOS PRINCIPALES SEGÚN EL DEPORTE
     if deporte in ['EPL', 'LALIGA', 'UCL', 'LIGAMX', 'SERIEA', 'BUNDES']:
         p_emp = 25.0
         p_loc = round(p_loc * 0.75, 1)
@@ -78,10 +82,15 @@ def simular():
     elif deporte == 'MLB':
         m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.5%"}
         m2 = {"nombre": f"Run Line {visita} +1.5 Carreras", "prob": round(min(p_vis + 10.0, 68.0), 1), "ev": "+3.8%"}
-    else: # NHL, NBA, NFL
-        unidad = "Goles" if deporte == "NHL" else "Puntos"
+    elif deporte == 'NBA':
+        m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.6%"}
+        m2 = {"nombre": f"Spread {visita} +4.5 Puntos", "prob": round(min(p_vis + 7.0, 66.0), 1), "ev": "+3.5%"}
+    elif deporte == 'NFL':
         m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.4%"}
-        m2 = {"nombre": f"Puckline/Spread {visita} +1.5 {unidad}", "prob": round(min(p_vis + 8.0, 65.0), 1), "ev": "+3.7%"}
+        m2 = {"nombre": f"Spread {visita} +3.5 Puntos", "prob": round(min(p_vis + 6.0, 65.0), 1), "ev": "+3.6%"}
+    else: # NHL
+        m1 = {"nombre": f"{local} GANA DIRECTO (ML @ {c_loc})", "prob": p_loc, "ev": "+3.4%"}
+        m2 = {"nombre": f"Puckline {visita} +1.5 Goles", "prob": round(min(p_vis + 8.0, 65.0), 1), "ev": "+3.7%"}
 
     return jsonify({
         "status": "success",
