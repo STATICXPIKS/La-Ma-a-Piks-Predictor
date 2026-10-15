@@ -3,10 +3,9 @@ import math
 import random
 import requests
 import numpy as np
-import pandas as pd
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from scipy.stats import poisson, nbinom, norm
+from scipy.stats import poisson, norm
 
 app = Flask(__name__)
 CORS(app)
@@ -20,7 +19,7 @@ OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
 def health_check():
     return jsonify({
         "status": "online",
-        "version": "Engine Pro v33.0 - Full Multi-Sport Quantitative Framework",
+        "version": "Engine Pro v33.0 - Quantitative Multi-Market Framework",
         "keys_configured": {
             "odds_api": bool(ODDS_API_KEY),
             "api_sports": bool(API_SPORTS_KEY),
@@ -32,18 +31,13 @@ def health_check():
 # 1. FÚTBOL: MODELO DIXON-COLES + POISSON + ELO + XG
 # =========================================================
 def tau_dixon_coles(x, y, lambda_x, mu_y, rho=-0.13):
-    if x == 0 and y == 0:
-        return 1.0 - (lambda_x * mu_y * rho)
-    elif x == 0 and y == 1:
-        return 1.0 + (lambda_x * rho)
-    elif x == 1 and y == 0:
-        return 1.0 + (mu_y * rho)
-    elif x == 1 and y == 1:
-        return 1.0 - rho
-    else:
-        return 1.0
+    if x == 0 and y == 0: return 1.0 - (lambda_x * mu_y * rho)
+    elif x == 0 and y == 1: return 1.0 + (lambda_x * rho)
+    elif x == 1 and y == 0: return 1.0 + (mu_y * rho)
+    elif x == 1 and y == 1: return 1.0 - rho
+    return 1.0
 
-def simulate_dixon_coles(xg_home, xg_away, iterations=10000):
+def simulate_dixon_coles(xg_home, xg_away):
     matrix = np.zeros((10, 10))
     for h in range(10):
         for a in range(10):
@@ -51,28 +45,19 @@ def simulate_dixon_coles(xg_home, xg_away, iterations=10000):
             p_a = poisson.pmf(a, xg_away)
             tau = tau_dixon_coles(h, a, xg_home, xg_away)
             matrix[h, a] = p_h * p_a * tau
-    
     matrix = matrix / np.sum(matrix)
     
     prob_home = float(np.sum(np.tril(matrix, -1)))
     prob_draw = float(np.sum(np.diag(matrix)))
     prob_away = float(np.sum(np.triu(matrix, 1)))
-    
-    # Ambos Anotan (BTTS)
     prob_btts = float(1.0 - np.sum(matrix[0, :]) - np.sum(matrix[:, 0]) + matrix[0, 0])
     
-    return {
-        "prob_home": prob_home,
-        "prob_draw": prob_draw,
-        "prob_away": prob_away,
-        "prob_btts": prob_btts
-    }
+    return {"prob_home": prob_home, "prob_draw": prob_draw, "prob_away": prob_away, "prob_btts": prob_btts}
 
 # =========================================================
-# 2. BÉISBOL (MLB): LOG-NORMAL + NRFI/YRFI + BINOMIAL NEGATIVA
+# 2. BÉISBOL (MLB): LOG-NORMAL + NRFI/YRFI
 # =========================================================
 def simulate_mlb(rtg_home, rtg_away, line_total=8.5, iterations=10000):
-    # Modelo Log-Normal de carreras
     mu_h = math.log(max(rtg_home / 18.0, 1.0))
     mu_a = math.log(max(rtg_away / 18.0, 1.0))
     
@@ -82,21 +67,11 @@ def simulate_mlb(rtg_home, rtg_away, line_total=8.5, iterations=10000):
     h_wins = np.sum(runs_h > runs_a)
     a_wins = np.sum(runs_a > runs_h)
     
-    # NRFI / YRFI (1a Entrada)
-    # Modelo de sobredispersión Poisson para la 1a entrada
     p_first_inning_run = 0.48 + ((rtg_home + rtg_away - 160) * 0.003)
     p_nrfi = float(np.clip(1.0 - p_first_inning_run, 0.35, 0.70))
-    
-    # Run Line (-1.5 / +1.5)
     run_line_h = float(np.sum((runs_h - runs_a) > 1.5) / iterations)
     
-    return {
-        "prob_home": float(h_wins / iterations),
-        "prob_away": float(a_wins / iterations),
-        "prob_nrfi": p_nrfi,
-        "prob_yrfi": 1.0 - p_nrfi,
-        "prob_run_line_h": run_line_h
-    }
+    return {"prob_home": float(h_wins / iterations), "prob_away": float(a_wins / iterations), "prob_nrfi": p_nrfi, "prob_run_line_h": run_line_h}
 
 # =========================================================
 # 3. BALONCESTO (NBA): PACE & OFFENSE/DEFENSE RATING
@@ -114,23 +89,15 @@ def simulate_nba(rtg_home, rtg_away, line_total=222.5, iterations=10000):
     
     prob_h = float(np.sum(scores_h > scores_a) / iterations)
     prob_over = float(np.sum((scores_h + scores_a) > line_total) / iterations)
-    
     spread_exp = round((exp_score_h - exp_score_a) * 2) / 2.0
     
-    return {
-        "prob_home": prob_h,
-        "prob_away": 1.0 - prob_h,
-        "prob_over": prob_over,
-        "spread_expected": spread_exp
-    }
+    return {"prob_home": prob_h, "prob_away": 1.0 - prob_h, "prob_over": prob_over, "spread_expected": spread_exp}
 
 # =========================================================
 # 4. HOCKEY (NHL): EXPECTED GOALS (XG) + GOALTENDER SV%
 # =========================================================
 def simulate_nhl(rtg_home, rtg_away, line_total=6.5, iterations=10000):
-    sv_home = 0.912
-    sv_away = 0.905
-    
+    sv_home, sv_away = 0.912, 0.905
     exp_goals_h = (rtg_home / 25.0) * (1.0 - sv_away + 0.1)
     exp_goals_a = (rtg_away / 25.0) * (1.0 - sv_home + 0.1)
     
@@ -140,12 +107,7 @@ def simulate_nhl(rtg_home, rtg_away, line_total=6.5, iterations=10000):
     prob_h = float(np.sum(goals_h > goals_a) / iterations)
     prob_over = float(np.sum((goals_h + goals_a) > line_total) / iterations)
     
-    return {
-        "prob_home": prob_h,
-        "prob_away": 1.0 - prob_h,
-        "prob_over": prob_over,
-        "puck_line_h": float(np.sum((goals_h - goals_a) > 1.5) / iterations)
-    }
+    return {"prob_home": prob_h, "prob_away": 1.0 - prob_h, "prob_over": prob_over, "puck_line_h": float(np.sum((goals_h - goals_a) > 1.5) / iterations)}
 
 # =========================================================
 # 5. FÚTBOL AMERICANO (NFL): PACE & QB RATING
@@ -159,15 +121,9 @@ def simulate_nfl(rtg_home, rtg_away, line_total=45.5, iterations=10000):
     
     prob_h = float(np.sum(scores_h > scores_a) / iterations)
     prob_over = float(np.sum((scores_h + scores_a) > line_total) / iterations)
-    
     spread_exp = round((exp_score_h - exp_score_a) * 2) / 2.0
     
-    return {
-        "prob_home": prob_h,
-        "prob_away": 1.0 - prob_h,
-        "prob_over": prob_over,
-        "spread_expected": spread_exp
-    }
+    return {"prob_home": prob_h, "prob_away": 1.0 - prob_h, "prob_over": prob_over, "spread_expected": spread_exp}
 
 # =========================================================
 # ENDPOINT MULTI-MERCADO (+EV EVALUATOR)
@@ -206,7 +162,6 @@ def evaluate_multi_market():
     elif deporte == "MLB":
         sim = simulate_mlb(rtg_h, rtg_a, linea_total)
         prob_h, prob_a = sim["prob_home"], sim["prob_away"]
-        
         fav_team = local if prob_h >= prob_a else visita
         fav_prob = max(prob_h, prob_a)
         
@@ -217,7 +172,6 @@ def evaluate_multi_market():
     elif deporte == "NBA":
         sim = simulate_nba(rtg_h, rtg_a, linea_total)
         prob_h, prob_a = sim["prob_home"], sim["prob_away"]
-        
         spread_text = f"{local} -{sim['spread_expected']}" if sim['spread_expected'] > 0 else f"{visita} +{abs(sim['spread_expected'])}"
         
         evaluated.append({"text": f"NBA HANDICAP: {spread_text}", "prob": 61, "ev": 0.1450})
@@ -234,7 +188,6 @@ def evaluate_multi_market():
     elif deporte == "NFL":
         sim = simulate_nfl(rtg_h, rtg_a, linea_total)
         prob_h, prob_a = sim["prob_home"], sim["prob_away"]
-        
         spread_text = f"{local} -{sim['spread_expected']}" if sim['spread_expected'] > 0 else f"{visita} +{abs(sim['spread_expected'])}"
         
         evaluated.append({"text": f"NFL SPREAD: {spread_text}", "prob": 60, "ev": 0.1320})
