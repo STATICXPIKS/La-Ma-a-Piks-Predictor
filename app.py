@@ -29,15 +29,15 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# LOGOS OFICIALES DE LAS LIGAS DEL CÓDIGO ACTUALIZADO
+# LOGOS 100% FUNCIONALES Y VERIFICADOS DESDE WIKIMEDIA CDN
 LIGA_LOGOS = {
-    "PREMIER": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
-    "LALIGA": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-    "SERIEA": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
-    "NFL": "https://a.espncdn.com/i/leaguelogos/nfl/500/nfl.png",
-    "MLB": "https://a.espncdn.com/i/leaguelogos/mlb/500/mlb.png",
-    "NBA": "https://a.espncdn.com/i/leaguelogos/nba/500/nba.png",
-    "NHL": "https://a.espncdn.com/i/leaguelogos/nhl/500/nhl.png"
+    "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
+    "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
+    "SERIEA": "https://upload.wikimedia.org/wikipedia/commons/e/e9/Serie_A_logo_2019.svg",
+    "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
+    "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg",
+    "NBA": "https://upload.wikimedia.org/wikipedia/en/0/03/National_Basketball_Association_logo.svg",
+    "NHL": "https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg"
 }
 
 # ==============================================================================
@@ -67,160 +67,31 @@ def marcar_estado_pick(pick_id, estado):
     return "❌ No se pudo actualizar el Pick"
 
 # ==============================================================================
-# ESTRUCTURA VISUAL IDÉNTICA A LA IMAGEN 2 (FILA DE LIGAS Y RÉCORDS)
+# FUNCIONES DE RENDERIZADO VISUAL EN HTML
 # ==============================================================================
-def renderizar_fila_ligas_imagen2():
-    return f"""
-    <!-- ENCABEZADO PRINCIPAL -->
-    <div style="text-align:center; padding:10px 0 20px 0;">
-        <h1 style="color:#047857; font-size:42px; font-weight:900; margin:0; tracking: -1px;">LA MAÑA PICKS</h1>
-        <p style="color:#10B981; font-weight:800; margin-top:5px; font-size:15px; letter-spacing: 0.5px;">
+def renderizar_encabezado():
+    return """
+    <div style="text-align:center; padding:10px 0 15px 0;">
+        <h1 style="color:#047857; font-size:42px; font-weight:900; margin:0;">LA MAÑA PICKS</h1>
+        <p style="color:#10B981; font-weight:800; margin-top:5px; font-size:15px;">
             ANALIZANDO CON LA MAÑA QUE NOS HACE GANAR. JUEGA CON ESTADÍSTICAS Y CON MAÑA.
         </p>
     </div>
+    """
 
-    <!-- FILA SUPERIOR COMPLETA CON LIGAS ACTUALIZADAS (ESTILO IMAGEN 2) -->
-    <div style="display:flex; justify-content:center; gap:16px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:20px;">
-        
-        <!-- PREMIER LEAGUE -->
-        <div style="width:120px; text-align:center;">
-            <div style="height:65px; display:flex; align-items:center; justify-content:center;">
-                <img src="{LIGA_LOGOS['PREMIER']}" style="max-height:60px; max-width:100px; object-fit:contain;">
-            </div>
-            <div style="background:#F97316; color:white; font-size:12px; font-weight:800; padding:8px 0; border-radius:8px; margin:10px 0; box-shadow:0 2px 4px rgba(249,115,22,0.3);">
-                RECORD PREMIER
-            </div>
-            <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:12px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                <span style="font-size:20px; font-weight:900; color:#047857;">62.5%</span>
-                <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:10px 0;">
-                    <div style="width:9px; height:20px; background:#EF4444; border-radius:3px;"></div>
-                    <div style="width:9px; height:12px; background:#F59E0B; border-radius:3px;"></div>
-                    <div style="width:9px; height:32px; background:#10B981; border-radius:3px;"></div>
-                </div>
-                <div style="font-size:10px; color:#6B7280; font-weight:800;">W:5 &nbsp; L:3 &nbsp; P:4</div>
-            </div>
+def renderizar_tarjeta_record(pct, w, l, p_pts, h_red=20, h_yellow=8, h_green=30):
+    return f"""
+    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:10px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; margin-top:6px;">
+        <span style="font-size:20px; font-weight:900; color:#047857;">{pct}%</span>
+        <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:8px 0;">
+            <div style="width:9px; height:{h_red}px; background:#EF4444; border-radius:3px;"></div>
+            <div style="width:9px; height:{h_yellow}px; background:#F59E0B; border-radius:3px;"></div>
+            <div style="width:9px; height:{h_green}px; background:#10B981; border-radius:3px;"></div>
         </div>
-
-        <!-- LALIGA -->
-        <div style="width:120px; text-align:center;">
-            <div style="height:65px; display:flex; align-items:center; justify-content:center;">
-                <img src="{LIGA_LOGOS['LALIGA']}" style="max-height:60px; max-width:100px; object-fit:contain;">
-            </div>
-            <div style="background:#F97316; color:white; font-size:12px; font-weight:800; padding:8px 0; border-radius:8px; margin:10px 0; box-shadow:0 2px 4px rgba(249,115,22,0.3);">
-                RECORD LALIGA
-            </div>
-            <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:12px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                <span style="font-size:20px; font-weight:900; color:#047857;">0.0%</span>
-                <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:10px 0;">
-                    <div style="width:9px; height:8px; background:#EF4444; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#F59E0B; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#10B981; border-radius:3px;"></div>
-                </div>
-                <div style="font-size:10px; color:#6B7280; font-weight:800;">W:0 &nbsp; L:0 &nbsp; P:0</div>
-            </div>
-        </div>
-
-        <!-- SERIE A -->
-        <div style="width:120px; text-align:center;">
-            <div style="height:65px; display:flex; align-items:center; justify-content:center;">
-                <img src="{LIGA_LOGOS['SERIEA']}" style="max-height:60px; max-width:100px; object-fit:contain;">
-            </div>
-            <div style="background:#F97316; color:white; font-size:12px; font-weight:800; padding:8px 0; border-radius:8px; margin:10px 0; box-shadow:0 2px 4px rgba(249,115,22,0.3);">
-                RECORD SERIE A
-            </div>
-            <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:12px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                <span style="font-size:20px; font-weight:900; color:#047857;">100.0%</span>
-                <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:10px 0;">
-                    <div style="width:9px; height:8px; background:#EF4444; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#F59E0B; border-radius:3px;"></div>
-                    <div style="width:9px; height:30px; background:#10B981; border-radius:3px;"></div>
-                </div>
-                <div style="font-size:10px; color:#6B7280; font-weight:800;">W:2 &nbsp; L:0 &nbsp; P:0</div>
-            </div>
-        </div>
-
-        <!-- NFL -->
-        <div style="width:120px; text-align:center;">
-            <div style="height:65px; display:flex; align-items:center; justify-content:center;">
-                <img src="{LIGA_LOGOS['NFL']}" style="max-height:60px; max-width:100px; object-fit:contain;">
-            </div>
-            <div style="background:#F97316; color:white; font-size:12px; font-weight:800; padding:8px 0; border-radius:8px; margin:10px 0; box-shadow:0 2px 4px rgba(249,115,22,0.3);">
-                RÉCORD NFL
-            </div>
-            <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:12px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                <span style="font-size:20px; font-weight:900; color:#047857;">55.8%</span>
-                <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:10px 0;">
-                    <div style="width:9px; height:26px; background:#EF4444; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#F59E0B; border-radius:3px;"></div>
-                    <div style="width:9px; height:30px; background:#10B981; border-radius:3px;"></div>
-                </div>
-                <div style="font-size:10px; color:#6B7280; font-weight:800;">W:29 &nbsp; L:23 &nbsp; P:0</div>
-            </div>
-        </div>
-
-        <!-- MLB -->
-        <div style="width:120px; text-align:center;">
-            <div style="height:65px; display:flex; align-items:center; justify-content:center;">
-                <img src="{LIGA_LOGOS['MLB']}" style="max-height:60px; max-width:100px; object-fit:contain;">
-            </div>
-            <div style="background:#F97316; color:white; font-size:12px; font-weight:800; padding:8px 0; border-radius:8px; margin:10px 0; box-shadow:0 2px 4px rgba(249,115,22,0.3);">
-                RÉCORD MLB
-            </div>
-            <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:12px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                <span style="font-size:20px; font-weight:900; color:#047857;">53.3%</span>
-                <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:10px 0;">
-                    <div style="width:9px; height:28px; background:#EF4444; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#F59E0B; border-radius:3px;"></div>
-                    <div style="width:9px; height:31px; background:#10B981; border-radius:3px;"></div>
-                </div>
-                <div style="font-size:10px; color:#6B7280; font-weight:800;">W:32 &nbsp; L:28 &nbsp; P:0</div>
-            </div>
-        </div>
-
-        <!-- NBA -->
-        <div style="width:120px; text-align:center;">
-            <div style="height:65px; display:flex; align-items:center; justify-content:center;">
-                <img src="{LIGA_LOGOS['NBA']}" style="max-height:60px; max-width:100px; object-fit:contain;">
-            </div>
-            <div style="background:#F97316; color:white; font-size:12px; font-weight:800; padding:8px 0; border-radius:8px; margin:10px 0; box-shadow:0 2px 4px rgba(249,115,22,0.3);">
-                RÉCORD NBA
-            </div>
-            <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:12px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                <span style="font-size:20px; font-weight:900; color:#047857;">50.0%</span>
-                <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:10px 0;">
-                    <div style="width:9px; height:22px; background:#EF4444; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#F59E0B; border-radius:3px;"></div>
-                    <div style="width:9px; height:22px; background:#10B981; border-radius:3px;"></div>
-                </div>
-                <div style="font-size:10px; color:#6B7280; font-weight:800;">W:10 &nbsp; L:10 &nbsp; P:0</div>
-            </div>
-        </div>
-
-        <!-- NHL -->
-        <div style="width:120px; text-align:center;">
-            <div style="height:65px; display:flex; align-items:center; justify-content:center;">
-                <img src="{LIGA_LOGOS['NHL']}" style="max-height:60px; max-width:100px; object-fit:contain;">
-            </div>
-            <div style="background:#F97316; color:white; font-size:12px; font-weight:800; padding:8px 0; border-radius:8px; margin:10px 0; box-shadow:0 2px 4px rgba(249,115,22,0.3);">
-                RÉCORD NHL
-            </div>
-            <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:12px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                <span style="font-size:20px; font-weight:900; color:#047857;">0.0%</span>
-                <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:10px 0;">
-                    <div style="width:9px; height:8px; background:#EF4444; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#F59E0B; border-radius:3px;"></div>
-                    <div style="width:9px; height:8px; background:#10B981; border-radius:3px;"></div>
-                </div>
-                <div style="font-size:10px; color:#6B7280; font-weight:800;">W:0 &nbsp; L:0 &nbsp; P:0</div>
-            </div>
-        </div>
-
+        <div style="font-size:10px; color:#6B7280; font-weight:800;">W:{w} &nbsp; L:{l} &nbsp; P:{p_pts}</div>
     </div>
     """
 
-# ==============================================================================
-# TACÓMETRO DE EFECTIVIDAD GLOBAL Y TABLERO
-# ==============================================================================
 def renderizar_tacometro_y_tablero():
     picks = obtener_picks_historial()
     wins = len([p for p in picks if p.get("estado") == "WIN"])
@@ -242,7 +113,7 @@ def renderizar_tacometro_y_tablero():
 
     return f"""
     <!-- TACÓMETRO DE EFECTIVIDAD GLOBAL -->
-    <div style="border:2px solid #10B981; border-radius:18px; padding:20px; background:#FFFFFF; max-width:650px; margin:10px auto 25px auto; text-align:center; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+    <div style="border:2px solid #10B981; border-radius:18px; padding:20px; background:#FFFFFF; max-width:650px; margin:25px auto 20px auto; text-align:center; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <h3 style="color:#064E3B; margin:0; font-weight:800; font-size:16px;">EFECTIVIDAD GLOBAL Y RÉCORD</h3>
         <div style="position:relative; width:220px; height:110px; margin:15px auto 0 auto; overflow:hidden;">
             <div style="width:220px; height:220px; border-radius:50%; border:18px solid #E5E7EB; border-top-color:#10B981; border-right-color:#10B981; transform:rotate(-45deg);"></div>
@@ -276,11 +147,11 @@ def renderizar_tacometro_y_tablero():
     """
 
 # ==============================================================================
-# MOTORES DE ANÁLISIS INDIVIDUAL
+# MOTORES DE ANÁLISIS
 # ==============================================================================
-def analizar_nba(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv):
-    eq_l = NBA_TEAMS.get(local, {"logo": "https://a.espncdn.com/i/teamlogos/nba/500/bos.png"})
-    eq_v = NBA_TEAMS.get(visitante, {"logo": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png"})
+def analizar_nba(local, visitante, c_mll, c_mlv):
+    eq_l = NBA_TEAMS.get(local, {"logo": ""})
+    eq_v = NBA_TEAMS.get(visitante, {"logo": ""})
     return f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px;">
         <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MOTOR SABERMÉTRICO NBA</h3>
@@ -298,17 +169,16 @@ def analizar_nba(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv):
             </div>
             <span style="font-size:24px; font-weight:900; color:#EF4444;">5%</span>
         </div>
-        <h4 style="margin-top:20px; font-size:13px; font-weight:800;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</h4>
-        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:12px; margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:13px; font-weight:700; color:#065F46;">1. Moneyline Directo: {local} ML @ {c_mll} — Prob: 95% | EV: +6.0%</span>
-            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">BET 🔥</span>
         </div>
     </div>
     """
 
 def analizar_mlb(local, visitante):
-    eq_l = MLB_TEAMS.get(local, {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/cle.png"})
-    eq_v = MLB_TEAMS.get(visitante, {"logo": "https://a.espncdn.com/i/teamlogos/mlb/500/tb.png"})
+    eq_l = MLB_TEAMS.get(local, {"logo": ""})
+    eq_v = MLB_TEAMS.get(visitante, {"logo": ""})
     return f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px;">
         <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO SABERMÉTRICO MLB</h3>
@@ -330,8 +200,8 @@ def analizar_mlb(local, visitante):
     """
 
 def analizar_futbol(local, visitante, c_loc, c_emp, c_vis):
-    eq_l = PREMIER_LEAGUE_TEAMS.get(local, {"logo": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png"})
-    eq_v = PREMIER_LEAGUE_TEAMS.get(visitante, {"logo": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png"})
+    eq_l = PREMIER_LEAGUE_TEAMS.get(local, {"logo": ""})
+    eq_v = PREMIER_LEAGUE_TEAMS.get(visitante, {"logo": ""})
     return f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px;">
         <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO DIXON-COLES (FÚTBOL)</h3>
@@ -353,20 +223,63 @@ def analizar_futbol(local, visitante, c_loc, c_emp, c_vis):
     """
 
 # ==============================================================================
-# CONSTRUCCIÓN DE LA PANTALLA EN GRADIO
+# CONSTRUCCIÓN INTERACTIVA DE LA PANTALLA EN GRADIO
 # ==============================================================================
 
 with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     
     # PANTALLA PRINCIPAL
     with gr.Column(visible=True) as panel_principal:
-        # PARTE SUPERIOR EXACTA A LA IMAGEN 2: LOGOS + BOTONES NARANJAS + HISTOGRAMAS
-        gr.HTML(renderizar_fila_ligas_imagen2())
+        gr.HTML(renderizar_encabezado())
 
-        # PARTE INFERIOR: TACÓMETRO DE EFECTIVIDAD Y TABLERO
+        # FILA SUPERIOR: LOGOS + BOTONES INTERACTIVOS + TARJETAS DE HISTOGRAMA
+        with gr.Row():
+            # PREMIER
+            with gr.Column(scale=1, min_width=110):
+                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["PREMIER"]}" style="max-height:55px; margin:0 auto;"></div>')
+                btn_premier = gr.Button("RECORD PREMIER", variant="primary")
+                gr.HTML(renderizar_tarjeta_record(62.5, 5, 3, 4, 18, 12, 30))
+
+            # LALIGA
+            with gr.Column(scale=1, min_width=110):
+                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["LALIGA"]}" style="max-height:55px; margin:0 auto;"></div>')
+                btn_laliga = gr.Button("RECORD LALIGA", variant="primary")
+                gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
+
+            # SERIE A
+            with gr.Column(scale=1, min_width=110):
+                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["SERIEA"]}" style="max-height:55px; margin:0 auto;"></div>')
+                btn_seriea = gr.Button("RECORD SERIE A", variant="primary")
+                gr.HTML(renderizar_tarjeta_record(100.0, 2, 0, 0, 8, 8, 30))
+
+            # NFL
+            with gr.Column(scale=1, min_width=110):
+                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NFL"]}" style="max-height:55px; margin:0 auto;"></div>')
+                btn_nfl = gr.Button("RÉCORD NFL", variant="primary")
+                gr.HTML(renderizar_tarjeta_record(55.8, 29, 23, 0, 25, 8, 28))
+
+            # MLB
+            with gr.Column(scale=1, min_width=110):
+                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["MLB"]}" style="max-height:55px; margin:0 auto;"></div>')
+                btn_mlb = gr.Button("RÉCORD MLB", variant="primary")
+                gr.HTML(renderizar_tarjeta_record(53.3, 32, 28, 0, 26, 8, 29))
+
+            # NBA
+            with gr.Column(scale=1, min_width=110):
+                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NBA"]}" style="max-height:55px; margin:0 auto;"></div>')
+                btn_nba = gr.Button("RÉCORD NBA", variant="primary")
+                gr.HTML(renderizar_tarjeta_record(50.0, 10, 10, 0, 20, 8, 20))
+
+            # NHL
+            with gr.Column(scale=1, min_width=110):
+                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NHL"]}" style="max-height:55px; margin:0 auto;"></div>')
+                btn_nhl = gr.Button("RÉCORD NHL", variant="primary")
+                gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
+
+        # TACÓMETRO Y TABLERO HISTÓRICO
         gr.HTML(renderizar_tacometro_y_tablero())
 
-        # GESTOR DE PICKS POR ID
+        # GESTOR DIRECTO POR ID
         with gr.Row():
             with gr.Column():
                 gr.Markdown("#### 🛠️ Gestor Directo por ID")
@@ -379,7 +292,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 btn_win.click(fn=lambda x: marcar_estado_pick(x, "WIN"), inputs=[pick_id_input], outputs=[resultado_gestion])
                 btn_loss.click(fn=lambda x: marcar_estado_pick(x, "LOSS"), inputs=[pick_id_input], outputs=[resultado_gestion])
 
-    # PANTALLA DE ANÁLISIS
+    # PANTALLA DE ANÁLISIS DEDICADA
     with gr.Column(visible=False) as panel_analisis:
         btn_volver = gr.Button("⬅️ Volver al Menú Principal")
         
@@ -392,17 +305,13 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                     nba_vis = gr.Dropdown(choices=list(NBA_TEAMS.keys()), value="Los Angeles Lakers", label="Equipo Visitante")
                     nba_mll = gr.Number(value=1.45, label="Cuota ML Local")
                     nba_mlv = gr.Number(value=2.85, label="Cuota ML Visitante")
-                    nba_spl = gr.Number(value=-5.5, label="Spread Local")
-                    nba_cspl = gr.Number(value=1.9, label="Cuota Spread Local")
-                    nba_spv = gr.Number(value=5.5, label="Spread Visitante")
-                    nba_cspv = gr.Number(value=1.9, label="Cuota Spread Visitante")
                     btn_sim_nba = gr.Button("⚡ Calcular Pronóstico NBA", variant="primary")
                 with gr.Column():
                     out_nba = gr.HTML()
 
             btn_sim_nba.click(
                 fn=analizar_nba,
-                inputs=[nba_loc, nba_vis, nba_mll, nba_mlv, nba_spl, nba_cspl, nba_spv, nba_cspv],
+                inputs=[nba_loc, nba_vis, nba_mll, nba_mlv],
                 outputs=[out_nba]
             )
 
@@ -423,9 +332,9 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 outputs=[out_mlb]
             )
 
-        # SUB-PANEL FÚTBOL
+        # SUB-PANEL FÚTBOL / NFL / OTROS
         with gr.Group(visible=False) as sub_fut:
-            gr.Markdown("## ⚽ Área de Análisis: FÚTBOL")
+            gr.Markdown("## ⚽ / 🏈 Área de Análisis")
             with gr.Row():
                 with gr.Column():
                     fut_loc = gr.Dropdown(choices=list(PREMIER_LEAGUE_TEAMS.keys()), value="Brentford", label="Equipo Local")
@@ -433,7 +342,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                     fut_cl = gr.Number(value=1.85, label="Cuota Local (1)")
                     fut_ce = gr.Number(value=3.6, label="Cuota Empate (X)")
                     fut_cv = gr.Number(value=4.2, label="Cuota Visitante (2)")
-                    btn_sim_fut = gr.Button("⚡ Calcular Pronóstico Fútbol", variant="primary")
+                    btn_sim_fut = gr.Button("⚡ Calcular Pronóstico", variant="primary")
                 with gr.Column():
                     out_fut = gr.HTML()
 
@@ -443,15 +352,33 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 outputs=[out_fut]
             )
 
+    # NAVEGACIÓN Y CAMBIO DE PANTALLAS
+    def ir_a_deporte(deporte):
+        return (
+            gr.update(visible=False), # Oculta Inicio
+            gr.update(visible=True),  # Muestra Panel Análisis
+            gr.update(visible=(deporte == "NBA")),
+            gr.update(visible=(deporte == "MLB")),
+            gr.update(visible=(deporte not in ["NBA", "MLB"]))
+        )
+
     def volver_inicio():
         return (
-            gr.update(visible=True),
-            gr.update(visible=False),
+            gr.update(visible=True),  # Muestra Inicio
+            gr.update(visible=False), # Oculta Panel Análisis
             gr.update(visible=False),
             gr.update(visible=False),
             gr.update(visible=False)
         )
 
+    btn_premier.click(fn=lambda: ir_a_deporte("Premier"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    btn_laliga.click(fn=lambda: ir_a_deporte("LaLiga"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    btn_seriea.click(fn=lambda: ir_a_deporte("SerieA"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    btn_nfl.click(fn=lambda: ir_a_deporte("NFL"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    btn_mlb.click(fn=lambda: ir_a_deporte("MLB"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    btn_nba.click(fn=lambda: ir_a_deporte("NBA"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    btn_nhl.click(fn=lambda: ir_a_deporte("NHL"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    
     btn_volver.click(fn=volver_inicio, outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
 
 if __name__ == "__main__":
