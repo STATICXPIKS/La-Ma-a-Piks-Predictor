@@ -17,6 +17,13 @@ gr.close_all()
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://tuywqyjsaubcxmbzxwlg.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj")
 
+# =========================================
+# CONFIGURACIÓN DE APIS EXTERNAS
+# =========================================
+ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
+API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY", "")
+OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
+
 SUPABASE_HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
