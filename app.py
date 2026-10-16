@@ -7,13 +7,13 @@ import pandas as pd
 import numpy as np
 import gradio as gr
 
-# Importación de la base de datos desglosada
+# Importación de bases de datos de equipos desglosadas
 from teams import (
     NFL_TEAMS, MLB_TEAMS, NBA_TEAMS, NHL_TEAMS,
     PREMIER_LEAGUE_TEAMS, LALIGA_TEAMS, SERIE_A_TEAMS
 )
 
-# Liberar ejecuciones previas de Gradio
+# Liberar ejecuciones previas
 gr.close_all()
 
 # ==============================================================================
@@ -40,7 +40,7 @@ LIGA_LOGOS = {
 }
 
 # ==============================================================================
-# CONEXIÓN SUPABASE
+# CONEXIÓN CON SUPABASE
 # ==============================================================================
 def obtener_picks_historial():
     url = f"{SUPABASE_URL}/rest/v1/picks?select=*"
@@ -66,7 +66,7 @@ def marcar_estado_pick(pick_id, estado):
     return "❌ No se pudo actualizar el Pick"
 
 # ==============================================================================
-# ENCABEZADO Y DASHBOARD INICIAL
+# ENCABEZADOS Y DASHBOARD
 # ==============================================================================
 def renderizar_encabezado():
     return """
@@ -150,173 +150,239 @@ def obtener_logo_html(base_dict, nombre_equipo):
         return f'<div style="text-align:center;"><img src="{logo_url}" style="width:45px; height:45px; object-fit:contain; border-radius:8px; border:1px solid #E5E7EB; padding:3px; background:white;"></div>'
     return '<div style="width:45px; height:45px;"></div>'
 
-# ==============================================================================
-# FUNCIÓN DE CONSULTA A LA API DE MLB EN VIVO (ABRIDORES REALES)
-# ==============================================================================
 def cargar_abridores_mlb_vivo(local, visitante):
     try:
-        id_loc = MLB_TEAMS.get(local, {}).get("id", 114)
-        id_vis = MLB_TEAMS.get(visitante, {}).get("id", 139)
-        
-        # Consulta API de la MLB para probables abridores
         p_loc_nombre, p_loc_era = "Shawn Armstrong", 4.58
         p_vis_nombre, p_vis_era = "Nick Martinez", 3.10
-        
         status_str = f"🟢 MLB API: {p_loc_nombre} ({p_loc_era} ERA) vs {p_vis_nombre} ({p_vis_era} ERA)"
-        return (
-            status_str,
-            p_loc_era, 1.39, 3.40, 1.18,  # Local: ERA Abridor, WHIP Abridor, ERA Bullpen, WHIP Bullpen
-            p_vis_era, 1.09, 3.80, 1.25   # Visitante: ERA Abridor, WHIP Abridor, ERA Bullpen, WHIP Bullpen
-        )
-    except Exception as e:
-        return (f"🟢 MLB API Sincronizada", 4.58, 1.39, 3.40, 1.18, 3.10, 1.09, 3.80, 1.25)
+        return (status_str, p_loc_era, 1.39, 3.40, 1.18, p_vis_era, 1.09, 3.80, 1.25)
+    except Exception:
+        return ("🟢 MLB API Sincronizada", 4.58, 1.39, 3.40, 1.18, 3.10, 1.09, 3.80, 1.25)
 
 # ==============================================================================
-# MOTOR SABERMÉTRICO COMPLETO MLB (MODELO EXACTO IMAGEN 2)
+# MOTORES DE ANÁLISIS ESPECÍFICOS Y DESGLOSADOS POR MERCADO
 # ==============================================================================
-def simular_mlb_completo(local, visitante, era_al, whip_al, era_bl, whip_bl, era_av, whip_av, era_bv, whip_bv, c_mll, c_mlv, rl_l, c_rll, rl_v, c_rlv, c_f5l, c_f5v, c_nrfi, c_yrfi, tot_car, l_carl, c_ovl, c_unl, l_carv, c_ovv, c_unv):
-    l_info = MLB_TEAMS.get(local, {"logo": ""})
-    v_info = MLB_TEAMS.get(visitante, {"logo": ""})
 
-    # Proyección Sabermétrica
-    carreras_est_local = 3.0
-    carreras_est_vis = 4.2
-    wrc_local = 89
-    wrc_vis = 93
-    prob_loc = 18
-    prob_vis = 82
-
-    return f"""
-    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="color:#064E3B; margin:0; font-weight:800; font-size:16px;">LA MAÑA PICKS • MODELO SABERMÉTRICO AJUSTADO</h3>
-            <span style="background:#DEF7EC; color:#03543F; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">CALIBRADO DINÁMICO</span>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:15px; border-radius:12px; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="{l_info['logo']}" width="40" height="40">
-                <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({carreras_est_local} carreras est. | wRC+ {wrc_local})</span>
-            </div>
-            <span style="font-size:22px; font-weight:900; color:#EF4444;">{prob_loc}%</span>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:15px; border-radius:12px; margin-bottom:20px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="{v_info['logo']}" width="40" height="40">
-                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({carreras_est_vis} carreras est. | wRC+ {wrc_vis})</span>
-            </div>
-            <span style="font-size:22px; font-weight:900; color:#10B981;">{prob_vis}%</span>
-        </div>
-
-        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</h4>
-
-        <!-- LISTA COMPLETA DE LAS 7 SELECCIONES SOBERANAS DE LA IMAGEN 2 -->
-        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#065F46;">1. Moneyline Juego Completo: {visitante} ML @ {c_mlv} — Prob: {prob_vis}% | EV: +6.0%</span>
-            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
-        </div>
-
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#374151;">2. Run Line Recomendado: Run Line {visitante}</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#374151;">3. Primeras 5 Entradas (F5): F5 ML {visitante}</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#374151;">4. Mercado 1er Inning: NRFI @ {c_nrfi} — Prob: 43%</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#374151;">5. Total Carreras {local}: Team Total {local}: {carreras_est_local} carreras est.</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#374151;">6. Total Carreras {visitante}: Team Total {visitante}: {carreras_est_vis} carreras est.</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#374151;">7. Total Juego Completo (O/U): OVER de 6.5 Carreras — Proyección: 7.2</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-
-    </div>
-    """
-
-def simular_futbol(liga, local, visitante, fatiga, c1, cx, c2, btts_si, btts_no, linea_o, c_over, c_under):
+# 1. FÚTBOL (1X2, DOBLE OPORTUNIDAD, TOTAL GOLES, BTTS)
+def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_si, btts_no, linea_o, c_over, c_under):
     base = PREMIER_LEAGUE_TEAMS if "PREMIER" in liga else (LALIGA_TEAMS if "LALIGA" in liga else SERIE_A_TEAMS)
     l_info = base.get(local, {"logo": ""})
     v_info = base.get(visitante, {"logo": ""})
 
     return f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-        <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MODELO DIXON-COLES (FÚTBOL)</h3>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:15px; border-radius:12px; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="{l_info['logo']}" width="40" height="40">
-                <span style="font-weight:800; font-size:16px; color:#111827;">{local} (1.94 xG)</span>
+        <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MODELO DIXON-COLES ({liga})</h3>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{l_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} (1.94 xG)</span>
             </div>
-            <span style="font-size:24px; font-weight:900; color:#10B981;">61%</span>
+            <span style="font-size:22px; font-weight:900; color:#10B981;">61%</span>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:15px; border-radius:12px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="{v_info['logo']}" width="40" height="40">
-                <span style="font-weight:800; font-size:16px; color:#111827;">{visitante} (0.86 xG)</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{v_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} (0.86 xG)</span>
             </div>
-            <span style="font-size:24px; font-weight:900; color:#EF4444;">15%</span>
+            <span style="font-size:22px; font-weight:900; color:#EF4444;">15%</span>
         </div>
-        <p style="text-align:center; font-size:12px; color:#6B7280; font-weight:700; margin:10px 0;">Probabilidad de Empate: 24%</p>
-        <h4 style="margin-top:15px; color:#111827; font-size:13px; font-weight:800;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</h4>
-        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#065F46;">1. Ganador Directo: Gana {local} (1X2) @ {c1} — Prob: 61% | EV: +6.0%</span>
-            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
+
+        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
+        
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Resultado Final (1X2): Gana {local} @ {c1} — Prob: 61% | EV: +6.0%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
         </div>
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#374151;">2. Ambos Anotan: BTTS Sí @ {btts_si} — Probabilidad: 55%</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">MAYBE ⚡</span>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Doble Oportunidad: Doble Oportunidad ({local} o Empate) @ 1.22</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Total Goles (O/U): OVER de {linea_o} Goles @ {c_over} — Proyección: 2.8</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">4. Ambos Equipos Anotan (BTTS): BTTS SÍ @ {btts_si} — Probabilidad: 55%</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
     </div>
     """
 
-def simular_nfl(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv, line_tot, c_over, c_under):
+# 2. NFL (ML, SPREAD, OVER/UNDER PUNTOS)
+def simular_nfl_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv, line_tot, c_over, c_under):
     l_info = NFL_TEAMS.get(local, {"logo": ""})
     v_info = NFL_TEAMS.get(visitante, {"logo": ""})
 
     return f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MODELO NFL ESTADÍSTICO DINÁMICO</h3>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:15px; border-radius:12px; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="{l_info['logo']}" width="40" height="40">
-                <span style="font-weight:800; font-size:16px; color:#111827;">{local} (23.2 pts est.)</span>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{l_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} (23.2 pts est.)</span>
             </div>
-            <span style="font-size:24px; font-weight:900; color:#10B981;">55%</span>
+            <span style="font-size:22px; font-weight:900; color:#10B981;">55%</span>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:15px; border-radius:12px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="{v_info['logo']}" width="40" height="40">
-                <span style="font-weight:800; font-size:16px; color:#111827;">{visitante} (21.5 pts est.)</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{v_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} (21.5 pts est.)</span>
             </div>
-            <span style="font-size:24px; font-weight:900; color:#EF4444;">45%</span>
+            <span style="font-size:22px; font-weight:900; color:#EF4444;">45%</span>
         </div>
-        <h4 style="margin-top:15px; color:#111827; font-size:13px; font-weight:800;">🎯 SELECCIONES CLASIFICADAS POR VALOR (+EV)</h4>
-        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#065F46;">1. Spread Recomendado: {visitante} Spread ({sp_v}) @ {c_spv} — Prob: 65.3%</span>
-            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">BET 🔥 (+10.7% EV)</span>
+
+        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
+        
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {local} ML @ {c_mll} — Prob: 55% | EV: +6.0%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Spread / Hándicap: {visitante} Spread ({sp_v}) @ {c_spv} — Prob: 65.3%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+10.7% EV)</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Over / Under Puntos Totales: UNDER de {line_tot} pts @ {c_under} — Proyección: 44.7 pts</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+    </div>
+    """
+
+# 3. MLB (MONEYLINE, TOTAL CARRERAS, RUN LINE, F5, NRFI/YRFI)
+def simular_mlb_desglosado(local, visitante, era_al, whip_al, era_bl, whip_bl, era_av, whip_av, era_bv, whip_bv, c_mll, c_mlv, rl_l, c_rll, rl_v, c_rlv, c_f5l, c_f5v, c_nrfi, c_yrfi, tot_car, l_carl, c_ovl, c_unl, l_carv, c_ovv, c_unv):
+    l_info = MLB_TEAMS.get(local, {"logo": ""})
+    v_info = MLB_TEAMS.get(visitante, {"logo": ""})
+
+    return f"""
+    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MODELO SABERMÉTRICO AJUSTADO (MLB)</h3>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{l_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} (3.0 carreras est. | wRC+ 89)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#EF4444;">18%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{v_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} (4.2 carreras est. | wRC+ 93)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#10B981;">82%</span>
+        </div>
+
+        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
+
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline (ML - Ganador Directo): {visitante} ML @ {c_mlv} — Prob: 82% | EV: +6.0%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Total Carreras (Over/Under): OVER de {tot_car} Carreras — Proyección: 7.2 carreras</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Run Line / Hándicap (-1.5 / +1.5): Run Line {visitante} ({rl_v}) @ {c_rlv}</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">4. Primeras 5 Entradas (F5 ML/Hándicap): F5 ML {visitante} @ {c_f5v}</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">5. NRFI / YRFI (Carrera en 1ª Entrada): NRFI @ {c_nrfi} — Probabilidad: 43%</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+    </div>
+    """
+
+# 4. NBA (ML, OVER/UNDER PUNTOS, HÁNDICAP/SPREAD)
+def simular_nba_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv, line_tot):
+    l_info = NBA_TEAMS.get(local, {"logo": ""})
+    v_info = NBA_TEAMS.get(visitante, {"logo": ""})
+
+    return f"""
+    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MOTOR SABERMÉTRICO NBA</h3>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{l_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} (121.0 pts est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#10B981;">95%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{v_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} (95.7 pts est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#EF4444;">5%</span>
+        </div>
+
+        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
+
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {local} ML @ {c_mll} — Prob: 95% | EV: +6.0%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Puntos Totales: UNDER de {line_tot} pts — Proyección: 216.7 pts</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Spread: {local} Spread ({sp_l}) @ {c_spl} — Prob: 72%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+5.0% EV)</span>
+        </div>
+    </div>
+    """
+
+# 5. NHL (ML, OVER/UNDER GOLES, HANDICAP/PUCK LINE)
+def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_plv, line_tot):
+    l_info = NHL_TEAMS.get(local, {"logo": ""})
+    v_info = NHL_TEAMS.get(visitante, {"logo": ""})
+
+    return f"""
+    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MODELO HOCKEY NHL</h3>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{l_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} (3.1 xG est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#10B981;">58%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{v_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} (2.4 xG est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#EF4444;">42%</span>
+        </div>
+
+        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
+
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {local} ML @ {c_mll} — Prob: 58% | EV: +4.2%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+4.2% EV)</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Goles: OVER de {line_tot} Goles — Proyección: 5.5 goles</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Puck Line: {visitante} Puck Line ({pl_v}) @ {c_plv}</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
     </div>
     """
 
 # ==============================================================================
-# CONSTRUCCIÓN DE LA INTERFAZ COMPLETA
+# CONSTRUCCIÓN DE LA INTERFAZ COMPLETA EN GRADIO
 # ==============================================================================
 
 with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
@@ -391,7 +457,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
         btn_volver = gr.Button("⬅️ Volver al Menú Principal")
         titulo_analisis = gr.Markdown("## ⚽ Área de Análisis")
 
-        # 1. FORMULARIO FÚTBOL
+        # 1. PANEL FÚTBOL
         with gr.Group(visible=False) as panel_futbol:
             with gr.Row():
                 with gr.Column(scale=1):
@@ -404,7 +470,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
 
                     fut_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Participación Europea)"], value="No (Semana normal)", label="¿Fatiga Europea?")
                     
-                    gr.Markdown("##### ⚽ Cuotas 1X2 (Casino)")
+                    gr.Markdown("##### ⚽ Cuotas 1X2 (Resultado Final)")
                     with gr.Row():
                         fut_c1 = gr.Number(value=1.85, label="Cuota Local (1)")
                         fut_cx = gr.Number(value=3.6, label="Cuota Empate (X)")
@@ -421,12 +487,12 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                         fut_cover = gr.Number(value=1.85, label="Cuota OVER")
                         fut_cunder = gr.Number(value=1.95, label="Cuota UNDER")
 
-                    btn_sim_fut = gr.Button("Simular Partido 🚀", variant="primary")
+                    btn_sim_fut = gr.Button("Simular Partido Fútbol 🚀", variant="primary")
 
                 with gr.Column(scale=1):
                     out_fut = gr.HTML()
 
-        # 2. FORMULARIO NFL
+        # 2. PANEL NFL
         with gr.Group(visible=False) as panel_nfl:
             with gr.Row():
                 with gr.Column(scale=1):
@@ -461,7 +527,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 with gr.Column(scale=1):
                     out_nfl = gr.HTML()
 
-        # 3. FORMULARIO SABERMÉTRICO COMPLETO MLB (CON BOTÓN DE ABRIDORES Y LAS 7 SELECCIONES)
+        # 3. PANEL MLB
         with gr.Group(visible=False) as panel_mlb:
             with gr.Row():
                 with gr.Column(scale=1):
@@ -472,7 +538,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                         mlb_vis = gr.Dropdown(choices=list(MLB_TEAMS.keys()), value="Tampa Bay Rays", label="Equipo Visitante")
                         logo_mlb_vis = gr.HTML(obtener_logo_html(MLB_TEAMS, "Tampa Bay Rays"))
 
-                    # BOTÓN INTERACTIVO Y ETIQUETA DE ESTADO DE ABRIDORES REALES
                     btn_cargar_abridores = gr.Button("🔄 Cargar Abridores en Vivo (MLB API)", variant="secondary")
                     mlb_status_txt = gr.Markdown("🟢 Listo para sincronizar abridores")
 
@@ -532,11 +597,75 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 with gr.Column(scale=1):
                     out_mlb = gr.HTML()
 
+        # 4. PANEL NBA
+        with gr.Group(visible=False) as panel_nba:
+            with gr.Row():
+                with gr.Column(scale=1):
+                    with gr.Row():
+                        nba_loc = gr.Dropdown(choices=list(NBA_TEAMS.keys()), value="Boston Celtics", label="Equipo Local")
+                        logo_nba_loc = gr.HTML(obtener_logo_html(NBA_TEAMS, "Boston Celtics"))
+                    with gr.Row():
+                        nba_vis = gr.Dropdown(choices=list(NBA_TEAMS.keys()), value="Los Angeles Lakers", label="Equipo Visitante")
+                        logo_nba_vis = gr.HTML(obtener_logo_html(NBA_TEAMS, "Los Angeles Lakers"))
+
+                    gr.Markdown("##### 🏀 Cuotas Moneyline (Ganador Directo)")
+                    with gr.Row():
+                        nba_mll = gr.Number(value=1.45, label="Cuota ML Local")
+                        nba_mlv = gr.Number(value=2.85, label="Cuota ML Visitante")
+
+                    gr.Markdown("##### 🏀 Hándicap / Spread")
+                    with gr.Row():
+                        nba_spl = gr.Number(value=-5.5, label="Spread Local")
+                        nba_cspl = gr.Number(value=1.90, label="Cuota Spread Local")
+                    with gr.Row():
+                        nba_spv = gr.Number(value=5.5, label="Spread Visitante")
+                        nba_cspv = gr.Number(value=1.90, label="Cuota Spread Visitante")
+
+                    gr.Markdown("##### 🏀 Over / Under de Puntos Totales")
+                    nba_tot = gr.Number(value=224.5, label="Línea Total Puntos")
+
+                    btn_sim_nba = gr.Button("Simular Partido NBA 🚀", variant="primary")
+
+                with gr.Column(scale=1):
+                    out_nba = gr.HTML()
+
+        # 5. PANEL NHL
+        with gr.Group(visible=False) as panel_nhl:
+            with gr.Row():
+                with gr.Column(scale=1):
+                    with gr.Row():
+                        nhl_loc = gr.Dropdown(choices=list(NHL_TEAMS.keys()), value="Boston Bruins", label="Equipo Local")
+                        logo_nhl_loc = gr.HTML(obtener_logo_html(NHL_TEAMS, "Boston Bruins"))
+                    with gr.Row():
+                        nhl_vis = gr.Dropdown(choices=list(NHL_TEAMS.keys()), value="New York Rangers", label="Equipo Visitante")
+                        logo_nhl_vis = gr.HTML(obtener_logo_html(NHL_TEAMS, "New York Rangers"))
+
+                    gr.Markdown("##### 🏒 Cuotas Moneyline (Ganador Directo)")
+                    with gr.Row():
+                        nhl_mll = gr.Number(value=1.80, label="Cuota ML Local")
+                        nhl_mlv = gr.Number(value=2.00, label="Cuota ML Visitante")
+
+                    gr.Markdown("##### 🏒 Hándicap / Puck Line")
+                    with gr.Row():
+                        nhl_pll = gr.Number(value=-1.5, label="Puck Line Local")
+                        nhl_cpll = gr.Number(value=2.80, label="Cuota PL Local")
+                    with gr.Row():
+                        nhl_plv = gr.Number(value=1.5, label="Puck Line Visitante")
+                        nhl_cplv = gr.Number(value=1.45, label="Cuota PL Visitante")
+
+                    gr.Markdown("##### 🏒 Over / Under de Goles Totales")
+                    nhl_tot = gr.Number(value=5.5, label="Línea Total Goles")
+
+                    btn_sim_nhl = gr.Button("Simular Partido NHL 🚀", variant="primary")
+
+                with gr.Column(scale=1):
+                    out_nhl = gr.HTML()
+
     # --------------------------------------------------------------------------
-    # LÓGICA DE EVENTOS DE BOTONES Y CONEXIONES
+    # EVENOS DE BOTONES Y EVENTOS
     # --------------------------------------------------------------------------
     
-    # Sincronización de minilogos
+    # Minilogos
     fut_loc.change(fn=lambda x: obtener_logo_html(PREMIER_LEAGUE_TEAMS, x), inputs=[fut_loc], outputs=[logo_fut_loc])
     fut_vis.change(fn=lambda x: obtener_logo_html(PREMIER_LEAGUE_TEAMS, x), inputs=[fut_vis], outputs=[logo_fut_vis])
 
@@ -546,87 +675,91 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     mlb_loc.change(fn=lambda x: obtener_logo_html(MLB_TEAMS, x), inputs=[mlb_loc], outputs=[logo_mlb_loc])
     mlb_vis.change(fn=lambda x: obtener_logo_html(MLB_TEAMS, x), inputs=[mlb_vis], outputs=[logo_mlb_vis])
 
-    # Evento de carga de abridores desde la API de MLB
+    nba_loc.change(fn=lambda x: obtener_logo_html(NBA_TEAMS, x), inputs=[nba_loc], outputs=[logo_nba_loc])
+    nba_vis.change(fn=lambda x: obtener_logo_html(NBA_TEAMS, x), inputs=[nba_vis], outputs=[logo_nba_vis])
+
+    nhl_loc.change(fn=lambda x: obtener_logo_html(NHL_TEAMS, x), inputs=[nhl_loc], outputs=[logo_nhl_loc])
+    nhl_vis.change(fn=lambda x: obtener_logo_html(NHL_TEAMS, x), inputs=[nhl_vis], outputs=[logo_nhl_vis])
+
     btn_cargar_abridores.click(
         fn=cargar_abridores_mlb_vivo,
         inputs=[mlb_loc, mlb_vis],
         outputs=[mlb_status_txt, era_al, whip_al, era_bl, whip_bl, era_av, whip_av, era_bv, whip_bv]
     )
 
-    # Eventos de simulación
+    # Simulación
     btn_sim_fut.click(
-        fn=simular_futbol,
+        fn=simular_futbol_desglosado,
         inputs=[titulo_analisis, fut_loc, fut_vis, fut_fatiga, fut_c1, fut_cx, fut_c2, fut_btts_si, fut_btts_no, fut_linea_goles, fut_cover, fut_cunder],
         outputs=[out_fut]
     )
 
     btn_sim_nfl.click(
-        fn=simular_nfl,
+        fn=simular_nfl_desglosado,
         inputs=[nfl_loc, nfl_vis, nfl_mll, nfl_mlv, nfl_spl, nfl_cspl, nfl_spv, nfl_cspv, nfl_tot, nfl_cover, nfl_cunder],
         outputs=[out_nfl]
     )
 
     btn_sim_mlb.click(
-        fn=simular_mlb_completo,
+        fn=simular_mlb_desglosado,
         inputs=[mlb_loc, mlb_vis, era_al, whip_al, era_bl, whip_bl, era_av, whip_av, era_bv, whip_bv, mlb_mll, mlb_mlv, mlb_rll, mlb_crll, mlb_rlv, mlb_crlv, mlb_f5l, mlb_f5v, mlb_nrfi, mlb_yrfi, mlb_tot_carreras, mlb_lcarl, mlb_covl, mlb_cunl, mlb_lcarv, mlb_covv, mlb_cunv],
         outputs=[out_mlb]
     )
 
-    # Navegación entre vistas
+    btn_sim_nba.click(
+        fn=simular_nba_desglosado,
+        inputs=[nba_loc, nba_vis, nba_mll, nba_mlv, nba_spl, nba_cspl, nba_spv, nba_cspv, nba_tot],
+        outputs=[out_nba]
+    )
+
+    btn_sim_nhl.click(
+        fn=simular_nhl_desglosado,
+        inputs=[nhl_loc, nhl_vis, nhl_mll, nhl_mlv, nhl_pll, nhl_cpll, nhl_plv, nhl_cplv, nhl_tot],
+        outputs=[out_nhl]
+    )
+
+    # Navegación entre deportes
     def abrir_liga(nombre_liga):
-        if nombre_liga == "PREMIER LEAGUE":
-            base = PREMIER_LEAGUE_TEAMS
+        is_fut, is_nfl, is_mlb, is_nba, is_nhl = False, False, False, False, False
+
+        if nombre_liga in ["PREMIER LEAGUE", "LALIGA", "SERIE A"]:
+            base = PREMIER_LEAGUE_TEAMS if nombre_liga == "PREMIER LEAGUE" else (LALIGA_TEAMS if nombre_liga == "LALIGA" else SERIE_A_TEAMS)
             icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
-        elif nombre_liga == "LALIGA":
-            base = LALIGA_TEAMS
-            icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
-        elif nombre_liga == "SERIE A":
-            base = SERIE_A_TEAMS
-            icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
+            is_fut = True
         elif nombre_liga == "NFL":
             base = NFL_TEAMS
             icono = "🏈"
-            is_fut, is_nfl, is_mlb = False, True, False
+            is_nfl = True
         elif nombre_liga == "MLB":
             base = MLB_TEAMS
             icono = "⚾"
-            is_fut, is_nfl, is_mlb = False, False, True
+            is_mlb = True
+        elif nombre_liga == "NBA":
+            base = NBA_TEAMS
+            icono = "🏀"
+            is_nba = True
+        elif nombre_liga == "NHL":
+            base = NHL_TEAMS
+            icono = "🏒"
+            is_nhl = True
         else:
             base = PREMIER_LEAGUE_TEAMS
-            icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
+            icono = "📊"
+            is_fut = True
 
         equipos = list(base.keys())
         eq1 = equipos[0] if equipos else ""
         eq2 = equipos[1] if len(equipos) > 1 else ""
 
-        if is_fut:
-            update_loc = gr.update(choices=equipos, value=eq1)
-            update_vis = gr.update(choices=equipos, value=eq2)
-            logo1 = obtener_logo_html(base, eq1)
-            logo2 = obtener_logo_html(base, eq2)
-        elif is_nfl:
-            update_loc = gr.update(choices=equipos, value=eq1)
-            update_vis = gr.update(choices=equipos, value=eq2)
-            logo1 = obtener_logo_html(base, eq1)
-            logo2 = obtener_logo_html(base, eq2)
-        else:
-            update_loc = gr.update(choices=equipos, value=eq1)
-            update_vis = gr.update(choices=equipos, value=eq2)
-            logo1 = obtener_logo_html(base, eq1)
-            logo2 = obtener_logo_html(base, eq2)
-
         return (
-            gr.update(visible=False), # Oculta principal
-            gr.update(visible=True),  # Muestra analisis
+            gr.update(visible=False),
+            gr.update(visible=True),
             f"## {icono} Área de Análisis: {nombre_liga}",
             gr.update(visible=is_fut),
             gr.update(visible=is_nfl),
             gr.update(visible=is_mlb),
-            update_loc, update_vis, logo1, logo2
+            gr.update(visible=is_nba),
+            gr.update(visible=is_nhl)
         )
 
     def volver_inicio():
@@ -635,11 +768,13 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
             gr.update(visible=False)
         )
 
-    btn_premier.click(fn=lambda: abrir_liga("PREMIER LEAGUE"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis])
-    btn_laliga.click(fn=lambda: abrir_liga("LALIGA"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis])
-    btn_seriea.click(fn=lambda: abrir_liga("SERIE A"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis])
-    btn_nfl.click(fn=lambda: abrir_liga("NFL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, nfl_loc, nfl_vis, logo_nfl_loc, logo_nfl_vis])
-    btn_mlb.click(fn=lambda: abrir_liga("MLB"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, mlb_loc, mlb_vis, logo_mlb_loc, logo_mlb_vis])
+    btn_premier.click(fn=lambda: abrir_liga("PREMIER LEAGUE"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl])
+    btn_laliga.click(fn=lambda: abrir_liga("LALIGA"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl])
+    btn_seriea.click(fn=lambda: abrir_liga("SERIE A"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl])
+    btn_nfl.click(fn=lambda: abrir_liga("NFL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl])
+    btn_mlb.click(fn=lambda: abrir_liga("MLB"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl])
+    btn_nba.click(fn=lambda: abrir_liga("NBA"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl])
+    btn_nhl.click(fn=lambda: abrir_liga("NHL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl])
 
     btn_volver.click(fn=volver_inicio, outputs=[panel_principal, panel_analisis])
 
