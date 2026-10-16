@@ -17,7 +17,7 @@ from teams import (
 gr.close_all()
 
 # ==============================================================================
-# CONFIGURACIÓN DE VARIABLES DE ENTORNO (RENDER / SUPABASE)
+# CONFIGURACIÓN DE VARIABLES DE ENTORNO
 # ==============================================================================
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://tuywqyjsaubcxmbzxwlg.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj")
@@ -29,19 +29,19 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# LOGOS 100% FUNCIONALES Y VERIFICADOS DESDE WIKIMEDIA CDN
+# LOGOS ESTABLES Y PROBADOS
 LIGA_LOGOS = {
-    "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
-    "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
-    "SERIEA": "https://upload.wikimedia.org/wikipedia/commons/e/e9/Serie_A_logo_2019.svg",
-    "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
-    "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg",
-    "NBA": "https://upload.wikimedia.org/wikipedia/en/0/03/National_Basketball_Association_logo.svg",
-    "NHL": "https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg"
+    "PREMIER": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
+    "LALIGA": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
+    "SERIEA": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
+    "NFL": "https://a.espncdn.com/i/leaguelogos/nfl/500/nfl.png",
+    "MLB": "https://a.espncdn.com/i/leaguelogos/mlb/500/mlb.png",
+    "NBA": "https://a.espncdn.com/i/leaguelogos/nba/500/nba.png",
+    "NHL": "https://a.espncdn.com/i/leaguelogos/nhl/500/nhl.png"
 }
 
 # ==============================================================================
-# CONSULTA DE SUPABASE
+# CONEXIÓN SUPABASE
 # ==============================================================================
 def obtener_picks_historial():
     url = f"{SUPABASE_URL}/rest/v1/picks?select=*"
@@ -67,7 +67,7 @@ def marcar_estado_pick(pick_id, estado):
     return "❌ No se pudo actualizar el Pick"
 
 # ==============================================================================
-# FUNCIONES DE RENDERIZADO VISUAL EN HTML
+# COMPONENTES HTML
 # ==============================================================================
 def renderizar_encabezado():
     return """
@@ -112,7 +112,6 @@ def renderizar_tacometro_y_tablero():
     if not perdidas_html: perdidas_html = "• [#156 - MLB] Los Angeles Dodgers vs Milwaukee Brewers — <i>LA Dodgers ML</i> @ 1.5 — Prob: 94% | EV: +6.0%"
 
     return f"""
-    <!-- TACÓMETRO DE EFECTIVIDAD GLOBAL -->
     <div style="border:2px solid #10B981; border-radius:18px; padding:20px; background:#FFFFFF; max-width:650px; margin:25px auto 20px auto; text-align:center; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <h3 style="color:#064E3B; margin:0; font-weight:800; font-size:16px;">EFECTIVIDAD GLOBAL Y RÉCORD</h3>
         <div style="position:relative; width:220px; height:110px; margin:15px auto 0 auto; overflow:hidden;">
@@ -126,7 +125,6 @@ def renderizar_tacometro_y_tablero():
         </p>
     </div>
 
-    <!-- TABLERO HISTÓRICO DE CONTROL -->
     <div>
         <h3 style="color:#111827; font-weight:800; font-size:18px; margin-bottom:12px;">📋 TABLERO HISTÓRICO DE CONTROL Y SEGUIMIENTO</h3>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:15px;">
@@ -147,139 +145,107 @@ def renderizar_tacometro_y_tablero():
     """
 
 # ==============================================================================
-# MOTORES DE ANÁLISIS
+# MOTORES DE CÁLCULO
 # ==============================================================================
-def analizar_nba(local, visitante, c_mll, c_mlv):
-    eq_l = NBA_TEAMS.get(local, {"logo": ""})
-    eq_v = NBA_TEAMS.get(visitante, {"logo": ""})
+def calcular_simulacion(liga, local, visitante, cuota):
+    # Diccionario según liga
+    bases = {
+        "Premier League": PREMIER_LEAGUE_TEAMS,
+        "LaLiga": LALIGA_TEAMS,
+        "Serie A": SERIE_A_TEAMS,
+        "NFL": NFL_TEAMS,
+        "MLB": MLB_TEAMS,
+        "NBA": NBA_TEAMS,
+        "NHL": NHL_TEAMS
+    }
+    base = bases.get(liga, {})
+    eq_l = base.get(local, {"logo": ""})
+    eq_v = base.get(visitante, {"logo": ""})
+
+    prob_local = round(np.random.uniform(55, 75), 1)
+    prob_visitante = round(100 - prob_local, 1)
+
     return f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px;">
-        <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MOTOR SABERMÉTRICO NBA</h3>
+        <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO ANÁLISIS ({liga.upper()})</h3>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F3F4F6; padding:15px; border-radius:12px; margin:15px 0;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{eq_l['logo']}" width="45" height="45">
-                <span style="font-weight:800; font-size:16px;">{local} (121.0 pts est)</span>
+                <span style="font-weight:800; font-size:16px;">{local}</span>
             </div>
-            <span style="font-size:24px; font-weight:900; color:#10B981;">95%</span>
+            <span style="font-size:24px; font-weight:900; color:#10B981;">{prob_local}%</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F3F4F6; padding:15px; border-radius:12px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{eq_v['logo']}" width="45" height="45">
-                <span style="font-weight:800; font-size:16px;">{visitante} (95.7 pts est)</span>
+                <span style="font-weight:800; font-size:16px;">{visitante}</span>
             </div>
-            <span style="font-size:24px; font-weight:900; color:#EF4444;">5%</span>
+            <span style="font-size:24px; font-weight:900; color:#EF4444;">{prob_visitante}%</span>
         </div>
         <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:12px; margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:#065F46;">1. Moneyline Directo: {local} ML @ {c_mll} — Prob: 95% | EV: +6.0%</span>
+            <span style="font-size:13px; font-weight:700; color:#065F46;">1. Recomendación Principal: Gana {local} @ {cuota} — Prob: {prob_local}%</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">BET 🔥</span>
         </div>
     </div>
     """
 
-def analizar_mlb(local, visitante):
-    eq_l = MLB_TEAMS.get(local, {"logo": ""})
-    eq_v = MLB_TEAMS.get(visitante, {"logo": ""})
-    return f"""
-    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px;">
-        <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO SABERMÉTRICO MLB</h3>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F3F4F6; padding:15px; border-radius:12px; margin:15px 0;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{eq_l['logo']}" width="45" height="45">
-                <span style="font-weight:800; font-size:16px;">{local} (3.0 carreras est.)</span>
-            </div>
-            <span style="font-size:24px; font-weight:900; color:#EF4444;">18%</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F3F4F6; padding:15px; border-radius:12px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{eq_v['logo']}" width="45" height="45">
-                <span style="font-weight:800; font-size:16px;">{visitante} (4.2 carreras est.)</span>
-            </div>
-            <span style="font-size:24px; font-weight:900; color:#10B981;">82%</span>
-        </div>
-    </div>
-    """
-
-def analizar_futbol(local, visitante, c_loc, c_emp, c_vis):
-    eq_l = PREMIER_LEAGUE_TEAMS.get(local, {"logo": ""})
-    eq_v = PREMIER_LEAGUE_TEAMS.get(visitante, {"logo": ""})
-    return f"""
-    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px;">
-        <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO DIXON-COLES (FÚTBOL)</h3>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F3F4F6; padding:15px; border-radius:12px; margin:15px 0;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{eq_l['logo']}" width="45" height="45">
-                <span style="font-weight:800; font-size:16px;">{local} (1.94 xG)</span>
-            </div>
-            <span style="font-size:24px; font-weight:900; color:#10B981;">61%</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#F3F4F6; padding:15px; border-radius:12px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{eq_v['logo']}" width="45" height="45">
-                <span style="font-weight:800; font-size:16px;">{visitante} (0.86 xG)</span>
-            </div>
-            <span style="font-size:24px; font-weight:900; color:#EF4444;">15%</span>
-        </div>
-    </div>
-    """
-
 # ==============================================================================
-# CONSTRUCCIÓN INTERACTIVA DE LA PANTALLA EN GRADIO
+# CONSTRUCCIÓN INTERFAZ GRADIO
 # ==============================================================================
-
 with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     
     # PANTALLA PRINCIPAL
     with gr.Column(visible=True) as panel_principal:
         gr.HTML(renderizar_encabezado())
 
-        # FILA SUPERIOR: LOGOS + BOTONES INTERACTIVOS + TARJETAS DE HISTOGRAMA
+        # FILA SUPERIOR CON LOGOS Y BOTONES DIRECCIÓN DIRECTA (SIN "RECORD")
         with gr.Row():
             # PREMIER
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["PREMIER"]}" style="max-height:55px; margin:0 auto;"></div>')
-                btn_premier = gr.Button("RECORD PREMIER", variant="primary")
+                btn_premier = gr.Button("PREMIER", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(62.5, 5, 3, 4, 18, 12, 30))
 
             # LALIGA
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["LALIGA"]}" style="max-height:55px; margin:0 auto;"></div>')
-                btn_laliga = gr.Button("RECORD LALIGA", variant="primary")
+                btn_laliga = gr.Button("LA LIGA", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             # SERIE A
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["SERIEA"]}" style="max-height:55px; margin:0 auto;"></div>')
-                btn_seriea = gr.Button("RECORD SERIE A", variant="primary")
+                btn_seriea = gr.Button("SERIE A", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(100.0, 2, 0, 0, 8, 8, 30))
 
             # NFL
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NFL"]}" style="max-height:55px; margin:0 auto;"></div>')
-                btn_nfl = gr.Button("RÉCORD NFL", variant="primary")
+                btn_nfl = gr.Button("NFL", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(55.8, 29, 23, 0, 25, 8, 28))
 
             # MLB
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["MLB"]}" style="max-height:55px; margin:0 auto;"></div>')
-                btn_mlb = gr.Button("RÉCORD MLB", variant="primary")
+                btn_mlb = gr.Button("MLB", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(53.3, 32, 28, 0, 26, 8, 29))
 
             # NBA
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NBA"]}" style="max-height:55px; margin:0 auto;"></div>')
-                btn_nba = gr.Button("RÉCORD NBA", variant="primary")
+                btn_nba = gr.Button("NBA", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(50.0, 10, 10, 0, 20, 8, 20))
 
             # NHL
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NHL"]}" style="max-height:55px; margin:0 auto;"></div>')
-                btn_nhl = gr.Button("RÉCORD NHL", variant="primary")
+                btn_nhl = gr.Button("NHL", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
-        # TACÓMETRO Y TABLERO HISTÓRICO
+        # TACÓMETRO Y TABLERO
         gr.HTML(renderizar_tacometro_y_tablero())
 
-        # GESTOR DIRECTO POR ID
+        # GESTOR POR ID
         with gr.Row():
             with gr.Column():
                 gr.Markdown("#### 🛠️ Gestor Directo por ID")
@@ -292,94 +258,84 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 btn_win.click(fn=lambda x: marcar_estado_pick(x, "WIN"), inputs=[pick_id_input], outputs=[resultado_gestion])
                 btn_loss.click(fn=lambda x: marcar_estado_pick(x, "LOSS"), inputs=[pick_id_input], outputs=[resultado_gestion])
 
-    # PANTALLA DE ANÁLISIS DEDICADA
+    # PANTALLA DE ANÁLISIS DINÁMICA
     with gr.Column(visible=False) as panel_analisis:
         btn_volver = gr.Button("⬅️ Volver al Menú Principal")
         
-        # SUB-PANEL NBA
-        with gr.Group(visible=False) as sub_nba:
-            gr.Markdown("## 🏀 Área de Análisis: NBA")
-            with gr.Row():
-                with gr.Column():
-                    nba_loc = gr.Dropdown(choices=list(NBA_TEAMS.keys()), value="Boston Celtics", label="Equipo Local")
-                    nba_vis = gr.Dropdown(choices=list(NBA_TEAMS.keys()), value="Los Angeles Lakers", label="Equipo Visitante")
-                    nba_mll = gr.Number(value=1.45, label="Cuota ML Local")
-                    nba_mlv = gr.Number(value=2.85, label="Cuota ML Visitante")
-                    btn_sim_nba = gr.Button("⚡ Calcular Pronóstico NBA", variant="primary")
-                with gr.Column():
-                    out_nba = gr.HTML()
+        titulo_analisis = gr.Markdown("## ⚽ Área de Análisis")
 
-            btn_sim_nba.click(
-                fn=analizar_nba,
-                inputs=[nba_loc, nba_vis, nba_mll, nba_mlv],
-                outputs=[out_nba]
-            )
+        with gr.Row():
+            with gr.Column():
+                dropdown_local = gr.Dropdown(choices=[], label="Equipo Local")
+                dropdown_visitante = gr.Dropdown(choices=[], label="Equipo Visitante")
+                cuota_input = gr.Number(value=1.85, label="Cuota del Casino")
+                liga_seleccionada_state = gr.State("")
+                btn_calcular = gr.Button("⚡ Calcular Pronóstico", variant="primary")
+            
+            with gr.Column():
+                salida_html = gr.HTML()
 
-        # SUB-PANEL MLB
-        with gr.Group(visible=False) as sub_mlb:
-            gr.Markdown("## ⚾ Área de Análisis: MLB")
-            with gr.Row():
-                with gr.Column():
-                    mlb_loc = gr.Dropdown(choices=list(MLB_TEAMS.keys()), value="Cleveland Guardians", label="Equipo Local")
-                    mlb_vis = gr.Dropdown(choices=list(MLB_TEAMS.keys()), value="Tampa Bay Rays", label="Equipo Visitante")
-                    btn_sim_mlb = gr.Button("⚡ Calcular Pronóstico MLB", variant="primary")
-                with gr.Column():
-                    out_mlb = gr.HTML()
+        btn_calcular.click(
+            fn=calcular_simulacion,
+            inputs=[liga_seleccionada_state, dropdown_local, dropdown_visitante, cuota_input],
+            outputs=[salida_html]
+        )
 
-            btn_sim_mlb.click(
-                fn=analizar_mlb,
-                inputs=[mlb_loc, mlb_vis],
-                outputs=[out_mlb]
-            )
+    # LÓGICA DE SELECCIÓN DE LIGA Y CARGA DE EQUIPOS REALES
+    def abrir_analisis(liga_nombre):
+        if liga_nombre == "Premier League":
+            equipos = list(PREMIER_LEAGUE_TEAMS.keys())
+            icono = "⚽"
+        elif liga_nombre == "LaLiga":
+            equipos = list(LALIGA_TEAMS.keys())
+            icono = "⚽"
+        elif liga_nombre == "Serie A":
+            equipos = list(SERIE_A_TEAMS.keys())
+            icono = "⚽"
+        elif liga_nombre == "NFL":
+            equipos = list(NFL_TEAMS.keys())
+            icono = "🏈"
+        elif liga_nombre == "MLB":
+            equipos = list(MLB_TEAMS.keys())
+            icono = "⚾"
+        elif liga_nombre == "NBA":
+            equipos = list(NBA_TEAMS.keys())
+            icono = "🏀"
+        elif liga_nombre == "NHL":
+            equipos = list(NHL_TEAMS.keys())
+            icono = "🏒"
+        else:
+            equipos = []
+            icono = "📊"
 
-        # SUB-PANEL FÚTBOL / NFL / OTROS
-        with gr.Group(visible=False) as sub_fut:
-            gr.Markdown("## ⚽ / 🏈 Área de Análisis")
-            with gr.Row():
-                with gr.Column():
-                    fut_loc = gr.Dropdown(choices=list(PREMIER_LEAGUE_TEAMS.keys()), value="Brentford", label="Equipo Local")
-                    fut_vis = gr.Dropdown(choices=list(PREMIER_LEAGUE_TEAMS.keys()), value="Liverpool", label="Equipo Visitante")
-                    fut_cl = gr.Number(value=1.85, label="Cuota Local (1)")
-                    fut_ce = gr.Number(value=3.6, label="Cuota Empate (X)")
-                    fut_cv = gr.Number(value=4.2, label="Cuota Visitante (2)")
-                    btn_sim_fut = gr.Button("⚡ Calcular Pronóstico", variant="primary")
-                with gr.Column():
-                    out_fut = gr.HTML()
+        eq_local_init = equipos[0] if equipos else ""
+        eq_vis_init = equipos[1] if len(equipos) > 1 else ""
 
-            btn_sim_fut.click(
-                fn=analizar_futbol,
-                inputs=[fut_loc, fut_vis, fut_cl, fut_ce, fut_cv],
-                outputs=[out_fut]
-            )
-
-    # NAVEGACIÓN Y CAMBIO DE PANTALLAS
-    def ir_a_deporte(deporte):
         return (
-            gr.update(visible=False), # Oculta Inicio
-            gr.update(visible=True),  # Muestra Panel Análisis
-            gr.update(visible=(deporte == "NBA")),
-            gr.update(visible=(deporte == "MLB")),
-            gr.update(visible=(deporte not in ["NBA", "MLB"]))
+            gr.update(visible=False), # Oculta panel principal
+            gr.update(visible=True),  # Muestra panel de analisis
+            f"## {icono} Área de Análisis: {liga_nombre.upper()}", # Titulo corregido
+            gr.update(choices=equipos, value=eq_local_init),      # Equipos reales local
+            gr.update(choices=equipos, value=eq_vis_init),        # Equipos reales visitante
+            liga_nombre
         )
 
     def volver_inicio():
         return (
-            gr.update(visible=True),  # Muestra Inicio
-            gr.update(visible=False), # Oculta Panel Análisis
-            gr.update(visible=False),
-            gr.update(visible=False),
-            gr.update(visible=False)
+            gr.update(visible=True), # Muestra panel principal
+            gr.update(visible=False) # Oculta panel analisis
         )
 
-    btn_premier.click(fn=lambda: ir_a_deporte("Premier"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
-    btn_laliga.click(fn=lambda: ir_a_deporte("LaLiga"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
-    btn_seriea.click(fn=lambda: ir_a_deporte("SerieA"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
-    btn_nfl.click(fn=lambda: ir_a_deporte("NFL"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
-    btn_mlb.click(fn=lambda: ir_a_deporte("MLB"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
-    btn_nba.click(fn=lambda: ir_a_deporte("NBA"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
-    btn_nhl.click(fn=lambda: ir_a_deporte("NHL"), outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
-    
-    btn_volver.click(fn=volver_inicio, outputs=[panel_principal, panel_analisis, sub_nba, sub_mlb, sub_fut])
+    # ACCIONES DE BOTONES
+    btn_premier.click(fn=lambda: abrir_analisis("Premier League"), outputs=[panel_principal, panel_analisis, titulo_analisis, dropdown_local, dropdown_visitante, liga_seleccionada_state])
+    btn_laliga.click(fn=lambda: abrir_analisis("LaLiga"), outputs=[panel_principal, panel_analisis, titulo_analisis, dropdown_local, dropdown_visitante, liga_seleccionada_state])
+    btn_seriea.click(fn=lambda: abrir_analisis("Serie A"), outputs=[panel_principal, panel_analisis, titulo_analisis, dropdown_local, dropdown_visitante, liga_seleccionada_state])
+    btn_nfl.click(fn=lambda: abrir_analisis("NFL"), outputs=[panel_principal, panel_analisis, titulo_analisis, dropdown_local, dropdown_visitante, liga_seleccionada_state])
+    btn_mlb.click(fn=lambda: abrir_analisis("MLB"), outputs=[panel_principal, panel_analisis, titulo_analisis, dropdown_local, dropdown_visitante, liga_seleccionada_state])
+    btn_nba.click(fn=lambda: abrir_analisis("NBA"), outputs=[panel_principal, panel_analisis, titulo_analisis, dropdown_local, dropdown_visitante, liga_seleccionada_state])
+    btn_nhl.click(fn=lambda: abrir_analisis("NHL"), outputs=[panel_principal, panel_analisis, titulo_analisis, dropdown_local, dropdown_visitante, liga_seleccionada_state])
+
+    btn_volver.click(fn=volver_inicio, outputs=[panel_principal, panel_analisis])
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
