@@ -32,10 +32,11 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
+# LOGOS ESTABLES EN FORMATO SVG/PNG DIRECTOS SIN BLOQUEOS
 LIGA_LOGOS = {
     "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
-    "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
-    "SERIEA": "https://upload.wikimedia.org/wikipedia/commons/e/e9/Serie_A_logo_2019.svg",
+    "LALIGA": "https://raw.githubusercontent.com/luukku/footy-logos/main/logos/LaLiga.png",
+    "SERIEA": "https://raw.githubusercontent.com/luukku/footy-logos/main/logos/Serie_A.png",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg",
     "NBA": "https://upload.wikimedia.org/wikipedia/en/0/03/National_Basketball_Association_logo.svg",
