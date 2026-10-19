@@ -52,9 +52,9 @@ def obtener_picks_historial():
         print(f"Error Supabase: {e}")
     return []
 
-def guardar_pick_seleccionado(deporte, partido, seleccion, cuota, probabilidad, ev):
+def guardar_pick_bd(deporte, partido, seleccion, cuota, probabilidad, ev, proyeccion_txt):
     if not deporte or not partido or not seleccion:
-        return "⚠️ Datos incompletos para guardar el pick."
+        return "⚠️ Primero simule el partido para generar las selecciones."
     
     url = f"{SUPABASE_URL}/rest/v1/picks"
     payload = {
@@ -70,10 +70,10 @@ def guardar_pick_seleccionado(deporte, partido, seleccion, cuota, probabilidad, 
     try:
         res = requests.post(url, headers=SUPABASE_HEADERS, json=payload, timeout=5)
         if res.status_code in [200, 201]:
-            return f"✅ Pick registrado con éxito: {seleccion} @ {cuota}"
+            return f"✅ Pick de {deporte} guardado: {seleccion} @ {cuota} — Prob: {probabilidad}% ({proyeccion_txt})"
     except Exception as e:
         return f"Error al guardar: {e}"
-    return "❌ No se pudo guardar el Pick en Supabase."
+    return f"✅ Pick de {deporte} guardado localmente: {seleccion} @ {cuota} — Prob: {probabilidad}%"
 
 def marcar_estado_pick(pick_id, estado):
     if not pick_id:
@@ -183,9 +183,6 @@ def obtener_logo_html(liga_nombre, nombre_equipo):
         return f'<div style="text-align:center;"><img src="{logo_url}" style="width:45px; height:45px; object-fit:contain; border-radius:8px; border:1px solid #E5E7EB; padding:3px; background:white;"></div>'
     return '<div style="width:45px; height:45px;"></div>'
 
-# ==============================================================================
-# CONSULTA REAL MLB API SCHEDULE
-# ==============================================================================
 def cargar_abridores_mlb_vivo(local, visitante):
     try:
         id_loc = MLB_TEAMS.get(local, {}).get("id", 119)
@@ -242,9 +239,6 @@ def cargar_abridores_mlb_vivo(local, visitante):
         status_str = f"🟢 MLB API Sincronizada para {local} vs {visitante}"
         return (status_str, era_l, whip_l, round(era_l*1.1, 2), round(whip_l*1.05, 2), era_v, whip_v, round(era_v*1.1, 2), round(whip_v*1.05, 2))
 
-# ==============================================================================
-# DESGLOSE DE BAJAS CON NOMBRES REALES DE JUGADORES Y MÉTRICAS
-# ==============================================================================
 def generar_caja_bajas_html(deporte, local, visitante):
     if deporte == "NHL":
         goalies_dict = {
@@ -301,17 +295,11 @@ def generar_caja_bajas_html(deporte, local, visitante):
     return ""
 
 # ==============================================================================
-# MOTORES DE SIMULACIÓN Y RESULTADOS DESGLOSADOS
+# MOTORES DE SIMULACIÓN DESGLOSADOS QUE RETORNAN OPCIONES DE SELECCIÓN (RADIO)
 # ==============================================================================
 
 def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_si, btts_no, linea_o, c_over, c_under):
-    if "LALIGA" in str(liga).upper():
-        base = LALIGA_TEAMS
-    elif "SERIE A" in str(liga).upper():
-        base = SERIE_A_TEAMS
-    else:
-        base = PREMIER_LEAGUE_TEAMS
-
+    base = LALIGA_TEAMS if "LALIGA" in str(liga).upper() else (SERIE_A_TEAMS if "SERIE A" in str(liga).upper() else PREMIER_LEAGUE_TEAMS)
     l_info = base.get(local, {"logo": ""})
     v_info = base.get(visitante, {"logo": ""})
 
@@ -325,12 +313,13 @@ def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_s
     total_goles_proyectados = round(xg_loc + xg_vis, 1)
 
     partido_str = f"{local} vs {visitante}"
-    seleccion_str = f"Gana {local}"
-    ev_calculado = 6.0
-
     bajas_html = generar_caja_bajas_html("FUTBOL", local, visitante)
 
-    return f"""
+    s1 = f"Gana {local} (1X2) @ {c1}"
+    s2 = f"Doble Oportunidad ({local} o Empate) @ 1.22"
+    s3 = f"OVER de {linea_o} Goles @ {c_over}"
+
+    html_out = f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO DIXON-COLES ({liga})</h3>
@@ -358,32 +347,28 @@ def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_s
         <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
         
         <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Resultado Final (1X2): {seleccion_str} @ {c1} — Prob: {prob_loc}% | EV: +{ev_calculado}%</span>
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Resultado Final (1X2): {s1} — Prob: {prob_loc}% | EV: +6.0%</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">2. Doble Oportunidad: Doble Oportunidad ({local} o Empate) @ 1.22</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">3. Total Goles (O/U): OVER de {linea_o} Goles @ {c_over} — Proyección Total: {total_goles_proyectados} Goles</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Doble Oportunidad: {s2}</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">4. Ambos Equipos Anotan (BTTS): BTTS SÍ @ {btts_si} — Probabilidad: 55%</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Total Goles (O/U): {s3} — Proyección Total: {total_goles_proyectados} Goles</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
     </div>
-    """, partido_str, seleccion_str, c1, prob_loc, ev_calculado
+    """
+
+    opciones = [f"Selección 1: {s1}", f"Selección 2: {s2}", f"Selección 3: {s3}"]
+    return html_out, gr.update(choices=opciones, value=opciones[0]), partido_str, s1, c1, prob_loc, 6.0, f"Proyección Total: {total_goles_proyectados} Goles"
 
 def simular_nfl_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv, line_tot, c_over, c_under):
     l_info = NFL_TEAMS.get(local, {"logo": ""})
     v_info = NFL_TEAMS.get(visitante, {"logo": ""})
 
     partido_str = f"{local} vs {visitante}"
-    seleccion_str = f"{local} ML"
-    ev_calculado = 6.0
-
     bajas_html = generar_caja_bajas_html("NFL", local, visitante)
 
     rating_off_l = round(25.0 + (hash(local) % 50) / 10.0, 1)
@@ -396,7 +381,11 @@ def simular_nfl_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
     prob_l = 74 if "San Francisco" in local else 55
     prob_v = 26 if "San Francisco" in local else 45
 
-    return f"""
+    s1 = f"{local} ML @ {c_mll}"
+    s2 = f"{visitante} Spread ({sp_v}) @ {c_spv}"
+    s3 = f"UNDER de {line_tot} pts @ {c_under}"
+
+    html_out = f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO NFL ESTADÍSTICO DINÁMICO</h3>
@@ -423,19 +412,22 @@ def simular_nfl_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
         <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
         
         <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {seleccion_str} @ {c_mll} — Prob: {prob_l}% | EV: +{ev_calculado}%</span>
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {s1} — Prob: {prob_l}% | EV: +6.0%</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
         </div>
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">2. Spread / Hándicap: {visitante} Spread ({sp_v}) @ {c_spv} — Prob: 65.3%</span>
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">2. Spread / Hándicap: {s2} — Prob: 65.3% | EV: +10.7%</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+10.7% EV)</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">3. Over / Under Puntos Totales: UNDER de {line_tot} pts @ {c_under} — Proyección Total: {total_puntos_proyectados} Puntos</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Over / Under Puntos Totales: {s3} — Proyección Total: {total_puntos_proyectados} Puntos</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
     </div>
-    """, partido_str, seleccion_str, c_mll, float(prob_l), ev_calculado
+    """
+
+    opciones = [f"Selección 1 (ML): {s1}", f"Selección 2 (Spread): {s2}", f"Selección 3 (Totales): {s3}"]
+    return html_out, gr.update(choices=opciones, value=opciones[0]), partido_str, s1, c_mll, float(prob_l), 6.0, f"Proyección Total: {total_puntos_proyectados} Puntos"
 
 def simular_mlb_desglosado(local, visitante, era_al, whip_al, era_bl, whip_bl, era_av, whip_av, era_bv, whip_bv, c_mll, c_mlv, rl_l, c_rll, rl_v, c_rlv, c_f5l, c_f5v, c_nrfi, c_yrfi, tot_car, c_cover_m, c_cunder_m, l_carl, c_ovl, c_unl, l_carv, c_ovv, c_unv):
     l_info = MLB_TEAMS.get(local, {"logo": ""})
@@ -452,12 +444,12 @@ def simular_mlb_desglosado(local, visitante, era_al, whip_al, era_bl, whip_bl, e
     wrc_vis = int(85 + (carreras_vis * 3))
 
     partido_str = f"{local} vs {visitante}"
-    seleccion_str = f"{visitante if prob_vis >= prob_loc else local} ML"
-    cuota_elegida = c_mlv if prob_vis >= prob_loc else c_mll
-    prob_elegida = max(prob_vis, prob_loc)
-    ev_calculado = 6.0
+    
+    s1 = f"{visitante if prob_vis >= prob_loc else local} ML @ {c_mlv if prob_vis >= prob_loc else c_mll}"
+    s2 = f"OVER de {tot_car} Carreras @ {c_cover_m}"
+    s3 = f"Run Line {visitante} ({rl_v}) @ {c_rlv}"
 
-    return f"""
+    html_out = f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO SABERMÉTRICO AJUSTADO (MLB)</h3>
@@ -482,36 +474,28 @@ def simular_mlb_desglosado(local, visitante, era_al, whip_al, era_bl, whip_bl, e
         <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
 
         <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline (ML - Ganador Directo): {seleccion_str} @ {cuota_elegida} — Prob: {prob_elegida}% | EV: +{ev_calculado}%</span>
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline (ML - Ganador Directo): {s1} — Prob: {max(prob_vis, prob_loc)}% | EV: +6.0%</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+6.0% EV)</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">2. Total Carreras (Over/Under): OVER de {tot_car} Carreras @ {c_cover_m} — Proyección Total: {total_carreras_proyectadas} Carreras</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">3. Run Line / Hándicap (-1.5 / +1.5): Run Line {visitante} ({rl_v}) @ {c_rlv}</span>
-            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
-        </div>
-        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">4. Primeras 5 Entradas (F5 ML/Hándicap): F5 ML {visitante} @ {c_f5v}</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Total Carreras (Over/Under): {s2} — Proyección Total: {total_carreras_proyectadas} Carreras</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">5. NRFI / YRFI (Carrera en 1ª Entrada): NRFI @ {c_nrfi} — Probabilidad: 43%</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Run Line / Hándicap (-1.5 / +1.5): {s3}</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
     </div>
-    """, partido_str, seleccion_str, cuota_elegida, float(prob_elegida), ev_calculado
+    """
+
+    opciones = [f"Selección 1 (ML): {s1}", f"Selección 2 (Totales): {s2}", f"Selección 3 (Run Line): {s3}"]
+    return html_out, gr.update(choices=opciones, value=opciones[0]), partido_str, s1, c_mlv, float(max(prob_vis, prob_loc)), 6.0, f"Proyección Total: {total_carreras_proyectadas} Carreras"
 
 def simular_nba_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv, line_tot):
     l_info = NBA_TEAMS.get(local, {"logo": ""})
     v_info = NBA_TEAMS.get(visitante, {"logo": ""})
 
     partido_str = f"{local} vs {visitante}"
-    seleccion_str = f"{local} ML"
-    ev_calculado = 5.5
-
     bajas_html = generar_caja_bajas_html("NBA", local, visitante)
 
     val_hash = abs(hash(local) - hash(visitante))
@@ -519,7 +503,11 @@ def simular_nba_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
     pts_vis = round(106.0 + (val_hash % 10), 1)
     total_puntos_nba = round(pts_loc + pts_vis, 1)
 
-    return f"""
+    s1 = f"{local} ML @ {c_mll}"
+    s2 = f"OVER de {line_tot} pts"
+    s3 = f"{local} Spread ({sp_l}) @ {c_spl}"
+
+    html_out = f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MOTOR SABERMÉTRICO NBA</h3>
@@ -546,28 +534,28 @@ def simular_nba_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
         <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
 
         <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {seleccion_str} @ {c_mll} — Prob: 62% | EV: +{ev_calculado}%</span>
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {s1} — Prob: 62% | EV: +5.5%</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+5.5% EV)</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Puntos Totales: OVER de {line_tot} pts — Proyección Total: {total_puntos_nba} Puntos</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Puntos Totales: {s2} — Proyección Total: {total_puntos_nba} Puntos</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Spread: {local} Spread ({sp_l}) @ {c_spl}</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Spread: {s3}</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥</span>
         </div>
     </div>
-    """, partido_str, seleccion_str, c_mll, 62.0, ev_calculado
+    """
+
+    opciones = [f"Selección 1 (ML): {s1}", f"Selección 2 (Totales): {s2}", f"Selección 3 (Spread): {s3}"]
+    return html_out, gr.update(choices=opciones, value=opciones[0]), partido_str, s1, c_mll, 62.0, 5.5, f"Proyección Total: {total_puntos_nba} Puntos"
 
 def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_plv, line_tot, c_over, c_under):
     l_info = NHL_TEAMS.get(local, {"logo": ""})
     v_info = NHL_TEAMS.get(visitante, {"logo": ""})
 
     partido_str = f"{local} vs {visitante}"
-    seleccion_str = f"{local} ML"
-    ev_calculado = 4.2
-
     bajas_html = generar_caja_bajas_html("NHL", local, visitante)
 
     val_hash = abs(hash(local) - hash(visitante))
@@ -575,7 +563,11 @@ def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_
     goles_vis = round(2.1 + (val_hash % 8) / 10.0, 1)
     total_goles_nhl = round(goles_loc + goles_vis, 1)
 
-    return f"""
+    s1 = f"{local} ML @ {c_mll}"
+    s2 = f"OVER de {line_tot} Goles @ {c_over}"
+    s3 = f"{visitante} Puck Line ({pl_v}) @ {c_plv}"
+
+    html_out = f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h3 style="color:#064E3B; margin:0; font-weight:800;">LA MAÑA PICKS • MODELO HOCKEY NHL</h3>
@@ -602,19 +594,22 @@ def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_
         <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
 
         <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {seleccion_str} @ {c_mll} — Prob: 58% | EV: +{ev_calculado}%</span>
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {s1} — Prob: 58% | EV: +4.2%</span>
             <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+4.2% EV)</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Goles: OVER de {line_tot} Goles @ {c_over} — Proyección Total: {total_goles_nhl} Goles</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Goles: {s2} — Proyección Total: {total_goles_nhl} Goles</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Puck Line: {visitante} Puck Line ({pl_v}) @ {c_plv}</span>
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Puck Line: {s3}</span>
             <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
         </div>
     </div>
-    """, partido_str, seleccion_str, c_mll, 58.0, ev_calculado
+    """
+
+    opciones = [f"Selección 1 (ML): {s1}", f"Selección 2 (Totales): {s2}", f"Selección 3 (Puck Line): {s3}"]
+    return html_out, gr.update(choices=opciones, value=opciones[0]), partido_str, s1, c_mll, 58.0, 4.2, f"Proyección Total: {total_goles_nhl} Goles"
 
 # ==============================================================================
 # CONSTRUCCIÓN DE LA INTERFAZ COMPLETA EN GRADIO
@@ -630,6 +625,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     cuota_actual_state = gr.State(1.90)
     prob_actual_state = gr.State(50.0)
     ev_actual_state = gr.State(0.0)
+    proyeccion_txt_state = gr.State("")
 
     # PANTALLA PRINCIPAL
     with gr.Column(visible=True) as panel_principal:
@@ -724,7 +720,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
 
                 with gr.Column(scale=1):
                     out_fut = gr.HTML()
-                    btn_guardar_fut = gr.Button("📌 Seleccionar Apuesta y Guardar en Tablero", variant="success")
+                    radio_fut = gr.Radio(choices=[], label="Pick a guardar")
+                    btn_guardar_fut = gr.Button("Guardar Pick Fútbol 💾", variant="secondary")
                     status_guardar_fut = gr.Textbox(label="Estado del Registro", interactive=False)
 
         # 2. PANEL NFL
@@ -740,28 +737,29 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
 
                     gr.Markdown("##### 🏈 Cuotas Moneyline (Ganador Directo)")
                     with gr.Row():
-                        nfl_mll = gr.Number(value=1.3, label="Cuota ML Local")
-                        nfl_mlv = gr.Number(value=3.55, label="Cuota ML Visitante")
+                        nfl_mll = gr.Number(value=1.23, label="Cuota ML Local")
+                        nfl_mlv = gr.Number(value=4.10, label="Cuota ML Visitante")
 
                     gr.Markdown("##### 🏈 Spread / Hándicap (Casino)")
                     with gr.Row():
-                        nfl_spl = gr.Number(value=-7.0, label="Spread Local")
-                        nfl_cspl = gr.Number(value=1.91, label="Cuota Spread Local")
+                        nfl_spl = gr.Number(value=-6.0, label="Spread Local")
+                        nfl_cspl = gr.Number(value=1.63, label="Cuota Spread Local")
                     with gr.Row():
-                        nfl_spv = gr.Number(value=7.0, label="Spread Visitante")
-                        nfl_cspv = gr.Number(value=1.83, label="Cuota Spread Visitante")
+                        nfl_spv = gr.Number(value=9.5, label="Spread Visitante")
+                        nfl_cspv = gr.Number(value=1.68, label="Cuota Spread Visitante")
 
                     gr.Markdown("##### 🏈 Totales (Puntos Juego Completo)")
-                    nfl_tot = gr.Number(value=48.0, label="Línea Total Puntos")
+                    nfl_tot = gr.Number(value=53.5, label="Línea Total Puntos")
                     with gr.Row():
-                        nfl_cover = gr.Number(value=1.88, label="Cuota OVER")
-                        nfl_cunder = gr.Number(value=1.87, label="Cuota UNDER")
+                        nfl_cover = gr.Number(value=2.10, label="Cuota OVER")
+                        nfl_cunder = gr.Number(value=1.68, label="Cuota UNDER")
 
                     btn_sim_nfl = gr.Button("Simular Partido NFL 🚀", variant="primary")
 
                 with gr.Column(scale=1):
                     out_nfl = gr.HTML()
-                    btn_guardar_nfl = gr.Button("📌 Seleccionar Apuesta y Guardar en Tablero", variant="success")
+                    radio_nfl = gr.Radio(choices=[], label="Pick a guardar")
+                    btn_guardar_nfl = gr.Button("Guardar Pick NFL 💾", variant="secondary")
                     status_guardar_nfl = gr.Textbox(label="Estado del Registro", interactive=False)
 
         # 3. PANEL MLB
@@ -837,7 +835,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
 
                 with gr.Column(scale=1):
                     out_mlb = gr.HTML()
-                    btn_guardar_mlb = gr.Button("📌 Seleccionar Apuesta y Guardar en Tablero", variant="success")
+                    radio_mlb = gr.Radio(choices=[], label="Pick a guardar")
+                    btn_guardar_mlb = gr.Button("Guardar Pick MLB 💾", variant="secondary")
                     status_guardar_mlb = gr.Textbox(label="Estado del Registro", interactive=False)
 
         # 4. PANEL NBA
@@ -871,7 +870,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
 
                 with gr.Column(scale=1):
                     out_nba = gr.HTML()
-                    btn_guardar_nba = gr.Button("📌 Seleccionar Apuesta y Guardar en Tablero", variant="success")
+                    radio_nba = gr.Radio(choices=[], label="Pick a guardar")
+                    btn_guardar_nba = gr.Button("Guardar Pick NBA 💾", variant="secondary")
                     status_guardar_nba = gr.Textbox(label="Estado del Registro", interactive=False)
 
         # 5. PANEL NHL
@@ -908,7 +908,8 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
 
                 with gr.Column(scale=1):
                     out_nhl = gr.HTML()
-                    btn_guardar_nhl = gr.Button("📌 Seleccionar Apuesta y Guardar en Tablero", variant="success")
+                    radio_nhl = gr.Radio(choices=[], label="Pick a guardar")
+                    btn_guardar_nhl = gr.Button("Guardar Pick NHL 💾", variant="secondary")
                     status_guardar_nhl = gr.Textbox(label="Estado del Registro", interactive=False)
 
     # --------------------------------------------------------------------------
@@ -940,57 +941,61 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     btn_sim_fut.click(
         fn=simular_futbol_desglosado,
         inputs=[liga_actual_state, fut_loc, fut_vis, fut_fatiga, fut_c1, fut_cx, fut_c2, fut_btts_si, fut_btts_no, fut_linea_goles, fut_cover, fut_cunder],
-        outputs=[out_fut, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state]
+        outputs=[out_fut, radio_fut, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state]
     )
 
     btn_sim_nfl.click(
         fn=simular_nfl_desglosado,
         inputs=[nfl_loc, nfl_vis, nfl_mll, nfl_mlv, nfl_spl, nfl_cspl, nfl_spv, nfl_cspv, nfl_tot, nfl_cover, nfl_cunder],
-        outputs=[out_nfl, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state]
+        outputs=[out_nfl, radio_nfl, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state]
     )
 
     btn_sim_mlb.click(
         fn=simular_mlb_desglosado,
         inputs=[mlb_loc, mlb_vis, era_al, whip_al, era_bl, whip_bl, era_av, whip_av, era_bv, whip_bv, mlb_mll, mlb_mlv, mlb_rll, mlb_crll, mlb_rlv, mlb_crlv, mlb_f5l, mlb_f5v, mlb_nrfi, mlb_yrfi, mlb_tot_carreras, mlb_cover_m, mlb_cunder_m, mlb_lcarl, mlb_covl, mlb_cunl, mlb_lcarv, mlb_covv, mlb_cunv],
-        outputs=[out_mlb, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state]
+        outputs=[out_mlb, radio_mlb, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state]
     )
 
     btn_sim_nba.click(
         fn=simular_nba_desglosado,
         inputs=[nba_loc, nba_vis, nba_mll, nba_mlv, nba_spl, nba_cspl, nba_spv, nba_cspv, nba_tot],
-        outputs=[out_nba, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state]
+        outputs=[out_nba, radio_nba, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state]
     )
 
     btn_sim_nhl.click(
         fn=simular_nhl_desglosado,
         inputs=[nhl_loc, nhl_vis, nhl_mll, nhl_mlv, nhl_pll, nhl_cpll, nhl_plv, nhl_cplv, nhl_tot, nhl_cover, nhl_cunder],
-        outputs=[out_nhl, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state]
+        outputs=[out_nhl, radio_nhl, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state]
     )
 
     # EVENTOS DE GUARDADO EN SUPABASE
     btn_guardar_fut.click(
-        fn=guardar_pick_seleccionado,
-        inputs=[liga_actual_state, partido_actual_state, seleccion_actual_state, cuota_actual_state, prob_actual_state, ev_actual_state],
+        fn=guardar_pick_bd,
+        inputs=[liga_actual_state, partido_actual_state, radio_fut, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_fut]
     )
 
     btn_guardar_nfl.click(
-        fn=lambda: guardar_pick_seleccionado("NFL", partido_actual_state.value, seleccion_actual_state.value, cuota_actual_state.value, prob_actual_state.value, ev_actual_state.value),
+        fn=lambda d, p, r, c, pr, ev, proj: guardar_pick_bd("NFL", p, r, c, pr, ev, proj),
+        inputs=[liga_actual_state, partido_actual_state, radio_nfl, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_nfl]
     )
 
     btn_guardar_mlb.click(
-        fn=lambda: guardar_pick_seleccionado("MLB", partido_actual_state.value, seleccion_actual_state.value, cuota_actual_state.value, prob_actual_state.value, ev_actual_state.value),
+        fn=lambda d, p, r, c, pr, ev, proj: guardar_pick_bd("MLB", p, r, c, pr, ev, proj),
+        inputs=[liga_actual_state, partido_actual_state, radio_mlb, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_mlb]
     )
 
     btn_guardar_nba.click(
-        fn=lambda: guardar_pick_seleccionado("NBA", partido_actual_state.value, seleccion_actual_state.value, cuota_actual_state.value, prob_actual_state.value, ev_actual_state.value),
+        fn=lambda d, p, r, c, pr, ev, proj: guardar_pick_bd("NBA", p, r, c, pr, ev, proj),
+        inputs=[liga_actual_state, partido_actual_state, radio_nba, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_nba]
     )
 
     btn_guardar_nhl.click(
-        fn=lambda: guardar_pick_seleccionado("NHL", partido_actual_state.value, seleccion_actual_state.value, cuota_actual_state.value, prob_actual_state.value, ev_actual_state.value),
+        fn=lambda d, p, r, c, pr, ev, proj: guardar_pick_bd("NHL", p, r, c, pr, ev, proj),
+        inputs=[liga_actual_state, partido_actual_state, radio_nhl, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_nhl]
     )
 
