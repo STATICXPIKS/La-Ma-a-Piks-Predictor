@@ -32,7 +32,7 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# LOGOS DE LIGAS CON ENLACES SVG/PNG CDN OFICIALES 100% FUNCIONALES
+# LOGOS DE LIGAS CON ENLACES SVG/PNG CDN OFICIALES
 LIGA_LOGOS = {
     "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
     "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
@@ -75,7 +75,7 @@ FUTBOL_INJURIES_DATABASE = {
 }
 
 # ==============================================================================
-# CONSULTA Y REGISTRO EN SUPABASE (PARSEO LIMPIO DE REGISTROS)
+# CONSULTA Y REGISTRO DIRECTO EN SUPABASE
 # ==============================================================================
 def obtener_picks_historial():
     url = f"{SUPABASE_URL}/rest/v1/picks?select=*"
@@ -87,40 +87,49 @@ def obtener_picks_historial():
         print(f"Error Supabase: {e}")
     return []
 
-def guardar_pick_bd(deporte, partido, seleccion, cuota, probabilidad, ev, proyeccion_txt):
-    if not deporte or not partido or not seleccion:
+def limpiar_float(val, defecto=1.90):
+    try:
+        if val is None: return defecto
+        s = str(val).strip().replace(',', '.')
+        return float(s)
+    except Exception:
+        return defecto
+
+def guardar_pick_bd(deporte_nombre, partido_val, seleccion_radio, cuota_val, prob_val, ev_val, proj_txt):
+    if not partido_val or not seleccion_radio:
         return "⚠️ Primero simule el partido para seleccionar un pick."
     
-    seleccion_limpia = str(seleccion).split(":", 1)[-1].strip() if ":" in str(seleccion) else str(seleccion).strip()
+    seleccion_limpia = str(seleccion_radio).split(":", 1)[-1].strip() if ":" in str(seleccion_radio) else str(seleccion_radio).strip()
     
     cuota_num = 1.90
     if "@" in seleccion_limpia:
-        parts = seleccion_limpia.split("@")
         try:
-            cuota_num = float(parts[-1].strip().replace(',', '.'))
-        except ValueError:
-            cuota_num = limpiar_float(cuota, 1.90)
+            cuota_num = float(seleccion_limpia.split("@")[-1].strip().replace(',', '.'))
+        except (ValueError, IndexError):
+            cuota_num = limpiar_float(cuota_val, 1.90)
     else:
-        cuota_num = limpiar_float(cuota, 1.90)
+        cuota_num = limpiar_float(cuota_val, 1.90)
 
     url = f"{SUPABASE_URL}/rest/v1/picks"
     payload = {
-        "deporte": deporte,
-        "partido": partido,
+        "deporte": str(deporte_nombre).upper(),
+        "partido": str(partido_val).strip(),
         "seleccion": seleccion_limpia,
         "cuota": cuota_num,
-        "probabilidad": float(probabilidad) if probabilidad else 50.0,
-        "ev": float(ev) if ev else 0.0,
+        "probabilidad": float(prob_val) if prob_val else 50.0,
+        "ev": float(ev_val) if ev_val else 0.0,
         "estado": "PENDIENTE",
         "creado_en": datetime.utcnow().isoformat()
     }
+    
     try:
-        res = requests.post(url, headers=SUPABASE_HEADERS, json=payload, timeout=5)
+        res = requests.post(url, headers=SUPABASE_HEADERS, json=payload, timeout=6)
         if res.status_code in [200, 201]:
-            return f"✅ Pick de {deporte} registrado en Supabase (PENDIENTE): {seleccion_limpia}"
+            return f"✅ Pick de {deporte_nombre} registrado en Supabase (PENDIENTE): {seleccion_limpia}"
+        else:
+            return f"⚠️ Supabase respondió {res.status_code}. Intente de nuevo."
     except Exception as e:
-        return f"Error al guardar: {e}"
-    return f"✅ Pick registrado localmente: {seleccion_limpia}"
+        return f"❌ Error de conexión al guardar: {e}"
 
 def marcar_estado_pick(pick_id, estado):
     if not pick_id:
@@ -156,7 +165,6 @@ def calcular_record_deporte(picks, nombre_deporte):
     total_res = wins + losses
     efectividad = round((wins / total_res * 100), 1) if total_res > 0 else 0.0
 
-    # Altura visual de las barras de la gráfica
     h_red = max(8, min(30, losses * 4)) if losses > 0 else 8
     h_yellow = max(8, min(30, pendientes * 4)) if pendientes > 0 else 8
     h_green = max(8, min(30, wins * 4)) if wins > 0 else 8
@@ -168,9 +176,9 @@ def renderizar_tarjeta_record(pct, w, l, p_pts, h_red=8, h_yellow=8, h_green=8):
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:10px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; margin-top:6px;">
         <span style="font-size:20px; font-weight:900; color:#047857;">{pct}%</span>
         <div style="display:flex; justify-content:center; align-items:flex-end; gap:4px; height:38px; margin:8px 0;">
-            <div style="width:9px; height:{h_red}px; background:#EF4444; border-radius:3px;" title="Losses: {l}"></div>
-            <div style="width:9px; height:{h_yellow}px; background:#F59E0B; border-radius:3px;" title="Pendientes: {p_pts}"></div>
-            <div style="width:9px; height:{h_green}px; background:#10B981; border-radius:3px;" title="Wins: {w}"></div>
+            <div style="width:9px; height:{h_red}px; background:#EF4444; border-radius:3px;"></div>
+            <div style="width:9px; height:{h_yellow}px; background:#F59E0B; border-radius:3px;"></div>
+            <div style="width:9px; height:{h_green}px; background:#10B981; border-radius:3px;"></div>
         </div>
         <div style="font-size:10px; color:#6B7280; font-weight:800;">W:{w} &nbsp; L:{l} &nbsp; P:{p_pts}</div>
     </div>
@@ -194,15 +202,6 @@ def renderizar_tacometro_y_tablero():
     if not pendientes_html: pendientes_html = "• No hay picks pendientes actualmente."
     if not ganadas_html: ganadas_html = "• No hay apuestas ganadas registradas."
     if not perdidas_html: perdidas_html = "• No hay apuestas perdidas registradas."
-
-    # Cálculos dinámicos por deporte para las tarjetas superiores
-    p_pct, p_w, p_l, p_p, p_hr, p_hy, p_hg = calcular_record_deporte(picks, "PREMIER LEAGUE")
-    l_pct, l_w, l_l, l_p, l_hr, l_hy, l_hg = calcular_record_deporte(picks, "LALIGA")
-    s_pct, s_w, s_l, s_p, s_hr, s_hy, s_hg = calcular_record_deporte(picks, "SERIE A")
-    nfl_pct, nfl_w, nfl_l, nfl_p, nfl_hr, nfl_hy, nfl_hg = calcular_record_deporte(picks, "NFL")
-    mlb_pct, mlb_w, mlb_l, mlb_p, mlb_hr, mlb_hy, mlb_hg = calcular_record_deporte(picks, "MLB")
-    nba_pct, nba_w, nba_l, nba_p, nba_hr, nba_hy, nba_hg = calcular_record_deporte(picks, "NBA")
-    nhl_pct, nhl_w, nhl_l, nhl_p, nhl_hr, nhl_hy, nhl_hg = calcular_record_deporte(picks, "NHL")
 
     return f"""
     <div style="border:2px solid #10B981; border-radius:18px; padding:20px; background:#FFFFFF; max-width:650px; margin:25px auto 20px auto; text-align:center; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -261,14 +260,6 @@ def renderizar_logo_liga_menu(url_logo, texto_alt):
         <img src="{url_logo}" alt="{texto_alt}" style="max-height:55px; max-width:85px; object-fit:contain;">
     </div>
     """
-
-def limpiar_float(val, defecto=1.90):
-    try:
-        if val is None: return defecto
-        s = str(val).strip().replace(',', '.')
-        return float(s)
-    except Exception:
-        return defecto
 
 def cargar_abridores_mlb_vivo(local, visitante):
     try:
@@ -823,7 +814,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                     btn_loss = gr.Button("❌ Marcar LOSS", variant="stop")
                 resultado_gestion = gr.Textbox(label="Estado", interactive=False)
 
-                # ACTUALIZACIÓN EN TIEMPO REAL TRAS MARCAR WIN O LOSS
                 def procesar_y_refrescar(pick_id, estado):
                     res_msg = marcar_estado_pick(pick_id, estado)
                     tac_html = renderizar_tacometro_y_tablero()
@@ -1124,7 +1114,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
         msg = guardar_pick_bd(deporte, partido, radio_val, cuota, prob, ev, proj)
         picks = obtener_picks_historial()
         
-        # Recalcular individualmente las tarjetas superiores
         cp_pct, cp_w, cp_l, cp_p, cp_hr, cp_hy, cp_hg = calcular_record_deporte(picks, "PREMIER LEAGUE")
         cl_pct, cl_w, cl_l, cl_p, cl_hr, cl_hy, cl_hg = calcular_record_deporte(picks, "LALIGA")
         cs_pct, cs_w, cs_l, cs_p, cs_hr, cs_hy, cs_hg = calcular_record_deporte(picks, "SERIE A")
@@ -1151,26 +1140,26 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     )
 
     btn_guardar_nfl.click(
-        fn=lambda d, p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("NFL", p, r, c, pr, ev, proj),
-        inputs=[liga_actual_state, partido_actual_state, radio_nfl, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
+        fn=lambda p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("NFL", p, r, c, pr, ev, proj),
+        inputs=[partido_actual_state, radio_nfl, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_nfl, out_tacometro, out_card_p, out_card_l, out_card_s, out_card_nfl, out_card_mlb, out_card_nba, out_card_nhl]
     )
 
     btn_guardar_mlb.click(
-        fn=lambda d, p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("MLB", p, r, c, pr, ev, proj),
-        inputs=[liga_actual_state, partido_actual_state, radio_mlb, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
+        fn=lambda p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("MLB", p, r, c, pr, ev, proj),
+        inputs=[partido_actual_state, radio_mlb, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_mlb, out_tacometro, out_card_p, out_card_l, out_card_s, out_card_nfl, out_card_mlb, out_card_nba, out_card_nhl]
     )
 
     btn_guardar_nba.click(
-        fn=lambda d, p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("NBA", p, r, c, pr, ev, proj),
-        inputs=[liga_actual_state, partido_actual_state, radio_nba, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
+        fn=lambda p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("NBA", p, r, c, pr, ev, proj),
+        inputs=[partido_actual_state, radio_nba, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_nba, out_tacometro, out_card_p, out_card_l, out_card_s, out_card_nfl, out_card_mlb, out_card_nba, out_card_nhl]
     )
 
     btn_guardar_nhl.click(
-        fn=lambda d, p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("NHL", p, r, c, pr, ev, proj),
-        inputs=[liga_actual_state, partido_actual_state, radio_nhl, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
+        fn=lambda p, r, c, pr, ev, proj: procesar_guardado_y_refrescar("NHL", p, r, c, pr, ev, proj),
+        inputs=[partido_actual_state, radio_nhl, cuota_actual_state, prob_actual_state, ev_actual_state, proyeccion_txt_state],
         outputs=[status_guardar_nhl, out_tacometro, out_card_p, out_card_l, out_card_s, out_card_nfl, out_card_mlb, out_card_nba, out_card_nhl]
     )
 
@@ -1237,7 +1226,6 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     def volver_inicio():
         picks = obtener_picks_historial()
         
-        # Al regresar al menú principal, refresca automáticamente las 7 tarjetas y el tacometro global
         cp_pct, cp_w, cp_l, cp_p, cp_hr, cp_hy, cp_hg = calcular_record_deporte(picks, "PREMIER LEAGUE")
         cl_pct, cl_w, cl_l, cl_p, cl_hr, cl_hy, cl_hg = calcular_record_deporte(picks, "LALIGA")
         cs_pct, cs_w, cs_l, cs_p, cs_hr, cs_hy, cs_hg = calcular_record_deporte(picks, "SERIE A")
