@@ -17,7 +17,7 @@ from teams import (
 gr.close_all()
 
 # ==============================================================================
-# CONFIGURACIÓN DE VARIABLES DE ENTORNO (SUPABASE / RENDER)
+# CONFIGURACIÓN DE VARIABLES DE ENTORNO
 # ==============================================================================
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://tuywqyjsaubcxmbzxwlg.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj")
@@ -29,7 +29,7 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# LOGOS ESTABLES EN FORMATO SVG/PNG DESDE CDN
+# LOGOS ESTABLES EN FORMATO SVG/PNG DESDE WIKIMEDIA
 LIGA_LOGOS = {
     "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
     "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
@@ -40,20 +40,15 @@ LIGA_LOGOS = {
     "NHL": "https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg"
 }
 
-# BASE DE DATOS DE PORTEROS Y ESTADÍSTICAS NHL (TEMPORADA 2025-2026 + 2026-2027)
 NHL_GOALIES_STATS = {
-    "Toronto Maple Leafs": {"starter": "Anthony Stolarz", "starter_sv": 0.916, "backup": "Joseph Woll", "backup_sv": 0.902, "xg_off": 3.4, "xg_def": 2.8, "bajas": ["Calle Jarnkrok (RW) - OUT"]},
-    "San Jose Sharks": {"starter": "Mackenzie Blackwood", "starter_sv": 0.891, "backup": "Vitek Vanecek", "backup_sv": 0.885, "xg_off": 2.2, "xg_def": 3.6, "bajas": ["Logan Couture (C) - OUT"]},
-    "New York Rangers": {"starter": "Igor Shesterkin", "starter_sv": 0.927, "backup": "Jonathan Quick", "backup_sv": 0.901, "xg_off": 3.2, "xg_def": 2.5, "bajas": ["Filip Chytil (C) - OUT [-0.4 xG]"]},
-    "Anaheim Ducks": {"starter": "Lukas Dostal", "starter_sv": 0.912, "backup": "John Gibson", "backup_sv": 0.882, "xg_off": 2.4, "xg_def": 3.3, "bajas": ["Trevor Zegras (C) - DAY-TO-DAY"]},
-    "Philadelphia Flyers": {"starter": "Samuel Ersson", "starter_sv": 0.905, "backup": "Ivan Fedotov", "backup_sv": 0.875, "xg_off": 2.7, "xg_def": 3.2, "bajas": ["Sean Couturier (C) - DAY-TO-DAY", "Rasmus Ristolainen (D) - OUT"]},
-    "Colorado Avalanche": {"starter": "Alexandar Georgiev", "starter_sv": 0.897, "backup": "Justus Annunen", "backup_sv": 0.890, "xg_off": 3.5, "xg_def": 3.0, "bajas": ["Gabriel Landeskog (LW) - OUT", "Valeri Nichushkin (RW) - OUT"]},
-    "Utah Hockey Club": {"starter": "Connor Ingram", "starter_sv": 0.908, "backup": "Karel Vejmelka", "backup_sv": 0.889, "xg_off": 2.8, "xg_def": 3.1, "bajas": ["Nick Bjugstad (C) - OUT"]},
-    "Pittsburgh Penguins": {"starter": "Tristan Jarry", "starter_sv": 0.903, "backup": "Alex Nedeljkovic", "backup_sv": 0.902, "xg_off": 2.9, "xg_def": 3.4, "bajas": ["Bryan Rust (RW) - DAY-TO-DAY"]},
-    "Boston Bruins": {"starter": "Jeremy Swayman", "starter_sv": 0.918, "backup": "Linus Ullmark", "backup_sv": 0.915, "xg_off": 3.1, "xg_def": 2.6, "bajas": ["Matt Poitras (C) - OUT"]},
-    "Edmonton Oilers": {"starter": "Stuart Skinner", "starter_sv": 0.905, "backup": "Calvin Pickard", "backup_sv": 0.895, "xg_off": 3.6, "xg_def": 3.1, "bajas": ["Evander Kane (LW) - OUT"]},
-    "Florida Panthers": {"starter": "Sergei Bobrovsky", "starter_sv": 0.915, "backup": "Anthony Stolarz", "backup_sv": 0.910, "xg_off": 3.3, "xg_def": 2.7, "bajas": ["Matthew Tkachuk (RW) - DAY-TO-DAY"]},
-    "Dallas Stars": {"starter": "Jake Oettinger", "starter_sv": 0.917, "backup": "Casey DeSmith", "backup_sv": 0.900, "xg_off": 3.3, "xg_def": 2.8, "bajas": ["Miro Heiskanen (D) - DAY-TO-DAY"]}
+    "Toronto Maple Leafs": {"starter": "Anthony Stolarz", "starter_sv": 0.916, "xg_off": 3.4, "xg_def": 2.8, "bajas": ["Calle Jarnkrok (RW) - OUT"]},
+    "San Jose Sharks": {"starter": "Mackenzie Blackwood", "starter_sv": 0.891, "xg_off": 2.2, "xg_def": 3.6, "bajas": ["Logan Couture (C) - OUT"]},
+    "New York Rangers": {"starter": "Igor Shesterkin", "starter_sv": 0.927, "xg_off": 3.2, "xg_def": 2.5, "bajas": ["Filip Chytil (C) - OUT [-0.4 xG]"]},
+    "Anaheim Ducks": {"starter": "Lukas Dostal", "starter_sv": 0.912, "xg_off": 2.4, "xg_def": 3.3, "bajas": ["Trevor Zegras (C) - DAY-TO-DAY"]},
+    "Philadelphia Flyers": {"starter": "Samuel Ersson", "starter_sv": 0.905, "xg_off": 2.7, "xg_def": 3.2, "bajas": ["Sean Couturier (C) - DAY-TO-DAY", "Rasmus Ristolainen (D) - OUT"]},
+    "Colorado Avalanche": {"starter": "Alexandar Georgiev", "starter_sv": 0.897, "xg_off": 3.5, "xg_def": 3.0, "bajas": ["Gabriel Landeskog (LW) - OUT", "Valeri Nichushkin (RW) - OUT"]},
+    "Utah Hockey Club": {"starter": "Connor Ingram", "starter_sv": 0.908, "xg_off": 2.8, "xg_def": 3.1, "bajas": ["Nick Bjugstad (C) - OUT"]},
+    "Pittsburgh Penguins": {"starter": "Tristan Jarry", "starter_sv": 0.903, "xg_off": 2.9, "xg_def": 3.4, "bajas": ["Bryan Rust (RW) - DAY-TO-DAY"]}
 }
 
 # ==============================================================================
@@ -92,10 +87,10 @@ def guardar_pick_bd(deporte, partido, seleccion, cuota, probabilidad, ev, proyec
     try:
         res = requests.post(url, headers=SUPABASE_HEADERS, json=payload, timeout=5)
         if res.status_code in [200, 201]:
-            return f"✅ Pick de {deporte} guardado en Supabase: {seleccion} — Prob: {probabilidad}% ({proyeccion_txt})"
+            return f"✅ Pick de {deporte} guardado en estado PENDIENTE: {seleccion} @ {cuota_num}"
     except Exception as e:
         return f"Error al guardar: {e}"
-    return f"✅ Pick de {deporte} registrado: {seleccion} — Prob: {probabilidad}% ({proyeccion_txt})"
+    return f"✅ Pick registrado: {seleccion} @ {cuota_num}"
 
 def marcar_estado_pick(pick_id, estado):
     if not pick_id:
@@ -105,13 +100,13 @@ def marcar_estado_pick(pick_id, estado):
     try:
         res = requests.patch(url, headers=SUPABASE_HEADERS, json=payload, timeout=5)
         if res.status_code in [200, 204]:
-            return f"✅ Pick #{pick_id} marcado como {estado}"
+            return f"✅ Pick #{pick_id} actualizado a {estado}"
     except Exception as e:
         return f"Error: {e}"
-    return "❌ No se pudo actualizar el Pick"
+    return "❌ No se pudo actualizar el Pick en Supabase"
 
 # ==============================================================================
-# VISTAS DE ENCABEZADO Y DASHBOARD PRINCIPAL
+# VISTAS DE ENCABEZADO Y DASHBOARD
 # ==============================================================================
 def renderizar_encabezado():
     return """
@@ -123,7 +118,7 @@ def renderizar_encabezado():
     </div>
     """
 
-def renderizar_tarjeta_record(pct, w, l, p_pts, h_red=20, h_yellow=8, h_green=30):
+def renderizar_tarjeta_record(pct, w, l, p_pts, h_red=8, h_yellow=8, h_green=8):
     return f"""
     <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; padding:10px 5px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; margin-top:6px;">
         <span style="font-size:20px; font-weight:900; color:#047857;">{pct}%</span>
@@ -141,7 +136,7 @@ def renderizar_tacometro_y_tablero():
     wins = len([p for p in picks if p.get("estado") == "WIN"])
     losses = len([p for p in picks if p.get("estado") == "LOSS"])
     total = wins + losses
-    efectividad = round((wins / total * 100), 1) if total > 0 else 52.8
+    efectividad = round((wins / total * 100), 1) if total > 0 else 0.0
 
     pendientes_html, ganadas_html, perdidas_html = "", "", ""
 
@@ -152,8 +147,8 @@ def renderizar_tacometro_y_tablero():
         elif p.get("estado") == "LOSS": perdidas_html += item
 
     if not pendientes_html: pendientes_html = "• No hay picks pendientes actualmente."
-    if not ganadas_html: ganadas_html = "• [#159 - NFL] Denver Broncos vs Seattle Seahawks — <i>Denver Broncos Spread (4.5)</i> @ 1.61 — Prob: 73.6% | EV: +11.5%"
-    if not perdidas_html: perdidas_html = "• [#156 - MLB] Los Angeles Dodgers vs Milwaukee Brewers — <i>LA Dodgers ML</i> @ 1.5 — Prob: 94% | EV: +6.0%"
+    if not ganadas_html: ganadas_html = "• No hay apuestas ganadas registradas."
+    if not perdidas_html: perdidas_html = "• No hay apuestas perdidas registradas."
 
     return f"""
     <div style="border:2px solid #10B981; border-radius:18px; padding:20px; background:#FFFFFF; max-width:650px; margin:25px auto 20px auto; text-align:center; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -165,7 +160,7 @@ def renderizar_tacometro_y_tablero():
             </div>
         </div>
         <p style="margin-top:10px; font-weight:700; color:#374151; font-size:14px;">
-            Récord Registrado: <span style="color:#059669;">{wins} WINS</span> / <span style="color:#DC2626;">{losses} LOSSES</span> (Total: {total if total > 0 else 159} Picks)
+            Récord Registrado: <span style="color:#059669;">{wins} WINS</span> / <span style="color:#DC2626;">{losses} LOSSES</span> (Total: {total} Picks)
         </p>
     </div>
 
@@ -213,9 +208,6 @@ def limpiar_float(val, defecto=1.90):
     except Exception:
         return defecto
 
-# ==============================================================================
-# CONSULTA REAL MLB API SCHEDULE PARA ABRIDORES OFICIALES
-# ==============================================================================
 def cargar_abridores_mlb_vivo(local, visitante):
     try:
         id_loc = MLB_TEAMS.get(local, {}).get("id", 119)
@@ -269,9 +261,6 @@ def cargar_abridores_mlb_vivo(local, visitante):
         status_str = f"🟢 MLB API Sincronizada para {local} vs {visitante}"
         return (status_str, era_l, whip_l, round(era_l*1.1, 2), round(whip_l*1.05, 2), era_v, whip_v, round(era_v*1.1, 2), round(whip_v*1.05, 2))
 
-# ==============================================================================
-# DESGLOSE DE BAJAS EXCLUSIVO PARA TITULARES CON NOMBRES REALES DE JUGADORES
-# ==============================================================================
 def generar_caja_bajas_html(deporte, local, visitante):
     if deporte == "NHL":
         data_loc = NHL_GOALIES_STATS.get(local, {"starter": f"Goalie ({local})", "starter_sv": 0.908, "bajas": ["Jugador Titular - OUT"]})
@@ -337,14 +326,12 @@ def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_
     cplv = limpiar_float(c_plv, 1.45)
     linea_tot_num = limpiar_float(line_tot, 5.5)
 
-    # Carga de datos reales de porteros y proyecciones
     data_loc = NHL_GOALIES_STATS.get(local, {"starter": "Portero Titular", "starter_sv": 0.908, "xg_off": 2.8, "xg_def": 3.0})
     data_vis = NHL_GOALIES_STATS.get(visitante, {"starter": "Portero Titular", "starter_sv": 0.901, "xg_off": 2.5, "xg_def": 3.2})
 
     g_loc_sv = data_loc.get("starter_sv", 0.908)
     g_vis_sv = data_vis.get("starter_sv", 0.901)
 
-    # xG (Goles Esperados) basado en temporadas 2025-2026 + 2026-2027 ajustado por SV% del portero rival
     xg_base_loc = (data_loc.get("xg_off", 2.8) + data_vis.get("xg_def", 3.0)) / 2.0
     xg_base_vis = (data_vis.get("xg_off", 2.5) + data_loc.get("xg_def", 3.0)) / 2.0
 
@@ -352,7 +339,6 @@ def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_
     lambda_vis = round(xg_base_vis * (1.0 + (0.910 - g_loc_sv) * 3.0), 2)
     total_goles_nhl = round(lambda_loc + lambda_vis, 1)
 
-    # Modelo Poisson
     prob_loc_raw = 0.0
     prob_vis_raw = 0.0
     prob_empate_raw = 0.0
@@ -386,12 +372,10 @@ def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_
         prob_s1 = max(prob_loc_final, prob_vis_final)
 
     tag_s1 = "BET 🔥" if ev_s1 > 0 else "MAYBE ⚡"
-
     s2_txt = f"OVER de {linea_tot_num} Goles @ {cov}" if total_goles_nhl > linea_tot_num else f"UNDER de {linea_tot_num} Goles @ {c_under}"
     tag_s2 = "BET 🔥" if total_goles_nhl > linea_tot_num else "MAYBE ⚡"
 
     s3_txt = f"{visitante} Puck Line ({pl_v}) @ {cplv}"
-
     partido_str = f"{local} vs {visitante}"
     bajas_html = generar_caja_bajas_html("NHL", local, visitante)
 
@@ -724,7 +708,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["PREMIER"]}" style="max-height:55px; margin:0 auto;"></div>')
                 btn_premier = gr.Button("PREMIER", variant="primary")
-                gr.HTML(renderizar_tarjeta_record(62.5, 5, 3, 4, 18, 12, 30))
+                gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["LALIGA"]}" style="max-height:55px; margin:0 auto;"></div>')
@@ -734,22 +718,22 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["SERIEA"]}" style="max-height:55px; margin:0 auto;"></div>')
                 btn_seriea = gr.Button("SERIE A", variant="primary")
-                gr.HTML(renderizar_tarjeta_record(100.0, 2, 0, 0, 8, 8, 30))
+                gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NFL"]}" style="max-height:55px; margin:0 auto;"></div>')
                 btn_nfl = gr.Button("NFL", variant="primary")
-                gr.HTML(renderizar_tarjeta_record(55.8, 29, 23, 0, 25, 8, 28))
+                gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["MLB"]}" style="max-height:55px; margin:0 auto;"></div>')
                 btn_mlb = gr.Button("MLB", variant="primary")
-                gr.HTML(renderizar_tarjeta_record(53.3, 32, 28, 0, 26, 8, 29))
+                gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NBA"]}" style="max-height:55px; margin:0 auto;"></div>')
                 btn_nba = gr.Button("NBA", variant="primary")
-                gr.HTML(renderizar_tarjeta_record(50.0, 10, 10, 0, 20, 8, 20))
+                gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
                 gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NHL"]}" style="max-height:55px; margin:0 auto;"></div>')
