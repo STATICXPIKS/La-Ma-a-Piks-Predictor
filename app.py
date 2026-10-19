@@ -339,7 +339,6 @@ def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_s
 
         {bajas_html}
 
-        <!-- DESGLOSE EXPLÍCITO DE GOLES ESPERADOS (xG) INDIVIDUALES POR EQUIPO -->
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{l_info['logo']}" width="35" height="35">
@@ -406,7 +405,6 @@ def simular_nfl_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
         
         {bajas_html}
 
-        <!-- DESGLOSE EXPLÍCITO DE PUNTOS PROYECTADOS POR EQUIPO -->
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{l_info['logo']}" width="35" height="35">
@@ -466,7 +464,6 @@ def simular_mlb_desglosado(local, visitante, era_al, whip_al, era_bl, whip_bl, e
             <span style="background:#DEF7EC; color:#03543F; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">CALIBRADO DINÁMICO</span>
         </div>
         
-        <!-- DESGLOSE EXPLÍCITO DE CARRERAS PROYECTADAS Y WRC+ POR EQUIPO -->
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{l_info['logo']}" width="35" height="35">
@@ -531,7 +528,6 @@ def simular_nba_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
         
         {bajas_html}
 
-        <!-- DESGLOSE EXPLÍCITO DE PUNTOS PROYECTADOS EN NBA POR EQUIPO -->
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{l_info['logo']}" width="35" height="35">
@@ -588,18 +584,17 @@ def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_
         
         {bajas_html}
 
-        <!-- DESGLOSE EXPLÍCITO DE GOLES ESPERADOS (xG) INDIVIDUALES EN NHL POR EQUIPO -->
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{l_info['logo']}" width="35" height="35">
-                <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({goles_loc} xG est.)</span>
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({goles_loc} goles est. / xG)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#10B981;">58%</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="{v_info['logo']}" width="35" height="35">
-                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({goles_vis} xG est.)</span>
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({goles_vis} goles est. / xG)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#EF4444;">42%</span>
         </div>
@@ -1071,7 +1066,7 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     btn_nfl.click(fn=lambda: abrir_liga("NFL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, nfl_loc, nfl_vis, logo_nfl_loc, logo_nfl_vis, liga_actual_state])
     btn_mlb.click(fn=lambda: abrir_liga("MLB"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, mlb_loc, mlb_vis, logo_mlb_loc, logo_mlb_vis, liga_actual_state])
     btn_nba.click(fn=lambda: abrir_liga("NBA"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, nba_loc, nba_vis, logo_nba_loc, logo_nba_vis, liga_actual_state])
-    btn_nhl.click(fn=lambda: abrir_liga("NHL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_panel_nba, panel_nhl, nhl_loc, nhl_vis, logo_nhl_loc, logo_nhl_vis, liga_actual_state])
+    btn_nhl.click(fn=lambda: abrir_liga("NHL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, nhl_loc, nhl_vis, logo_nhl_loc, logo_nhl_vis, liga_actual_state])
 
     btn_volver.click(fn=volver_inicio, outputs=[panel_principal, panel_analisis])
 
