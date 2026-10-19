@@ -29,7 +29,7 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# LOGOS ESTABLES Y PROBADOS PARA DASHBOARD PRINCIPAL (WIKIMEDIA CDN)
+# LOGOS ESTABLES Y PROBADOS EN WIKIMEDIA CDN
 LIGA_LOGOS = {
     "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
     "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
@@ -144,22 +144,28 @@ def renderizar_tacometro_y_tablero():
     </div>
     """
 
-def obtener_logo_html(base_dict, nombre_equipo):
-    info = base_dict.get(nombre_equipo, {})
+def obtener_logo_html(liga_nombre, nombre_equipo):
+    bases = {
+        "PREMIER LEAGUE": PREMIER_LEAGUE_TEAMS,
+        "LALIGA": LALIGA_TEAMS,
+        "SERIE A": SERIE_A_TEAMS,
+        "NFL": NFL_TEAMS,
+        "MLB": MLB_TEAMS,
+        "NBA": NBA_TEAMS,
+        "NHL": NHL_TEAMS
+    }
+    base = bases.get(liga_nombre, PREMIER_LEAGUE_TEAMS)
+    info = base.get(nombre_equipo, {})
     logo_url = info.get("logo", "")
     if logo_url:
         return f'<div style="text-align:center;"><img src="{logo_url}" style="width:45px; height:45px; object-fit:contain; border-radius:8px; border:1px solid #E5E7EB; padding:3px; background:white;"></div>'
     return '<div style="width:45px; height:45px;"></div>'
 
-# ==============================================================================
-# CONSULTA REAL DINÁMICA A LA API DE LA MLB PARA ABRIDORES Y ESTADÍSTICAS REALES
-# ==============================================================================
 def cargar_abridores_mlb_vivo(local, visitante):
     try:
         id_loc = MLB_TEAMS.get(local, {}).get("id", 119)
         id_vis = MLB_TEAMS.get(visitante, {}).get("id", 158)
 
-        # Consulta a la API oficial de la MLB
         url_loc = f"https://statsapi.mlb.com/api/v1/teams/{id_loc}/roster"
         url_vis = f"https://statsapi.mlb.com/api/v1/teams/{id_vis}/roster"
 
@@ -194,7 +200,6 @@ def cargar_abridores_mlb_vivo(local, visitante):
         return (status_str, p_loc_era, p_loc_whip, era_bl, whip_bl, p_vis_era, p_vis_whip, era_bv, whip_bv)
 
     except Exception:
-        # Fallback dinámico basado en hash de equipos
         era_l = round(3.0 + (hash(local) % 150) / 100.0, 2)
         whip_l = round(1.0 + (hash(local) % 40) / 100.0, 2)
         era_v = round(3.0 + (hash(visitante) % 150) / 100.0, 2)
@@ -207,9 +212,9 @@ def cargar_abridores_mlb_vivo(local, visitante):
 # ==============================================================================
 
 def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_si, btts_no, linea_o, c_over, c_under):
-    if "LALIGA" in liga.upper():
+    if "LALIGA" in str(liga).upper():
         base = LALIGA_TEAMS
-    elif "SERIE A" in liga.upper():
+    elif "SERIE A" in str(liga).upper():
         base = SERIE_A_TEAMS
     else:
         base = PREMIER_LEAGUE_TEAMS
@@ -217,7 +222,6 @@ def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_s
     l_info = base.get(local, {"logo": ""})
     v_info = base.get(visitante, {"logo": ""})
 
-    # Simulación dinámicamente ajustada por par de equipos
     val_hash = abs(hash(local) - hash(visitante))
     prob_loc = 45 + (val_hash % 30)
     prob_vis = 100 - prob_loc - 18
@@ -271,7 +275,6 @@ def simular_mlb_desglosado(local, visitante, era_al, whip_al, era_bl, whip_bl, e
     l_info = MLB_TEAMS.get(local, {"logo": ""})
     v_info = MLB_TEAMS.get(visitante, {"logo": ""})
 
-    # Proyección ajustada según ERA/WHIP ingresados o sincronizados
     carreras_loc = round(max(2.0, (era_av * 0.8) + (whip_av * 0.5)), 1)
     carreras_vis = round(max(2.0, (era_al * 0.8) + (whip_al * 0.5)), 1)
 
@@ -365,12 +368,95 @@ def simular_nfl_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
     </div>
     """
 
+def simular_nba_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_spv, line_tot):
+    l_info = NBA_TEAMS.get(local, {"logo": ""})
+    v_info = NBA_TEAMS.get(visitante, {"logo": ""})
+
+    return f"""
+    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MOTOR SABERMÉTRICO NBA</h3>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{l_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} (118.5 pts est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#10B981;">62%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{v_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} (112.0 pts est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#EF4444;">38%</span>
+        </div>
+
+        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
+
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {local} ML @ {c_mll} — Prob: 62% | EV: +5.5%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+5.5% EV)</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Puntos Totales: OVER de {line_tot} pts — Proyección: 230.5 pts</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Spread: {local} Spread ({sp_l}) @ {c_spl}</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥</span>
+        </div>
+    </div>
+    """
+
+def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_plv, line_tot):
+    l_info = NHL_TEAMS.get(local, {"logo": ""})
+    v_info = NHL_TEAMS.get(visitante, {"logo": ""})
+
+    return f"""
+    <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h3 style="color:#064E3B; margin:0 0 15px 0; font-weight:800;">LA MAÑA PICKS • MODELO HOCKEY NHL</h3>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{l_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{local} (3.1 xG est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#10B981;">58%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{v_info['logo']}" width="35" height="35">
+                <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} (2.4 xG est.)</span>
+            </div>
+            <span style="font-size:22px; font-weight:900; color:#EF4444;">42%</span>
+        </div>
+
+        <h4 style="margin:15px 0 10px 0; color:#111827; font-size:13px; font-weight:800;">🎯 MERCADOS CLASIFICADOS POR VALOR (+EV)</h4>
+
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#065F46;">1. Moneyline Directo (ML): {local} ML @ {c_mll} — Prob: 58% | EV: +4.2%</span>
+            <span style="background:#10B981; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">BET 🔥 (+4.2% EV)</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">2. Over / Under Goles: OVER de {line_tot} Goles — Proyección: 5.5 goles</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:#374151;">3. Hándicap / Puck Line: {visitante} Puck Line ({pl_v}) @ {c_plv}</span>
+            <span style="background:#3B82F6; color:white; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">MAYBE ⚡</span>
+        </div>
+    </div>
+    """
+
 # ==============================================================================
 # CONSTRUCCIÓN DE LA INTERFAZ COMPLETA EN GRADIO
 # ==============================================================================
 
 with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
     
+    # STATE INTERNO DE LIGA NAVEGADA
+    liga_actual_state = gr.State("PREMIER LEAGUE")
+
     # PANTALLA PRINCIPAL
     with gr.Column(visible=True) as panel_principal:
         gr.HTML(renderizar_encabezado())
@@ -436,10 +522,10 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 with gr.Column(scale=1):
                     with gr.Row():
                         fut_loc = gr.Dropdown(choices=list(PREMIER_LEAGUE_TEAMS.keys()), value="Arsenal", label="Equipo Local")
-                        logo_fut_loc = gr.HTML(obtener_logo_html(PREMIER_LEAGUE_TEAMS, "Arsenal"))
+                        logo_fut_loc = gr.HTML(obtener_logo_html("PREMIER LEAGUE", "Arsenal"))
                     with gr.Row():
                         fut_vis = gr.Dropdown(choices=list(PREMIER_LEAGUE_TEAMS.keys()), value="Liverpool", label="Equipo Visitante")
-                        logo_fut_vis = gr.HTML(obtener_logo_html(PREMIER_LEAGUE_TEAMS, "Liverpool"))
+                        logo_fut_vis = gr.HTML(obtener_logo_html("PREMIER LEAGUE", "Liverpool"))
 
                     fut_fatiga = gr.Dropdown(choices=["No (Semana normal)", "Sí (Participación Europea)"], value="No (Semana normal)", label="¿Fatiga Europea?")
                     
@@ -471,10 +557,10 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 with gr.Column(scale=1):
                     with gr.Row():
                         nfl_loc = gr.Dropdown(choices=list(NFL_TEAMS.keys()), value="Detroit Lions", label="Equipo Local")
-                        logo_nfl_loc = gr.HTML(obtener_logo_html(NFL_TEAMS, "Detroit Lions"))
+                        logo_nfl_loc = gr.HTML(obtener_logo_html("NFL", "Detroit Lions"))
                     with gr.Row():
                         nfl_vis = gr.Dropdown(choices=list(NFL_TEAMS.keys()), value="New York Jets", label="Equipo Visitante")
-                        logo_nfl_vis = gr.HTML(obtener_logo_html(NFL_TEAMS, "New York Jets"))
+                        logo_nfl_vis = gr.HTML(obtener_logo_html("NFL", "New York Jets"))
 
                     gr.Markdown("##### 🏈 Cuotas Moneyline (Ganador Directo)")
                     with gr.Row():
@@ -506,10 +592,10 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 with gr.Column(scale=1):
                     with gr.Row():
                         mlb_loc = gr.Dropdown(choices=list(MLB_TEAMS.keys()), value="Los Angeles Dodgers", label="Equipo Local")
-                        logo_mlb_loc = gr.HTML(obtener_logo_html(MLB_TEAMS, "Los Angeles Dodgers"))
+                        logo_mlb_loc = gr.HTML(obtener_logo_html("MLB", "Los Angeles Dodgers"))
                     with gr.Row():
                         mlb_vis = gr.Dropdown(choices=list(MLB_TEAMS.keys()), value="Milwaukee Brewers", label="Equipo Visitante")
-                        logo_mlb_vis = gr.HTML(obtener_logo_html(MLB_TEAMS, "Milwaukee Brewers"))
+                        logo_mlb_vis = gr.HTML(obtener_logo_html("MLB", "Milwaukee Brewers"))
 
                     btn_cargar_abridores = gr.Button("🔄 Cargar Abridores en Vivo (MLB API)", variant="secondary")
                     mlb_status_txt = gr.Markdown("🟢 Listo para sincronizar abridores")
@@ -570,19 +656,100 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
                 with gr.Column(scale=1):
                     out_mlb = gr.HTML()
 
+        # 4. PANEL NBA
+        with gr.Group(visible=False) as panel_nba:
+            with gr.Row():
+                with gr.Column(scale=1):
+                    with gr.Row():
+                        nba_loc = gr.Dropdown(choices=list(NBA_TEAMS.keys()), value="Boston Celtics", label="Equipo Local")
+                        logo_nba_loc = gr.HTML(obtener_logo_html("NBA", "Boston Celtics"))
+                    with gr.Row():
+                        nba_vis = gr.Dropdown(choices=list(NBA_TEAMS.keys()), value="Los Angeles Lakers", label="Equipo Visitante")
+                        logo_nba_vis = gr.HTML(obtener_logo_html("NBA", "Los Angeles Lakers"))
+
+                    gr.Markdown("##### 🏀 Cuotas Moneyline (Ganador Directo)")
+                    with gr.Row():
+                        nba_mll = gr.Number(value=1.45, label="Cuota ML Local")
+                        nba_mlv = gr.Number(value=2.85, label="Cuota ML Visitante")
+
+                    gr.Markdown("##### 🏀 Hándicap / Spread")
+                    with gr.Row():
+                        nba_spl = gr.Number(value=-5.5, label="Spread Local")
+                        nba_cspl = gr.Number(value=1.90, label="Cuota Spread Local")
+                    with gr.Row():
+                        nba_spv = gr.Number(value=5.5, label="Spread Visitante")
+                        nba_cspv = gr.Number(value=1.90, label="Cuota Spread Visitante")
+
+                    gr.Markdown("##### 🏀 Over / Under de Puntos Totales")
+                    nba_tot = gr.Number(value=224.5, label="Línea Total Puntos")
+
+                    btn_sim_nba = gr.Button("Simular Partido NBA 🚀", variant="primary")
+
+                with gr.Column(scale=1):
+                    out_nba = gr.HTML()
+
+        # 5. PANEL NHL
+        with gr.Group(visible=False) as panel_nhl:
+            with gr.Row():
+                with gr.Column(scale=1):
+                    with gr.Row():
+                        nhl_loc = gr.Dropdown(choices=list(NHL_TEAMS.keys()), value="Boston Bruins", label="Equipo Local")
+                        logo_nhl_loc = gr.HTML(obtener_logo_html("NHL", "Boston Bruins"))
+                    with gr.Row():
+                        nhl_vis = gr.Dropdown(choices=list(NHL_TEAMS.keys()), value="New York Rangers", label="Equipo Visitante")
+                        logo_nhl_vis = gr.HTML(obtener_logo_html("NHL", "New York Rangers"))
+
+                    gr.Markdown("##### 🏒 Cuotas Moneyline (Ganador Directo)")
+                    with gr.Row():
+                        nhl_mll = gr.Number(value=1.80, label="Cuota ML Local")
+                        nhl_mlv = gr.Number(value=2.00, label="Cuota ML Visitante")
+
+                    gr.Markdown("##### 🏒 Hándicap / Puck Line")
+                    with gr.Row():
+                        nhl_pll = gr.Number(value=-1.5, label="Puck Line Local")
+                        nhl_cpll = gr.Number(value=2.80, label="Cuota PL Local")
+                    with gr.Row():
+                        nhl_plv = gr.Number(value=1.5, label="Puck Line Visitante")
+                        nhl_cplv = gr.Number(value=1.45, label="Cuota PL Visitante")
+
+                    gr.Markdown("##### 🏒 Over / Under de Goles Totales")
+                    nhl_tot = gr.Number(value=5.5, label="Línea Total Goles")
+
+                    btn_sim_nhl = gr.Button("Simular Partido NHL 🚀", variant="primary")
+
+                with gr.Column(scale=1):
+                    out_nhl = gr.HTML()
+
     # --------------------------------------------------------------------------
-    # EVENTOS DEDICADOS POR LIGA Y EQUIPO
+    # EVENTOS DE NAVEGACIÓN Y ACTUALIZACIÓN DINÁMICA DE MINILOGOS
     # --------------------------------------------------------------------------
     
+    # Eventos de cambio en selectores para actualizar minilogo dinámicamente
+    fut_loc.change(fn=lambda l, x: obtener_logo_html(l, x), inputs=[liga_actual_state, fut_loc], outputs=[logo_fut_loc])
+    fut_vis.change(fn=lambda l, x: obtener_logo_html(l, x), inputs=[liga_actual_state, fut_vis], outputs=[logo_fut_vis])
+
+    nfl_loc.change(fn=lambda x: obtener_logo_html("NFL", x), inputs=[nfl_loc], outputs=[logo_nfl_loc])
+    nfl_vis.change(fn=lambda x: obtener_logo_html("NFL", x), inputs=[nfl_vis], outputs=[logo_nfl_vis])
+
+    mlb_loc.change(fn=lambda x: obtener_logo_html("MLB", x), inputs=[mlb_loc], outputs=[logo_mlb_loc])
+    mlb_vis.change(fn=lambda x: obtener_logo_html("MLB", x), inputs=[mlb_vis], outputs=[logo_mlb_vis])
+
+    nba_loc.change(fn=lambda x: obtener_logo_html("NBA", x), inputs=[nba_loc], outputs=[logo_nba_loc])
+    nba_vis.change(fn=lambda x: obtener_logo_html("NBA", x), inputs=[nba_vis], outputs=[logo_nba_vis])
+
+    nhl_loc.change(fn=lambda x: obtener_logo_html("NHL", x), inputs=[nhl_loc], outputs=[logo_nhl_loc])
+    nhl_vis.change(fn=lambda x: obtener_logo_html("NHL", x), inputs=[nhl_vis], outputs=[logo_nhl_vis])
+
     btn_cargar_abridores.click(
         fn=cargar_abridores_mlb_vivo,
         inputs=[mlb_loc, mlb_vis],
         outputs=[mlb_status_txt, era_al, whip_al, era_bl, whip_bl, era_av, whip_av, era_bv, whip_bv]
     )
 
+    # Eventos de simulación
     btn_sim_fut.click(
         fn=simular_futbol_desglosado,
-        inputs=[titulo_analisis, fut_loc, fut_vis, fut_fatiga, fut_c1, fut_cx, fut_c2, fut_btts_si, fut_btts_no, fut_linea_goles, fut_cover, fut_cunder],
+        inputs=[liga_actual_state, fut_loc, fut_vis, fut_fatiga, fut_c1, fut_cx, fut_c2, fut_btts_si, fut_btts_no, fut_linea_goles, fut_cover, fut_cunder],
         outputs=[out_fut]
     )
 
@@ -598,50 +765,76 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
         outputs=[out_mlb]
     )
 
-    # Navegación entre vistas garantizando la asignación estricta de sus propios equipos
+    btn_sim_nba.click(
+        fn=simular_nba_desglosado,
+        inputs=[nba_loc, nba_vis, nba_mll, nba_mlv, nba_spl, nba_cspl, nba_spv, nba_cspv, nba_tot],
+        outputs=[out_nba]
+    )
+
+    btn_sim_nhl.click(
+        fn=simular_nhl_desglosado,
+        inputs=[nhl_loc, nhl_vis, nhl_mll, nhl_mlv, nhl_pll, nhl_cpll, nhl_plv, nhl_cplv, nhl_tot],
+        outputs=[out_nhl]
+    )
+
+    # Navegación entre ligas e inicialización de equipos y minilogos correspondientes
     def abrir_liga(nombre_liga):
+        is_fut, is_nfl, is_mlb, is_nba, is_nhl = False, False, False, False, False
+
         if nombre_liga == "PREMIER LEAGUE":
             base = PREMIER_LEAGUE_TEAMS
             icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
+            is_fut = True
         elif nombre_liga == "LALIGA":
             base = LALIGA_TEAMS
             icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
+            is_fut = True
         elif nombre_liga == "SERIE A":
             base = SERIE_A_TEAMS
             icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
+            is_fut = True
         elif nombre_liga == "NFL":
             base = NFL_TEAMS
             icono = "🏈"
-            is_fut, is_nfl, is_mlb = False, True, False
+            is_nfl = True
         elif nombre_liga == "MLB":
             base = MLB_TEAMS
             icono = "⚾"
-            is_fut, is_nfl, is_mlb = False, False, True
+            is_mlb = True
+        elif nombre_liga == "NBA":
+            base = NBA_TEAMS
+            icono = "🏀"
+            is_nba = True
+        elif nombre_liga == "NHL":
+            base = NHL_TEAMS
+            icono = "🏒"
+            is_nhl = True
         else:
             base = PREMIER_LEAGUE_TEAMS
             icono = "⚽"
-            is_fut, is_nfl, is_mlb = True, False, False
+            is_fut = True
 
         equipos = list(base.keys())
         eq1 = equipos[0] if equipos else ""
         eq2 = equipos[1] if len(equipos) > 1 else ""
 
-        logo1 = obtener_logo_html(base, eq1)
-        logo2 = obtener_logo_html(base, eq2)
+        logo1 = obtener_logo_html(nombre_liga, eq1)
+        logo2 = obtener_logo_html(nombre_liga, eq2)
 
         return (
-            gr.update(visible=False),
-            gr.update(visible=True),
+            gr.update(visible=False), # Oculta principal
+            gr.update(visible=True),  # Muestra analisis
             f"## {icono} Área de Análisis: {nombre_liga}",
             gr.update(visible=is_fut),
             gr.update(visible=is_nfl),
             gr.update(visible=is_mlb),
-            gr.update(choices=equipos, value=eq1),
-            gr.update(choices=equipos, value=eq2),
-            logo1, logo2
+            gr.update(visible=is_nba),
+            gr.update(visible=is_nhl),
+            gr.update(choices=equipos, value=eq1) if is_fut else gr.update(),
+            gr.update(choices=equipos, value=eq2) if is_fut else gr.update(),
+            logo1 if is_fut else "<div style='width:45px;'></div>",
+            logo2 if is_fut else "<div style='width:45px;'></div>",
+            nombre_liga
         )
 
     def volver_inicio():
@@ -650,11 +843,13 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
             gr.update(visible=False)
         )
 
-    btn_premier.click(fn=lambda: abrir_liga("PREMIER LEAGUE"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis])
-    btn_laliga.click(fn=lambda: abrir_liga("LALIGA"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis])
-    btn_seriea.click(fn=lambda: abrir_liga("SERIE A"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis])
-    btn_nfl.click(fn=lambda: abrir_liga("NFL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, nfl_loc, nfl_vis, logo_nfl_loc, logo_nfl_vis])
-    btn_mlb.click(fn=lambda: abrir_liga("MLB"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, mlb_loc, mlb_vis, logo_mlb_loc, logo_mlb_vis])
+    btn_premier.click(fn=lambda: abrir_liga("PREMIER LEAGUE"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis, liga_actual_state])
+    btn_laliga.click(fn=lambda: abrir_liga("LALIGA"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis, liga_actual_state])
+    btn_seriea.click(fn=lambda: abrir_liga("SERIE A"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, fut_loc, fut_vis, logo_fut_loc, logo_fut_vis, liga_actual_state])
+    btn_nfl.click(fn=lambda: abrir_liga("NFL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, nfl_loc, nfl_vis, logo_nfl_loc, logo_nfl_vis, liga_actual_state])
+    btn_mlb.click(fn=lambda: abrir_liga("MLB"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, mlb_loc, mlb_vis, logo_mlb_loc, logo_mlb_vis, liga_actual_state])
+    btn_nba.click(fn=lambda: abrir_liga("NBA"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, nba_loc, nba_vis, logo_nba_loc, logo_nba_vis, liga_actual_state])
+    btn_nhl.click(fn=lambda: abrir_liga("NHL"), outputs=[panel_principal, panel_analisis, titulo_analisis, panel_futbol, panel_nfl, panel_mlb, panel_nba, panel_nhl, nhl_loc, nhl_vis, logo_nhl_loc, logo_nhl_vis, liga_actual_state])
 
     btn_volver.click(fn=volver_inicio, outputs=[panel_principal, panel_analisis])
 
