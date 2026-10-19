@@ -32,11 +32,11 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# LOGOS ESTABLES EN FORMATO SVG/PNG DIRECTOS SIN BLOQUEOS
+# LOGOS DE LIGAS CON ENLACES OFICIALES WIKIMEDIA 100% DIRECTOS Y VERIFICADOS
 LIGA_LOGOS = {
     "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
-    "LALIGA": "https://raw.githubusercontent.com/luukku/footy-logos/main/logos/LaLiga.png",
-    "SERIEA": "https://raw.githubusercontent.com/luukku/footy-logos/main/logos/Serie_A.png",
+    "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
+    "SERIEA": "https://upload.wikimedia.org/wikipedia/commons/e/e9/Serie_A_logo_2019.svg",
     "NFL": "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
     "MLB": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Major_League_Baseball_logo.svg",
     "NBA": "https://upload.wikimedia.org/wikipedia/en/0/03/National_Basketball_Association_logo.svg",
@@ -109,7 +109,7 @@ def marcar_estado_pick(pick_id, estado):
     return "❌ No se pudo actualizar el Pick en Supabase"
 
 # ==============================================================================
-# VISTAS DE ENCABEZADO Y DASHBOARD
+# VISTAS DE ENCABEZADO Y DASHBOARD CON LOGOS SEGUROS
 # ==============================================================================
 def renderizar_encabezado():
     return """
@@ -200,8 +200,16 @@ def obtener_logo_html(liga_nombre, nombre_equipo):
     info = base.get(nombre_equipo, {})
     logo_url = info.get("logo", "")
     if logo_url:
-        return f'<div style="text-align:center;"><img src="{logo_url}" style="width:45px; height:45px; object-fit:contain; border-radius:8px; border:1px solid #E5E7EB; padding:3px; background:white;"></div>'
+        return f'<div style="text-align:center;"><img src="{logo_url}" style="width:45px; height:45px; object-fit:contain; border-radius:8px; border:1px solid #E5E7EB; padding:3px; background:white;" onerror="this.style.display=\'none\'"></div>'
     return '<div style="width:45px; height:45px;"></div>'
+
+def renderizar_logo_liga_menu(url_logo, texto_alt):
+    return f"""
+    <div style="text-align:center; height:60px; display:flex; align-items:center; justify-content:center;">
+        <img src="{url_logo}" alt="{texto_alt}" style="max-height:55px; max-width:80px; object-fit:contain;" 
+             onerror="this.onerror=null; this.parentElement.innerHTML='<span style=\\'font-weight:900; font-size:14px; color:#047857;\\'>{texto_alt}</span>';">
+    </div>
+    """
 
 def limpiar_float(val, defecto=1.90):
     try:
@@ -394,14 +402,14 @@ def simular_nhl_desglosado(local, visitante, c_mll, c_mlv, pl_l, c_pll, pl_v, c_
 
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{l_info['logo']}" width="35" height="35">
+                <img src="{l_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({lambda_loc} goles est. / xG)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:{'#10B981' if prob_loc_final >= prob_vis_final else '#EF4444'};">{prob_loc_final}%</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{v_info['logo']}" width="35" height="35">
+                <img src="{v_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({lambda_vis} goles est. / xG)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:{'#10B981' if prob_vis_final > prob_loc_final else '#EF4444'};">{prob_vis_final}%</span>
@@ -461,14 +469,14 @@ def simular_futbol_desglosado(liga, local, visitante, fatiga, c1, cx, c2, btts_s
 
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{l_info['logo']}" width="35" height="35">
+                <img src="{l_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({xg_loc} goles est. / xG)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#10B981;">{prob_loc}%</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{v_info['logo']}" width="35" height="35">
+                <img src="{v_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({xg_vis} goles est. / xG)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#EF4444;">{prob_vis}%</span>
@@ -526,14 +534,14 @@ def simular_nfl_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
 
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{l_info['logo']}" width="35" height="35">
+                <img src="{l_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({pts_est_l} pts est. | Rating Off: {rating_off_l})</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#10B981;">{prob_l}%</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{v_info['logo']}" width="35" height="35">
+                <img src="{v_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({pts_est_v} pts est. | Rating Off: {rating_off_v})</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#EF4444;">{100-prob_l}%</span>
@@ -593,14 +601,14 @@ def simular_mlb_desglosado(local, visitante, era_al, whip_al, era_bl, whip_bl, e
         
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{l_info['logo']}" width="35" height="35">
+                <img src="{l_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({carreras_loc} carreras est. | wRC+ {wrc_loc})</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:{'#10B981' if prob_loc > prob_vis else '#EF4444'};">{prob_loc}%</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{v_info['logo']}" width="35" height="35">
+                <img src="{v_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({carreras_vis} carreras est. | wRC+ {wrc_vis})</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:{'#10B981' if prob_vis >= prob_loc else '#EF4444'};">{prob_vis}%</span>
@@ -655,14 +663,14 @@ def simular_nba_desglosado(local, visitante, c_mll, c_mlv, sp_l, c_spl, sp_v, c_
 
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{l_info['logo']}" width="35" height="35">
+                <img src="{l_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{local} ({pts_loc} pts est.)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#10B981;">62%</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9FAFB; padding:12px 15px; border-radius:12px; margin-bottom:15px;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="{v_info['logo']}" width="35" height="35">
+                <img src="{v_info['logo']}" width="35" height="35" onerror="this.style.display='none'">
                 <span style="font-weight:800; font-size:15px; color:#111827;">{visitante} ({pts_vis} pts est.)</span>
             </div>
             <span style="font-size:22px; font-weight:900; color:#EF4444;">38%</span>
@@ -710,37 +718,37 @@ with gr.Blocks(title="La Maña Picks", theme=gr.themes.Soft()) as demo:
 
         with gr.Row():
             with gr.Column(scale=1, min_width=110):
-                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["PREMIER"]}" style="max-height:55px; margin:0 auto;"></div>')
+                gr.HTML(renderizar_logo_liga_menu(LIGA_LOGOS["PREMIER"], "Premier League"))
                 btn_premier = gr.Button("PREMIER", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
-                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["LALIGA"]}" style="max-height:55px; margin:0 auto;"></div>')
+                gr.HTML(renderizar_logo_liga_menu(LIGA_LOGOS["LALIGA"], "LaLiga"))
                 btn_laliga = gr.Button("LA LIGA", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
-                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["SERIEA"]}" style="max-height:55px; margin:0 auto;"></div>')
+                gr.HTML(renderizar_logo_liga_menu(LIGA_LOGOS["SERIEA"], "Serie A"))
                 btn_seriea = gr.Button("SERIE A", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
-                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NFL"]}" style="max-height:55px; margin:0 auto;"></div>')
+                gr.HTML(renderizar_logo_liga_menu(LIGA_LOGOS["NFL"], "NFL"))
                 btn_nfl = gr.Button("NFL", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
-                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["MLB"]}" style="max-height:55px; margin:0 auto;"></div>')
+                gr.HTML(renderizar_logo_liga_menu(LIGA_LOGOS["MLB"], "MLB"))
                 btn_mlb = gr.Button("MLB", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
-                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NBA"]}" style="max-height:55px; margin:0 auto;"></div>')
+                gr.HTML(renderizar_logo_liga_menu(LIGA_LOGOS["NBA"], "NBA"))
                 btn_nba = gr.Button("NBA", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
             with gr.Column(scale=1, min_width=110):
-                gr.HTML(f'<div style="text-align:center; height:60px;"><img src="{LIGA_LOGOS["NHL"]}" style="max-height:55px; margin:0 auto;"></div>')
+                gr.HTML(renderizar_logo_liga_menu(LIGA_LOGOS["NHL"], "NHL"))
                 btn_nhl = gr.Button("NHL", variant="primary")
                 gr.HTML(renderizar_tarjeta_record(0.0, 0, 0, 0, 8, 8, 8))
 
