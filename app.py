@@ -17,10 +17,13 @@ from teams import (
 gr.close_all()
 
 # ==============================================================================
-# CONFIGURACIÓN DE VARIABLES DE ENTORNO
+# CONFIGURACIÓN DE VARIABLES DE ENTORNO Y APIS
 # ==============================================================================
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://tuywqyjsaubcxmbzxwlg.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj")
+
+ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
+API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY", "")
 
 SUPABASE_HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -29,7 +32,6 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# LOGOS ESTABLES EN FORMATO SVG/PNG DESDE WIKIMEDIA
 LIGA_LOGOS = {
     "PREMIER": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg",
     "LALIGA": "https://upload.wikimedia.org/wikipedia/commons/0/0f/LaLiga_EA_Sports_2023_Logo.svg",
@@ -262,6 +264,7 @@ def cargar_abridores_mlb_vivo(local, visitante):
         return (status_str, era_l, whip_l, round(era_l*1.1, 2), round(whip_l*1.05, 2), era_v, whip_v, round(era_v*1.1, 2), round(whip_v*1.05, 2))
 
 def generar_caja_bajas_html(deporte, local, visitante):
+    status_api = "🟢 API Key Conectada" if API_SPORTS_KEY else "⚡ Consultando Datos"
     if deporte == "NHL":
         data_loc = NHL_GOALIES_STATS.get(local, {"starter": f"Goalie ({local})", "starter_sv": 0.908, "bajas": ["Jugador Titular - OUT"]})
         data_vis = NHL_GOALIES_STATS.get(visitante, {"starter": f"Goalie ({visitante})", "starter_sv": 0.901, "bajas": ["Jugador Titular - OUT"]})
@@ -283,7 +286,7 @@ def generar_caja_bajas_html(deporte, local, visitante):
     elif deporte == "NFL":
         return f"""
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:12px; padding:12px 16px; margin-bottom:15px; font-size:12px; color:#374151; line-height:1.7;">
-            <div style="font-weight:800; color:#D97706; margin-bottom:4px;">🚨 Bajas Exclusivas de Titulares / QBs ({local}):</div>
+            <div style="font-weight:800; color:#D97706; margin-bottom:4px;">🚨 Bajas Exclusivas de Titulares / QBs ({local}) — {status_api}:</div>
             <div>❌ Brock Purdy / QB Titular: <b>ACTIVO</b> <span style="color:#059669;">[Rating Off: 25.7]</span></div>
             <div>❌ Christian McCaffrey (RB): <b>OUT</b> <span style="color:#DC2626; font-weight:800;">[-3.5 pts Off]</span></div>
             
@@ -295,7 +298,7 @@ def generar_caja_bajas_html(deporte, local, visitante):
     elif deporte == "NBA":
         return f"""
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:12px; padding:12px 16px; margin-bottom:15px; font-size:12px; color:#374151; line-height:1.7;">
-            <div style="font-weight:800; color:#D97706; margin-bottom:4px;">🚨 Bajas de Jugadores Inicialistas ({local}):</div>
+            <div style="font-weight:800; color:#D97706; margin-bottom:4px;">🚨 Bajas de Jugadores Inicialistas ({local}) — {status_api}:</div>
             <div>⚠️ Kristaps Porzingis (C Titular): <b>OUT</b> <span style="color:#DC2626;">[-2.5 pts Off]</span></div>
             <div style="font-weight:800; color:#D97706; margin:8px 0 4px 0;">🚨 Bajas de Jugadores Inicialistas ({visitante}):</div>
             <div>⚠️ Anthony Davis (FC Titular): <b>DAY-TO-DAY</b> <span style="color:#D97706;">[-1.5 pts DTD]</span></div>
@@ -304,7 +307,7 @@ def generar_caja_bajas_html(deporte, local, visitante):
     elif deporte == "FUTBOL":
         return f"""
         <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:12px; padding:12px 16px; margin-bottom:15px; font-size:12px; color:#374151; line-height:1.7;">
-            <div style="font-weight:800; color:#D97706; margin-bottom:4px;">🚨 Bajas en Alineación Titular ({local}):</div>
+            <div style="font-weight:800; color:#D97706; margin-bottom:4px;">🚨 Bajas en Alineación Titular ({local}) — {status_api}:</div>
             <div>🚑 Martin Ødegaard (MC Titular): <b>Baja Confirmada</b></div>
             <div style="font-weight:800; color:#D97706; margin:8px 0 4px 0;">🚨 Bajas en Alineación Titular ({visitante}):</div>
             <div>🚑 Alisson Becker (Portero Titular): <b>Baja Confirmada</b></div>
