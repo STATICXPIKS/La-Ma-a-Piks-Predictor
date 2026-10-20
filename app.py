@@ -1,3 +1,13 @@
+import os
+import math
+import json
+import requests
+import numpy as np
+import pandas as pd
+import gradio as gr
+from datetime import datetime
+from scipy.stats import norm, poisson
+
 # =========================================================
 # FUNCIÓN CORREGIDA PARA GUARDAR EN SUPABASE (TABLA PICKS)
 # =========================================================
@@ -35,3 +45,7 @@ def render_logo_html(url, height=50):
     return f"""<div style="display: flex; justify-content: center; align-items: center; height: 55px; margin-bottom: 4px; overflow: hidden;">
         <img src="{url}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://a.espncdn.com/i/leaguelogos/soccer/500/23.png';" style="max-height: {height}px; max-width: 100%; width: auto; object-fit: contain;" />
     </div>"""
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+    app_mana.launch(server_name="0.0.0.0", server_port=port)
