@@ -1,7 +1,8 @@
 import os
+import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from nhl_model import ejecutar_modelo_nhl_completo
+from nhl_model import ejecutar_modelo_nhl_completo, SUPABASE_URL, HEADERS_SUPABASE
 
 app = FastAPI(title="La Maña Picks - API NHL")
 
@@ -21,15 +22,15 @@ def home():
 def analizar_nhl(
     local: str = "Florida Panthers",
     visitante: str = "Edmonton Oilers",
-    c_ml_loc: float = 1.85,
-    c_ml_vis: float = 1.95,
+    c_ml_loc: float = 1.84,
+    c_ml_vis: float = 1.96,
     l_pl_loc: float = -1.5,
-    c_pl_loc: float = 2.85,
+    c_pl_loc: float = 1.32,
     l_pl_vis: float = 1.5,
-    c_pl_vis: float = 1.45,
-    l_total: float = 6.0,
-    c_over: float = 1.90,
-    c_under: float = 1.90
+    c_pl_vis: float = 3.35,
+    l_total: float = 5.5,
+    c_over: float = 1.63,
+    c_under: float = 2.23
 ):
     return ejecutar_modelo_nhl_completo(
         loc_nombre=local,
@@ -47,6 +48,24 @@ def analizar_nhl(
         cuota_sog_over=1.85,
         cuota_sog_under=1.85
     )
+
+@app.post("/api/guardar-pick")
+def guardar_pick_backend(payload: dict):
+    try:
+        r = requests.post(
+            f"{SUPABASE_URL}/rest/v1/picks",
+            headers=HEADERS_SUPABASE,
+            json=payload,
+            timeout=8
+        )
+        if r.status_code in [200, 201, 204]:
+            return {"status": "ok"}
+        else:
+            print("⚠️ Error Supabase:", r.text)
+            return {"status": "error", "message": r.text}
+    except Exception as e:
+        print("⚠️ Excepcion Backend:", str(e))
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
