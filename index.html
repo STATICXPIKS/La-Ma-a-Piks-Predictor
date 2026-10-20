@@ -369,12 +369,14 @@
             document.getElementById('modal-historial').classList.add('hidden');
         }
 
-        // FUNCIÓN DE GUARDADO CON PAYLOAD ULTRA-LIMPIO PARA ESQUEMA SUPABASE
-        async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
+        // CONEXIÓN DIRECTA Y ROBUSTA A SUPABASE (SIN CORRUPCIÓN DE CARACTERES)
+        async function guardarPickEnHistorial(btnId, pickTexto, evTexto, local, visitante) {
+            const btnElement = document.getElementById(btnId);
+            if(!btnElement) return;
+
             btnElement.disabled = true;
             btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
 
-            // Únicamente los 7 campos universales obligatorios
             const payloadLimpio = {
                 fecha: new Date().toISOString().split('T')[0],
                 deporte: "NHL",
@@ -386,24 +388,29 @@
             };
 
             try {
-                const res = await fetch(`${RENDER_API_URL}/api/guardar-pick`, {
+                // Inserción directa enviando API KEY oficial de Supabase
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${SUPABASE_KEY}`,
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal"
+                    },
                     body: JSON.stringify(payloadLimpio)
                 });
-                const json = await res.json();
 
-                if (json.status === "ok") {
+                if (res.ok || res.status === 201 || res.status === 204) {
                     btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
                     btnElement.className = "w-full mt-2 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-2.5 rounded-xl uppercase border border-emerald-500/30";
                     cargarMetricasYGrafica();
                 } else {
-                    console.error("Respuesta error Render/Supabase:", json.message);
+                    console.error("Respuesta error Supabase:", res.status);
                     btnElement.innerText = "📌 REINTENTAR GUARDAR";
                     btnElement.disabled = false;
                 }
             } catch (err) {
-                console.error("Error conexión:", err);
+                console.error("Error conexión Supabase:", err);
                 btnElement.innerText = "📌 REINTENTAR GUARDAR";
                 btnElement.disabled = false;
             }
@@ -495,6 +502,10 @@
                     </div>`;
                 }
 
+                // Guardamos los datos de las tarjetas en variables globales temporales para evitar fallos de escape de caracteres
+                window.dataBetFire = { pick: d.bet_fire, ev: d.bet_ev, loc: local, vis: visitante };
+                window.dataBetMaybe = { pick: d.maybe_lightning, ev: d.maybe_ev, loc: local, vis: visitante };
+
                 resContainer.innerHTML = `
                     <div class="mb-6 space-y-4">
                         <div class="bg-emerald-950/80 border-2 border-emerald-500 p-4 rounded-2xl shadow-lg">
@@ -505,7 +516,7 @@
                                 </div>
                                 <span class="font-montserrat text-lg font-black text-emerald-400">(${d.bet_ev} EV)</span>
                             </div>
-                            <button onclick="guardarPickEnHistorial(this, '${d.bet_fire}', '${d.bet_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase transition">
+                            <button id="btn-save-fire" onclick="guardarPickEnHistorial('btn-save-fire', window.dataBetFire.pick, window.dataBetFire.ev, window.dataBetFire.loc, window.dataBetFire.vis)" class="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase transition">
                                 📌 APOSTAR Y REGISTRAR EN HISTORIAL
                             </button>
                         </div>
@@ -518,7 +529,7 @@
                                 </div>
                                 <span class="font-montserrat text-base font-bold text-amber-400">(${d.maybe_ev} EV)</span>
                             </div>
-                            <button onclick="guardarPickEnHistorial(this, '${d.maybe_lightning}', '${d.maybe_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase transition">
+                            <button id="btn-save-maybe" onclick="guardarPickEnHistorial('btn-save-maybe', window.dataBetMaybe.pick, window.dataBetMaybe.ev, window.dataBetMaybe.loc, window.dataBetMaybe.vis)" class="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase transition">
                                 📌 APOSTAR Y REGISTRAR EN HISTORIAL
                             </button>
                         </div>
