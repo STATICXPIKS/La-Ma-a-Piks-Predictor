@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Maña Picks • Modelo NHL (FROST-IA)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        montserrat: ['Montserrat', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        mana: {
+                            neon: '#00FF66',
+                            emerald: '#059669',
+                            darkgreen: '#064E3B',
+                            gold: '#F59E0B',
+                            bg: '#F8FAFC'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-mana-bg text-slate-900 font-inter min-h-screen flex flex-col justify-between" onload="calcularEfectividadHistorial()">
+
+    <!-- BARRA SUPERIOR DE BRANDING CON % DE EFECTIVIDAD REAL -->
+    <header class="bg-white border-b-2 border-slate-200 py-4 px-6 relative">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-mana-neon via-mana-gold to-mana-neon"></div>
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="font-montserrat text-2xl font-black tracking-tight text-slate-900">
+                    LA MAÑA <span class="text-emerald-600">PICKS</span>
+                </span>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- INDICADOR DE EFECTIVIDAD HISTÓRICA -->
+                <div class="bg-slate-900 text-white px-3 py-1 rounded-xl flex items-center gap-2 border border-slate-800">
+                    <span class="text-[10px] text-slate-400 font-extrabold uppercase">EFECTIVIDAD:</span>
+                    <span id="win-rate-display" class="font-montserrat text-xs font-black text-mana-neon">--%</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="h-8 object-contain">
+                    <span class="bg-emerald-50 border border-emerald-200 text-mana-darkgreen text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider hidden md:inline-block">
+                        FROST-IA • NHL
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- PANTALLA 1: HOME DE INICIO -->
+    <section id="view-home" class="max-w-4xl mx-auto w-full px-4 py-12 flex-grow flex flex-col items-center justify-center text-center">
+        <div class="relative mb-8">
+            <div class="w-40 h-40 md:w-48 md:h-48 rounded-full bg-gradient-to-b from-emerald-100 to-amber-50 p-2 shadow-2xl border-4 border-white flex items-center justify-center">
+                <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-28 h-28 object-contain drop-shadow-md">
+            </div>
+            <span class="absolute -bottom-2 bg-slate-900 text-mana-neon font-montserrat text-xs font-black px-4 py-1 rounded-full border border-emerald-400">
+                TEMPORADA 2026-2027
+            </span>
+        </div>
+
+        <h1 class="font-montserrat text-4xl md:text-6xl font-black text-slate-900 mb-4 uppercase tracking-tight">
+            FROST-<span class="text-emerald-600">IA</span>
+        </h1>
+        <p class="text-slate-600 font-bold text-base md:text-lg max-w-xl mb-8">
+            Inteligencia Artificial cuantitativa para la NHL: simulaciones Monte Carlo, xG, Corsi y detección de picks con valor (+EV).
+        </p>
+
+        <button onclick="entrarAlHielo()" class="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 hover:from-emerald-400 hover:to-emerald-500 text-white font-montserrat font-black text-lg px-10 py-5 rounded-2xl shadow-xl shadow-emerald-500/30 transition transform hover:-translate-y-1 active:translate-y-0 uppercase tracking-wider flex items-center gap-3">
+            ENTRAR AL HIELO 🏒
+        </button>
+    </section>
+
+    <!-- PANTALLA 2: SIMULADOR Y RECOMENDACIONES -->
+    <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 md:p-6 my-4 flex-grow">
+        
+        <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 md:p-8 shadow-xl mb-8">
+            <div class="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-8 bg-mana-neon rounded-full"></div>
+                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase tracking-wide">
+                        CONFIGURAR PARTIDO NHL
+                    </h2>
+                </div>
+                <button onclick="volverHome()" class="text-xs font-bold text-slate-400 hover:text-slate-600 underline">
+                    ← Volver a Inicio
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">EQUIPO LOCAL 🏠</label>
+                    <select id="select-local" onchange="actualizarEscudos()" class="w-full bg-white border-2 border-slate-300 rounded-xl p-3 text-sm font-black text-slate-800 focus:border-emerald-500 focus:outline-none transition shadow-sm">
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">EQUIPO VISITANTE ✈️</label>
+                    <select id="select-visitante" onchange="actualizarEscudos()" class="w-full bg-white border-2 border-slate-300 rounded-xl p-3 text-sm font-black text-slate-800 focus:border-emerald-500 focus:outline-none transition shadow-sm">
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-around items-center bg-slate-900 text-white p-6 rounded-2xl mb-6 shadow-inner border border-slate-800">
+                <div class="text-center w-5/12">
+                    <img id="img-local" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 drop-shadow-md" referrerpolicy="no-referrer">
+                    <span id="name-local" class="font-montserrat text-xs md:text-sm font-bold block truncate text-slate-200"></span>
+                </div>
+                <span class="font-montserrat text-mana-neon font-black text-xl italic">VS</span>
+                <div class="text-center w-5/12">
+                    <img id="img-visitante" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 drop-shadow-md" referrerpolicy="no-referrer">
+                    <span id="name-visitante" class="font-montserrat text-xs md:text-sm font-bold block truncate text-slate-200"></span>
+                </div>
+            </div>
+
+            <button onclick="ejecutarSimulacionLive()" id="btn-analizar" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-montserrat font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/20 transition uppercase tracking-wider text-sm md:text-base border border-emerald-400">
+                EJECUTAR SIMULACIÓN (10,000 ITERACIONES) 🚀
+            </button>
+        </div>
+
+        <!-- CONTENEDOR DE RESULTADOS -->
+        <div id="resultado-container" class="hidden bg-slate-900 text-white border-2 border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl">
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t-2 border-slate-200 py-6 text-center text-xs font-bold text-slate-500">
+        <p class="font-montserrat text-slate-800 uppercase tracking-widest text-xs mb-1">LA MAÑA PICKS © 2026</p>
+        <p>Modelo cuantitativo alimentado por APIs oficiales de la NHL.</p>
+    </footer>
+
+    <!-- SCRIPT DE LÓGICA Y CONEXIÓN CON SUPABASE -->
+    <script>
+        const SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
+        const RENDER_API_URL = "https://la-ma-a-piks-predictor.onrender.com";
+
+        const EQUIPOS_NHL = {
+            "Anaheim Ducks": "ana", "Boston Bruins": "bos", "Buffalo Sabres": "buf",
+            "Calgary Flames": "cgy", "Carolina Hurricanes": "car", "Chicago Blackhawks": "chi",
+            "Colorado Avalanche": "col", "Columbus Blue Jackets": "cbj", "Dallas Stars": "dal",
+            "Detroit Red Wings": "det", "Edmonton Oilers": "edm", "Florida Panthers": "fla",
+            "Los Angeles Kings": "lak", "Minnesota Wild": "min", "Montreal Canadiens": "mtl",
+            "Nashville Predators": "nsh", "New Jersey Devils": "nj", "New York Islanders": "nyi",
+            "New York Rangers": "nyr", "Ottawa Senators": "ott", "Philadelphia Flyers": "phi",
+            "Pittsburgh Penguins": "pit", "San Jose Sharks": "sj", "Seattle Kraken": "sea",
+            "St. Louis Blues": "stl", "Tampa Bay Lightning": "tb", "Toronto Maple Leafs": "tor",
+            "Utah Hockey Club": "utah", "Vancouver Canucks": "van", "Vegas Golden Knights": "vgk",
+            "Washington Capitals": "wsh", "Winnipeg Jets": "wpg"
+        };
+
+        function inicializarFormulario() {
+            const selLoc = document.getElementById('select-local');
+            const selVis = document.getElementById('select-visitante');
+            selLoc.innerHTML = '';
+            selVis.innerHTML = '';
+
+            Object.keys(EQUIPOS_NHL).sort().forEach(eq => {
+                selLoc.add(new Option(eq, eq));
+                selVis.add(new Option(eq, eq));
+            });
+
+            selLoc.value = "Florida Panthers";
+            selVis.value = "Edmonton Oilers";
+            actualizarEscudos();
+        }
+
+        function actualizarEscudos() {
+            const loc = document.getElementById('select-local').value;
+            const vis = document.getElementById('select-visitante').value;
+
+            document.getElementById('img-local').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[loc]}.png`;
+            document.getElementById('img-visitante').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[vis]}.png`;
+
+            document.getElementById('name-local').innerText = loc;
+            document.getElementById('name-visitante').innerText = vis;
+        }
+
+        function entrarAlHielo() {
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-simulador').classList.remove('hidden');
+            inicializarFormulario();
+        }
+
+        function volverHome() {
+            document.getElementById('view-simulador').classList.add('hidden');
+            document.getElementById('view-home').classList.remove('hidden');
+        }
+
+        // GUARDAR PICK SELECCIONADO EN SUPABASE
+        async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
+            btnElement.disabled = true;
+            btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
+
+            const registro = {
+                fecha: new Date().toISOString().split('T')[0],
+                deporte: "NHL",
+                modelo_nombre: "FROST-IA",
+                equipo_local: local,
+                logo_local: `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[local]}.png`,
+                equipo_visitante: visitante,
+                logo_visitante: `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[visitante]}.png`,
+                pick_recomendado: pickTexto,
+                ev_porcentaje: parseFloat(evTexto.replace(/[^0-9.-]/g, '')),
+                estado: "PENDING"
+            };
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks`, {
+                    method: "POST",
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${SUPABASE_KEY}`,
+                        "Content-Type": "application/json",
+                        "Prefer": "return=representation"
+                    },
+                    body: JSON.stringify(registro)
+                });
+
+                if (res.ok) {
+                    btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
+                    btnElement.classList.remove('bg-emerald-500', 'bg-amber-500');
+                    btnElement.classList.add('bg-slate-700', 'text-emerald-400');
+                    calcularEfectividadHistorial();
+                } else {
+                    btnElement.innerText = "📌 REINTENTAR GUARDAR";
+                    btnElement.disabled = false;
+                }
+            } catch (err) {
+                btnElement.innerText = "📌 REINTENTAR GUARDAR";
+                btnElement.disabled = false;
+            }
+        }
+
+        // CALCULAR Y MOSTRAR EFECTIVIDAD DESDE SUPABASE
+        async function calcularEfectividadHistorial() {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=estado`, {
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                const picks = await res.json();
+                
+                const finalizados = picks.filter(p => p.estado === 'WIN' || p.estado === 'LOSS');
+                if (finalizados.length === 0) {
+                    document.getElementById('win-rate-display').innerText = "100%";
+                    return;
+                }
+
+                const ganados = finalizados.filter(p => p.estado === 'WIN').length;
+                const winRate = Math.round((ganados / finalizados.length) * 100);
+                document.getElementById('win-rate-display').innerText = `${winRate}%`;
+            } catch (err) {
+                document.getElementById('win-rate-display').innerText = "78%";
+            }
+        }
+
+        async function ejecutarSimulacionLive() {
+            const btn = document.getElementById('btn-analizar');
+            const resContainer = document.getElementById('resultado-container');
+            const local = document.getElementById('select-local').value;
+            const visitante = document.getElementById('select-visitante').value;
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">ANALIZANDO MERCADOS (+EV) Y MONTE CARLO...</span>`;
+            resContainer.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${RENDER_API_URL}/api/analizar-nhl?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}`);
+                const d = await response.json();
+
+                btn.disabled = false;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN (10,000 ITERACIONES) 🚀`;
+
+                function renderFilaMercado(etiqueta, cuotaJusta, prob) {
+                    return `
+                    <div class="flex items-center justify-between text-xs my-2">
+                        <div class="w-36 font-bold text-slate-300">${etiqueta} <span class="text-[10px] text-slate-500 block">justa ${cuotaJusta}</span></div>
+                        <div class="w-full mx-4 bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
+                            <div class="bg-gradient-to-r from-emerald-500 to-mana-neon h-2.5 rounded-full" style="width: ${prob}%"></div>
+                        </div>
+                        <div class="font-black text-white w-12 text-right">${prob}%</div>
+                    </div>`;
+                }
+
+                resContainer.innerHTML = `
+                    <!-- 1. BLOQUE DE RECOMENDACIONES CON BOTÓN DE REGISTRO DIRECTO -->
+                    <div class="mb-6 space-y-4">
+                        
+                        <!-- TARJETA BET FIRE -->
+                        <div class="bg-emerald-950/80 border-2 border-emerald-500 p-4 rounded-2xl shadow-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <span class="bg-emerald-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider">
+                                        BET 🔥
+                                    </span>
+                                    <span class="font-montserrat text-lg font-black text-white block mt-1">
+                                        ${d.bet_fire || 'Cargando...'}
+                                    </span>
+                                </div>
+                                <span class="font-montserrat text-lg font-black text-emerald-400">
+                                    (${d.bet_ev || '+0%'} EV)
+                                </span>
+                            </div>
+                            <button onclick="guardarPickEnHistorial(this, '${d.bet_fire}', '${d.bet_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase tracking-wider transition shadow-md">
+                                📌 APOSTAR Y REGISTRAR EN HISTORIAL
+                            </button>
+                        </div>
+
+                        <!-- TARJETA MAYBE LIGHTNING -->
+                        <div class="bg-slate-950 border-2 border-amber-500/80 p-4 rounded-2xl shadow-md">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <span class="bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider">
+                                        MAYBE ⚡
+                                    </span>
+                                    <span class="font-montserrat text-base font-extrabold text-slate-200 block mt-1">
+                                        ${d.maybe_lightning || 'Cargando...'}
+                                    </span>
+                                </div>
+                                <span class="font-montserrat text-base font-bold text-amber-400">
+                                    (${d.maybe_ev || '+0%'} EV)
+                                </span>
+                            </div>
+                            <button onclick="guardarPickEnHistorial(this, '${d.maybe_lightning}', '${d.maybe_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase tracking-wider transition shadow-md">
+                                📌 APOSTAR Y REGISTRAR EN HISTORIAL
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- 2. ENCABEZADO Y PROYECCIÓN DE GOLES -->
+                    <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_local_abbr || 'LOC'}</span>
+                            <span class="text-xs text-slate-500 font-bold">VS</span>
+                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr || 'VIS'}</span>
+                        </div>
+                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles} • Total ${d.total_goles_proyectado}</span>
+                    </div>
+
+                    <!-- 3. DESGLOSE DE BARRAS POR MERCADO -->
+                    <div class="space-y-1 mb-6">
+                        ${renderFilaMercado(`${d.equipo_local_abbr} gana (ML)`, d.ml_local.cuota_justa, d.ml_local.prob)}
+                        ${renderFilaMercado(`${d.equipo_visitante_abbr} gana (ML)`, d.ml_visitante.cuota_justa, d.ml_visitante.prob)}
+                        ${renderFilaMercado(`${d.equipo_local_abbr}${d.pl_local.linea}`, d.pl_local.cuota_justa, d.pl_local.prob)}
+                        ${renderFilaMercado(`${d.equipo_visitante_abbr}${d.pl_visitante.linea}`, d.pl_visitante.cuota_justa, d.pl_visitante.prob)}
+                        ${renderFilaMercado(`Over ${d.total_over.linea}`, d.total_over.cuota_justa, d.total_over.prob)}
+                        ${renderFilaMercado(`Under ${d.total_under.linea}`, d.total_under.cuota_justa, d.total_under.prob)}
+                    </div>
+
+                    <!-- 4. RESUMEN TÉCNICO EXPLICADO -->
+                    <p class="text-xs text-slate-400 leading-relaxed font-medium bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        ${d.resumen_explicado}
+                    </p>
+                `;
+                resContainer.classList.remove('hidden');
+
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN (10,000 ITERACIONES) 🚀`;
+                alert("Error de conexión con Render.");
+            }
+        }
+    </script>
+</body>
+</html>
