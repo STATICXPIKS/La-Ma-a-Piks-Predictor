@@ -145,39 +145,48 @@
                     <div class="grid grid-cols-2 gap-3 text-xs">
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota ML Local</label>
-                            <input id="cuota-ml-loc" type="number" step="0.01" value="1.85" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-ml-loc" type="number" step="0.01" value="1.84" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota ML Visitante</label>
-                            <input id="cuota-ml-vis" type="number" step="0.01" value="1.95" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-ml-vis" type="number" step="0.01" value="1.96" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. PUCK LINE / SPREAD -->
+                <!-- 2. PUCK LINE / SPREAD (AMBOS SELECTORES 100% MANUALES) -->
                 <div class="border-t border-slate-800 pt-3">
-                    <span class="text-[11px] font-bold text-slate-400 block mb-2">2. PUCK LINE (SPREAD)</span>
+                    <span class="text-[11px] font-bold text-slate-400 block mb-2">2. PUCK LINE (SPREAD MANUAL)</span>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Local</label>
-                            <select id="linea-pl-loc" onchange="sincronizarLineasPl()" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <select id="linea-pl-loc" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                                <option value="-2.5">-2.5</option>
                                 <option value="-1.5" selected>-1.5</option>
+                                <option value="-0.5">-0.5</option>
+                                <option value="+0.5">+0.5</option>
                                 <option value="+1.5">+1.5</option>
+                                <option value="+2.5">+2.5</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota PL Local</label>
-                            <input id="cuota-pl-loc" type="number" step="0.01" value="2.85" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-pl-loc" type="number" step="0.01" value="1.32" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Visitante</label>
-                            <select id="linea-pl-vis" disabled class="w-full bg-slate-900 border border-slate-800 p-2 rounded-lg text-slate-500 font-bold">
-                                <option value="+1.5">+1.5</option>
+                            <select id="linea-pl-vis" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                                <option value="-2.5">-2.5</option>
+                                <option value="-1.5">-1.5</option>
+                                <option value="-0.5">-0.5</option>
+                                <option value="+0.5">+0.5</option>
+                                <option value="+1.5" selected>+1.5</option>
+                                <option value="+2.5">+2.5</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota PL Visitante</label>
-                            <input id="cuota-pl-vis" type="number" step="0.01" value="1.45" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-pl-vis" type="number" step="0.01" value="3.35" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
@@ -193,8 +202,8 @@
                                 <option value="4.0">4.0 Goles</option>
                                 <option value="4.5">4.5 Goles</option>
                                 <option value="5.0">5.0 Goles</option>
-                                <option value="5.5">5.5 Goles</option>
-                                <option value="6.0" selected>6.0 Goles</option>
+                                <option value="5.5" selected>5.5 Goles</option>
+                                <option value="6.0">6.0 Goles</option>
                                 <option value="6.5">6.5 Goles</option>
                                 <option value="7.0">7.0 Goles</option>
                                 <option value="7.5">7.5 Goles</option>
@@ -206,11 +215,11 @@
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Over</label>
-                            <input id="cuota-over" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-over" type="number" step="0.01" value="1.63" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Under</label>
-                            <input id="cuota-under" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-under" type="number" step="0.01" value="2.23" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
@@ -271,12 +280,6 @@
 
         let miGraficaChart = null;
 
-        function sincronizarLineasPl() {
-            const locVal = document.getElementById('linea-pl-loc').value;
-            const visSelect = document.getElementById('linea-pl-vis');
-            visSelect.innerHTML = locVal === "-1.5" ? '<option value="+1.5" selected>+1.5</option>' : '<option value="-1.5" selected>-1.5</option>';
-        }
-
         function inicializarFormulario() {
             const selLoc = document.getElementById('select-local');
             const selVis = document.getElementById('select-visitante');
@@ -288,8 +291,8 @@
                 selVis.add(new Option(eq, eq));
             });
 
-            selLoc.value = "Florida Panthers";
-            selVis.value = "Edmonton Oilers";
+            selLoc.value = "New Jersey Devils";
+            selVis.value = "Colorado Avalanche";
             actualizarEscudos();
         }
 
@@ -326,7 +329,7 @@
                 });
                 const picks = await res.json();
 
-                if (!picks || picks.length === 0) {
+                if (!picks || !Array.isArray(picks) || picks.length === 0) {
                     container.innerHTML = `<p class="text-slate-400 text-center text-sm font-medium">Aún no has registrado apuestas en tu historial.</p>`;
                     return;
                 }
@@ -366,11 +369,12 @@
             document.getElementById('modal-historial').classList.add('hidden');
         }
 
+        // REGISTRO SEGURO Y ULTRA-SINCRO EN SUPABASE
         async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
             btnElement.disabled = true;
             btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
 
-            const registro = {
+            const payload = {
                 fecha: new Date().toISOString().split('T')[0],
                 deporte: "NHL",
                 modelo_nombre: "FROST-IA",
@@ -392,18 +396,20 @@
                         "Content-Type": "application/json",
                         "Prefer": "return=minimal"
                     },
-                    body: JSON.stringify(registro)
+                    body: JSON.stringify(payload)
                 });
 
-                if (res.ok || res.status === 201) {
+                if (res.ok || res.status === 201 || res.status === 204) {
                     btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
                     btnElement.className = "w-full mt-2 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-2.5 rounded-xl uppercase border border-emerald-500/30";
                     cargarMetricasYGrafica();
                 } else {
+                    console.error("Respuesta fallida Supabase:", res.status);
                     btnElement.innerText = "📌 REINTENTAR GUARDAR";
                     btnElement.disabled = false;
                 }
             } catch (err) {
+                console.error("Error en red:", err);
                 btnElement.innerText = "📌 REINTENTAR GUARDAR";
                 btnElement.disabled = false;
             }
@@ -416,10 +422,10 @@
                 });
                 const picks = await res.json();
 
-                const totalPicks = picks ? picks.length : 0;
-                const wins = picks ? picks.filter(p => p.estado === 'WIN').length : 0;
-                const losses = picks ? picks.filter(p => p.estado === 'LOSS').length : 0;
-                const pending = picks ? picks.filter(p => p.estado === 'PENDING').length : 0;
+                const totalPicks = picks && Array.isArray(picks) ? picks.length : 0;
+                const wins = picks && Array.isArray(picks) ? picks.filter(p => p.estado === 'WIN').length : 0;
+                const losses = picks && Array.isArray(picks) ? picks.filter(p => p.estado === 'LOSS').length : 0;
+                const pending = picks && Array.isArray(picks) ? picks.filter(p => p.estado === 'PENDING').length : 0;
 
                 const finalizados = wins + losses;
                 const winRate = finalizados > 0 ? Math.round((wins / finalizados) * 100) : 100;
@@ -460,18 +466,18 @@
             const local = document.getElementById('select-local').value;
             const visitante = document.getElementById('select-visitante').value;
 
-            // CUOTAS Y LÍNEAS PERSONALIZADAS
-            const cMlLoc = document.getElementById('cuota-ml-loc').value || 1.85;
-            const cMlVis = document.getElementById('cuota-ml-vis').value || 1.95;
+            // CUOTAS Y LÍNEAS INDEPENDIENTES
+            const cMlLoc = document.getElementById('cuota-ml-loc').value || 1.84;
+            const cMlVis = document.getElementById('cuota-ml-vis').value || 1.96;
             
             const lPlLoc = document.getElementById('linea-pl-loc').value || -1.5;
-            const cPlLoc = document.getElementById('cuota-pl-loc').value || 2.85;
-            const lPlVis = lPlLoc === "-1.5" ? 1.5 : -1.5;
-            const cPlVis = document.getElementById('cuota-pl-vis').value || 1.45;
+            const cPlLoc = document.getElementById('cuota-pl-loc').value || 1.32;
+            const lPlVis = document.getElementById('linea-pl-vis').value || 1.5;
+            const cPlVis = document.getElementById('cuota-pl-vis').value || 3.35;
 
-            const lTotal = document.getElementById('linea-total-goles').value || 6.0;
-            const cOver = document.getElementById('cuota-over').value || 1.90;
-            const cUnder = document.getElementById('cuota-under').value || 1.90;
+            const lTotal = document.getElementById('linea-total-goles').value || 5.5;
+            const cOver = document.getElementById('cuota-over').value || 1.63;
+            const cUnder = document.getElementById('cuota-under').value || 2.23;
 
             btn.disabled = true;
             btn.innerHTML = `<span class="animate-pulse">EVALUANDO TUS LÍNEAS Y CUOTAS EN MONTE CARLO...</span>`;
