@@ -9,7 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
     
-    <!-- TAILWIND CSS & CHART.JS PARA LA GRÁFICA -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -38,177 +37,162 @@
             filter: drop-shadow(0px 0px 8px rgba(0, 255, 102, 0.75)) drop-shadow(0px 0px 18px rgba(0, 255, 102, 0.35));
             transition: filter 0.3s ease-in-out;
         }
-        .neon-shield:hover {
-            filter: drop-shadow(0px 0px 12px rgba(0, 255, 102, 0.95)) drop-shadow(0px 0px 25px rgba(0, 255, 102, 0.55));
-        }
     </style>
 </head>
 <body class="bg-mana-bg text-slate-900 font-inter min-h-screen flex flex-col justify-between" onload="cargarMetricasYGrafica()">
 
-    <!-- BARRA SUPERIOR DE BRANDING -->
+    <!-- HEADER -->
     <header class="bg-white border-b-2 border-slate-200 py-4 px-6 relative">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-mana-neon via-mana-gold to-mana-neon"></div>
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <span class="font-montserrat text-2xl font-black tracking-tight text-slate-900">
-                    LA MAÑA <span class="text-emerald-600">PICKS</span>
-                </span>
-            </div>
+            <span class="font-montserrat text-2xl font-black tracking-tight text-slate-900">
+                LA MAÑA <span class="text-emerald-600">PICKS</span>
+            </span>
             
-            <div class="flex items-center gap-3 md:gap-4">
+            <div class="flex items-center gap-3">
                 <button onclick="abrirModalHistorial()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl flex items-center gap-2 border border-slate-700 shadow-sm transition">
                     <span class="text-[10px] text-slate-400 font-extrabold uppercase">HISTORIAL:</span>
                     <span id="win-rate-display" class="font-montserrat text-xs font-black text-mana-neon">--%</span>
                     <span class="text-xs">📜</span>
                 </button>
-
-                <div class="flex items-center gap-2">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="h-8 object-contain">
-                    <span class="bg-emerald-50 border border-emerald-200 text-mana-darkgreen text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider hidden md:inline-block">
-                        FROST-IA • NHL
-                    </span>
-                </div>
+                <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="h-8 object-contain">
             </div>
         </div>
     </header>
 
-    <!-- PANTALLA 1: HOME CON PREDICCIONES Y GRÁFICA DE RENDIMIENTO -->
+    <!-- HOME -->
     <section id="view-home" class="max-w-4xl mx-auto w-full px-4 py-10 flex-grow flex flex-col items-center justify-center text-center">
         <div class="relative mb-6">
-            <div class="w-36 h-36 md:w-44 md:h-44 rounded-full bg-gradient-to-b from-emerald-100 to-amber-50 p-2 shadow-2xl border-4 border-white flex items-center justify-center">
-                <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-24 h-24 object-contain drop-shadow-md">
+            <div class="w-36 h-36 rounded-full bg-gradient-to-b from-emerald-100 to-amber-50 p-2 shadow-2xl border-4 border-white flex items-center justify-center">
+                <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-24 h-24 object-contain">
             </div>
             <span class="absolute -bottom-2 bg-slate-900 text-mana-neon font-montserrat text-[11px] font-black px-3 py-1 rounded-full border border-emerald-400">
                 TEMPORADA 2026-2027
             </span>
         </div>
 
-        <h1 class="font-montserrat text-4xl md:text-6xl font-black text-slate-900 mb-3 uppercase tracking-tight">
+        <h1 class="font-montserrat text-4xl md:text-6xl font-black text-slate-900 mb-3 uppercase">
             FROST-<span class="text-emerald-600">IA</span>
         </h1>
-        <p class="text-slate-600 font-bold text-sm md:text-base max-w-xl mb-6">
-            Inteligencia Artificial cuantitativa para la NHL: simulaciones Monte Carlo, xG, Corsi y detección de picks con valor (+EV).
+        <p class="text-slate-600 font-bold text-sm max-w-xl mb-6">
+            Simulaciones Monte Carlo, xG, Corsi y detección de picks con valor (+EV) personalizado.
         </p>
 
-        <button onclick="entrarAlHielo()" class="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 hover:from-emerald-400 hover:to-emerald-500 text-white font-montserrat font-black text-lg px-10 py-4 rounded-2xl shadow-xl shadow-emerald-500/30 transition transform hover:-translate-y-1 active:translate-y-0 uppercase tracking-wider flex items-center gap-3 mb-10">
+        <button onclick="entrarAlHielo()" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black text-lg px-10 py-4 rounded-2xl shadow-xl shadow-emerald-500/30 hover:scale-105 transition uppercase mb-10">
             ENTRAR AL HIELO 🏒
         </button>
 
-        <!-- PANEL Y GRÁFICA DE EFECTIVIDAD Y APUESTAS -->
+        <!-- PANEL DE RENDIMIENTO -->
         <div class="w-full bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl text-left">
-            <div class="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                <div class="w-3 h-6 bg-mana-neon rounded-full"></div>
-                <h3 class="font-montserrat text-base font-black text-slate-900 uppercase">
-                    RENDIMIENTO HISTÓRICO EN VIVO
-                </h3>
-            </div>
-
+            <h3 class="font-montserrat text-base font-black text-slate-900 uppercase mb-4 pb-2 border-b">
+                RENDIMIENTO HISTÓRICO EN VIVO
+            </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                <!-- TARJETAS DE MÉTIRCAS -->
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-center">
-                        <span class="text-[10px] text-slate-400 font-black block uppercase">EFECTIVIDAD</span>
+                    <div class="bg-slate-50 p-3 rounded-2xl border text-center">
+                        <span class="text-[10px] text-slate-400 font-black block">EFECTIVIDAD</span>
                         <span id="stat-winrate" class="font-montserrat text-xl font-black text-emerald-600">--%</span>
                     </div>
-                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-center">
-                        <span class="text-[10px] text-slate-400 font-black block uppercase">REGISTRADOS</span>
+                    <div class="bg-slate-50 p-3 rounded-2xl border text-center">
+                        <span class="text-[10px] text-slate-400 font-black block">REGISTRADOS</span>
                         <span id="stat-totales" class="font-montserrat text-xl font-black text-slate-800">0</span>
                     </div>
-                    <div class="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 text-center">
-                        <span class="text-[10px] text-emerald-600 font-black block uppercase">GANADOS ✅</span>
+                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-center">
+                        <span class="text-[10px] text-emerald-600 font-black block">GANADOS ✅</span>
                         <span id="stat-wins" class="font-montserrat text-xl font-black text-emerald-700">0</span>
                     </div>
-                    <div class="bg-rose-50 p-3.5 rounded-2xl border border-rose-200 text-center">
-                        <span class="text-[10px] text-rose-500 font-black block uppercase">PERDIDOS ❌</span>
+                    <div class="bg-rose-50 p-3 rounded-2xl border border-rose-200 text-center">
+                        <span class="text-[10px] text-rose-500 font-black block">PERDIDOS ❌</span>
                         <span id="stat-losses" class="font-montserrat text-xl font-black text-rose-600">0</span>
                     </div>
                 </div>
-
-                <!-- CONTENEDOR DE LA GRÁFICA CHART.JS -->
-                <div class="relative h-44 w-full flex items-center justify-center">
+                <div class="relative h-40 w-full flex items-center justify-center">
                     <canvas id="graficaEfectividad"></canvas>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- PANTALLA 2: SIMULADOR -->
-    <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 md:p-6 my-4 flex-grow">
-        <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 md:p-8 shadow-xl mb-8">
-            <div class="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-8 bg-mana-neon rounded-full"></div>
-                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase tracking-wide">
-                        CONFIGURAR PARTIDO NHL
-                    </h2>
-                </div>
-                <button onclick="volverHome()" class="text-xs font-bold text-slate-400 hover:text-slate-600 underline">
-                    ← Volver a Inicio
-                </button>
+    <!-- SIMULADOR Y CONFIGURACIÓN DE CUOTAS MANUALES -->
+    <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 my-4 flex-grow">
+        <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl mb-8">
+            <div class="flex justify-between items-center mb-6 pb-2 border-b">
+                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">CONFIGURAR PARTIDO Y CUOTAS REALES</h2>
+                <button onclick="volverHome()" class="text-xs font-bold text-slate-400 hover:text-slate-600 underline">← Inicio</button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                    <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">EQUIPO LOCAL 🏠</label>
-                    <select id="select-local" onchange="actualizarEscudos()" class="w-full bg-white border-2 border-slate-300 rounded-xl p-3 text-sm font-black text-slate-800 focus:border-emerald-500 focus:outline-none transition shadow-sm">
-                    </select>
+            <!-- SELECTOR DE EQUIPOS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-slate-50 p-3 rounded-2xl border">
+                    <label class="block text-xs font-extrabold text-slate-500 mb-1">LOCAL 🏠</label>
+                    <select id="select-local" onchange="actualizarEscudos()" class="w-full bg-white border p-2 rounded-xl text-sm font-bold"></select>
                 </div>
-
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                    <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">EQUIPO VISITANTE ✈️</label>
-                    <select id="select-visitante" onchange="actualizarEscudos()" class="w-full bg-white border-2 border-slate-300 rounded-xl p-3 text-sm font-black text-slate-800 focus:border-emerald-500 focus:outline-none transition shadow-sm">
-                    </select>
+                <div class="bg-slate-50 p-3 rounded-2xl border">
+                    <label class="block text-xs font-extrabold text-slate-500 mb-1">VISITANTE ✈️</label>
+                    <select id="select-visitante" onchange="actualizarEscudos()" class="w-full bg-white border p-2 rounded-xl text-sm font-bold"></select>
                 </div>
             </div>
 
-            <div class="flex justify-around items-center bg-slate-900 text-white p-6 rounded-2xl mb-6 shadow-inner border border-slate-800">
+            <!-- ENTRADA DE CUOTAS DE TU CASINO DE APUESTAS -->
+            <div class="bg-slate-900 text-white p-4 rounded-2xl mb-6">
+                <span class="text-xs font-montserrat font-bold text-mana-neon block mb-3 uppercase tracking-wider">
+                    🎯 CONFIGURA LAS CUOTAS REALES DE TU CASINO (DECIMALES):
+                </span>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div>
+                        <label class="text-slate-400 block mb-1">ML Local</label>
+                        <input id="cuota-ml-loc" type="number" step="0.01" value="1.85" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">ML Visita</label>
+                        <input id="cuota-ml-vis" type="number" step="0.01" value="1.95" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">Cuota Over 6.0</label>
+                        <input id="cuota-over" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">Cuota Under 6.0</label>
+                        <input id="cuota-under" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-around items-center bg-slate-950 text-white p-4 rounded-2xl mb-6 border border-slate-800">
                 <div class="text-center w-5/12">
-                    <img id="img-local" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 neon-shield" referrerpolicy="no-referrer">
-                    <span id="name-local" class="font-montserrat text-xs md:text-sm font-bold block truncate text-slate-200"></span>
+                    <img id="img-local" class="w-16 h-16 object-contain mx-auto mb-1 neon-shield" referrerpolicy="no-referrer">
+                    <span id="name-local" class="font-montserrat text-xs font-bold block truncate"></span>
                 </div>
-                <span class="font-montserrat text-mana-neon font-black text-xl italic">VS</span>
+                <span class="font-montserrat text-mana-neon font-black italic">VS</span>
                 <div class="text-center w-5/12">
-                    <img id="img-visitante" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 neon-shield" referrerpolicy="no-referrer">
-                    <span id="name-visitante" class="font-montserrat text-xs md:text-sm font-bold block truncate text-slate-200"></span>
+                    <img id="img-visitante" class="w-16 h-16 object-contain mx-auto mb-1 neon-shield" referrerpolicy="no-referrer">
+                    <span id="name-visitante" class="font-montserrat text-xs font-bold block truncate"></span>
                 </div>
             </div>
 
-            <button onclick="ejecutarSimulacionLive()" id="btn-analizar" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-montserrat font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/20 transition uppercase tracking-wider text-sm md:text-base border border-emerald-400">
-                EJECUTAR SIMULACIÓN (10,000 ITERACIONES) 🚀
+            <button onclick="ejecutarSimulacionLive()" id="btn-analizar" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-4 rounded-2xl uppercase tracking-wider text-sm shadow-lg">
+                EJECUTAR SIMULACIÓN CON MIS CUOTAS 🚀
             </button>
         </div>
 
-        <div id="resultado-container" class="hidden bg-slate-900 text-white border-2 border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl">
-        </div>
+        <div id="resultado-container" class="hidden bg-slate-900 text-white border-2 border-slate-800 rounded-3xl p-6 shadow-2xl"></div>
     </main>
 
     <!-- MODAL HISTORIAL -->
     <div id="modal-historial" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border-2 border-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-900/50">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">📜</span>
-                    <h3 class="font-montserrat text-lg font-black text-white uppercase tracking-wider">HISTORIAL DE APUESTAS REGISTRADAS</h3>
-                </div>
-                <button onclick="cerrarModalHistorial()" class="text-slate-400 hover:text-white font-black text-lg p-1">✕</button>
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="flex justify-between items-center p-5 border-b border-slate-800">
+                <h3 class="font-montserrat text-sm font-black text-white uppercase">HISTORIAL DE APUESTAS REGISTRADAS</h3>
+                <button onclick="cerrarModalHistorial()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
             </div>
-
-            <div id="lista-historial-content" class="p-6 overflow-y-auto flex-grow space-y-3">
-                <p class="text-slate-400 text-center text-sm font-medium animate-pulse">Cargando apuestas desde Supabase...</p>
-            </div>
-
+            <div id="lista-historial-content" class="p-5 overflow-y-auto flex-grow space-y-3"></div>
             <div class="p-4 border-t border-slate-800 bg-slate-950 text-right">
-                <button onclick="cerrarModalHistorial()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-montserrat font-bold px-5 py-2.5 rounded-xl uppercase tracking-wider">Cerrar</button>
+                <button onclick="cerrarModalHistorial()" class="bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl">Cerrar</button>
             </div>
         </div>
     </div>
 
-    <footer class="bg-white border-t-2 border-slate-200 py-6 text-center text-xs font-bold text-slate-500">
-        <p class="font-montserrat text-slate-800 uppercase tracking-widest text-xs mb-1">LA MAÑA PICKS © 2026</p>
-        <p>Modelo cuantitativo alimentado por APIs oficiales de la NHL.</p>
-    </footer>
-
-    <!-- SCRIPT DE LÓGICA CON RENDIMIENTO Y GRÁFICA DE DONA -->
+    <!-- SCRIPT DE LÓGICA -->
     <script>
         const SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co";
         const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
@@ -275,10 +259,7 @@
 
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=*&order=id.desc`, {
-                    headers: {
-                        "apikey": SUPABASE_KEY,
-                        "Authorization": `Bearer ${SUPABASE_KEY}`
-                    }
+                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
                 });
                 const picks = await res.json();
 
@@ -299,23 +280,22 @@
                     }
 
                     return `
-                        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                        <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex justify-between items-center">
                             <div>
-                                <span class="text-[10px] text-slate-500 font-bold block">${p.fecha || 'Fecha N/A'} • ${p.deporte || 'NHL'}</span>
-                                <span class="font-montserrat font-bold text-sm text-white block mt-0.5">${p.equipo_local} vs ${p.equipo_visitante}</span>
-                                <span class="font-montserrat font-black text-xs text-mana-neon block mt-1">${p.pick_recomendado}</span>
+                                <span class="text-[10px] text-slate-500 font-bold block">${p.fecha || 'N/A'}</span>
+                                <span class="font-montserrat font-bold text-xs text-white block">${p.equipo_local} vs ${p.equipo_visitante}</span>
+                                <span class="font-montserrat font-black text-xs text-mana-neon block mt-0.5">${p.pick_recomendado}</span>
                             </div>
                             <div class="text-right">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-black border ${badgeColor}">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${badgeColor}">
                                     ${estadoTexto}
                                 </span>
-                                <span class="text-[11px] font-bold text-slate-400 block mt-2">${p.ev_porcentaje ? '+' + p.ev_porcentaje + '% EV' : ''}</span>
                             </div>
                         </div>
                     `;
                 }).join('');
             } catch (err) {
-                container.innerHTML = `<p class="text-rose-400 text-center text-sm font-medium">Error al obtener el historial.</p>`;
+                container.innerHTML = `<p class="text-rose-400 text-center text-sm font-medium">Error al cargar historial.</p>`;
             }
         }
 
@@ -323,36 +303,39 @@
             document.getElementById('modal-historial').classList.add('hidden');
         }
 
-        // GUARDAR PICK A TRAVÉS DE RENDER
+        // FUNCIÓN CORREGIDA DE GUARDADO DIRECTO A SUPABASE
         async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
             btnElement.disabled = true;
             btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
 
-            const payload = {
+            const registro = {
                 fecha: new Date().toISOString().split('T')[0],
                 deporte: "NHL",
                 modelo_nombre: "FROST-IA",
-                equipo_local: local,
+                equipo_local: String(local),
                 logo_local: `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[local]}.png`,
-                equipo_visitante: visitante,
+                equipo_visitante: String(visitante),
                 logo_visitante: `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[visitante]}.png`,
-                pick_recomendado: pickTexto,
-                ev_porcentaje: parseFloat(evTexto.replace(/[^0-9.-]/g, '')) || 0.0,
+                pick_recomendado: String(pickTexto),
+                ev_porcentaje: parseFloat(String(evTexto).replace(/[^0-9.-]/g, '')) || 0.0,
                 estado: "PENDING"
             };
 
             try {
-                const res = await fetch(`${RENDER_API_URL}/api/guardar-pick`, {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${SUPABASE_KEY}`,
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal"
+                    },
+                    body: JSON.stringify(registro)
                 });
-                const json = await res.json();
 
-                if (json.status === "success") {
+                if (res.ok || res.status === 201) {
                     btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
-                    btnElement.classList.remove('bg-emerald-500', 'bg-amber-500');
-                    btnElement.classList.add('bg-slate-700', 'text-emerald-400');
+                    btnElement.className = "w-full mt-2 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-2.5 rounded-xl uppercase border border-emerald-500/30";
                     cargarMetricasYGrafica();
                 } else {
                     btnElement.innerText = "📌 REINTENTAR GUARDAR";
@@ -364,14 +347,10 @@
             }
         }
 
-        // CARGAR DATOS REALES Y DIBUJAR LA GRÁFICA DE DONA
         async function cargarMetricasYGrafica() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=estado`, {
-                    headers: {
-                        "apikey": SUPABASE_KEY,
-                        "Authorization": `Bearer ${SUPABASE_KEY}`
-                    }
+                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
                 });
                 const picks = await res.json();
 
@@ -389,16 +368,13 @@
                 document.getElementById('stat-wins').innerText = wins;
                 document.getElementById('stat-losses').innerText = losses;
 
-                // DIBUJAR O ACTUALIZAR GRÁFICA DE DONA
                 const ctx = document.getElementById('graficaEfectividad').getContext('2d');
-                if (miGraficaChart) {
-                    miGraficaChart.destroy();
-                }
+                if (miGraficaChart) { miGraficaChart.destroy(); }
 
                 miGraficaChart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Ganadas (WIN)', 'Perdidas (LOSS)', 'Pendientes'],
+                        labels: ['Ganadas', 'Perdidas', 'Pendientes'],
                         datasets: [{
                             data: [wins > 0 ? wins : 1, losses, pending],
                             backgroundColor: ['#10B981', '#F43F5E', '#F59E0B'],
@@ -409,23 +385,11 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'right',
-                                labels: {
-                                    boxWidth: 12,
-                                    font: { family: 'Inter', size: 10, weight: 'bold' }
-                                }
-                            }
-                        },
+                        plugins: { legend: { display: true, position: 'right' } },
                         cutout: '70%'
                     }
                 });
-
-            } catch (err) {
-                console.error("Error cargando métricas:", err);
-            }
+            } catch (err) {}
         }
 
         async function ejecutarSimulacionLive() {
@@ -434,16 +398,23 @@
             const local = document.getElementById('select-local').value;
             const visitante = document.getElementById('select-visitante').value;
 
+            // LEER CUOTAS MANUALES
+            const cMlLoc = document.getElementById('cuota-ml-loc').value || 1.85;
+            const cMlVis = document.getElementById('cuota-ml-vis').value || 1.95;
+            const cOver = document.getElementById('cuota-over').value || 1.90;
+            const cUnder = document.getElementById('cuota-under').value || 1.90;
+
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">ANALIZANDO MERCADOS (+EV) Y MONTE CARLO...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">EVALUANDO TUS CUOTAS EN MONTE CARLO...</span>`;
             resContainer.classList.add('hidden');
 
             try {
-                const response = await fetch(`${RENDER_API_URL}/api/analizar-nhl?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}`);
+                const url = `${RENDER_API_URL}/api/analizar-nhl?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}&c_ml_loc=${cMlLoc}&c_ml_vis=${cMlVis}&c_over=${cOver}&c_under=${cUnder}`;
+                const response = await fetch(url);
                 const d = await response.json();
 
                 btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN (10,000 ITERACIONES) 🚀`;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS 🚀`;
 
                 function renderFilaMercado(etiqueta, cuotaJusta, prob) {
                     return `
@@ -461,18 +432,12 @@
                         <div class="bg-emerald-950/80 border-2 border-emerald-500 p-4 rounded-2xl shadow-lg">
                             <div class="flex justify-between items-center mb-2">
                                 <div>
-                                    <span class="bg-emerald-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider">
-                                        BET 🔥
-                                    </span>
-                                    <span class="font-montserrat text-lg font-black text-white block mt-1">
-                                        ${d.bet_fire || 'Cargando...'}
-                                    </span>
+                                    <span class="bg-emerald-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded uppercase">BET 🔥</span>
+                                    <span class="font-montserrat text-lg font-black text-white block mt-1">${d.bet_fire}</span>
                                 </div>
-                                <span class="font-montserrat text-lg font-black text-emerald-400">
-                                    (${d.bet_ev || '+0%'} EV)
-                                </span>
+                                <span class="font-montserrat text-lg font-black text-emerald-400">(${d.bet_ev} EV)</span>
                             </div>
-                            <button onclick="guardarPickEnHistorial(this, '${d.bet_fire}', '${d.bet_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase tracking-wider transition shadow-md">
+                            <button onclick="guardarPickEnHistorial(this, '${d.bet_fire}', '${d.bet_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase transition">
                                 📌 APOSTAR Y REGISTRAR EN HISTORIAL
                             </button>
                         </div>
@@ -480,18 +445,12 @@
                         <div class="bg-slate-950 border-2 border-amber-500/80 p-4 rounded-2xl shadow-md">
                             <div class="flex justify-between items-center mb-2">
                                 <div>
-                                    <span class="bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider">
-                                        MAYBE ⚡
-                                    </span>
-                                    <span class="font-montserrat text-base font-extrabold text-slate-200 block mt-1">
-                                        ${d.maybe_lightning || 'Cargando...'}
-                                    </span>
+                                    <span class="bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded uppercase">MAYBE ⚡</span>
+                                    <span class="font-montserrat text-base font-extrabold text-slate-200 block mt-1">${d.maybe_lightning}</span>
                                 </div>
-                                <span class="font-montserrat text-base font-bold text-amber-400">
-                                    (${d.maybe_ev || '+0%'} EV)
-                                </span>
+                                <span class="font-montserrat text-base font-bold text-amber-400">(${d.maybe_ev} EV)</span>
                             </div>
-                            <button onclick="guardarPickEnHistorial(this, '${d.maybe_lightning}', '${d.maybe_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase tracking-wider transition shadow-md">
+                            <button onclick="guardarPickEnHistorial(this, '${d.maybe_lightning}', '${d.maybe_ev}', '${local}', '${visitante}')" class="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-montserrat font-black text-xs py-2.5 rounded-xl uppercase transition">
                                 📌 APOSTAR Y REGISTRAR EN HISTORIAL
                             </button>
                         </div>
@@ -499,9 +458,9 @@
 
                     <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_local_abbr || 'LOC'}</span>
+                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_local_abbr}</span>
                             <span class="text-xs text-slate-500 font-bold">VS</span>
-                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr || 'VIS'}</span>
+                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr}</span>
                         </div>
                         <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles} • Total ${d.total_goles_proyectado}</span>
                     </div>
@@ -515,15 +474,14 @@
                         ${renderFilaMercado(`Under ${d.total_under.linea}`, d.total_under.cuota_justa, d.total_under.prob)}
                     </div>
 
-                    <p class="text-xs text-slate-400 leading-relaxed font-medium bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <p class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800">
                         ${d.resumen_explicado}
                     </p>
                 `;
                 resContainer.classList.remove('hidden');
-
             } catch (err) {
                 btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN (10,000 ITERACIONES) 🚀`;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS 🚀`;
                 alert("Error de conexión con Render.");
             }
         }
