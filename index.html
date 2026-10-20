@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Maña Picks • Modelo NHL (FROST-IA)</title>
+    <title>La Maña Picks • Hub Multideporte (FROST-IA & BLITZ-IA)</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,9 +45,9 @@
     <header class="bg-white border-b-2 border-slate-200 py-4 px-6 relative">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-mana-neon via-mana-gold to-mana-neon"></div>
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <span class="font-montserrat text-2xl font-black tracking-tight text-slate-900">
+            <button onclick="volverHome()" class="font-montserrat text-2xl font-black tracking-tight text-slate-900 text-left">
                 LA MAÑA <span class="text-emerald-600">PICKS</span>
-            </span>
+            </button>
             
             <div class="flex items-center gap-3">
                 <button onclick="abrirModalHistorial()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl flex items-center gap-2 border border-slate-700 shadow-sm transition">
@@ -55,37 +55,58 @@
                     <span id="win-rate-display" class="font-montserrat text-xs font-black text-mana-neon">--%</span>
                     <span class="text-xs">📜</span>
                 </button>
-                <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="h-8 object-contain">
             </div>
         </div>
     </header>
 
-    <!-- HOME -->
-    <section id="view-home" class="max-w-4xl mx-auto w-full px-4 py-10 flex-grow flex flex-col items-center justify-center text-center">
-        <div class="relative mb-6">
-            <div class="w-36 h-36 rounded-full bg-gradient-to-b from-emerald-100 to-amber-50 p-2 shadow-2xl border-4 border-white flex items-center justify-center">
-                <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-24 h-24 object-contain">
-            </div>
-            <span class="absolute -bottom-2 bg-slate-900 text-mana-neon font-montserrat text-[11px] font-black px-3 py-1 rounded-full border border-emerald-400">
-                TEMPORADA 2026-2027
-            </span>
-        </div>
-
-        <h1 class="font-montserrat text-4xl md:text-6xl font-black text-slate-900 mb-3 uppercase">
-            FROST-<span class="text-emerald-600">IA</span>
+    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE (SELECCIÓN DE MODELO) -->
+    <section id="view-home" class="max-w-5xl mx-auto w-full px-4 py-10 flex-grow flex flex-col items-center justify-center text-center">
+        <h1 class="font-montserrat text-3xl md:text-5xl font-black text-slate-900 mb-2 uppercase tracking-tight">
+            MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
         </h1>
-        <p class="text-slate-600 font-bold text-sm max-w-xl mb-6">
-            Simulaciones Monte Carlo, xG, Corsi y detección de picks con valor (+EV) personalizado.
+        <p class="text-slate-600 font-bold text-sm md:text-base max-w-xl mb-10">
+            Simulaciones Monte Carlo, EPA, Corsi, xG y detección de apuestas con valor (+EV). Selecciona tu emparrillado o pista de hielo.
         </p>
 
-        <button onclick="entrarAlHielo()" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black text-lg px-10 py-4 rounded-2xl shadow-xl shadow-emerald-500/30 hover:scale-105 transition uppercase mb-10">
-            ENTRAR AL HIELO 🏒
-        </button>
+        <!-- CARDS DE SELECCIÓN DE MODELO -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl mb-12">
+            
+            <!-- MODELO NHL (FROST-IA) -->
+            <div class="bg-white border-2 border-slate-200 hover:border-emerald-500 rounded-3xl p-6 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-28 h-28 rounded-full bg-gradient-to-b from-emerald-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-4">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-16 h-16 object-contain">
+                </div>
+                <span class="bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-3 py-1 rounded-full mb-3 border border-emerald-400">
+                    NHL • HOCKEY
+                </span>
+                <h2 class="font-montserrat text-2xl font-black text-slate-900 uppercase mb-2">FROST-IA</h2>
+                <p class="text-xs text-slate-500 font-medium mb-6">xG, Corsi, Fenwick, Moneyline, Puck Line ($\pm 1.5$) y Totales de goles.</p>
+                <button onclick="seleccionarDeporte('NHL')" class="w-full mt-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                    ENTRAR AL HIELO 🏒
+                </button>
+            </div>
 
-        <!-- PANEL DE RENDIMIENTO -->
-        <div class="w-full bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl text-left">
+            <!-- MODELO NFL (BLITZ-IA) -->
+            <div class="bg-white border-2 border-slate-200 hover:border-amber-500 rounded-3xl p-6 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-28 h-28 rounded-full bg-gradient-to-b from-amber-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-4">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg" alt="NFL Logo" class="w-16 h-16 object-contain">
+                </div>
+                <span class="bg-slate-900 text-mana-gold font-montserrat text-[10px] font-black px-3 py-1 rounded-full mb-3 border border-amber-400">
+                    NFL • FÚTBOL AMERICANO
+                </span>
+                <h2 class="font-montserrat text-2xl font-black text-slate-900 uppercase mb-2">BLITZ-IA</h2>
+                <p class="text-xs text-slate-500 font-medium mb-6">EPA/Drive, Rating QB, Clima, Point Spread ($\pm 3.5, \pm 7.0$) y Totales.</p>
+                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-amber-500 to-amber-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                    ENTRAR AL EMPARRILLADO 🏈
+                </button>
+            </div>
+
+        </div>
+
+        <!-- PANEL DE RENDIMIENTO GENERAL -->
+        <div class="w-full max-w-3xl bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl text-left">
             <h3 class="font-montserrat text-base font-black text-slate-900 uppercase mb-4 pb-2 border-b">
-                RENDIMIENTO HISTÓRICO EN VIVO
+                RENDIMIENTO HISTÓRICO GLOBAL EN VIVO
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                 <div class="grid grid-cols-2 gap-3">
@@ -113,15 +134,22 @@
         </div>
     </section>
 
-    <!-- SIMULADOR CON NUEVO ORDEN DE SECCIONES -->
+    <!-- PANTALLA 2: SIMULADOR DINÁMICO (NHL / NFL) -->
     <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 my-4 flex-grow">
         <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl mb-8">
             <div class="flex justify-between items-center mb-6 pb-2 border-b">
-                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">CONFIGURAR PARTIDO Y CUOTAS REALES</h2>
-                <button onclick="volverHome()" class="text-xs font-bold text-slate-400 hover:text-slate-600 underline">← Inicio</button>
+                <div class="flex items-center gap-2">
+                    <span id="simulador-badge-deporte" class="bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border">
+                        NHL
+                    </span>
+                    <h2 id="simulador-titulo-modelo" class="font-montserrat text-lg font-black text-slate-900 uppercase">
+                        FROST-IA • CONFIGURACIÓN
+                    </h2>
+                </div>
+                <button onclick="volverHome()" class="text-xs font-bold text-slate-400 hover:text-slate-600 underline">← Volver a Hub</button>
             </div>
 
-            <!-- 1. SELECTOR DE EQUIPOS (ARRIBA) -->
+            <!-- SELECTOR DE EQUIPOS -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div class="bg-slate-50 p-3 rounded-2xl border">
                     <label class="block text-xs font-extrabold text-slate-500 mb-1">LOCAL 🏠</label>
@@ -133,7 +161,7 @@
                 </div>
             </div>
 
-            <!-- 2. LOGOS DE LOS EQUIPOS CON SILUETA NEÓN (ARRIBA) -->
+            <!-- ESCUDOS CON SILUETA NEÓN -->
             <div class="flex justify-around items-center bg-slate-950 text-white p-4 rounded-2xl mb-6 border border-slate-800">
                 <div class="text-center w-5/12">
                     <img id="img-local" class="w-16 h-16 object-contain mx-auto mb-1 neon-shield" referrerpolicy="no-referrer">
@@ -146,7 +174,7 @@
                 </div>
             </div>
 
-            <!-- 3. CONFIGURACIÓN DE CUOTAS Y LÍNEAS (LUEGO DE LOS LOGOS) -->
+            <!-- PANEL DE CUOTAS Y LÍNEAS -->
             <div class="bg-slate-900 text-white p-5 rounded-2xl mb-6 space-y-4">
                 <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider">
                     🎯 CONFIGURA LAS LÍNEAS Y CUOTAS REALES DE TU CASINO:
@@ -167,84 +195,54 @@
                     </div>
                 </div>
 
-                <!-- PUCK LINE -->
+                <!-- SPREAD / PUCKLINE -->
                 <div class="border-t border-slate-800 pt-3">
-                    <span class="text-[11px] font-bold text-slate-400 block mb-2">2. PUCK LINE (SPREAD MANUAL)</span>
+                    <span id="etiqueta-mercado-spread" class="text-[11px] font-bold text-slate-400 block mb-2">2. SPREAD / HANDICAP MANUAL</span>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Local</label>
-                            <select id="linea-pl-loc" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
-                                <option value="-2.5">-2.5</option>
-                                <option value="-1.5" selected>-1.5</option>
-                                <option value="-0.5">-0.5</option>
-                                <option value="+0.5">+0.5</option>
-                                <option value="+1.5">+1.5</option>
-                                <option value="+2.5">+2.5</option>
-                            </select>
+                            <select id="linea-pl-loc" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black"></select>
                         </div>
                         <div>
-                            <label class="text-slate-400 block mb-1">Cuota PL Local</label>
-                            <input id="cuota-pl-loc" type="number" step="0.01" value="1.32" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <label class="text-slate-400 block mb-1">Cuota Local</label>
+                            <input id="cuota-pl-loc" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Visitante</label>
-                            <select id="linea-pl-vis" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
-                                <option value="-2.5">-2.5</option>
-                                <option value="-1.5">-1.5</option>
-                                <option value="-0.5">-0.5</option>
-                                <option value="+0.5">+0.5</option>
-                                <option value="+1.5" selected>+1.5</option>
-                                <option value="+2.5">+2.5</option>
-                            </select>
+                            <select id="linea-pl-vis" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black"></select>
                         </div>
                         <div>
-                            <label class="text-slate-400 block mb-1">Cuota PL Visitante</label>
-                            <input id="cuota-pl-vis" type="number" step="0.01" value="3.35" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <label class="text-slate-400 block mb-1">Cuota Visitante</label>
+                            <input id="cuota-pl-vis" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
 
                 <!-- OVER / UNDER -->
                 <div class="border-t border-slate-800 pt-3">
-                    <span class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTAL DE GOLES (OVER / UNDER)</span>
+                    <span id="etiqueta-mercado-totales" class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTALES (OVER / UNDER)</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         <div>
-                            <label class="text-slate-400 block mb-1">Línea Total (3.5 a 9.5)</label>
-                            <select id="linea-total-goles" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
-                                <option value="3.5">3.5 Goles</option>
-                                <option value="4.0">4.0 Goles</option>
-                                <option value="4.5">4.5 Goles</option>
-                                <option value="5.0">5.0 Goles</option>
-                                <option value="5.5" selected>5.5 Goles</option>
-                                <option value="6.0">6.0 Goles</option>
-                                <option value="6.5">6.5 Goles</option>
-                                <option value="7.0">7.0 Goles</option>
-                                <option value="7.5">7.5 Goles</option>
-                                <option value="8.0">8.0 Goles</option>
-                                <option value="8.5">8.5 Goles</option>
-                                <option value="9.0">9.0 Goles</option>
-                                <option value="9.5">9.5 Goles</option>
-                            </select>
+                            <label class="text-slate-400 block mb-1">Línea Total</label>
+                            <select id="linea-total-goles" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black"></select>
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Over</label>
-                            <input id="cuota-over" type="number" step="0.01" value="1.63" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-over" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Under</label>
-                            <input id="cuota-under" type="number" step="0.01" value="2.23" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-under" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 4. BOTÓN DE EJECUTAR SIMULACIÓN -->
             <button onclick="ejecutarSimulacionLive()" id="btn-analizar" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-4 rounded-2xl uppercase tracking-wider text-sm shadow-lg">
-                EJECUTAR SIMULACIÓN CON MIS CUOTAS Y LÍNEAS 🚀
+                EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀
             </button>
         </div>
 
-        <!-- 5. CONTENEDOR DE RESULTADOS (AL FINAL) -->
         <div id="resultado-container" class="hidden bg-slate-900 text-white border-2 border-slate-800 rounded-3xl p-6 shadow-2xl"></div>
     </main>
 
@@ -267,6 +265,8 @@
         const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
         const RENDER_API_URL = "https://la-ma-a-piks-predictor.onrender.com";
 
+        let deporteActual = "NHL";
+
         const EQUIPOS_NHL = {
             "Anaheim Ducks": "ana", "Boston Bruins": "bos", "Buffalo Sabres": "buf",
             "Calgary Flames": "cgy", "Carolina Hurricanes": "car", "Chicago Blackhawks": "chi",
@@ -281,14 +281,25 @@
             "Washington Capitals": "wsh", "Winnipeg Jets": "wpg"
         };
 
+        const EQUIPOS_NFL = {
+            "Arizona Cardinals": "ari", "Atlanta Falcons": "atl", "Baltimore Ravens": "bal",
+            "Buffalo Bills": "buf", "Carolina Panthers": "car", "Chicago Bears": "chi",
+            "Cincinnati Bengals": "cin", "Cleveland Browns": "cle", "Dallas Cowboys": "dal",
+            "Denver Broncos": "den", "Detroit Lions": "det", "Green Bay Packers": "gb",
+            "Houston Texans": "hou", "Indianapolis Colts": "ind", "Jacksonville Jaguars": "jax",
+            "Kansas City Chiefs": "kc", "Las Vegas Raiders": "lv", "Los Angeles Chargers": "lac",
+            "Los Angeles Rams": "lar", "Miami Dolphins": "mia", "Minnesota Vikings": "min",
+            "New England Patriots": "ne", "New Orleans Saints": "no", "New York Giants": "nyg",
+            "New York Jets": "nyj", "Philadelphia Eagles": "phi", "Pittsburgh Steelers": "pit",
+            "San Francisco 49ers": "sf", "Seattle Seahawks": "sea", "Tampa Bay Buccaneers": "tb",
+            "Tennessee Titans": "ten", "Washington Commanders": "was"
+        };
+
         let miGraficaChart = null;
 
         function obtenerPicksGuardados() {
-            try {
-                return JSON.parse(localStorage.getItem('picks_historial_local')) || [];
-            } catch (e) {
-                return [];
-            }
+            try { return JSON.parse(localStorage.getItem('picks_historial_local')) || []; }
+            catch (e) { return []; }
         }
 
         function guardarPickEnLocal(pickObj) {
@@ -297,19 +308,93 @@
             localStorage.setItem('picks_historial_local', JSON.stringify(lista));
         }
 
-        function inicializarFormulario() {
+        function seleccionarDeporte(dep) {
+            deporteActual = dep;
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-simulador').classList.remove('hidden');
+
+            const badge = document.getElementById('simulador-badge-deporte');
+            const titulo = document.getElementById('simulador-titulo-modelo');
+
+            if (dep === 'NHL') {
+                badge.innerText = "NHL";
+                badge.className = "bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-400";
+                titulo.innerText = "FROST-IA • SIMULADOR HOCKEY";
+                cargarOpcionesNHL();
+            } else {
+                badge.innerText = "NFL";
+                badge.className = "bg-slate-900 text-mana-gold font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-amber-400";
+                titulo.innerText = "BLITZ-IA • SIMULADOR EMPARRILLADO";
+                cargarOpcionesNFL();
+            }
+        }
+
+        function cargarOpcionesNHL() {
+            const dic = EQUIPOS_NHL;
             const selLoc = document.getElementById('select-local');
             const selVis = document.getElementById('select-visitante');
-            selLoc.innerHTML = '';
-            selVis.innerHTML = '';
+            selLoc.innerHTML = ''; selVis.innerHTML = '';
 
-            Object.keys(EQUIPOS_NHL).sort().forEach(eq => {
+            Object.keys(dic).sort().forEach(eq => {
                 selLoc.add(new Option(eq, eq));
                 selVis.add(new Option(eq, eq));
             });
 
             selLoc.value = "New Jersey Devils";
             selVis.value = "Colorado Avalanche";
+
+            document.getElementById('etiqueta-mercado-spread').innerText = "2. PUCK LINE (SPREAD MANUAL)";
+            document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
+
+            // Líneas PuckLine NHL
+            const plLoc = document.getElementById('linea-pl-loc');
+            const plVis = document.getElementById('linea-pl-vis');
+            plLoc.innerHTML = '<option value="-1.5" selected>-1.5</option><option value="+1.5">+1.5</option>';
+            plVis.innerHTML = '<option value="+1.5" selected>+1.5</option><option value="-1.5">-1.5</option>';
+
+            // Totales NHL
+            const selTot = document.getElementById('linea-total-goles');
+            selTot.innerHTML = '';
+            [4.5, 5.0, 5.5, 6.0, 6.5, 7.0].forEach(v => {
+                selTot.add(new Option(`${v} Goles`, v, false, v === 5.5));
+            });
+
+            actualizarEscudos();
+        }
+
+        function cargarOpcionesNFL() {
+            const dic = EQUIPOS_NFL;
+            const selLoc = document.getElementById('select-local');
+            const selVis = document.getElementById('select-visitante');
+            selLoc.innerHTML = ''; selVis.innerHTML = '';
+
+            Object.keys(dic).sort().forEach(eq => {
+                selLoc.add(new Option(eq, eq));
+                selVis.add(new Option(eq, eq));
+            });
+
+            selLoc.value = "Kansas City Chiefs";
+            selVis.value = "San Francisco 49ers";
+
+            document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
+            document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
+
+            // Líneas Spread NFL
+            const plLoc = document.getElementById('linea-pl-loc');
+            const plVis = document.getElementById('linea-pl-vis');
+            plLoc.innerHTML = ''; plVis.innerHTML = '';
+            [-10.5, -7.5, -6.5, -3.5, -2.5, +2.5, +3.5, +6.5, +7.5].forEach(v => {
+                plLoc.add(new Option(`${v > 0 ? '+' : ''}${v}`, v, false, v === -3.5));
+                plVis.add(new Option(`${v > 0 ? '+' : ''}${v}`, v, false, v === 3.5));
+            });
+
+            // Totales NFL
+            const selTot = document.getElementById('linea-total-goles');
+            selTot.innerHTML = '';
+            [37.5, 41.5, 43.5, 45.5, 47.5, 49.5, 51.5, 54.5].forEach(v => {
+                selTot.add(new Option(`${v} Puntos`, v, false, v === 47.5));
+            });
+
             actualizarEscudos();
         }
 
@@ -317,17 +402,16 @@
             const loc = document.getElementById('select-local').value;
             const vis = document.getElementById('select-visitante').value;
 
-            document.getElementById('img-local').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[loc]}.png`;
-            document.getElementById('img-visitante').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[vis]}.png`;
+            if (deporteActual === 'NHL') {
+                document.getElementById('img-local').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[loc]}.png`;
+                document.getElementById('img-visitante').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[vis]}.png`;
+            } else {
+                document.getElementById('img-local').src = `https://a.espncdn.com/i/teamlogos/nfl/500/${EQUIPOS_NFL[loc]}.png`;
+                document.getElementById('img-visitante').src = `https://a.espncdn.com/i/teamlogos/nfl/500/${EQUIPOS_NFL[vis]}.png`;
+            }
 
             document.getElementById('name-local').innerText = loc;
             document.getElementById('name-visitante').innerText = vis;
-        }
-
-        function entrarAlHielo() {
-            document.getElementById('view-home').classList.add('hidden');
-            document.getElementById('view-simulador').classList.remove('hidden');
-            inicializarFormulario();
         }
 
         function volverHome() {
@@ -370,7 +454,7 @@
                 return `
                     <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex justify-between items-center">
                         <div>
-                            <span class="text-[10px] text-slate-500 font-bold block">${p.fecha || 'N/A'}</span>
+                            <span class="text-[10px] text-slate-500 font-bold block">${p.fecha || 'N/A'} • ${p.deporte || 'NHL'}</span>
                             <span class="font-montserrat font-bold text-xs text-white block">${p.equipo_local} vs ${p.equipo_visitante}</span>
                             <span class="font-montserrat font-black text-xs text-mana-neon block mt-0.5">${p.pick_recomendado}</span>
                         </div>
@@ -397,7 +481,7 @@
 
             const nuevoPick = {
                 fecha: new Date().toISOString().split('T')[0],
-                deporte: "NHL",
+                deporte: deporteActual,
                 equipo_local: String(local),
                 equipo_visitante: String(visitante),
                 pick_recomendado: String(pickTexto),
@@ -487,25 +571,31 @@
             const cMlVis = document.getElementById('cuota-ml-vis').value || 1.96;
             
             const lPlLoc = document.getElementById('linea-pl-loc').value || -1.5;
-            const cPlLoc = document.getElementById('cuota-pl-loc').value || 1.32;
+            const cPlLoc = document.getElementById('cuota-pl-loc').value || 1.90;
             const lPlVis = document.getElementById('linea-pl-vis').value || 1.5;
-            const cPlVis = document.getElementById('cuota-pl-vis').value || 3.35;
+            const cPlVis = document.getElementById('cuota-pl-vis').value || 1.90;
 
             const lTotal = document.getElementById('linea-total-goles').value || 5.5;
-            const cOver = document.getElementById('cuota-over').value || 1.63;
-            const cUnder = document.getElementById('cuota-under').value || 2.23;
+            const cOver = document.getElementById('cuota-over').value || 1.90;
+            const cUnder = document.getElementById('cuota-under').value || 1.90;
 
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">EVALUANDO TUS LÍNEAS Y CUOTAS EN MONTE CARLO...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">EJECUTANDO SIMULACIÓN MONTE CARLO (10,000 ITERACIONES)...</span>`;
             resContainer.classList.add('hidden');
 
+            const endpoint = deporteActual === 'NHL' ? '/api/analizar-nhl' : '/api/analizar-nfl';
+            const paramSpreadLoc = deporteActual === 'NHL' ? 'l_pl_loc' : 'l_spread_loc';
+            const paramSpreadVis = deporteActual === 'NHL' ? 'l_pl_vis' : 'l_spread_vis';
+            const paramCuotaSpreadLoc = deporteActual === 'NHL' ? 'c_pl_loc' : 'c_spread_loc';
+            const paramCuotaSpreadVis = deporteActual === 'NHL' ? 'c_pl_vis' : 'c_spread_vis';
+
             try {
-                const url = `${RENDER_API_URL}/api/analizar-nhl?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}&c_ml_loc=${cMlLoc}&c_ml_vis=${cMlVis}&l_pl_loc=${lPlLoc}&c_pl_loc=${cPlLoc}&l_pl_vis=${lPlVis}&c_pl_vis=${cPlVis}&l_total=${lTotal}&c_over=${cOver}&c_under=${cUnder}`;
+                const url = `${RENDER_API_URL}${endpoint}?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}&c_ml_loc=${cMlLoc}&c_ml_vis=${cMlVis}&${paramSpreadLoc}=${lPlLoc}&${paramCuotaSpreadLoc}=${cPlLoc}&${paramSpreadVis}=${lPlVis}&${paramCuotaSpreadVis}=${cPlVis}&l_total=${lTotal}&c_over=${cOver}&c_under=${cUnder}`;
                 const response = await fetch(url);
                 const d = await response.json();
 
                 btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS Y LÍNEAS 🚀`;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀`;
 
                 function renderFilaMercado(etiqueta, cuotaJusta, prob) {
                     return `
@@ -520,6 +610,12 @@
 
                 window.dataBetFire = { pick: d.bet_fire, ev: d.bet_ev, loc: local, vis: visitante };
                 window.dataBetMaybe = { pick: d.maybe_lightning, ev: d.maybe_ev, loc: local, vis: visitante };
+
+                const labelSpreadLoc = deporteActual === 'NHL' ? `${d.equipo_local_abbr} ${d.pl_local ? d.pl_local.linea : ''}` : `${d.equipo_local_abbr} ${d.spread_local ? d.spread_local.linea : ''}`;
+                const labelSpreadVis = deporteActual === 'NHL' ? `${d.equipo_visitante_abbr} ${d.pl_visitante ? d.pl_visitante.linea : ''}` : `${d.equipo_visitante_abbr} ${d.spread_visitante ? d.spread_visitante.linea : ''}`;
+
+                const dataSpreadLoc = deporteActual === 'NHL' ? d.pl_local : d.spread_local;
+                const dataSpreadVis = deporteActual === 'NHL' ? d.pl_visitante : d.spread_visitante;
 
                 resContainer.innerHTML = `
                     <div class="mb-6 space-y-4">
@@ -556,14 +652,14 @@
                             <span class="text-xs text-slate-500 font-bold">VS</span>
                             <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr}</span>
                         </div>
-                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles} • Total ${d.total_goles_proyectado}</span>
+                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos} • Total ${d.total_goles_proyectado || d.total_puntos_proyectado}</span>
                     </div>
 
                     <div class="space-y-1 mb-6">
                         ${renderFilaMercado(`${d.equipo_local_abbr} gana (ML)`, d.ml_local.cuota_justa, d.ml_local.prob)}
                         ${renderFilaMercado(`${d.equipo_visitante_abbr} gana (ML)`, d.ml_visitante.cuota_justa, d.ml_visitante.prob)}
-                        ${renderFilaMercado(`${d.equipo_local_abbr}${d.pl_local.linea}`, d.pl_local.cuota_justa, d.pl_local.prob)}
-                        ${renderFilaMercado(`${d.equipo_visitante_abbr}${d.pl_visitante.linea}`, d.pl_visitante.cuota_justa, d.pl_visitante.prob)}
+                        ${renderFilaMercado(labelSpreadLoc, dataSpreadLoc.cuota_justa, dataSpreadLoc.prob)}
+                        ${renderFilaMercado(labelSpreadVis, dataSpreadVis.cuota_justa, dataSpreadVis.prob)}
                         ${renderFilaMercado(`Over ${d.total_over.linea}`, d.total_over.cuota_justa, d.total_over.prob)}
                         ${renderFilaMercado(`Under ${d.total_under.linea}`, d.total_under.cuota_justa, d.total_under.prob)}
                     </div>
@@ -575,7 +671,7 @@
                 resContainer.classList.remove('hidden');
             } catch (err) {
                 btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS Y LÍNEAS 🚀`;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀`;
                 alert("Error de conexión con Render.");
             }
         }
