@@ -1,10 +1,10 @@
 import os
-import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from nhl_model import ejecutar_modelo_nhl_completo, SUPABASE_URL, HEADERS_SUPABASE
+from nhl_model import ejecutar_modelo_nhl_completo
+from nfl_model import ejecutar_modelo_nfl_completo
 
-app = FastAPI(title="La Maña Picks - API NHL")
+app = FastAPI(title="La Maña Picks - API Multi-Deporte")
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,7 +16,7 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"status": "Servidor Activo", "deporte": "NHL"}
+    return {"status": "Servidor Activo", "modelos": ["FROST-IA (NHL)", "BLITZ-IA (NFL)"]}
 
 @app.get("/api/analizar-nhl")
 def analizar_nhl(
@@ -43,29 +43,36 @@ def analizar_nhl(
         cuota_pl_vis=c_pl_vis,
         linea_total=l_total,
         cuota_over=c_over,
-        cuota_under=c_under,
-        linea_sog=62.5,
-        cuota_sog_over=1.85,
-        cuota_sog_under=1.85
+        cuota_under=c_under
     )
 
-@app.post("/api/guardar-pick")
-def guardar_pick_backend(payload: dict):
-    try:
-        r = requests.post(
-            f"{SUPABASE_URL}/rest/v1/picks",
-            headers=HEADERS_SUPABASE,
-            json=payload,
-            timeout=8
-        )
-        if r.status_code in [200, 201, 204]:
-            return {"status": "ok"}
-        else:
-            print("⚠️ Error Supabase:", r.text)
-            return {"status": "error", "message": r.text}
-    except Exception as e:
-        print("⚠️ Excepcion Backend:", str(e))
-        return {"status": "error", "message": str(e)}
+@app.get("/api/analizar-nfl")
+def analizar_nfl(
+    local: str = "Kansas City Chiefs",
+    visitante: str = "San Francisco 49ers",
+    c_ml_loc: float = 1.70,
+    c_ml_vis: float = 2.20,
+    l_spread_loc: float = -3.5,
+    c_spread_loc: float = 1.90,
+    l_spread_vis: float = 3.5,
+    c_spread_vis: float = 1.90,
+    l_total: float = 47.5,
+    c_over: float = 1.90,
+    c_under: float = 1.90
+):
+    return ejecutar_modelo_nfl_completo(
+        loc_nombre=local,
+        vis_nombre=visitante,
+        cuota_ml_loc=c_ml_loc,
+        cuota_ml_vis=c_ml_vis,
+        linea_spread_loc=l_spread_loc,
+        cuota_spread_loc=c_spread_loc,
+        linea_spread_vis=l_spread_vis,
+        cuota_spread_vis=c_spread_vis,
+        linea_total=l_total,
+        cuota_over=c_over,
+        cuota_under=c_under
+    )
 
 if __name__ == "__main__":
     import uvicorn
