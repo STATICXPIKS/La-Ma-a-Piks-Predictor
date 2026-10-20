@@ -369,19 +369,17 @@
             document.getElementById('modal-historial').classList.add('hidden');
         }
 
-        // GUARDADO A TRAVÉS DEL BACKEND EN RENDER (EVITA RLS Y CORS)
+        // FUNCIÓN DE GUARDADO CON PAYLOAD ULTRA-LIMPIO PARA ESQUEMA SUPABASE
         async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
             btnElement.disabled = true;
             btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
 
-            const payload = {
+            // Únicamente los 7 campos universales obligatorios
+            const payloadLimpio = {
                 fecha: new Date().toISOString().split('T')[0],
                 deporte: "NHL",
-                modelo_nombre: "FROST-IA",
                 equipo_local: String(local),
-                logo_local: `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[local]}.png`,
                 equipo_visitante: String(visitante),
-                logo_visitante: `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[visitante]}.png`,
                 pick_recomendado: String(pickTexto),
                 ev_porcentaje: parseFloat(String(evTexto).replace(/[^0-9.-]/g, '')) || 0.0,
                 estado: "PENDING"
@@ -391,7 +389,7 @@
                 const res = await fetch(`${RENDER_API_URL}/api/guardar-pick`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payloadLimpio)
                 });
                 const json = await res.json();
 
@@ -400,10 +398,12 @@
                     btnElement.className = "w-full mt-2 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-2.5 rounded-xl uppercase border border-emerald-500/30";
                     cargarMetricasYGrafica();
                 } else {
+                    console.error("Respuesta error Render/Supabase:", json.message);
                     btnElement.innerText = "📌 REINTENTAR GUARDAR";
                     btnElement.disabled = false;
                 }
             } catch (err) {
+                console.error("Error conexión:", err);
                 btnElement.innerText = "📌 REINTENTAR GUARDAR";
                 btnElement.disabled = false;
             }
