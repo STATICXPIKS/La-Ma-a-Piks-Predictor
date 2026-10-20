@@ -153,7 +153,7 @@ def ejecutar_modelo_nhl_completo(
     sim_loc_final[empates] += ot_winners
     sim_vis_final[empates] += (~ot_winners)
 
-    # Probabilidades de Mercados
+    # Probabilidades reales de todos los mercados
     prob_ml_loc = round((np.sum(sim_loc_final > sim_vis_final) / N_SIM) * 100, 1)
     prob_ml_vis = round(100.0 - prob_ml_loc, 1)
     ev_ml_loc = round(prob_ml_loc - ((1.0 / float(cuota_ml_loc)) * 100), 1)
@@ -180,54 +180,32 @@ def ejecutar_modelo_nhl_completo(
     cuota_j_over = round(100.0 / prob_over, 2) if prob_over > 0 else 2.0
     cuota_j_under = round(100.0 / prob_under, 2) if prob_under > 0 else 2.0
 
-    # Clasificación de BET 🔥 y MAYBE ⚡
-    if ev_ml_loc >= 2.0:
-        bet_principal = f"{loc_nombre} ML @ {cuota_ml_loc}"
-        bet_ev = f"+{ev_ml_loc}%"
-    elif ev_ml_vis >= 2.0:
-        bet_principal = f"{vis_nombre} ML @ {cuota_ml_vis}"
-        bet_ev = f"+{ev_ml_vis}%"
-    elif ev_over >= 2.0:
-        bet_principal = f"OVER {l_tot} Goles @ {cuota_over}"
-        bet_ev = f"+{ev_over}%"
-    else:
-        fav_team = loc_nombre if prob_ml_loc >= prob_ml_vis else vis_nombre
-        fav_cuota = cuota_ml_loc if prob_ml_loc >= prob_ml_vis else cuota_ml_vis
-        fav_ev = max(ev_ml_loc, ev_ml_vis)
-        bet_principal = f"{fav_team} ML @ {fav_cuota}"
-        bet_ev = f"+{max(0.1, fav_ev)}%"
+    # =========================================================
+    # EVALUACIÓN DINÁMICA DE LOS 6 MERCADOS POR SU VALOR (+EV)
+    # =========================================================
+    todos_los_mercados = [
+        {"nombre": f"{loc_nombre} ML @ {cuota_ml_loc}", "ev": ev_ml_loc, "tipo": "ML"},
+        {"nombre": f"{vis_nombre} ML @ {cuota_ml_vis}", "ev": ev_ml_vis, "tipo": "ML"},
+        {"nombre": f"{loc_nombre} {linea_pl_loc:+g} @ {cuota_pl_loc}", "ev": ev_pl_loc, "tipo": "PL"},
+        {"nombre": f"{vis_nombre} {linea_pl_vis:+g} @ {cuota_pl_vis}", "ev": ev_pl_vis, "tipo": "PL"},
+        {"nombre": f"OVER {l_tot} Goles @ {cuota_over}", "ev": ev_over, "tipo": "TOTAL"},
+        {"nombre": f"UNDER {l_tot} Goles @ {cuota_under}", "ev": ev_under, "tipo": "TOTAL"}
+    ]
 
-    if ev_pl_vis >= 0.5 and "ML" in bet_principal:
-        maybe_principal = f"{vis_nombre} {linea_pl_vis:+g} @ {cuota_pl_vis}"
-        maybe_ev = f"+{max(0.2, ev_pl_vis)}%"
-    elif ev_under >= 0.5:
-        maybe_principal = f"UNDER {l_tot} Goles @ {cuota_under}"
-        maybe_ev = f"+{max(0.2, ev_under)}%"
-    else:
-        maybe_principal = f"{loc_nombre} {linea_pl_loc:+g} @ {cuota_pl_loc}"
-        maybe_ev = f"+{max(0.1, ev_pl_loc)}%"
+    # Ordenar estrictamente de mayor a menor según el % de EV
+    todos_los_mercados.sort(key=lambda x: x["ev"], reverse=True)
 
-    resumen_texto = f"{loc_nombre} vs {vis_nombre}: Proyección de {lambda_loc:.2f} a {lambda_vis:.2f} goles (Total proyectado: {lambda_loc + lambda_vis:.2f}). La mejor relación de valor detectada por FROST-IA sugiere enfocar la apuesta principal en {bet_principal}."
+    # El de mayor EV se asigna a BET 🔥
+    top_1 = todos_los_mercados[0]
+    bet_principal = top_1["nombre"]
+    bet_ev = f"{'+' if top_1['ev'] >= 0 else ''}{top_1['ev']}%"
 
-    registro_supabase = {
-        "fecha": datetime.now().strftime("%Y-%m-%d"),
-        "deporte": "NHL",
-        "modelo_nombre": "FROST-IA",
-        "equipo_local": loc_nombre,
-        "logo_local": f"https://a.espncdn.com/i/teamlogos/nhl/500/{loc_st['abbr']}.png",
-        "equipo_visitante": vis_nombre,
-        "logo_visitante": f"https://a.espncdn.com/i/teamlogos/nhl/500/{vis_st['abbr']}.png",
-        "pick_recomendado": bet_principal,
-        "cuota": float(cuota_ml_loc if prob_ml_loc >= prob_ml_vis else cuota_ml_vis),
-        "probabilidad": int(max(prob_ml_loc, prob_ml_vis)),
-        "ev_porcentaje": float(max(ev_ml_loc, ev_ml_vis)),
-        "estado": "PENDING"
-    }
+    # El segundo de mayor EV se asigna a MAYBE ⚡
+    top_2 = todos_los_mercados[1]
+    maybe_principal = top_2["nombre"]
+    maybe_ev = f"{'+' if top_2['ev'] >= 0 else ''}{top_2['ev']}%"
 
-    try:
-        requests.post(f"{SUPABASE_URL}/rest/v1/picks", headers=HEADERS_SUPABASE, json=registro_supabase, timeout=4)
-    except Exception as e:
-        print(f"Error Supabase: {e}")
+    resumen_texto = f"{loc_nombre} vs {vis_nombre}: Proyección de {lambda_loc:.2f} a {lambda_vis:.2f} goles (Total proyectado: {lambda_loc + lambda_vis:.2f}). La mejor relación de valor cuantificada por FROST-IA enfoca la apuesta principal en {bet_principal}."
 
     return {
         "equipo_local_abbr": loc_st["abbr"].upper(),
@@ -246,7 +224,3 @@ def ejecutar_modelo_nhl_completo(
         "total_under": {"linea": l_tot, "prob": prob_under, "cuota_justa": cuota_j_under},
         "resumen_explicado": resumen_texto
     }
-
-if __name__ == "__main__":
-    res = ejecutar_modelo_nhl_completo("Florida Panthers", "Edmonton Oilers")
-    print(res)
