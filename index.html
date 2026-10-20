@@ -39,7 +39,7 @@
         }
     </style>
 </head>
-<body class="bg-mana-bg text-slate-900 font-inter min-h-screen flex flex-col justify-between" onload="cargarMetricasYGrafica()">
+<body class="bg-mana-bg text-slate-900 font-inter min-h-screen flex flex-col justify-between" onload="cargarMetricasYGraficas()">
 
     <!-- HEADER -->
     <header class="bg-white border-b-2 border-slate-200 py-4 px-6 relative">
@@ -50,8 +50,8 @@
             </button>
             
             <div class="flex items-center gap-3">
-                <button onclick="abrirModalHistorial()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl flex items-center gap-2 border border-slate-700 shadow-sm transition">
-                    <span class="text-[10px] text-slate-400 font-extrabold uppercase">HISTORIAL:</span>
+                <button onclick="abrirModalHistorial('TODOS')" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl flex items-center gap-2 border border-slate-700 shadow-sm transition">
+                    <span class="text-[10px] text-slate-400 font-extrabold uppercase">GLOBAL:</span>
                     <span id="win-rate-display" class="font-montserrat text-xs font-black text-mana-neon">--%</span>
                     <span class="text-xs">📜</span>
                 </button>
@@ -59,8 +59,8 @@
         </div>
     </header>
 
-    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE (SELECCIÓN DE MODELO) -->
-    <section id="view-home" class="max-w-5xl mx-auto w-full px-4 py-10 flex-grow flex flex-col items-center justify-center text-center">
+    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE CON GRÁFICAS INDEPENDIENTES -->
+    <section id="view-home" class="max-w-6xl mx-auto w-full px-4 py-10 flex-grow flex flex-col items-center justify-center text-center">
         <h1 class="font-montserrat text-3xl md:text-5xl font-black text-slate-900 mb-2 uppercase tracking-tight">
             MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
         </h1>
@@ -68,73 +68,95 @@
             Simulaciones Monte Carlo, EPA, Corsi, xG y detección de apuestas con valor (+EV). Selecciona tu emparrillado o pista de hielo.
         </p>
 
-        <!-- CARDS DE SELECCIÓN DE MODELO -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl mb-12">
+        <!-- CARDS CON MÉTRICAS Y GRÁFICAS PROPIAS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mb-12">
             
             <!-- MODELO NHL (FROST-IA) -->
             <div class="bg-white border-2 border-slate-200 hover:border-emerald-500 rounded-3xl p-6 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-28 h-28 rounded-full bg-gradient-to-b from-emerald-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-4">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-16 h-16 object-contain">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-b from-emerald-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-2">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-12 h-12 object-contain">
                 </div>
-                <span class="bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-3 py-1 rounded-full mb-3 border border-emerald-400">
+                <span class="bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-3 py-0.5 rounded-full mb-2 border border-emerald-400">
                     NHL • HOCKEY
                 </span>
-                <h2 class="font-montserrat text-2xl font-black text-slate-900 uppercase mb-2">FROST-IA</h2>
-                <p class="text-xs text-slate-500 font-medium mb-6">xG, Corsi, Fenwick, Moneyline, Puck Line ($\pm 1.5$) y Totales de goles.</p>
-                <button onclick="seleccionarDeporte('NHL')" class="w-full mt-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                <h2 class="font-montserrat text-2xl font-black text-slate-900 uppercase mb-1">FROST-IA</h2>
+                <p class="text-xs text-slate-500 font-medium mb-4">xG, Corsi, Moneyline, Puck Line (-1.5) y Totales.</p>
+
+                <!-- MÉTRICAS Y GRÁFICA NHL -->
+                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 grid grid-cols-2 gap-2 items-center">
+                    <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                        <div class="bg-white p-2 rounded-xl border border-slate-200">
+                            <span class="text-[9px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                            <span id="nhl-stat-winrate" class="font-montserrat font-black text-emerald-600 text-sm">--%</span>
+                        </div>
+                        <div class="bg-white p-2 rounded-xl border border-slate-200">
+                            <span class="text-[9px] text-slate-400 font-bold block">REGISTRADOS</span>
+                            <span id="nhl-stat-totales" class="font-montserrat font-black text-slate-800 text-sm">0</span>
+                        </div>
+                        <div class="bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                            <span class="text-[9px] text-emerald-600 font-bold block">GANADOS ✅</span>
+                            <span id="nhl-stat-wins" class="font-montserrat font-black text-emerald-700 text-sm">0</span>
+                        </div>
+                        <div class="bg-rose-50 p-2 rounded-xl border border-rose-200">
+                            <span class="text-[9px] text-rose-500 font-bold block">PERDIDOS ❌</span>
+                            <span id="nhl-stat-losses" class="font-montserrat font-black text-rose-600 text-sm">0</span>
+                        </div>
+                    </div>
+                    <div class="relative h-28 w-full flex items-center justify-center">
+                        <canvas id="graficaNhl"></canvas>
+                    </div>
+                </div>
+
+                <button onclick="seleccionarDeporte('NHL')" class="w-full mt-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-3.5 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
                     ENTRAR AL HIELO 🏒
                 </button>
             </div>
 
             <!-- MODELO NFL (BLITZ-IA) -->
             <div class="bg-white border-2 border-slate-200 hover:border-amber-500 rounded-3xl p-6 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-28 h-28 rounded-full bg-gradient-to-b from-amber-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-4">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg" alt="NFL Logo" class="w-16 h-16 object-contain">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-b from-amber-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-2">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg" alt="NFL Logo" class="w-12 h-12 object-contain">
                 </div>
-                <span class="bg-slate-900 text-mana-gold font-montserrat text-[10px] font-black px-3 py-1 rounded-full mb-3 border border-amber-400">
+                <span class="bg-slate-900 text-mana-gold font-montserrat text-[10px] font-black px-3 py-0.5 rounded-full mb-2 border border-amber-400">
                     NFL • FÚTBOL AMERICANO
                 </span>
-                <h2 class="font-montserrat text-2xl font-black text-slate-900 uppercase mb-2">BLITZ-IA</h2>
-                <p class="text-xs text-slate-500 font-medium mb-6">EPA/Drive, Rating QB, Clima, Point Spread ($\pm 3.5, \pm 7.0$) y Totales.</p>
-                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-amber-500 to-amber-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                <h2 class="font-montserrat text-2xl font-black text-slate-900 uppercase mb-1">BLITZ-IA</h2>
+                <p class="text-xs text-slate-500 font-medium mb-4">EPA/Drive, Rating QB, Clima, Point Spread y Totales.</p>
+
+                <!-- MÉTRICAS Y GRÁFICA NFL -->
+                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 grid grid-cols-2 gap-2 items-center">
+                    <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                        <div class="bg-white p-2 rounded-xl border border-slate-200">
+                            <span class="text-[9px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                            <span id="nfl-stat-winrate" class="font-montserrat font-black text-amber-500 text-sm">--%</span>
+                        </div>
+                        <div class="bg-white p-2 rounded-xl border border-slate-200">
+                            <span class="text-[9px] text-slate-400 font-bold block">REGISTRADOS</span>
+                            <span id="nfl-stat-totales" class="font-montserrat font-black text-slate-800 text-sm">0</span>
+                        </div>
+                        <div class="bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                            <span class="text-[9px] text-emerald-600 font-bold block">GANADOS ✅</span>
+                            <span id="nfl-stat-wins" class="font-montserrat font-black text-emerald-700 text-sm">0</span>
+                        </div>
+                        <div class="bg-rose-50 p-2 rounded-xl border border-rose-200">
+                            <span class="text-[9px] text-rose-500 font-bold block">PERDIDOS ❌</span>
+                            <span id="nfl-stat-losses" class="font-montserrat font-black text-rose-600 text-sm">0</span>
+                        </div>
+                    </div>
+                    <div class="relative h-28 w-full flex items-center justify-center">
+                        <canvas id="graficaNfl"></canvas>
+                    </div>
+                </div>
+
+                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-amber-500 to-amber-600 text-white font-montserrat font-black py-3.5 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
                     ENTRAR AL EMPARRILLADO 🏈
                 </button>
             </div>
 
         </div>
-
-        <!-- PANEL DE RENDIMIENTO GENERAL -->
-        <div class="w-full max-w-3xl bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl text-left">
-            <h3 class="font-montserrat text-base font-black text-slate-900 uppercase mb-4 pb-2 border-b">
-                RENDIMIENTO HISTÓRICO GLOBAL EN VIVO
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-slate-50 p-3 rounded-2xl border text-center">
-                        <span class="text-[10px] text-slate-400 font-black block">EFECTIVIDAD</span>
-                        <span id="stat-winrate" class="font-montserrat text-xl font-black text-emerald-600">--%</span>
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-2xl border text-center">
-                        <span class="text-[10px] text-slate-400 font-black block">REGISTRADOS</span>
-                        <span id="stat-totales" class="font-montserrat text-xl font-black text-slate-800">0</span>
-                    </div>
-                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-center">
-                        <span class="text-[10px] text-emerald-600 font-black block">GANADOS ✅</span>
-                        <span id="stat-wins" class="font-montserrat text-xl font-black text-emerald-700">0</span>
-                    </div>
-                    <div class="bg-rose-50 p-3 rounded-2xl border border-rose-200 text-center">
-                        <span class="text-[10px] text-rose-500 font-black block">PERDIDOS ❌</span>
-                        <span id="stat-losses" class="font-montserrat text-xl font-black text-rose-600">0</span>
-                    </div>
-                </div>
-                <div class="relative h-40 w-full flex items-center justify-center">
-                    <canvas id="graficaEfectividad"></canvas>
-                </div>
-            </div>
-        </div>
     </section>
 
-    <!-- PANTALLA 2: SIMULADOR DINÁMICO (NHL / NFL) -->
+    <!-- PANTALLA 2: SIMULADOR DINÁMICO -->
     <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 my-4 flex-grow">
         <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl mb-8">
             <div class="flex justify-between items-center mb-6 pb-2 border-b">
@@ -246,14 +268,22 @@
         <div id="resultado-container" class="hidden bg-slate-900 text-white border-2 border-slate-800 rounded-3xl p-6 shadow-2xl"></div>
     </main>
 
-    <!-- MODAL HISTORIAL -->
+    <!-- MODAL HISTORIAL CON FILTROS -->
     <div id="modal-historial" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="flex justify-between items-center p-5 border-b border-slate-800">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center">
                 <h3 class="font-montserrat text-sm font-black text-white uppercase">HISTORIAL DE APUESTAS REGISTRADAS</h3>
                 <button onclick="cerrarModalHistorial()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
             </div>
+
+            <div class="bg-slate-950 px-5 py-2 border-b border-slate-800 flex gap-2">
+                <button onclick="filtrarHistorial('TODOS')" id="btn-f-todos" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-white">TODOS</button>
+                <button onclick="filtrarHistorial('NHL')" id="btn-f-nhl" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400">NHL 🏒</button>
+                <button onclick="filtrarHistorial('NFL')" id="btn-f-nfl" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400">NFL 🏈</button>
+            </div>
+
             <div id="lista-historial-content" class="p-5 overflow-y-auto flex-grow space-y-3"></div>
+
             <div class="p-4 border-t border-slate-800 bg-slate-950 text-right">
                 <button onclick="cerrarModalHistorial()" class="bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl">Cerrar</button>
             </div>
@@ -266,6 +296,7 @@
         const RENDER_API_URL = "https://la-ma-a-piks-predictor.onrender.com";
 
         let deporteActual = "NHL";
+        let filtroHistorialActual = "TODOS";
 
         const EQUIPOS_NHL = {
             "Anaheim Ducks": "ana", "Boston Bruins": "bos", "Buffalo Sabres": "buf",
@@ -295,7 +326,8 @@
             "Tennessee Titans": "ten", "Washington Commanders": "was"
         };
 
-        let miGraficaChart = null;
+        let chartNhl = null;
+        let chartNfl = null;
 
         function obtenerPicksGuardados() {
             try { return JSON.parse(localStorage.getItem('picks_historial_local')) || []; }
@@ -346,13 +378,11 @@
             document.getElementById('etiqueta-mercado-spread').innerText = "2. PUCK LINE (SPREAD MANUAL)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
 
-            // Líneas PuckLine NHL
             const plLoc = document.getElementById('linea-pl-loc');
             const plVis = document.getElementById('linea-pl-vis');
             plLoc.innerHTML = '<option value="-1.5" selected>-1.5</option><option value="+1.5">+1.5</option>';
             plVis.innerHTML = '<option value="+1.5" selected>+1.5</option><option value="-1.5">-1.5</option>';
 
-            // Totales NHL
             const selTot = document.getElementById('linea-total-goles');
             selTot.innerHTML = '';
             [4.5, 5.0, 5.5, 6.0, 6.5, 7.0].forEach(v => {
@@ -379,7 +409,6 @@
             document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
 
-            // Líneas Spread NFL
             const plLoc = document.getElementById('linea-pl-loc');
             const plVis = document.getElementById('linea-pl-vis');
             plLoc.innerHTML = ''; plVis.innerHTML = '';
@@ -388,7 +417,6 @@
                 plVis.add(new Option(`${v > 0 ? '+' : ''}${v}`, v, false, v === 3.5));
             });
 
-            // Totales NFL
             const selTot = document.getElementById('linea-total-goles');
             selTot.innerHTML = '';
             [37.5, 41.5, 43.5, 45.5, 47.5, 49.5, 51.5, 54.5].forEach(v => {
@@ -419,10 +447,22 @@
             document.getElementById('view-home').classList.remove('hidden');
         }
 
-        async function abrirModalHistorial() {
+        function abrirModalHistorial(filtro) {
+            filtroHistorialActual = filtro || 'TODOS';
             document.getElementById('modal-historial').classList.remove('hidden');
+            renderizarListaHistorial();
+        }
+
+        function filtrarHistorial(dep) {
+            filtroHistorialActual = dep;
+            document.getElementById('btn-f-todos').className = dep === 'TODOS' ? "px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-white" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
+            document.getElementById('btn-f-nhl').className = dep === 'NHL' ? "px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
+            document.getElementById('btn-f-nfl').className = dep === 'NFL' ? "px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
+            renderizarListaHistorial();
+        }
+
+        async function renderizarListaHistorial() {
             const container = document.getElementById('lista-historial-content');
-            
             let picks = obtenerPicksGuardados();
 
             try {
@@ -435,8 +475,12 @@
                 }
             } catch (err) {}
 
+            if (filtroHistorialActual !== 'TODOS') {
+                picks = picks.filter(p => (p.deporte || 'NHL').toUpperCase() === filtroHistorialActual);
+            }
+
             if (!picks || picks.length === 0) {
-                container.innerHTML = `<p class="text-slate-400 text-center text-sm font-medium">Aún no has registrado apuestas en tu historial.</p>`;
+                container.innerHTML = `<p class="text-slate-400 text-center text-sm font-medium">Aún no hay apuestas registradas en ${filtroHistorialActual}.</p>`;
                 return;
             }
 
@@ -507,15 +551,16 @@
             setTimeout(() => {
                 btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
                 btnElement.className = "w-full mt-2 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-2.5 rounded-xl uppercase border border-emerald-500/30";
-                cargarMetricasYGrafica();
+                cargarMetricasYGraficas();
             }, 300);
         }
 
-        async function cargarMetricasYGrafica() {
+        // CÁLCULO DE MÉTRICAS Y DIBUJO DE DOS GRÁFICAS TOTALMENTE INDEPENDIENTES
+        async function cargarMetricasYGraficas() {
             let picks = obtenerPicksGuardados();
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=estado`, {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=estado,deporte`, {
                     headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
                 });
                 const picksSupa = await res.json();
@@ -524,29 +569,45 @@
                 }
             } catch (err) {}
 
-            const totalPicks = picks ? picks.length : 0;
-            const wins = picks ? picks.filter(p => p.estado === 'WIN').length : 0;
-            const losses = picks ? picks.filter(p => p.estado === 'LOSS').length : 0;
-            const pending = picks ? picks.filter(p => p.estado === 'PENDING').length : 0;
+            const nhlPicks = picks.filter(p => (p.deporte || 'NHL').toUpperCase() === 'NHL');
+            const nflPicks = picks.filter(p => (p.deporte || '').toUpperCase() === 'NFL');
 
-            const finalizados = wins + losses;
-            const winRate = finalizados > 0 ? Math.round((wins / finalizados) * 100) : 100;
+            function calcStats(lista) {
+                const wins = lista.filter(p => p.estado === 'WIN').length;
+                const losses = lista.filter(p => p.estado === 'LOSS').length;
+                const pending = lista.filter(p => p.estado === 'PENDING').length;
+                const fin = wins + losses;
+                const wr = fin > 0 ? Math.round((wins / fin) * 100) : 100;
+                return { total: lista.length, wins, losses, pending, wr };
+            }
 
-            document.getElementById('win-rate-display').innerText = `${winRate}%`;
-            document.getElementById('stat-winrate').innerText = `${winRate}%`;
-            document.getElementById('stat-totales').innerText = totalPicks;
-            document.getElementById('stat-wins').innerText = wins;
-            document.getElementById('stat-losses').innerText = losses;
+            const nhl = calcStats(nhlPicks);
+            const nfl = calcStats(nflPicks);
 
-            const ctx = document.getElementById('graficaEfectividad').getContext('2d');
-            if (miGraficaChart) { miGraficaChart.destroy(); }
+            // ACTUALIZAR TEXTOS
+            document.getElementById('nhl-stat-winrate').innerText = `${nhl.wr}%`;
+            document.getElementById('nhl-stat-totales').innerText = nhl.total;
+            document.getElementById('nhl-stat-wins').innerText = nhl.wins;
+            document.getElementById('nhl-stat-losses').innerText = nhl.losses;
 
-            miGraficaChart = new Chart(ctx, {
+            document.getElementById('nfl-stat-winrate').innerText = `${nfl.wr}%`;
+            document.getElementById('nfl-stat-totales').innerText = nfl.total;
+            document.getElementById('nfl-stat-wins').innerText = nfl.wins;
+            document.getElementById('nfl-stat-losses').innerText = nfl.losses;
+
+            const finGlobal = nhl.wins + nfl.wins + nhl.losses + nfl.losses;
+            const wrGlobal = finGlobal > 0 ? Math.round(((nhl.wins + nfl.wins) / finGlobal) * 100) : 100;
+            document.getElementById('win-rate-display').innerText = `${wrGlobal}%`;
+
+            // DIBUJAR GRÁFICA INDEPENDIENTE NHL
+            const ctxNhl = document.getElementById('graficaNhl').getContext('2d');
+            if (chartNhl) { chartNhl.destroy(); }
+            chartNhl = new Chart(ctxNhl, {
                 type: 'doughnut',
                 data: {
                     labels: ['Ganadas', 'Perdidas', 'Pendientes'],
                     datasets: [{
-                        data: [wins > 0 ? wins : 1, losses, pending > 0 ? pending : (totalPicks == 0 ? 1 : 0)],
+                        data: [nhl.wins > 0 ? nhl.wins : 1, nhl.losses, nhl.pending > 0 ? nhl.pending : (nhl.total == 0 ? 1 : 0)],
                         backgroundColor: ['#10B981', '#F43F5E', '#F59E0B'],
                         borderWidth: 2,
                         borderColor: '#FFFFFF'
@@ -555,7 +616,29 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: true, position: 'right' } },
+                    plugins: { legend: { display: false } },
+                    cutout: '70%'
+                }
+            });
+
+            // DIBUJAR GRÁFICA INDEPENDIENTE NFL
+            const ctxNfl = document.getElementById('graficaNfl').getContext('2d');
+            if (chartNfl) { chartNfl.destroy(); }
+            chartNfl = new Chart(ctxNfl, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ganadas', 'Perdidas', 'Pendientes'],
+                    datasets: [{
+                        data: [nfl.wins > 0 ? nfl.wins : 1, nfl.losses, nfl.pending > 0 ? nfl.pending : (nfl.total == 0 ? 1 : 0)],
+                        backgroundColor: ['#F59E0B', '#F43F5E', '#3B82F6'],
+                        borderWidth: 2,
+                        borderColor: '#FFFFFF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                     cutout: '70%'
                 }
             });
