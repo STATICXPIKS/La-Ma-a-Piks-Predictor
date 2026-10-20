@@ -113,7 +113,7 @@
         </div>
     </section>
 
-    <!-- SIMULADOR Y CONFIGURACIÓN DE CUOTAS MANUALES -->
+    <!-- SIMULADOR Y CONFIGURACIÓN DE CUOTAS Y LÍNEAS MANUALES -->
     <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 my-4 flex-grow">
         <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl mb-8">
             <div class="flex justify-between items-center mb-6 pb-2 border-b">
@@ -133,27 +133,85 @@
                 </div>
             </div>
 
-            <!-- ENTRADA DE CUOTAS DE TU CASINO DE APUESTAS -->
-            <div class="bg-slate-900 text-white p-4 rounded-2xl mb-6">
-                <span class="text-xs font-montserrat font-bold text-mana-neon block mb-3 uppercase tracking-wider">
-                    🎯 CONFIGURA LAS CUOTAS REALES DE TU CASINO (DECIMALES):
+            <!-- PANEL COMPLETO DE AJUSTE MANUAL DE MERCADOS -->
+            <div class="bg-slate-900 text-white p-5 rounded-2xl mb-6 space-y-4">
+                <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider">
+                    🎯 CONFIGURA LAS LÍNEAS Y CUOTAS REALES DE TU CASINO:
                 </span>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                    <div>
-                        <label class="text-slate-400 block mb-1">ML Local</label>
-                        <input id="cuota-ml-loc" type="number" step="0.01" value="1.85" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+
+                <!-- 1. MONEYLINE -->
+                <div class="border-t border-slate-800 pt-3">
+                    <span class="text-[11px] font-bold text-slate-400 block mb-2">1. MONEYLINE (ML)</span>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="text-slate-400 block mb-1">Cuota ML Local</label>
+                            <input id="cuota-ml-loc" type="number" step="0.01" value="1.85" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                        </div>
+                        <div>
+                            <label class="text-slate-400 block mb-1">Cuota ML Visitante</label>
+                            <input id="cuota-ml-vis" type="number" step="0.01" value="1.95" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-slate-400 block mb-1">ML Visita</label>
-                        <input id="cuota-ml-vis" type="number" step="0.01" value="1.95" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                </div>
+
+                <!-- 2. PUCK LINE / SPREAD -->
+                <div class="border-t border-slate-800 pt-3">
+                    <span class="text-[11px] font-bold text-slate-400 block mb-2">2. PUCK LINE (SPREAD)</span>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        <div>
+                            <label class="text-slate-400 block mb-1">Línea Local</label>
+                            <select id="linea-pl-loc" onchange="sincronizarLineasPl()" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                                <option value="-1.5" selected>-1.5</option>
+                                <option value="+1.5">+1.5</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-slate-400 block mb-1">Cuota PL Local</label>
+                            <input id="cuota-pl-loc" type="number" step="0.01" value="2.85" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                        </div>
+                        <div>
+                            <label class="text-slate-400 block mb-1">Línea Visitante</label>
+                            <select id="linea-pl-vis" disabled class="w-full bg-slate-900 border border-slate-800 p-2 rounded-lg text-slate-500 font-bold">
+                                <option value="+1.5">+1.5</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-slate-400 block mb-1">Cuota PL Visitante</label>
+                            <input id="cuota-pl-vis" type="number" step="0.01" value="1.45" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-slate-400 block mb-1">Cuota Over 6.0</label>
-                        <input id="cuota-over" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
-                    </div>
-                    <div>
-                        <label class="text-slate-400 block mb-1">Cuota Under 6.0</label>
-                        <input id="cuota-under" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                </div>
+
+                <!-- 3. OVER / UNDER TOTAL DE GOLES -->
+                <div class="border-t border-slate-800 pt-3">
+                    <span class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTAL DE GOLES (OVER / UNDER)</span>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                        <div>
+                            <label class="text-slate-400 block mb-1">Línea Total (3.5 a 9.5)</label>
+                            <select id="linea-total-goles" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                                <option value="3.5">3.5 Goles</option>
+                                <option value="4.0">4.0 Goles</option>
+                                <option value="4.5">4.5 Goles</option>
+                                <option value="5.0">5.0 Goles</option>
+                                <option value="5.5">5.5 Goles</option>
+                                <option value="6.0" selected>6.0 Goles</option>
+                                <option value="6.5">6.5 Goles</option>
+                                <option value="7.0">7.0 Goles</option>
+                                <option value="7.5">7.5 Goles</option>
+                                <option value="8.0">8.0 Goles</option>
+                                <option value="8.5">8.5 Goles</option>
+                                <option value="9.0">9.0 Goles</option>
+                                <option value="9.5">9.5 Goles</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-slate-400 block mb-1">Cuota Over</label>
+                            <input id="cuota-over" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                        </div>
+                        <div>
+                            <label class="text-slate-400 block mb-1">Cuota Under</label>
+                            <input id="cuota-under" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -171,7 +229,7 @@
             </div>
 
             <button onclick="ejecutarSimulacionLive()" id="btn-analizar" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-4 rounded-2xl uppercase tracking-wider text-sm shadow-lg">
-                EJECUTAR SIMULACIÓN CON MIS CUOTAS 🚀
+                EJECUTAR SIMULACIÓN CON MIS CUOTAS Y LÍNEAS 🚀
             </button>
         </div>
 
@@ -192,7 +250,6 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE LÓGICA -->
     <script>
         const SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co";
         const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
@@ -213,6 +270,12 @@
         };
 
         let miGraficaChart = null;
+
+        function sincronizarLineasPl() {
+            const locVal = document.getElementById('linea-pl-loc').value;
+            const visSelect = document.getElementById('linea-pl-vis');
+            visSelect.innerHTML = locVal === "-1.5" ? '<option value="+1.5" selected>+1.5</option>' : '<option value="-1.5" selected>-1.5</option>';
+        }
 
         function inicializarFormulario() {
             const selLoc = document.getElementById('select-local');
@@ -303,7 +366,6 @@
             document.getElementById('modal-historial').classList.add('hidden');
         }
 
-        // FUNCIÓN CORREGIDA DE GUARDADO DIRECTO A SUPABASE
         async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
             btnElement.disabled = true;
             btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
@@ -398,23 +460,30 @@
             const local = document.getElementById('select-local').value;
             const visitante = document.getElementById('select-visitante').value;
 
-            // LEER CUOTAS MANUALES
+            // CUOTAS Y LÍNEAS PERSONALIZADAS
             const cMlLoc = document.getElementById('cuota-ml-loc').value || 1.85;
             const cMlVis = document.getElementById('cuota-ml-vis').value || 1.95;
+            
+            const lPlLoc = document.getElementById('linea-pl-loc').value || -1.5;
+            const cPlLoc = document.getElementById('cuota-pl-loc').value || 2.85;
+            const lPlVis = lPlLoc === "-1.5" ? 1.5 : -1.5;
+            const cPlVis = document.getElementById('cuota-pl-vis').value || 1.45;
+
+            const lTotal = document.getElementById('linea-total-goles').value || 6.0;
             const cOver = document.getElementById('cuota-over').value || 1.90;
             const cUnder = document.getElementById('cuota-under').value || 1.90;
 
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">EVALUANDO TUS CUOTAS EN MONTE CARLO...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">EVALUANDO TUS LÍNEAS Y CUOTAS EN MONTE CARLO...</span>`;
             resContainer.classList.add('hidden');
 
             try {
-                const url = `${RENDER_API_URL}/api/analizar-nhl?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}&c_ml_loc=${cMlLoc}&c_ml_vis=${cMlVis}&c_over=${cOver}&c_under=${cUnder}`;
+                const url = `${RENDER_API_URL}/api/analizar-nhl?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}&c_ml_loc=${cMlLoc}&c_ml_vis=${cMlVis}&l_pl_loc=${lPlLoc}&c_pl_loc=${cPlLoc}&l_pl_vis=${lPlVis}&c_pl_vis=${cPlVis}&l_total=${lTotal}&c_over=${cOver}&c_under=${cUnder}`;
                 const response = await fetch(url);
                 const d = await response.json();
 
                 btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS 🚀`;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS Y LÍNEAS 🚀`;
 
                 function renderFilaMercado(etiqueta, cuotaJusta, prob) {
                     return `
@@ -481,7 +550,7 @@
                 resContainer.classList.remove('hidden');
             } catch (err) {
                 btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS 🚀`;
+                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MIS CUOTAS Y LÍNEAS 🚀`;
                 alert("Error de conexión con Render.");
             }
         }
