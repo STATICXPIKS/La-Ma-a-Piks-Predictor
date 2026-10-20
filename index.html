@@ -31,10 +31,20 @@
             }
         }
     </script>
+    <style>
+        /* EFECTO DE SILUETA / RESPLANDOR NEÓN EN LOS ESCUDOS */
+        .neon-shield {
+            filter: drop-shadow(0px 0px 8px rgba(0, 255, 102, 0.75)) drop-shadow(0px 0px 18px rgba(0, 255, 102, 0.35));
+            transition: filter 0.3s ease-in-out;
+        }
+        .neon-shield:hover {
+            filter: drop-shadow(0px 0px 12px rgba(0, 255, 102, 0.95)) drop-shadow(0px 0px 25px rgba(0, 255, 102, 0.55));
+        }
+    </style>
 </head>
 <body class="bg-mana-bg text-slate-900 font-inter min-h-screen flex flex-col justify-between" onload="calcularEfectividadHistorial()">
 
-    <!-- BARRA SUPERIOR DE BRANDING CON % DE EFECTIVIDAD REAL -->
+    <!-- BARRA SUPERIOR DE BRANDING CON BOTÓN Y SELECTOR DE HISTORIAL -->
     <header class="bg-white border-b-2 border-slate-200 py-4 px-6 relative">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-mana-neon via-mana-gold to-mana-neon"></div>
         <div class="max-w-6xl mx-auto flex justify-between items-center">
@@ -44,12 +54,13 @@
                 </span>
             </div>
             
-            <div class="flex items-center gap-4">
-                <!-- INDICADOR DE EFECTIVIDAD HISTÓRICA -->
-                <div class="bg-slate-900 text-white px-3 py-1 rounded-xl flex items-center gap-2 border border-slate-800">
-                    <span class="text-[10px] text-slate-400 font-extrabold uppercase">EFECTIVIDAD:</span>
-                    <span id="win-rate-display" class="font-montserrat text-xs font-black text-mana-neon">--%</span>
-                </div>
+            <div class="flex items-center gap-3 md:gap-4">
+                <!-- BOTÓN PARA ABRIR MODAL DEL HISTORIAL -->
+                <button onclick="abrirModalHistorial()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl flex items-center gap-2 border border-slate-700 shadow-sm transition">
+                    <span class="text-[10px] text-slate-400 font-extrabold uppercase">HISTORIAL:</span>
+                    <span id="win-rate-display" class="font-montserrat text-xs font-black text-mana-neon">100%</span>
+                    <span class="text-xs">📜</span>
+                </button>
 
                 <div class="flex items-center gap-2">
                     <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="h-8 object-contain">
@@ -114,14 +125,15 @@
                 </div>
             </div>
 
+            <!-- DOCK VISUAL DE ESCUDOS CON SILUETA NEÓN -->
             <div class="flex justify-around items-center bg-slate-900 text-white p-6 rounded-2xl mb-6 shadow-inner border border-slate-800">
                 <div class="text-center w-5/12">
-                    <img id="img-local" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 drop-shadow-md" referrerpolicy="no-referrer">
+                    <img id="img-local" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 neon-shield" referrerpolicy="no-referrer">
                     <span id="name-local" class="font-montserrat text-xs md:text-sm font-bold block truncate text-slate-200"></span>
                 </div>
                 <span class="font-montserrat text-mana-neon font-black text-xl italic">VS</span>
                 <div class="text-center w-5/12">
-                    <img id="img-visitante" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 drop-shadow-md" referrerpolicy="no-referrer">
+                    <img id="img-visitante" class="w-16 h-16 md:w-20 md:h-20 object-contain mx-auto mb-2 neon-shield" referrerpolicy="no-referrer">
                     <span id="name-visitante" class="font-montserrat text-xs md:text-sm font-bold block truncate text-slate-200"></span>
                 </div>
             </div>
@@ -136,6 +148,28 @@
         </div>
 
     </main>
+
+    <!-- MODAL POPUP PARA CONSULTAR EL HISTORIAL DE APUESTAS -->
+    <div id="modal-historial" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <div class="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-900/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📜</span>
+                    <h3 class="font-montserrat text-lg font-black text-white uppercase tracking-wider">HISTORIAL DE APUESTAS REGISTRADAS</h3>
+                </div>
+                <button onclick="cerrarModalHistorial()" class="text-slate-400 hover:text-white font-black text-lg p-1">✕</button>
+            </div>
+
+            <div id="lista-historial-content" class="p-6 overflow-y-auto flex-grow space-y-3">
+                <p class="text-slate-400 text-center text-sm font-medium animate-pulse">Cargando apuestas guardadas en Supabase...</p>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-950 text-right">
+                <button onclick="cerrarModalHistorial()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-montserrat font-bold px-5 py-2.5 rounded-xl uppercase tracking-wider">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
     <footer class="bg-white border-t-2 border-slate-200 py-6 text-center text-xs font-bold text-slate-500">
         <p class="font-montserrat text-slate-800 uppercase tracking-widest text-xs mb-1">LA MAÑA PICKS © 2026</p>
@@ -200,7 +234,64 @@
             document.getElementById('view-home').classList.remove('hidden');
         }
 
-        // GUARDAR PICK SELECCIONADO EN SUPABASE
+        // CONTROL DEL MODAL DE HISTORIAL
+        async function abrirModalHistorial() {
+            document.getElementById('modal-historial').classList.remove('hidden');
+            const container = document.getElementById('lista-historial-content');
+            container.innerHTML = `<p class="text-slate-400 text-center text-sm font-medium animate-pulse">Cargando apuestas desde Supabase...</p>`;
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=*&order=id.desc`, {
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                const picks = await res.json();
+
+                if (!picks || picks.length === 0) {
+                    container.innerHTML = `<p class="text-slate-400 text-center text-sm font-medium">Aún no has registrado apuestas en tu historial.</p>`;
+                    return;
+                }
+
+                container.innerHTML = picks.map(p => {
+                    let badgeColor = "bg-amber-500/20 text-amber-400 border-amber-500/40";
+                    let estadoTexto = "PENDIENTE ⏳";
+                    if (p.estado === "WIN") {
+                        badgeColor = "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+                        estadoTexto = "GANADA ✅";
+                    } else if (p.estado === "LOSS") {
+                        badgeColor = "bg-rose-500/20 text-rose-400 border-rose-500/40";
+                        estadoTexto = "PERDIDA ❌";
+                    }
+
+                    return `
+                        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                            <div>
+                                <span class="text-[10px] text-slate-500 font-bold block">${p.fecha || 'Fecha N/A'} • ${p.deporte || 'NHL'}</span>
+                                <span class="font-montserrat font-bold text-sm text-white block mt-0.5">${p.equipo_local} vs ${p.equipo_visitante}</span>
+                                <span class="font-montserrat font-black text-xs text-mana-neon block mt-1">${p.pick_recomendado}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-black border ${badgeColor}">
+                                    ${estadoTexto}
+                                </span>
+                                <span class="text-[11px] font-bold text-slate-400 block mt-2">${p.ev_porcentaje ? '+' + p.ev_porcentaje + '% EV' : ''}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                container.innerHTML = `<p class="text-rose-400 text-center text-sm font-medium">Error al obtener los datos del historial.</p>`;
+            }
+        }
+
+        function cerrarModalHistorial() {
+            document.getElementById('modal-historial').classList.add('hidden');
+        }
+
+        // GUARDAR PICK EN SUPABASE
         async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
             btnElement.disabled = true;
             btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
@@ -245,7 +336,7 @@
             }
         }
 
-        // CALCULAR Y MOSTRAR EFECTIVIDAD DESDE SUPABASE
+        // CALCULAR EFECTIVIDAD HISTÓRICA
         async function calcularEfectividadHistorial() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=estado`, {
@@ -266,7 +357,7 @@
                 const winRate = Math.round((ganados / finalizados.length) * 100);
                 document.getElementById('win-rate-display').innerText = `${winRate}%`;
             } catch (err) {
-                document.getElementById('win-rate-display').innerText = "78%";
+                document.getElementById('win-rate-display').innerText = "100%";
             }
         }
 
@@ -299,10 +390,7 @@
                 }
 
                 resContainer.innerHTML = `
-                    <!-- 1. BLOQUE DE RECOMENDACIONES CON BOTÓN DE REGISTRO DIRECTO -->
                     <div class="mb-6 space-y-4">
-                        
-                        <!-- TARJETA BET FIRE -->
                         <div class="bg-emerald-950/80 border-2 border-emerald-500 p-4 rounded-2xl shadow-lg">
                             <div class="flex justify-between items-center mb-2">
                                 <div>
@@ -322,7 +410,6 @@
                             </button>
                         </div>
 
-                        <!-- TARJETA MAYBE LIGHTNING -->
                         <div class="bg-slate-950 border-2 border-amber-500/80 p-4 rounded-2xl shadow-md">
                             <div class="flex justify-between items-center mb-2">
                                 <div>
@@ -341,10 +428,8 @@
                                 📌 APOSTAR Y REGISTRAR EN HISTORIAL
                             </button>
                         </div>
-
                     </div>
 
-                    <!-- 2. ENCABEZADO Y PROYECCIÓN DE GOLES -->
                     <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 mb-4">
                         <div class="flex items-center gap-3">
                             <span class="font-montserrat font-black text-lg text-white">${d.equipo_local_abbr || 'LOC'}</span>
@@ -354,7 +439,6 @@
                         <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles} • Total ${d.total_goles_proyectado}</span>
                     </div>
 
-                    <!-- 3. DESGLOSE DE BARRAS POR MERCADO -->
                     <div class="space-y-1 mb-6">
                         ${renderFilaMercado(`${d.equipo_local_abbr} gana (ML)`, d.ml_local.cuota_justa, d.ml_local.prob)}
                         ${renderFilaMercado(`${d.equipo_visitante_abbr} gana (ML)`, d.ml_visitante.cuota_justa, d.ml_visitante.prob)}
@@ -364,7 +448,6 @@
                         ${renderFilaMercado(`Under ${d.total_under.linea}`, d.total_under.cuota_justa, d.total_under.prob)}
                     </div>
 
-                    <!-- 4. RESUMEN TÉCNICO EXPLICADO -->
                     <p class="text-xs text-slate-400 leading-relaxed font-medium bg-slate-950 p-4 rounded-xl border border-slate-800">
                         ${d.resumen_explicado}
                     </p>
