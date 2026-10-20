@@ -8,11 +8,25 @@ import gradio as gr
 from datetime import datetime
 from scipy.stats import norm, poisson
 
-# =========================================================
-# FUNCIÓN CORREGIDA PARA GUARDAR EN SUPABASE (TABLA PICKS)
-# =========================================================
+# Configuración de variables de entorno
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://tuywqyjsaubcxmbzxwlg.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj")
+
+SUPABASE_HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
+
+# Renderizador de logos con protección CORS
+def render_logo_html(url, height=50):
+    return f"""<div style="display: flex; justify-content: center; align-items: center; height: 55px; margin-bottom: 4px; overflow: hidden;">
+        <img src="{url}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://a.espncdn.com/i/leaguelogos/soccer/500/23.png';" style="max-height: {height}px; max-width: 100%; width: auto; object-fit: contain;" />
+    </div>"""
+
+# Guardado en la nueva tabla 'picks' de Supabase
 def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
-    # Separación básica de equipos
     partes = partido.split(" vs ")
     eq_loc = partes[0] if len(partes) > 0 else "Local"
     eq_vis = partes[1] if len(partes) > 1 else "Visitante"
@@ -38,14 +52,15 @@ def guardar_pick_db(deporte, partido, seleccion, tipo_pick, cuota, ventaja_ev):
     except Exception as e:
         print(f"Error guardando en Supabase: {e}")
 
-# =========================================================
-# RENDERIZADOR DE LOGOS REFORZADO (CORS FIX)
-# =========================================================
-def render_logo_html(url, height=50):
-    return f"""<div style="display: flex; justify-content: center; align-items: center; height: 55px; margin-bottom: 4px; overflow: hidden;">
-        <img src="{url}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://a.espncdn.com/i/leaguelogos/soccer/500/23.png';" style="max-height: {height}px; max-width: 100%; width: auto; object-fit: contain;" />
-    </div>"""
+# CREACIÓN DE LA INTERFAZ GRADIO (DECLARACIÓN DE APP_MANA)
+with gr.Blocks(title="La Maña Picks") as app_mana:
+    gr.Markdown("# 🏆 **La Maña Picks - Predicciones Deportivas**")
+    gr.Markdown("Servidor backend y motor de modelos activo y sincronizado con Supabase.")
+    
+    with gr.Row():
+        out_info = gr.Markdown("🟢 **Estado del Servicio:** Operacional")
 
+# LAnzamiento del servidor
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     app_mana.launch(server_name="0.0.0.0", server_port=port)
