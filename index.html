@@ -113,7 +113,7 @@
         </div>
     </section>
 
-    <!-- SIMULADOR Y CONFIGURACIÓN DE CUOTAS Y LÍNEAS MANUALES -->
+    <!-- SIMULADOR -->
     <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 my-4 flex-grow">
         <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl mb-8">
             <div class="flex justify-between items-center mb-6 pb-2 border-b">
@@ -133,13 +133,13 @@
                 </div>
             </div>
 
-            <!-- PANEL COMPLETO DE AJUSTE MANUAL DE MERCADOS -->
+            <!-- PANEL DE CUOTAS Y LÍNEAS -->
             <div class="bg-slate-900 text-white p-5 rounded-2xl mb-6 space-y-4">
                 <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider">
                     🎯 CONFIGURA LAS LÍNEAS Y CUOTAS REALES DE TU CASINO:
                 </span>
 
-                <!-- 1. MONEYLINE -->
+                <!-- MONEYLINE -->
                 <div class="border-t border-slate-800 pt-3">
                     <span class="text-[11px] font-bold text-slate-400 block mb-2">1. MONEYLINE (ML)</span>
                     <div class="grid grid-cols-2 gap-3 text-xs">
@@ -154,7 +154,7 @@
                     </div>
                 </div>
 
-                <!-- 2. PUCK LINE / SPREAD (AMBOS SELECTORES 100% MANUALES) -->
+                <!-- PUCK LINE -->
                 <div class="border-t border-slate-800 pt-3">
                     <span class="text-[11px] font-bold text-slate-400 block mb-2">2. PUCK LINE (SPREAD MANUAL)</span>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -191,7 +191,7 @@
                     </div>
                 </div>
 
-                <!-- 3. OVER / UNDER TOTAL DE GOLES -->
+                <!-- OVER / UNDER -->
                 <div class="border-t border-slate-800 pt-3">
                     <span class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTAL DE GOLES (OVER / UNDER)</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
@@ -369,7 +369,7 @@
             document.getElementById('modal-historial').classList.add('hidden');
         }
 
-        // REGISTRO SEGURO Y ULTRA-SINCRO EN SUPABASE
+        // GUARDADO A TRAVÉS DEL BACKEND EN RENDER (EVITA RLS Y CORS)
         async function guardarPickEnHistorial(btnElement, pickTexto, evTexto, local, visitante) {
             btnElement.disabled = true;
             btnElement.innerText = "⏳ REGISTRANDO EN SUPABASE...";
@@ -388,28 +388,22 @@
             };
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks`, {
+                const res = await fetch(`${RENDER_API_URL}/api/guardar-pick`, {
                     method: "POST",
-                    headers: {
-                        "apikey": SUPABASE_KEY,
-                        "Authorization": `Bearer ${SUPABASE_KEY}`,
-                        "Content-Type": "application/json",
-                        "Prefer": "return=minimal"
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                 });
+                const json = await res.json();
 
-                if (res.ok || res.status === 201 || res.status === 204) {
+                if (json.status === "ok") {
                     btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
                     btnElement.className = "w-full mt-2 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-2.5 rounded-xl uppercase border border-emerald-500/30";
                     cargarMetricasYGrafica();
                 } else {
-                    console.error("Respuesta fallida Supabase:", res.status);
                     btnElement.innerText = "📌 REINTENTAR GUARDAR";
                     btnElement.disabled = false;
                 }
             } catch (err) {
-                console.error("Error en red:", err);
                 btnElement.innerText = "📌 REINTENTAR GUARDAR";
                 btnElement.disabled = false;
             }
@@ -466,7 +460,6 @@
             const local = document.getElementById('select-local').value;
             const visitante = document.getElementById('select-visitante').value;
 
-            // CUOTAS Y LÍNEAS INDEPENDIENTES
             const cMlLoc = document.getElementById('cuota-ml-loc').value || 1.84;
             const cMlVis = document.getElementById('cuota-ml-vis').value || 1.96;
             
