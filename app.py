@@ -1,8 +1,7 @@
 import os
-import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from nhl_model import ejecutar_modelo_nhl_completo, SUPABASE_URL, HEADERS_SUPABASE
+from nhl_model import ejecutar_modelo_nhl_completo
 
 app = FastAPI(title="La Maña Picks - API NHL")
 
@@ -24,6 +23,11 @@ def analizar_nhl(
     visitante: str = "Edmonton Oilers",
     c_ml_loc: float = 1.85,
     c_ml_vis: float = 1.95,
+    l_pl_loc: float = -1.5,
+    c_pl_loc: float = 2.85,
+    l_pl_vis: float = 1.5,
+    c_pl_vis: float = 1.45,
+    l_total: float = 6.0,
     c_over: float = 1.90,
     c_under: float = 1.90
 ):
@@ -32,11 +36,11 @@ def analizar_nhl(
         vis_nombre=visitante,
         cuota_ml_loc=c_ml_loc,
         cuota_ml_vis=c_ml_vis,
-        linea_pl_loc=-1.5,
-        cuota_pl_loc=2.85,
-        linea_pl_vis=1.5,
-        cuota_pl_vis=1.45,
-        linea_total=6.0,
+        linea_pl_loc=l_pl_loc,
+        cuota_pl_loc=c_pl_loc,
+        linea_pl_vis=l_pl_vis,
+        cuota_pl_vis=c_pl_vis,
+        linea_total=l_total,
         cuota_over=c_over,
         cuota_under=c_under,
         linea_sog=62.5,
