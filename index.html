@@ -644,20 +644,20 @@
             const local = document.getElementById('select-local').value;
             const visitante = document.getElementById('select-visitante').value;
 
-            const cMlLoc = document.getElementById('cuota-ml-loc').value || 1.84;
-            const cMlVis = document.getElementById('cuota-ml-vis').value || 1.96;
+            const cMlLoc = parseFloat(document.getElementById('cuota-ml-loc').value) || 1.84;
+            const cMlVis = parseFloat(document.getElementById('cuota-ml-vis').value) || 1.96;
             
             const lPlLoc = document.getElementById('linea-pl-loc').value || -1.5;
-            const cPlLoc = document.getElementById('cuota-pl-loc').value || 1.90;
+            const cPlLoc = parseFloat(document.getElementById('cuota-pl-loc').value) || 1.90;
             const lPlVis = document.getElementById('linea-pl-vis').value || 1.5;
-            const cPlVis = document.getElementById('cuota-pl-vis').value || 1.90;
+            const cPlVis = parseFloat(document.getElementById('cuota-pl-vis').value) || 1.90;
 
             const lTotal = document.getElementById('linea-total-goles').value || 5.5;
-            const cOver = document.getElementById('cuota-over').value || 1.90;
-            const cUnder = document.getElementById('cuota-under').value || 1.90;
+            const cOver = parseFloat(document.getElementById('cuota-over').value) || 1.90;
+            const cUnder = parseFloat(document.getElementById('cuota-under').value) || 1.90;
 
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">ORDENANDO LAS 6 OPCIONES DE MERCADO POR % EV...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">EVALUANDO Y ORDENANDO LAS 6 OPCIONES DE MERCADO POR % EV...</span>`;
             resContainer.classList.add('hidden');
 
             const endpoint = deporteActual === 'NHL' ? '/api/analizar-nhl' : '/api/analizar-nfl';
@@ -680,23 +680,25 @@
                 const labelSpreadLoc = deporteActual === 'NHL' ? `${d.equipo_local_abbr} ${dataSpreadLoc.linea}` : `${d.equipo_local_abbr} ${dataSpreadLoc.linea > 0 ? '+' : ''}${dataSpreadLoc.linea}`;
                 const labelSpreadVis = deporteActual === 'NHL' ? `${d.equipo_visitante_abbr} ${dataSpreadVis.linea}` : `${d.equipo_visitante_abbr} ${dataSpreadVis.linea > 0 ? '+' : ''}${dataSpreadVis.linea}`;
 
-                // CONSTRUCCIÓN Y ORDENAMIENTO DE LAS 6 OPCIONES POR VALOR ESPERADO (EV)
+                // CÁLCULO MÁS SEGURO EN EL FRONTEND PARA NUNCA MOSTRAR UNDEFINED
+                function calcEV(probPercent, odds) {
+                    const probDecimal = probPercent / 100.0;
+                    return Math.round(((probDecimal * odds) - 1.0) * 1000) / 10.0;
+                }
+
                 let opciones = [
-                    { titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: d.ml_local.ev, cuota: cMlLoc, prob: d.ml_local.prob },
-                    { titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: d.ml_visitante.ev, cuota: cMlVis, prob: d.ml_visitante.prob },
-                    { titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: dataSpreadLoc.ev, cuota: cPlLoc, prob: dataSpreadLoc.prob },
-                    { titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: dataSpreadVis.ev, cuota: cPlVis, prob: dataSpreadVis.prob },
-                    { titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: d.total_over.ev, cuota: cOver, prob: d.total_over.prob },
-                    { titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: d.total_under.ev, cuota: cUnder, prob: d.total_under.prob }
+                    { titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: (d.ml_local.ev !== undefined ? d.ml_local.ev : calcEV(d.ml_local.prob, cMlLoc)), cuota: cMlLoc, prob: d.ml_local.prob },
+                    { titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: (d.ml_visitante.ev !== undefined ? d.ml_visitante.ev : calcEV(d.ml_visitante.prob, cMlVis)), cuota: cMlVis, prob: d.ml_visitante.prob },
+                    { titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: (dataSpreadLoc.ev !== undefined ? dataSpreadLoc.ev : calcEV(dataSpreadLoc.prob, cPlLoc)), cuota: cPlLoc, prob: dataSpreadLoc.prob },
+                    { titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: (dataSpreadVis.ev !== undefined ? dataSpreadVis.ev : calcEV(dataSpreadVis.prob, cPlVis)), cuota: cPlVis, prob: dataSpreadVis.prob },
+                    { titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: (d.total_over.ev !== undefined ? d.total_over.ev : calcEV(d.total_over.prob, cOver)), cuota: cOver, prob: d.total_over.prob },
+                    { titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: (d.total_under.ev !== undefined ? d.total_under.ev : calcEV(d.total_under.prob, cUnder)), cuota: cUnder, prob: d.total_under.prob }
                 ];
 
-                // ORDENAR DE MAYOR A MENOR EV
+                // ORDENAR DE MAYOR A MENOR VALOR ESPERADO (% EV)
                 opciones.sort((a, b) => b.ev - a.ev);
 
-                window.opcionesOrdenadas = opciones;
-
-                // FUNCIÓN DE RENDERIZADO ESTILO "CARD APILADA" (IGUAL A LA IMAGEN)
-                function renderTarjetaEstiloImagen(opc, index) {
+                function renderTarjetaApilada(opc, index) {
                     const btnId = `btn-card-market-${index}`;
                     const esEVPositivo = opc.ev >= 0;
                     
@@ -739,7 +741,7 @@
 
                 resContainer.innerHTML = `
                     <div class="mb-6 space-y-4">
-                        ${opciones.map((o, idx) => renderTarjetaEstiloImagen(o, idx)).join('')}
+                        ${opciones.map((o, idx) => renderTarjetaApilada(o, idx)).join('')}
                     </div>
 
                     <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 mb-4">
@@ -752,7 +754,7 @@
                     </div>
 
                     <p class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800">
-                        ${d.resumen_explicado}
+                        ${d.resumen_explicado || 'Simulación ejecutada con éxito mediante Monte Carlo.'}
                     </p>
                 `;
                 resContainer.classList.remove('hidden');
