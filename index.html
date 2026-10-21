@@ -233,7 +233,7 @@
                 </div>
             </div>
 
-            <!-- PANEL DE CUOTAS Y LÍNEAS -->
+            <!-- PANEL DE CUOTAS Y LÍNEAS MANUALES -->
             <div class="bg-slate-900 text-white p-5 rounded-2xl mb-6 space-y-4">
                 <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider">
                     🎯 CONFIGURA LAS LÍNEAS Y CUOTAS REALES DE TU CASINO:
@@ -254,13 +254,13 @@
                     </div>
                 </div>
 
-                <!-- SPREAD / PUCKLINE -->
+                <!-- SPREAD / HANDICAP (ENTRADA MANUAL) -->
                 <div class="border-t border-slate-800 pt-3">
                     <span id="etiqueta-mercado-spread" class="text-[11px] font-bold text-slate-400 block mb-2">2. SPREAD / HANDICAP MANUAL</span>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Local</label>
-                            <select id="linea-pl-loc" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black"></select>
+                            <input id="linea-pl-loc" type="number" step="0.5" value="-2.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Local</label>
@@ -268,7 +268,7 @@
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Visitante</label>
-                            <select id="linea-pl-vis" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black"></select>
+                            <input id="linea-pl-vis" type="number" step="0.5" value="2.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Visitante</label>
@@ -277,13 +277,13 @@
                     </div>
                 </div>
 
-                <!-- OVER / UNDER -->
+                <!-- OVER / UNDER (ENTRADA MANUAL) -->
                 <div class="border-t border-slate-800 pt-3">
                     <span id="etiqueta-mercado-totales" class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTALES (OVER / UNDER)</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         <div>
-                            <label class="text-slate-400 block mb-1">Línea Total</label>
-                            <select id="linea-total-goles" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black"></select>
+                            <label class="text-slate-400 block mb-1">Línea Total Puntos/Goles</label>
+                            <input id="linea-total-goles" type="number" step="0.5" value="224.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Over</label>
@@ -431,14 +431,9 @@
             document.getElementById('etiqueta-mercado-spread').innerText = "2. PUCK LINE (SPREAD MANUAL)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
 
-            const plLoc = document.getElementById('linea-pl-loc');
-            const plVis = document.getElementById('linea-pl-vis');
-            plLoc.innerHTML = '<option value="-1.5" selected>-1.5</option><option value="+1.5">+1.5</option>';
-            plVis.innerHTML = '<option value="+1.5" selected>+1.5</option><option value="-1.5">-1.5</option>';
-
-            const selTot = document.getElementById('linea-total-goles');
-            selTot.innerHTML = '';
-            [4.5, 5.0, 5.5, 6.0, 6.5, 7.0].forEach(v => { selTot.add(new Option(`${v} Goles`, v, false, v === 5.5)); });
+            document.getElementById('linea-pl-loc').value = "-1.5";
+            document.getElementById('linea-pl-vis').value = "1.5";
+            document.getElementById('linea-total-goles').value = "5.5";
             actualizarEscudos();
         }
 
@@ -457,17 +452,9 @@
             document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
 
-            const plLoc = document.getElementById('linea-pl-loc');
-            const plVis = document.getElementById('linea-pl-vis');
-            plLoc.innerHTML = ''; plVis.innerHTML = '';
-            [-10.5, -7.5, -6.5, -3.5, -2.5, +2.5, +3.5, +6.5, +7.5].forEach(v => {
-                plLoc.add(new Option(`${v > 0 ? '+' : ''}${v}`, v, false, v === -3.5));
-                plVis.add(new Option(`${v > 0 ? '+' : ''}${v}`, v, false, v === 3.5));
-            });
-
-            const selTot = document.getElementById('linea-total-goles');
-            selTot.innerHTML = '';
-            [37.5, 41.5, 43.5, 45.5, 47.5, 49.5, 51.5, 54.5].forEach(v => { selTot.add(new Option(`${v} Puntos`, v, false, v === 47.5)); });
+            document.getElementById('linea-pl-loc').value = "-3.5";
+            document.getElementById('linea-pl-vis').value = "3.5";
+            document.getElementById('linea-total-goles').value = "47.5";
             actualizarEscudos();
         }
 
@@ -482,21 +469,13 @@
                 selVis.add(new Option(eq, eq));
             });
 
-            selLoc.value = "Boston Celtics"; selVis.value = "Los Angeles Lakers";
+            selLoc.value = "Miami Heat"; selVis.value = "Minnesota Timberwolves";
             document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
 
-            const plLoc = document.getElementById('linea-pl-loc');
-            const plVis = document.getElementById('linea-pl-vis');
-            plLoc.innerHTML = ''; plVis.innerHTML = '';
-            [-12.5, -9.5, -6.5, -4.5, -2.5, +2.5, +4.5, +6.5, +9.5, +12.5].forEach(v => {
-                plLoc.add(new Option(`${v > 0 ? '+' : ''}${v}`, v, false, v === -4.5));
-                plVis.add(new Option(`${v > 0 ? '+' : ''}${v}`, v, false, v === 4.5));
-            });
-
-            const selTot = document.getElementById('linea-total-goles');
-            selTot.innerHTML = '';
-            [212.5, 218.5, 222.5, 224.5, 228.5, 232.5, 236.5].forEach(v => { selTot.add(new Option(`${v} Puntos`, v, false, v === 224.5)); });
+            document.getElementById('linea-pl-loc').value = "-2.5";
+            document.getElementById('linea-pl-vis').value = "2.5";
+            document.getElementById('linea-total-goles').value = "236.5";
             actualizarEscudos();
         }
 
@@ -761,12 +740,12 @@
             const cMlLoc = parseFloat(document.getElementById('cuota-ml-loc').value) || 1.84;
             const cMlVis = parseFloat(document.getElementById('cuota-ml-vis').value) || 1.96;
             
-            const lPlLoc = document.getElementById('linea-pl-loc').value || -1.5;
+            const lPlLoc = parseFloat(document.getElementById('linea-pl-loc').value) || -2.5;
             const cPlLoc = parseFloat(document.getElementById('cuota-pl-loc').value) || 1.90;
-            const lPlVis = document.getElementById('linea-pl-vis').value || 1.5;
+            const lPlVis = parseFloat(document.getElementById('linea-pl-vis').value) || 2.5;
             const cPlVis = parseFloat(document.getElementById('cuota-pl-vis').value) || 1.90;
 
-            const lTotal = document.getElementById('linea-total-goles').value || 5.5;
+            const lTotal = parseFloat(document.getElementById('linea-total-goles').value) || 224.5;
             const cOver = parseFloat(document.getElementById('cuota-over').value) || 1.90;
             const cUnder = parseFloat(document.getElementById('cuota-under').value) || 1.90;
 
@@ -823,7 +802,6 @@
                     let textEvColor = esEVPositivo ? "text-emerald-400" : "text-rose-400";
                     let btnColor = "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700";
 
-                    // Opción 1: BET 🔥 con estilo Neón Verde Difuminado
                     if (index === 0) {
                         bgCard = "bg-emerald-950/70 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]";
                         bgBadge = "bg-emerald-400 text-slate-950 font-black";
@@ -831,7 +809,6 @@
                         textEvColor = "text-emerald-300";
                         btnColor = "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black";
                     } 
-                    // Opciones 2 y 3: MAYBE ⚡ con estilo Neón Dorado Difuminado
                     else if (index === 1 || index === 2) {
                         bgCard = "bg-amber-950/70 border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]";
                         bgBadge = "bg-amber-400 text-slate-950 font-black";
@@ -853,7 +830,6 @@
                             <span class="font-montserrat text-sm md:text-base font-black ${textEvColor}">${evTextoFormatted}</span>
                         </div>
                         
-                        <!-- Muestra de Probabilidad Modelo % -->
                         <div class="flex items-center justify-between text-xs my-2 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
                             <span class="text-slate-400 font-bold">Probabilidad Modelo:</span>
                             <span class="font-montserrat font-black text-white">${probFormatted}</span>
