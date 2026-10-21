@@ -817,38 +817,49 @@
                     const btnId = `btn-card-market-${index}`;
                     const esEVPositivo = opc.ev >= 0;
                     
-                    let bgCard = "bg-emerald-950/80 border-2 border-emerald-500";
-                    let bgBadge = "bg-emerald-500 text-slate-950";
-                    let textoBadge = "BET 🔥";
-                    let textEvColor = "text-emerald-400";
-                    let btnColor = "bg-emerald-500 hover:bg-emerald-400 text-slate-950";
+                    let bgCard = "bg-slate-950/90 border border-slate-800";
+                    let bgBadge = "bg-slate-800 text-slate-300";
+                    let textoBadge = `OPCIÓN ${index + 1} 🎯`;
+                    let textEvColor = esEVPositivo ? "text-emerald-400" : "text-rose-400";
+                    let btnColor = "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700";
 
-                    if (index === 1) {
-                        bgCard = "bg-slate-950 border-2 border-amber-500/80";
-                        bgBadge = "bg-amber-500 text-slate-950";
+                    // Opción 1: BET 🔥 con estilo Neón Verde Difuminado
+                    if (index === 0) {
+                        bgCard = "bg-emerald-950/70 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]";
+                        bgBadge = "bg-emerald-400 text-slate-950 font-black";
+                        textoBadge = "BET 🔥";
+                        textEvColor = "text-emerald-300";
+                        btnColor = "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black";
+                    } 
+                    // Opciones 2 y 3: MAYBE ⚡ con estilo Neón Dorado Difuminado
+                    else if (index === 1 || index === 2) {
+                        bgCard = "bg-amber-950/70 border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]";
+                        bgBadge = "bg-amber-400 text-slate-950 font-black";
                         textoBadge = "MAYBE ⚡";
-                        textEvColor = "text-amber-400";
-                        btnColor = "bg-amber-500 hover:bg-amber-400 text-slate-950";
-                    } else if (index > 1) {
-                        bgCard = "bg-slate-950/90 border-2 border-slate-800";
-                        bgBadge = "bg-slate-800 text-slate-300";
-                        textoBadge = `OPCIÓN ${index + 1} 🎯`;
-                        textEvColor = esEVPositivo ? "text-emerald-400" : "text-rose-400";
-                        btnColor = "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700";
+                        textEvColor = "text-amber-300";
+                        btnColor = "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black";
                     }
 
                     const evTextoFormatted = esEVPositivo ? `(+${opc.ev}% EV)` : `(${opc.ev}% EV)`;
+                    const probFormatted = opc.prob !== undefined ? `${opc.prob}%` : 'N/A';
 
                     return `
-                    <div class="${bgCard} p-4 rounded-2xl shadow-lg">
-                        <div class="flex justify-between items-center mb-2">
+                    <div class="${bgCard} p-4 rounded-2xl shadow-lg transition">
+                        <div class="flex justify-between items-start mb-1">
                             <div>
-                                <span class="${bgBadge} font-black text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider">${textoBadge}</span>
-                                <span class="font-montserrat text-base md:text-lg font-black text-white block mt-1.5">${opc.titulo}</span>
+                                <span class="${bgBadge} text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider block w-fit mb-1">${textoBadge}</span>
+                                <span class="font-montserrat text-base md:text-lg font-black text-white block">${opc.titulo}</span>
                             </div>
                             <span class="font-montserrat text-sm md:text-base font-black ${textEvColor}">${evTextoFormatted}</span>
                         </div>
-                        <button id="${btnId}" onclick="guardarPickEnHistorial('${btnId}', '${opc.titulo}', '${evTextoFormatted}', '${local}', '${visitante}')" class="w-full mt-3 ${btnColor} font-montserrat font-black text-xs py-3 rounded-xl uppercase transition shadow-md">
+                        
+                        <!-- Muestra de Probabilidad Modelo % -->
+                        <div class="flex items-center justify-between text-xs my-2 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
+                            <span class="text-slate-400 font-bold">Probabilidad Modelo:</span>
+                            <span class="font-montserrat font-black text-white">${probFormatted}</span>
+                        </div>
+
+                        <button id="${btnId}" onclick="guardarPickEnHistorial('${btnId}', '${opc.titulo}', '${evTextoFormatted}', '${local}', '${visitante}')" class="w-full mt-2 ${btnColor} font-montserrat font-black text-xs py-3 rounded-xl uppercase transition shadow-md">
                             📌 APOSTAR Y REGISTRAR EN HISTORIAL
                         </button>
                     </div>`;
