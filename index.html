@@ -59,7 +59,7 @@
         </div>
     </header>
 
-    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE CON GRÁFICAS INDEPENDIENTES -->
+    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE -->
     <section id="view-home" class="max-w-6xl mx-auto w-full px-4 py-10 flex-grow flex flex-col items-center justify-center text-center">
         <h1 class="font-montserrat text-3xl md:text-5xl font-black text-slate-900 mb-2 uppercase tracking-tight">
             MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
@@ -266,7 +266,7 @@
         <div id="resultado-container" class="hidden bg-slate-900 text-white border-2 border-slate-800 rounded-3xl p-6 shadow-2xl"></div>
     </main>
 
-    <!-- MODAL HISTORIAL CON FILTROS -->
+    <!-- MODAL HISTORIAL -->
     <div id="modal-historial" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-5 border-b border-slate-800 flex justify-between items-center">
@@ -548,7 +548,7 @@
 
             setTimeout(() => {
                 btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
-                btnElement.className = "w-full mt-2 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-2 rounded-xl uppercase border border-emerald-500/30";
+                btnElement.className = "w-full mt-3 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-3 rounded-xl uppercase border border-emerald-500/30 shadow-md";
                 cargarMetricasYGraficas();
             }, 300);
         }
@@ -657,7 +657,7 @@
             const cUnder = document.getElementById('cuota-under').value || 1.90;
 
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">EVALUANDO LAS 6 OPCIONES DE MERCADO CON MONTE CARLO...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">ORDENANDO LAS 6 OPCIONES DE MERCADO POR % EV...</span>`;
             resContainer.classList.add('hidden');
 
             const endpoint = deporteActual === 'NHL' ? '/api/analizar-nhl' : '/api/analizar-nfl';
@@ -674,75 +674,81 @@
                 btn.disabled = false;
                 btn.innerHTML = `EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀`;
 
-                // CONSTRUCCIÓN DE LAS 6 OPCIONES DE MERCADO CON SUS EV Y PROBABILIDADES
                 const dataSpreadLoc = deporteActual === 'NHL' ? d.pl_local : d.spread_local;
                 const dataSpreadVis = deporteActual === 'NHL' ? d.pl_visitante : d.spread_visitante;
 
                 const labelSpreadLoc = deporteActual === 'NHL' ? `${d.equipo_local_abbr} ${dataSpreadLoc.linea}` : `${d.equipo_local_abbr} ${dataSpreadLoc.linea > 0 ? '+' : ''}${dataSpreadLoc.linea}`;
                 const labelSpreadVis = deporteActual === 'NHL' ? `${d.equipo_visitante_abbr} ${dataSpreadVis.linea}` : `${d.equipo_visitante_abbr} ${dataSpreadVis.linea > 0 ? '+' : ''}${dataSpreadVis.linea}`;
 
-                const opciones = [
-                    { id: 'btn-m-1', titulo: `${d.equipo_local_abbr} gana (ML)`, prob: d.ml_local.prob, ev: d.ml_local.ev, cuota: cMlLoc, justa: d.ml_local.cuota_justa },
-                    { id: 'btn-m-2', titulo: `${d.equipo_visitante_abbr} gana (ML)`, prob: d.ml_visitante.prob, ev: d.ml_visitante.ev, cuota: cMlVis, justa: d.ml_visitante.cuota_justa },
-                    { id: 'btn-m-3', titulo: labelSpreadLoc, prob: dataSpreadLoc.prob, ev: dataSpreadLoc.ev, cuota: cPlLoc, justa: dataSpreadLoc.cuota_justa },
-                    { id: 'btn-m-4', titulo: labelSpreadVis, prob: dataSpreadVis.prob, ev: dataSpreadVis.ev, cuota: cPlVis, justa: dataSpreadVis.cuota_justa },
-                    { id: 'btn-m-5', titulo: `OVER ${d.total_over.linea}`, prob: d.total_over.prob, ev: d.total_over.ev, cuota: cOver, justa: d.total_over.cuota_justa },
-                    { id: 'btn-m-6', titulo: `UNDER ${d.total_under.linea}`, prob: d.total_under.prob, ev: d.total_under.ev, cuota: cUnder, justa: d.total_under.cuota_justa }
+                // CONSTRUCCIÓN Y ORDENAMIENTO DE LAS 6 OPCIONES POR VALOR ESPERADO (EV)
+                let opciones = [
+                    { titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: d.ml_local.ev, cuota: cMlLoc, prob: d.ml_local.prob },
+                    { titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: d.ml_visitante.ev, cuota: cMlVis, prob: d.ml_visitante.prob },
+                    { titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: dataSpreadLoc.ev, cuota: cPlLoc, prob: dataSpreadLoc.prob },
+                    { titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: dataSpreadVis.ev, cuota: cPlVis, prob: dataSpreadVis.prob },
+                    { titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: d.total_over.ev, cuota: cOver, prob: d.total_over.prob },
+                    { titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: d.total_under.ev, cuota: cUnder, prob: d.total_under.prob }
                 ];
 
-                window.opcionesMercado = opciones;
+                // ORDENAR DE MAYOR A MENOR EV
+                opciones.sort((a, b) => b.ev - a.ev);
 
-                function renderTarjetaMercado(opc) {
+                window.opcionesOrdenadas = opciones;
+
+                // FUNCIÓN DE RENDERIZADO ESTILO "CARD APILADA" (IGUAL A LA IMAGEN)
+                function renderTarjetaEstiloImagen(opc, index) {
+                    const btnId = `btn-card-market-${index}`;
                     const esEVPositivo = opc.ev >= 0;
-                    const colorEv = esEVPositivo ? 'text-mana-neon' : 'text-rose-400';
-                    const badgeEv = esEVPositivo ? `+${opc.ev}% EV` : `${opc.ev}% EV`;
-                    const borderCard = esEVPositivo ? 'border-emerald-500/50 bg-slate-950' : 'border-slate-800 bg-slate-950/60';
+                    
+                    let bgCard = "bg-emerald-950/80 border-2 border-emerald-500";
+                    let bgBadge = "bg-emerald-500 text-slate-950";
+                    let textoBadge = "BET 🔥";
+                    let textEvColor = "text-emerald-400";
+                    let btnColor = "bg-emerald-500 hover:bg-emerald-400 text-slate-950";
+
+                    if (index === 1) {
+                        bgCard = "bg-slate-950 border-2 border-amber-500/80";
+                        bgBadge = "bg-amber-500 text-slate-950";
+                        textoBadge = "MAYBE ⚡";
+                        textEvColor = "text-amber-400";
+                        btnColor = "bg-amber-500 hover:bg-amber-400 text-slate-950";
+                    } else if (index > 1) {
+                        bgCard = "bg-slate-950/90 border-2 border-slate-800";
+                        bgBadge = "bg-slate-800 text-slate-300";
+                        textoBadge = `OPCIÓN ${index + 1} 🎯`;
+                        textEvColor = esEVPositivo ? "text-emerald-400" : "text-rose-400";
+                        btnColor = "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700";
+                    }
+
+                    const evTextoFormatted = esEVPositivo ? `(+${opc.ev}% EV)` : `(${opc.ev}% EV)`;
 
                     return `
-                    <div class="border ${borderCard} p-3.5 rounded-2xl flex flex-col justify-between shadow-md">
-                        <div class="flex justify-between items-start mb-2">
+                    <div class="${bgCard} p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-center mb-2">
                             <div>
-                                <span class="font-montserrat font-black text-sm text-white block">${opc.titulo}</span>
-                                <span class="text-[10px] text-slate-400 font-bold">Cuota @ ${opc.cuota} (Justa ${opc.justa})</span>
+                                <span class="${bgBadge} font-black text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider">${textoBadge}</span>
+                                <span class="font-montserrat text-base md:text-lg font-black text-white block mt-1.5">${opc.titulo}</span>
                             </div>
-                            <span class="font-montserrat font-black text-xs ${colorEv} bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
-                                ${badgeEv}
-                            </span>
+                            <span class="font-montserrat text-sm md:text-base font-black ${textEvColor}">${evTextoFormatted}</span>
                         </div>
-
-                        <!-- BARRA DE PROBABILIDAD -->
-                        <div class="my-2">
-                            <div class="flex justify-between text-[10px] text-slate-400 font-bold mb-1">
-                                <span>Probabilidad Modelo</span>
-                                <span class="text-white font-black">${opc.prob}%</span>
-                            </div>
-                            <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
-                                <div class="bg-gradient-to-r from-emerald-500 to-mana-neon h-2 rounded-full" style="width: ${opc.prob}%"></div>
-                            </div>
-                        </div>
-
-                        <button id="${opc.id}" onclick="guardarPickEnHistorial('${opc.id}', '${opc.titulo} @ ${opc.cuota}', '${badgeEv}', '${local}', '${visitante}')" class="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-white font-montserrat font-extrabold text-[11px] py-2 rounded-xl uppercase transition border border-slate-700">
+                        <button id="${btnId}" onclick="guardarPickEnHistorial('${btnId}', '${opc.titulo}', '${evTextoFormatted}', '${local}', '${visitante}')" class="w-full mt-3 ${btnColor} font-montserrat font-black text-xs py-3 rounded-xl uppercase transition shadow-md">
                             📌 APOSTAR Y REGISTRAR EN HISTORIAL
                         </button>
                     </div>`;
                 }
 
                 resContainer.innerHTML = `
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-5">
-                        <div class="flex items-center gap-3">
-                            <span class="font-montserrat font-black text-xl text-white">${d.equipo_local_abbr}</span>
-                            <span class="text-xs text-slate-500 font-bold">VS</span>
-                            <span class="font-montserrat font-black text-xl text-white">${d.equipo_visitante_abbr}</span>
-                        </div>
-                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos} • Total ${d.total_goles_proyectado || d.total_puntos_proyectado}</span>
+                    <div class="mb-6 space-y-4">
+                        ${opciones.map((o, idx) => renderTarjetaEstiloImagen(o, idx)).join('')}
                     </div>
 
-                    <h3 class="font-montserrat text-xs font-black text-mana-neon uppercase tracking-wider mb-4">
-                        📊 EVALUACIÓN DE LAS 6 OPCIONES DE MERCADO (PROBABILIDAD Y % EV):
-                    </h3>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        ${opciones.map(o => renderTarjetaMercado(o)).join('')}
+                    <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_local_abbr}</span>
+                            <span class="text-xs text-slate-500 font-bold">VS</span>
+                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr}</span>
+                        </div>
+                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos} • Total ${d.total_goles_proyectado || d.total_puntos_proyectado}</span>
                     </div>
 
                     <p class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800">
