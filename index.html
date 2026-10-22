@@ -59,7 +59,7 @@
         </div>
     </header>
 
-    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE (3 CARDS) -->
+    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE CON MASCOTAS -->
     <section id="view-home" class="max-w-6xl mx-auto w-full px-4 py-8 flex-grow flex flex-col items-center justify-center text-center">
         <h1 class="font-montserrat text-3xl md:text-5xl font-black text-slate-900 mb-2 uppercase tracking-tight">
             MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
@@ -71,9 +71,9 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mb-10">
             
             <!-- MODELO NHL (FROST-IA) -->
-            <div class="bg-white border-2 border-slate-200 hover:border-emerald-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-b from-emerald-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-2">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg" alt="NHL Logo" class="w-10 h-10 object-contain">
+            <div class="bg-white border-2 border-emerald-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-28 h-28 mb-1 flex items-center justify-center">
+                    <img src="mascota-nhl.png.png" alt="Mascota FROST-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]">
                 </div>
                 <span class="bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-emerald-400">
                     NHL • HOCKEY
@@ -111,11 +111,11 @@
             </div>
 
             <!-- MODELO NFL (BLITZ-IA) -->
-            <div class="bg-white border-2 border-slate-200 hover:border-amber-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-b from-amber-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-2">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg" alt="NFL Logo" class="w-10 h-10 object-contain">
+            <div class="bg-white border-2 border-sky-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-28 h-28 mb-1 flex items-center justify-center">
+                    <img src="mascota-nfl.png.png" alt="Mascota BLITZ-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(14,165,233,0.5)]">
                 </div>
-                <span class="bg-slate-900 text-mana-gold font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-amber-400">
+                <span class="bg-slate-900 text-sky-400 font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-sky-400">
                     NFL • FÚTBOL AMERICANO
                 </span>
                 <h2 class="font-montserrat text-xl font-black text-slate-900 uppercase mb-1">BLITZ-IA</h2>
@@ -125,7 +125,7 @@
                     <div class="grid grid-cols-2 gap-1 text-center text-xs">
                         <div class="bg-white p-1.5 rounded-xl border">
                             <span class="text-[8px] text-slate-400 font-bold block">EFECTIVIDAD</span>
-                            <span id="nfl-stat-winrate" class="font-montserrat font-black text-amber-500 text-xs">--%</span>
+                            <span id="nfl-stat-winrate" class="font-montserrat font-black text-sky-500 text-xs">--%</span>
                         </div>
                         <div class="bg-white p-1.5 rounded-xl border">
                             <span class="text-[8px] text-slate-400 font-bold block">TOTAL</span>
@@ -145,15 +145,15 @@
                     </div>
                 </div>
 
-                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-amber-500 to-amber-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-sky-500 to-sky-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
                     ENTRAR AL EMPARRILLADO 🏈
                 </button>
             </div>
 
             <!-- MODELO NBA (DUNK-IA) -->
-            <div class="bg-white border-2 border-slate-200 hover:border-orange-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-b from-orange-100 to-slate-50 p-2 shadow-lg border-2 border-white flex items-center justify-center mb-2">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/0/03/National_Basketball_Association_logo.svg" alt="NBA Logo" class="w-10 h-10 object-contain">
+            <div class="bg-white border-2 border-orange-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-28 h-28 mb-1 flex items-center justify-center">
+                    <img src="mascota-nba.png.png" alt="Mascota DUNK-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]">
                 </div>
                 <span class="bg-slate-900 text-mana-orange font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-orange-400">
                     NBA • BALONCESTO
@@ -254,7 +254,7 @@
                     </div>
                 </div>
 
-                <!-- SPREAD / HANDICAP (ENTRADA MANUAL) -->
+                <!-- SPREAD / HANDICAP MANUAL -->
                 <div class="border-t border-slate-800 pt-3">
                     <span id="etiqueta-mercado-spread" class="text-[11px] font-bold text-slate-400 block mb-2">2. SPREAD / HANDICAP MANUAL</span>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -277,7 +277,7 @@
                     </div>
                 </div>
 
-                <!-- OVER / UNDER (ENTRADA MANUAL) -->
+                <!-- OVER / UNDER MANUAL -->
                 <div class="border-t border-slate-800 pt-3">
                     <span id="etiqueta-mercado-totales" class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTALES (OVER / UNDER)</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
