@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Maña Picks • Hub Multideporte (NHL, NFL & NBA)</title>
+    <title>La Maña Picks • Hub Multideporte (NHL, NFL, NBA & MLB)</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,6 +25,7 @@
                             emerald: '#059669',
                             gold: '#F59E0B',
                             orange: '#F97316',
+                            yellow: '#FACC15',
                             bg: '#F8FAFC'
                         }
                     }
@@ -43,8 +44,8 @@
 
     <!-- HEADER -->
     <header class="bg-white border-b-2 border-slate-200 py-4 px-6 relative">
-        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-mana-neon via-mana-gold to-mana-orange"></div>
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-mana-neon via-sky-400 via-mana-orange to-yellow-400"></div>
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
             <button onclick="volverHome()" class="font-montserrat text-2xl font-black tracking-tight text-slate-900 text-left">
                 LA MAÑA <span class="text-emerald-600">PICKS</span>
             </button>
@@ -59,134 +60,174 @@
         </div>
     </header>
 
-    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE CON MASCOTAS -->
-    <section id="view-home" class="max-w-6xl mx-auto w-full px-4 py-8 flex-grow flex flex-col items-center justify-center text-center">
+    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE (4 MODELOS) -->
+    <section id="view-home" class="max-w-7xl mx-auto w-full px-4 py-8 flex-grow flex flex-col items-center justify-center text-center">
         <h1 class="font-montserrat text-3xl md:text-5xl font-black text-slate-900 mb-2 uppercase tracking-tight">
             MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
         </h1>
-        <p class="text-slate-600 font-bold text-sm md:text-base max-w-xl mb-8">
-            Simulaciones Monte Carlo, Pace, Eficiencia, xG y detección de apuestas con valor (+EV).
+        <p class="text-slate-600 font-bold text-sm md:text-base max-w-2xl mb-8">
+            Simulaciones Monte Carlo, Sabermetría, Pace, Eficiencia y detección de apuestas con valor (+EV).
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mb-10">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full max-w-7xl mb-10">
             
             <!-- MODELO NHL (FROST-IA) -->
-            <div class="bg-white border-2 border-emerald-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-28 h-28 mb-1 flex items-center justify-center">
+            <div class="bg-white border-2 border-emerald-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-24 h-24 mb-1 flex items-center justify-center">
                     <img src="mascota-nhl.png.png" alt="Mascota FROST-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]">
                 </div>
-                <span class="bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-emerald-400">
+                <span class="bg-slate-900 text-mana-neon font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-emerald-400">
                     NHL • HOCKEY
                 </span>
-                <h2 class="font-montserrat text-xl font-black text-slate-900 uppercase mb-1">FROST-IA</h2>
-                <p class="text-[11px] text-slate-500 font-medium mb-3">xG, Corsi, Moneyline y Totales.</p>
+                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">FROST-IA</h2>
+                <p class="text-[10px] text-slate-500 font-medium mb-3">xG, Corsi, Moneyline y Totales.</p>
 
-                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-4 grid grid-cols-2 gap-2 items-center">
+                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
                     <div class="grid grid-cols-2 gap-1 text-center text-xs">
-                        <div class="bg-white p-1.5 rounded-xl border">
-                            <span class="text-[8px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
                             <span id="nhl-stat-winrate" class="font-montserrat font-black text-emerald-600 text-xs">--%</span>
                         </div>
-                        <div class="bg-white p-1.5 rounded-xl border">
-                            <span class="text-[8px] text-slate-400 font-bold block">TOTAL</span>
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
                             <span id="nhl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
                         </div>
-                        <div class="bg-emerald-50 p-1.5 rounded-xl border border-emerald-200">
-                            <span class="text-[8px] text-emerald-600 font-bold block">WIN ✅</span>
+                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
                             <span id="nhl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
                         </div>
-                        <div class="bg-rose-50 p-1.5 rounded-xl border border-rose-200">
-                            <span class="text-[8px] text-rose-500 font-bold block">LOSS ❌</span>
+                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
                             <span id="nhl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
                         </div>
                     </div>
-                    <div class="relative h-24 w-full flex items-center justify-center">
+                    <div class="relative h-20 w-full flex items-center justify-center">
                         <canvas id="graficaNhl"></canvas>
                     </div>
                 </div>
 
-                <button onclick="seleccionarDeporte('NHL')" class="w-full mt-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                <button onclick="seleccionarDeporte('NHL')" class="w-full mt-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
                     ENTRAR AL HIELO 🏒
                 </button>
             </div>
 
             <!-- MODELO NFL (BLITZ-IA) -->
-            <div class="bg-white border-2 border-sky-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-28 h-28 mb-1 flex items-center justify-center">
+            <div class="bg-white border-2 border-sky-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-24 h-24 mb-1 flex items-center justify-center">
                     <img src="mascota-nfl.png.png" alt="Mascota BLITZ-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(14,165,233,0.5)]">
                 </div>
-                <span class="bg-slate-900 text-sky-400 font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-sky-400">
+                <span class="bg-slate-900 text-sky-400 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-sky-400">
                     NFL • FÚTBOL AMERICANO
                 </span>
-                <h2 class="font-montserrat text-xl font-black text-slate-900 uppercase mb-1">BLITZ-IA</h2>
-                <p class="text-[11px] text-slate-500 font-medium mb-3">EPA/Drive, Spread y Totales.</p>
+                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">BLITZ-IA</h2>
+                <p class="text-[10px] text-slate-500 font-medium mb-3">EPA/Drive, Spread y Totales.</p>
 
-                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-4 grid grid-cols-2 gap-2 items-center">
+                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
                     <div class="grid grid-cols-2 gap-1 text-center text-xs">
-                        <div class="bg-white p-1.5 rounded-xl border">
-                            <span class="text-[8px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
                             <span id="nfl-stat-winrate" class="font-montserrat font-black text-sky-500 text-xs">--%</span>
                         </div>
-                        <div class="bg-white p-1.5 rounded-xl border">
-                            <span class="text-[8px] text-slate-400 font-bold block">TOTAL</span>
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
                             <span id="nfl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
                         </div>
-                        <div class="bg-emerald-50 p-1.5 rounded-xl border border-emerald-200">
-                            <span class="text-[8px] text-emerald-600 font-bold block">WIN ✅</span>
+                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
                             <span id="nfl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
                         </div>
-                        <div class="bg-rose-50 p-1.5 rounded-xl border border-rose-200">
-                            <span class="text-[8px] text-rose-500 font-bold block">LOSS ❌</span>
+                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
                             <span id="nfl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
                         </div>
                     </div>
-                    <div class="relative h-24 w-full flex items-center justify-center">
+                    <div class="relative h-20 w-full flex items-center justify-center">
                         <canvas id="graficaNfl"></canvas>
                     </div>
                 </div>
 
-                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-sky-500 to-sky-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-sky-500 to-sky-600 text-white font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
                     ENTRAR AL EMPARRILLADO 🏈
                 </button>
             </div>
 
             <!-- MODELO NBA (DUNK-IA) -->
-            <div class="bg-white border-2 border-orange-500 rounded-3xl p-5 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-28 h-28 mb-1 flex items-center justify-center">
+            <div class="bg-white border-2 border-orange-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-24 h-24 mb-1 flex items-center justify-center">
                     <img src="mascota-nba.png.png" alt="Mascota DUNK-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]">
                 </div>
-                <span class="bg-slate-900 text-mana-orange font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-orange-400">
+                <span class="bg-slate-900 text-mana-orange font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-orange-400">
                     NBA • BALONCESTO
                 </span>
-                <h2 class="font-montserrat text-xl font-black text-slate-900 uppercase mb-1">DUNK-IA</h2>
-                <p class="text-[11px] text-slate-500 font-medium mb-3">Pace, Off/Def Rating, Spread y Totales.</p>
+                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">DUNK-IA</h2>
+                <p class="text-[10px] text-slate-500 font-medium mb-3">Pace, Off/Def Rating y Totales.</p>
 
-                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-4 grid grid-cols-2 gap-2 items-center">
+                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
                     <div class="grid grid-cols-2 gap-1 text-center text-xs">
-                        <div class="bg-white p-1.5 rounded-xl border">
-                            <span class="text-[8px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
                             <span id="nba-stat-winrate" class="font-montserrat font-black text-orange-500 text-xs">--%</span>
                         </div>
-                        <div class="bg-white p-1.5 rounded-xl border">
-                            <span class="text-[8px] text-slate-400 font-bold block">TOTAL</span>
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
                             <span id="nba-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
                         </div>
-                        <div class="bg-emerald-50 p-1.5 rounded-xl border border-emerald-200">
-                            <span class="text-[8px] text-emerald-600 font-bold block">WIN ✅</span>
+                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
                             <span id="nba-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
                         </div>
-                        <div class="bg-rose-50 p-1.5 rounded-xl border border-rose-200">
-                            <span class="text-[8px] text-rose-500 font-bold block">LOSS ❌</span>
+                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
                             <span id="nba-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
                         </div>
                     </div>
-                    <div class="relative h-24 w-full flex items-center justify-center">
+                    <div class="relative h-20 w-full flex items-center justify-center">
                         <canvas id="graficaNba"></canvas>
                     </div>
                 </div>
 
-                <button onclick="seleccionarDeporte('NBA')" class="w-full mt-auto bg-gradient-to-r from-orange-500 to-orange-600 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-md hover:scale-105 transition">
+                <button onclick="seleccionarDeporte('NBA')" class="w-full mt-auto bg-gradient-to-r from-orange-500 to-orange-600 text-white font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
                     ENTRAR A LA DUELA 🏀
+                </button>
+            </div>
+
+            <!-- MODELO MLB (SLUGGER-IA - AMARILLO NEÓN) -->
+            <div class="bg-white border-2 border-yellow-400 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-24 h-24 mb-1 flex items-center justify-center">
+                    <img src="mascota-mlb.png.png" alt="Mascota SLUGGER-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(250,204,21,0.6)]">
+                </div>
+                <span class="bg-slate-900 text-yellow-300 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-yellow-400">
+                    MLB • BÉISBOL
+                </span>
+                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">SLUGGER-IA</h2>
+                <p class="text-[10px] text-slate-500 font-medium mb-3">xERA, FIP, NRFI, Props K's y F5.</p>
+
+                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
+                    <div class="grid grid-cols-2 gap-1 text-center text-xs">
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                            <span id="mlb-stat-winrate" class="font-montserrat font-black text-yellow-500 text-xs">--%</span>
+                        </div>
+                        <div class="bg-white p-1 rounded-xl border">
+                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
+                            <span id="mlb-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
+                        </div>
+                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
+                            <span id="mlb-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
+                        </div>
+                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
+                            <span id="mlb-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
+                        </div>
+                    </div>
+                    <div class="relative h-20 w-full flex items-center justify-center">
+                        <canvas id="graficaMlb"></canvas>
+                    </div>
+                </div>
+
+                <button onclick="seleccionarDeporte('MLB')" class="w-full mt-auto bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-950 font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
+                    ENTRAR AL DIAMANTE ⚾
                 </button>
             </div>
 
@@ -260,7 +301,7 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Local</label>
-                            <input id="linea-pl-loc" type="number" step="0.5" value="-2.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                            <input id="linea-pl-loc" type="number" step="0.5" value="-1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Local</label>
@@ -268,7 +309,7 @@
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Visitante</label>
-                            <input id="linea-pl-vis" type="number" step="0.5" value="2.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                            <input id="linea-pl-vis" type="number" step="0.5" value="1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Visitante</label>
@@ -282,8 +323,8 @@
                     <span id="etiqueta-mercado-totales" class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTALES (OVER / UNDER)</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         <div>
-                            <label class="text-slate-400 block mb-1">Línea Total Puntos/Goles</label>
-                            <input id="linea-total-goles" type="number" step="0.5" value="224.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                            <label class="text-slate-400 block mb-1">Línea Total Puntos/Goles/Carreras</label>
+                            <input id="linea-total-goles" type="number" step="0.5" value="6.0" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Over</label>
@@ -313,11 +354,12 @@
                 <button onclick="cerrarModalHistorial()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
             </div>
 
-            <div class="bg-slate-950 px-5 py-2 border-b border-slate-800 flex gap-2">
+            <div class="bg-slate-950 px-5 py-2 border-b border-slate-800 flex gap-2 flex-wrap">
                 <button onclick="filtrarHistorial('TODOS')" id="btn-f-todos" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-white">TODOS</button>
                 <button onclick="filtrarHistorial('NHL')" id="btn-f-nhl" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400">NHL 🏒</button>
                 <button onclick="filtrarHistorial('NFL')" id="btn-f-nfl" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400">NFL 🏈</button>
                 <button onclick="filtrarHistorial('NBA')" id="btn-f-nba" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400">NBA 🏀</button>
+                <button onclick="filtrarHistorial('MLB')" id="btn-f-mlb" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400">MLB ⚾</button>
             </div>
 
             <div id="lista-historial-content" class="p-5 overflow-y-auto flex-grow space-y-3"></div>
@@ -341,7 +383,7 @@
             "Calgary Flames": "cgy", "Carolina Hurricanes": "car", "Chicago Blackhawks": "chi",
             "Colorado Avalanche": "col", "Columbus Blue Jackets": "cbj", "Dallas Stars": "dal",
             "Detroit Red Wings": "det", "Edmonton Oilers": "edm", "Florida Panthers": "fla",
-            "Los Angeles Kings": "lak", "Minnesota Wild": "min", "Montreal Canadiens": "mtl",
+            "Los Angeles Kings": "la", "Minnesota Wild": "min", "Montreal Canadiens": "mtl",
             "Nashville Predators": "nsh", "New Jersey Devils": "nj", "New York Islanders": "nyi",
             "New York Rangers": "nyr", "Ottawa Senators": "ott", "Philadelphia Flyers": "phi",
             "Pittsburgh Penguins": "pit", "San Jose Sharks": "sj", "Seattle Kraken": "sea",
@@ -377,7 +419,20 @@
             "Toronto Raptors": "tor", "Utah Jazz": "uta", "Washington Wizards": "was"
         };
 
-        let chartNhl = null, chartNfl = null, chartNba = null;
+        const EQUIPOS_MLB = {
+            "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
+            "Boston Red Sox": "bos", "Chicago Cubs": "chc", "Chicago White Sox": "chw",
+            "Cincinnati Reds": "cin", "Cleveland Guardians": "cle", "Colorado Rockies": "col",
+            "Detroit Tigers": "det", "Houston Astros": "hou", "Kansas City Royals": "kc",
+            "Los Angeles Angels": "laa", "Los Angeles Dodgers": "lad", "Miami Marlins": "mia",
+            "Milwaukee Brewers": "mil", "Minnesota Twins": "min", "New York Mets": "nym",
+            "New York Yankees": "nyy", "Oakland Athletics": "oak", "Philadelphia Phillies": "phi",
+            "Pittsburgh Pirates": "pit", "San Diego Padres": "sd", "San Francisco Giants": "sf",
+            "Seattle Mariners": "sea", "St. Louis Cardinals": "stl", "Tampa Bay Rays": "tb",
+            "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh"
+        };
+
+        let chartNhl = null, chartNfl = null, chartNba = null, chartMlb = null;
 
         function obtenerPicksGuardados() {
             try { return JSON.parse(localStorage.getItem('picks_historial_local')) || []; }
@@ -408,11 +463,16 @@
                 badge.className = "bg-slate-900 text-mana-gold font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-amber-400";
                 titulo.innerText = "BLITZ-IA • SIMULADOR EMPARRILLADO";
                 cargarOpcionesNFL();
-            } else {
+            } else if (dep === 'NBA') {
                 badge.innerText = "NBA";
                 badge.className = "bg-slate-900 text-mana-orange font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-orange-400";
                 titulo.innerText = "DUNK-IA • SIMULADOR BALONCESTO";
                 cargarOpcionesNBA();
+            } else {
+                badge.innerText = "MLB";
+                badge.className = "bg-slate-900 text-yellow-300 font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-yellow-400";
+                titulo.innerText = "SLUGGER-IA • MOTOR SABERMÉTRICO BÉISBOL";
+                cargarOpcionesMLB();
             }
         }
 
@@ -433,7 +493,7 @@
 
             document.getElementById('linea-pl-loc').value = "-1.5";
             document.getElementById('linea-pl-vis').value = "1.5";
-            document.getElementById('linea-total-goles').value = "5.5";
+            document.getElementById('linea-total-goles').value = "6.0";
             actualizarEscudos();
         }
 
@@ -469,13 +529,34 @@
                 selVis.add(new Option(eq, eq));
             });
 
-            selLoc.value = "Miami Heat"; selVis.value = "Minnesota Timberwolves";
+            selLoc.value = "Boston Celtics"; selVis.value = "Denver Nuggets";
             document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
 
             document.getElementById('linea-pl-loc').value = "-2.5";
             document.getElementById('linea-pl-vis').value = "2.5";
-            document.getElementById('linea-total-goles').value = "236.5";
+            document.getElementById('linea-total-goles').value = "224.5";
+            actualizarEscudos();
+        }
+
+        function cargarOpcionesMLB() {
+            const dic = EQUIPOS_MLB;
+            const selLoc = document.getElementById('select-local');
+            const selVis = document.getElementById('select-visitante');
+            selLoc.innerHTML = ''; selVis.innerHTML = '';
+
+            Object.keys(dic).sort().forEach(eq => {
+                selLoc.add(new Option(eq, eq));
+                selVis.add(new Option(eq, eq));
+            });
+
+            selLoc.value = "Los Angeles Dodgers"; selVis.value = "New York Yankees";
+            document.getElementById('etiqueta-mercado-spread').innerText = "2. RUN LINE (HANDICAP CARRERAS)";
+            document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE CARRERAS (OVER / UNDER)";
+
+            document.getElementById('linea-pl-loc').value = "-1.5";
+            document.getElementById('linea-pl-vis').value = "1.5";
+            document.getElementById('linea-total-goles').value = "8.5";
             actualizarEscudos();
         }
 
@@ -483,16 +564,37 @@
             const loc = document.getElementById('select-local').value;
             const vis = document.getElementById('select-visitante').value;
 
+            const imgLocElement = document.getElementById('img-local');
+            const imgVisElement = document.getElementById('img-visitante');
+
             if (deporteActual === 'NHL') {
-                document.getElementById('img-local').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[loc]}.png`;
-                document.getElementById('img-visitante').src = `https://a.espncdn.com/i/teamlogos/nhl/500/${EQUIPOS_NHL[vis]}.png`;
+                const codeLoc = EQUIPOS_NHL[loc] || "nhl";
+                const codeVis = EQUIPOS_NHL[vis] || "nhl";
+                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nhl/500/${codeLoc}.png`;
+                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nhl/500/${codeVis}.png`;
             } else if (deporteActual === 'NFL') {
-                document.getElementById('img-local').src = `https://a.espncdn.com/i/teamlogos/nfl/500/${EQUIPOS_NFL[loc]}.png`;
-                document.getElementById('img-visitante').src = `https://a.espncdn.com/i/teamlogos/nfl/500/${EQUIPOS_NFL[vis]}.png`;
+                const codeLoc = EQUIPOS_NFL[loc] || "nfl";
+                const codeVis = EQUIPOS_NFL[vis] || "nfl";
+                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nfl/500/${codeLoc}.png`;
+                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nfl/500/${codeVis}.png`;
+            } else if (deporteActual === 'NBA') {
+                const codeLoc = EQUIPOS_NBA[loc] || "nba";
+                const codeVis = EQUIPOS_NBA[vis] || "nba";
+                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nba/500/${codeLoc}.png`;
+                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nba/500/${codeVis}.png`;
             } else {
-                document.getElementById('img-local').src = `https://a.espncdn.com/i/teamlogos/nba/500/${EQUIPOS_NBA[loc]}.png`;
-                document.getElementById('img-visitante').src = `https://a.espncdn.com/i/teamlogos/nba/500/${EQUIPOS_NBA[vis]}.png`;
+                const codeLoc = EQUIPOS_MLB[loc] || "mlb";
+                const codeVis = EQUIPOS_MLB[vis] || "mlb";
+                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/mlb/500/${codeLoc}.png`;
+                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/mlb/500/${codeVis}.png`;
             }
+
+            imgLocElement.onerror = function() {
+                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png";
+            };
+            imgVisElement.onerror = function() {
+                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png";
+            };
 
             document.getElementById('name-local').innerText = loc;
             document.getElementById('name-visitante').innerText = vis;
@@ -515,6 +617,7 @@
             document.getElementById('btn-f-nhl').className = dep === 'NHL' ? "px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
             document.getElementById('btn-f-nfl').className = dep === 'NFL' ? "px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
             document.getElementById('btn-f-nba').className = dep === 'NBA' ? "px-3 py-1 rounded-lg text-xs font-bold bg-orange-500 text-slate-950" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
+            document.getElementById('btn-f-mlb').className = dep === 'MLB' ? "px-3 py-1 rounded-lg text-xs font-bold bg-yellow-400 text-slate-950" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
             renderizarListaHistorial();
         }
 
@@ -655,6 +758,7 @@
             const nhlPicks = picks.filter(p => (p.deporte || 'NHL').toUpperCase() === 'NHL');
             const nflPicks = picks.filter(p => (p.deporte || '').toUpperCase() === 'NFL');
             const nbaPicks = picks.filter(p => (p.deporte || '').toUpperCase() === 'NBA');
+            const mlbPicks = picks.filter(p => (p.deporte || '').toUpperCase() === 'MLB');
 
             function calcStats(lista) {
                 const wins = lista.filter(p => p.estado === 'WIN').length;
@@ -668,6 +772,7 @@
             const nhl = calcStats(nhlPicks);
             const nfl = calcStats(nflPicks);
             const nba = calcStats(nbaPicks);
+            const mlb = calcStats(mlbPicks);
 
             document.getElementById('nhl-stat-winrate').innerText = `${nhl.wr}%`;
             document.getElementById('nhl-stat-totales').innerText = nhl.total;
@@ -684,8 +789,13 @@
             document.getElementById('nba-stat-wins').innerText = nba.wins;
             document.getElementById('nba-stat-losses').innerText = nba.losses;
 
-            const finGlobal = nhl.wins + nfl.wins + nba.wins + nhl.losses + nfl.losses + nba.losses;
-            const wrGlobal = finGlobal > 0 ? Math.round(((nhl.wins + nfl.wins + nba.wins) / finGlobal) * 100) : 100;
+            document.getElementById('mlb-stat-winrate').innerText = `${mlb.wr}%`;
+            document.getElementById('mlb-stat-totales').innerText = mlb.total;
+            document.getElementById('mlb-stat-wins').innerText = mlb.wins;
+            document.getElementById('mlb-stat-losses').innerText = mlb.losses;
+
+            const finGlobal = nhl.wins + nfl.wins + nba.wins + mlb.wins + nhl.losses + nfl.losses + nba.losses + mlb.losses;
+            const wrGlobal = finGlobal > 0 ? Math.round(((nhl.wins + nfl.wins + nba.wins + mlb.wins) / finGlobal) * 100) : 100;
             document.getElementById('win-rate-display').innerText = `${wrGlobal}%`;
 
             const ctxNhl = document.getElementById('graficaNhl').getContext('2d');
@@ -729,6 +839,20 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
             });
+
+            const ctxMlb = document.getElementById('graficaMlb').getContext('2d');
+            if (chartMlb) { chartMlb.destroy(); }
+            chartMlb = new Chart(ctxMlb, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ganadas', 'Perdidas', 'Pendientes'],
+                    datasets: [{
+                        data: [mlb.wins > 0 ? mlb.wins : 1, mlb.losses, mlb.pending > 0 ? mlb.pending : (mlb.total == 0 ? 1 : 0)],
+                        backgroundColor: ['#FACC15', '#F43F5E', '#10B981'], borderWidth: 2, borderColor: '#FFFFFF'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
+            });
         }
 
         async function ejecutarSimulacionLive() {
@@ -740,12 +864,12 @@
             const cMlLoc = parseFloat(document.getElementById('cuota-ml-loc').value) || 1.84;
             const cMlVis = parseFloat(document.getElementById('cuota-ml-vis').value) || 1.96;
             
-            const lPlLoc = parseFloat(document.getElementById('linea-pl-loc').value) || -2.5;
+            const lPlLoc = parseFloat(document.getElementById('linea-pl-loc').value) || -1.5;
             const cPlLoc = parseFloat(document.getElementById('cuota-pl-loc').value) || 1.90;
-            const lPlVis = parseFloat(document.getElementById('linea-pl-vis').value) || 2.5;
+            const lPlVis = parseFloat(document.getElementById('linea-pl-vis').value) || 1.5;
             const cPlVis = parseFloat(document.getElementById('cuota-pl-vis').value) || 1.90;
 
-            const lTotal = parseFloat(document.getElementById('linea-total-goles').value) || 224.5;
+            const lTotal = parseFloat(document.getElementById('linea-total-goles').value) || 6.0;
             const cOver = parseFloat(document.getElementById('cuota-over').value) || 1.90;
             const cUnder = parseFloat(document.getElementById('cuota-under').value) || 1.90;
 
@@ -756,11 +880,12 @@
             let endpoint = '/api/analizar-nhl';
             if (deporteActual === 'NFL') endpoint = '/api/analizar-nfl';
             if (deporteActual === 'NBA') endpoint = '/api/analizar-nba';
+            if (deporteActual === 'MLB') endpoint = '/api/analizar-mlb';
 
-            const paramSpreadLoc = deporteActual === 'NHL' ? 'l_pl_loc' : 'l_spread_loc';
-            const paramSpreadVis = deporteActual === 'NHL' ? 'l_pl_vis' : 'l_spread_vis';
-            const paramCuotaSpreadLoc = deporteActual === 'NHL' ? 'c_pl_loc' : 'c_spread_loc';
-            const paramCuotaSpreadVis = deporteActual === 'NHL' ? 'c_pl_vis' : 'c_spread_vis';
+            const paramSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'l_rl_loc' : 'l_spread_loc';
+            const paramSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'l_rl_vis' : 'l_spread_vis';
+            const paramCuotaSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'c_rl_loc' : 'c_spread_loc';
+            const paramCuotaSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'c_rl_vis' : 'c_spread_vis';
 
             try {
                 const url = `${RENDER_API_URL}${endpoint}?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}&c_ml_loc=${cMlLoc}&c_ml_vis=${cMlVis}&${paramSpreadLoc}=${lPlLoc}&${paramCuotaSpreadLoc}=${cPlLoc}&${paramSpreadVis}=${lPlVis}&${paramCuotaSpreadVis}=${cPlVis}&l_total=${lTotal}&c_over=${cOver}&c_under=${cUnder}`;
@@ -770,11 +895,11 @@
                 btn.disabled = false;
                 btn.innerHTML = `EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀`;
 
-                const dataSpreadLoc = deporteActual === 'NHL' ? d.pl_local : d.spread_local;
-                const dataSpreadVis = deporteActual === 'NHL' ? d.pl_visitante : d.spread_visitante;
+                const dataSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_local || d.runline_local) : d.spread_local;
+                const dataSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_visitante || d.runline_visitante) : d.spread_visitante;
 
-                const labelSpreadLoc = deporteActual === 'NHL' ? `${d.equipo_local_abbr} ${dataSpreadLoc.linea}` : `${d.equipo_local_abbr} ${dataSpreadLoc.linea > 0 ? '+' : ''}${dataSpreadLoc.linea}`;
-                const labelSpreadVis = deporteActual === 'NHL' ? `${d.equipo_visitante_abbr} ${dataSpreadVis.linea}` : `${d.equipo_visitante_abbr} ${dataSpreadVis.linea > 0 ? '+' : ''}${dataSpreadVis.linea}`;
+                const labelSpreadLoc = `${d.equipo_local_abbr} ${dataSpreadLoc.linea > 0 ? '+' : ''}${dataSpreadLoc.linea}`;
+                const labelSpreadVis = `${d.equipo_visitante_abbr} ${dataSpreadVis.linea > 0 ? '+' : ''}${dataSpreadVis.linea}`;
 
                 function calcEV(probPercent, odds) {
                     const probDecimal = probPercent / 100.0;
@@ -852,7 +977,7 @@
                             <span class="text-xs text-slate-500 font-bold">VS</span>
                             <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr}</span>
                         </div>
-                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos} • Total ${d.total_goles_proyectado || d.total_puntos_proyectado}</span>
+                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos || d.proyeccion_carreras} • Total ${d.total_goles_proyectado || d.total_puntos_proyectado || d.total_carreras_proyectado}</span>
                     </div>
 
                     <p class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800">
