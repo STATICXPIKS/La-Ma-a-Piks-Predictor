@@ -1,14 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Importaciones de los 4 motores de simulación
 import nhl_model
 import nfl_model
 import nba_model
 import mlb_model
 
 app = Flask(__name__)
-CORS(app)  # Permite peticiones desde la interfaz en Vercel
+CORS(app)
 
 @app.route('/')
 def home():
@@ -39,7 +38,7 @@ def analizar_nhl():
         
         func_nhl = getattr(nhl_model, 'simular_partido_nhl', getattr(nhl_model, 'simular_partido', None))
         if func_nhl is None:
-            return jsonify({"error": "No se encontró la función de simulación en nhl_model"}), 500
+            return jsonify({"error": "No se encontró la función en nhl_model"}), 500
 
         resultado = func_nhl(
             local, visitante,
@@ -73,7 +72,7 @@ def analizar_nfl():
         
         func_nfl = getattr(nfl_model, 'simular_partido_nfl', getattr(nfl_model, 'simular_partido', None))
         if func_nfl is None:
-            return jsonify({"error": "No se encontró la función de simulación en nfl_model"}), 500
+            return jsonify({"error": "No se encontró la función en nfl_model"}), 500
 
         resultado = func_nfl(
             local, visitante,
@@ -107,7 +106,7 @@ def analizar_nba():
         
         func_nba = getattr(nba_model, 'simular_partido_nba', getattr(nba_model, 'simular_partido', None))
         if func_nba is None:
-            return jsonify({"error": "No se encontró la función de simulación en nba_model"}), 500
+            return jsonify({"error": "No se encontró la función en nba_model"}), 500
 
         resultado = func_nba(
             local, visitante,
@@ -141,7 +140,7 @@ def analizar_mlb():
         
         func_mlb = getattr(mlb_model, 'simular_partido_mlb', getattr(mlb_model, 'simular_partido', None))
         if func_mlb is None:
-            return jsonify({"error": "No se encontró la función de simulación en mlb_model"}), 500
+            return jsonify({"error": "No se encontró la función en mlb_model"}), 500
 
         resultado = func_mlb(
             local, visitante,
