@@ -58,16 +58,23 @@ def simular_poisson_sobredispersa(media: float, dispersion: float = 1.15) -> int
 def simular_partido_mlb(
     local: str,
     visitante: str,
-    c_ml_loc: float, c_ml_vis: float,
-    l_rl_loc: float, c_rl_loc: float,
-    l_rl_vis: float, c_rl_vis: float,
-    l_total: float, c_over: float, c_under: float,
-    linea_ks_p_loc: float = 6.5, cuota_over_ks_loc: float = 1.85,
+    c_ml_loc: float,
+    c_ml_vis: float,
+    l_rl_loc: float,
+    c_rl_loc: float,
+    l_rl_vis: float,
+    c_rl_vis: float,
+    l_total: float,
+    c_over: float,
+    c_under: float,
+    linea_ks_p_loc: float = 6.5,
+    cuota_over_ks_loc: float = 1.85,
     linea_outs_p_loc: float = 17.5,
-    viento_mph: float = 0.0, # Positivo = hacia afuera (favor bateador)
-    temp_f: float = 72.0,   # Humedad / Temperatura
+    viento_mph: float = 0.0,
+    temp_f: float = 72.0,
     iteraciones: int = 10000
 ):
+    
     abbr_loc = MAPEO_MLB.get(local, local[:3].upper())
     abbr_vis = MAPEO_MLB.get(visitante, visitante[:3].upper())
 
