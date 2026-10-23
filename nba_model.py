@@ -4,7 +4,6 @@ import math
 PACE_LIGA = 100.2
 OFF_EFF_LIGA = 116.5
 
-# Mapeo exacto de nombres completos de selectores
 MAPEO_NOMBRES = {
     "Atlanta Hawks": "ATL", "Boston Celtics": "BOS", "Brooklyn Nets": "BKN",
     "Charlotte Hornets": "CHA", "Chicago Bulls": "CHI", "Cleveland Cavaliers": "CLE",
@@ -35,6 +34,18 @@ def obtener_ratings(nombre_equipo: str):
     abbr = MAPEO_NOMBRES.get(nombre_equipo, nombre_equipo[:3].upper())
     return EQUIPOS_RATINGS.get(abbr, (114.5, 114.5)), abbr
 
+def calibrar_probabilidad(prob_mc: float, cuota: float, peso_mc: float = 0.20) -> float:
+    """
+    Ajusta la probabilidad de Monte Carlo (prob_mc) usando la Probabilidad Implícita de la Cuota (1/cuota)
+    como ancla Bayesiana.
+    """
+    if not cuota or cuota <= 1.0:
+        return prob_mc
+    prob_impl = (1.0 / cuota) * 100.0
+    # Regresión Bayesiana: Peso del Mercado (80%) + Peso del Modelo IA (20%)
+    prob_calibrada = (prob_mc * peso_mc) + (prob_impl * (1.0 - peso_mc))
+    return round(prob_calibrada, 1)
+
 def simular_partido_nba(
     local: str,
     visitante: str,
@@ -62,7 +73,7 @@ def simular_partido_nba(
     covers_spread_loc, covers_spread_vis = 0, 0
     overs, unders = 0, 0
 
-    std_dev = 10.5 
+    std_dev = 12.0 
 
     for _ in range(iteraciones):
         sim_pts_loc = random.gauss(pts_esperados_loc, std_dev)
@@ -75,7 +86,7 @@ def simular_partido_nba(
 
         if (sim_pts_loc + l_spread_loc) > sim_pts_vis:
             covers_spread_loc += 1
-        elif (sim_pts_vis + l_spread_vis) > sim_pts_loc:
+        if (sim_pts_vis + l_spread_vis) > sim_pts_loc:
             covers_spread_vis += 1
 
         total_sim = sim_pts_loc + sim_pts_vis
@@ -84,12 +95,21 @@ def simular_partido_nba(
         else:
             unders += 1
 
-    prob_ml_loc = round((wins_loc / iteraciones) * 100, 1)
-    prob_ml_vis = round((wins_vis / iteraciones) * 100, 1)
-    prob_spread_loc = round((covers_spread_loc / iteraciones) * 100, 1)
-    prob_spread_vis = round((covers_spread_vis / iteraciones) * 100, 1)
-    prob_over = round((overs / iteraciones) * 100, 1)
-    prob_under = round((unders / iteraciones) * 100, 1)
+    # Probabilidades brutas de Monte Carlo
+    mc_ml_loc = (wins_loc / iteraciones) * 100
+    mc_ml_vis = (wins_vis / iteraciones) * 100
+    mc_sp_loc = (covers_spread_loc / iteraciones) * 100
+    mc_sp_vis = (covers_spread_vis / iteraciones) * 100
+    mc_over = (overs / iteraciones) * 100
+    mc_under = (unders / iteraciones) * 100
+
+    # Aplicación de Calibración Bayesiana
+    prob_ml_loc = calibrar_probabilidad(mc_ml_loc, c_ml_loc)
+    prob_ml_vis = calibrar_probabilidad(mc_ml_vis, c_ml_vis)
+    prob_spread_loc = calibrar_probabilidad(mc_sp_loc, c_spread_loc)
+    prob_spread_vis = calibrar_probabilidad(mc_sp_vis, c_spread_vis)
+    prob_over = calibrar_probabilidad(mc_over, c_over)
+    prob_under = calibrar_probabilidad(mc_under, c_under)
 
     return {
         "equipo_local_abbr": abbr_loc,
@@ -102,5 +122,5 @@ def simular_partido_nba(
         "spread_visitante": {"linea": l_spread_vis, "prob": prob_spread_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"DUNK-IA ejecutó 10,000 simulaciones mapeando correctamente los equipos {abbr_loc} vs {abbr_vis} con una proyección de {round(pts_esperados_loc + pts_esperados_vis, 1)} puntos totales."
+        "resumen_explicado": f"DUNK-IA ejecutó 10,000 simulaciones con calibración Bayesiana del mercado para {abbr_loc} vs {abbr_vis}."
     }
