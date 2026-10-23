@@ -72,37 +72,45 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full max-w-7xl mb-10">
             
             <!-- MODELO NHL (FROST-IA) -->
-            <div class="bg-white border-2 border-emerald-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-24 h-24 mb-1 flex items-center justify-center">
-                    <img src="mascota-nhl.png.png" alt="Mascota FROST-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]">
+            <div class="bg-white border-2 border-emerald-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
+                <div class="text-center mb-3">
+                    <span class="bg-slate-900 text-mana-neon font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-emerald-400">
+                        NHL • HOCKEY
+                    </span>
+                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">FROST-IA</h2>
+                    <p class="text-[10px] text-slate-500 font-medium">xG, Corsi, Moneyline y Totales.</p>
                 </div>
-                <span class="bg-slate-900 text-mana-neon font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-emerald-400">
-                    NHL • HOCKEY
-                </span>
-                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">FROST-IA</h2>
-                <p class="text-[10px] text-slate-500 font-medium mb-3">xG, Corsi, Moneyline y Totales.</p>
 
-                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
-                    <div class="grid grid-cols-2 gap-1 text-center text-xs">
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
-                            <span id="nhl-stat-winrate" class="font-montserrat font-black text-emerald-600 text-xs">--%</span>
-                        </div>
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
-                            <span id="nhl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                        </div>
-                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
-                            <span id="nhl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                        </div>
-                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
-                            <span id="nhl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                        </div>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <!-- MASCOTA GIGANTE IZQUIERDA -->
+                    <div class="w-1/2 h-44 flex items-center justify-center">
+                        <img src="mascota-nhl.png.png" alt="Mascota FROST-IA" class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.6)]">
                     </div>
-                    <div class="relative h-20 w-full flex items-center justify-center">
-                        <canvas id="graficaNhl"></canvas>
+
+                    <!-- MÉTRICAS Y GRÁFICA DERECHA -->
+                    <div class="w-1/2 flex flex-col gap-2">
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 grid grid-cols-2 gap-1 text-center text-xs">
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                                <span id="nhl-stat-winrate" class="font-montserrat font-black text-emerald-600 text-xs">--%</span>
+                            </div>
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
+                                <span id="nhl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
+                            </div>
+                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                                <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
+                                <span id="nhl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
+                            </div>
+                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                                <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
+                                <span id="nhl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 h-20 flex items-center justify-center relative">
+                            <canvas id="graficaNhl"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -112,37 +120,43 @@
             </div>
 
             <!-- MODELO NFL (BLITZ-IA) -->
-            <div class="bg-white border-2 border-sky-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-24 h-24 mb-1 flex items-center justify-center">
-                    <img src="mascota-nfl.png.png" alt="Mascota BLITZ-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(14,165,233,0.5)]">
+            <div class="bg-white border-2 border-sky-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
+                <div class="text-center mb-3">
+                    <span class="bg-slate-900 text-sky-400 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-sky-400">
+                        NFL • FÚTBOL AMERICANO
+                    </span>
+                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">BLITZ-IA</h2>
+                    <p class="text-[10px] text-slate-500 font-medium">EPA/Drive, Spread y Totales.</p>
                 </div>
-                <span class="bg-slate-900 text-sky-400 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-sky-400">
-                    NFL • FÚTBOL AMERICANO
-                </span>
-                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">BLITZ-IA</h2>
-                <p class="text-[10px] text-slate-500 font-medium mb-3">EPA/Drive, Spread y Totales.</p>
 
-                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
-                    <div class="grid grid-cols-2 gap-1 text-center text-xs">
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
-                            <span id="nfl-stat-winrate" class="font-montserrat font-black text-sky-500 text-xs">--%</span>
-                        </div>
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
-                            <span id="nfl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                        </div>
-                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
-                            <span id="nfl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                        </div>
-                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
-                            <span id="nfl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                        </div>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <div class="w-1/2 h-44 flex items-center justify-center">
+                        <img src="mascota-nfl.png.png" alt="Mascota BLITZ-IA" class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(14,165,233,0.6)]">
                     </div>
-                    <div class="relative h-20 w-full flex items-center justify-center">
-                        <canvas id="graficaNfl"></canvas>
+
+                    <div class="w-1/2 flex flex-col gap-2">
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 grid grid-cols-2 gap-1 text-center text-xs">
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                                <span id="nfl-stat-winrate" class="font-montserrat font-black text-sky-500 text-xs">--%</span>
+                            </div>
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
+                                <span id="nfl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
+                            </div>
+                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                                <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
+                                <span id="nfl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
+                            </div>
+                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                                <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
+                                <span id="nfl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 h-20 flex items-center justify-center relative">
+                            <canvas id="graficaNfl"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -152,37 +166,43 @@
             </div>
 
             <!-- MODELO NBA (DUNK-IA) -->
-            <div class="bg-white border-2 border-orange-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-24 h-24 mb-1 flex items-center justify-center">
-                    <img src="mascota-nba.png.png" alt="Mascota DUNK-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]">
+            <div class="bg-white border-2 border-orange-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
+                <div class="text-center mb-3">
+                    <span class="bg-slate-900 text-mana-orange font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-orange-400">
+                        NBA • BALONCESTO
+                    </span>
+                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">DUNK-IA</h2>
+                    <p class="text-[10px] text-slate-500 font-medium">Pace, Off/Def Rating y Totales.</p>
                 </div>
-                <span class="bg-slate-900 text-mana-orange font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-orange-400">
-                    NBA • BALONCESTO
-                </span>
-                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">DUNK-IA</h2>
-                <p class="text-[10px] text-slate-500 font-medium mb-3">Pace, Off/Def Rating y Totales.</p>
 
-                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
-                    <div class="grid grid-cols-2 gap-1 text-center text-xs">
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
-                            <span id="nba-stat-winrate" class="font-montserrat font-black text-orange-500 text-xs">--%</span>
-                        </div>
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
-                            <span id="nba-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                        </div>
-                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
-                            <span id="nba-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                        </div>
-                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
-                            <span id="nba-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                        </div>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <div class="w-1/2 h-44 flex items-center justify-center">
+                        <img src="mascota-nba.png.png" alt="Mascota DUNK-IA" class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(249,115,22,0.6)]">
                     </div>
-                    <div class="relative h-20 w-full flex items-center justify-center">
-                        <canvas id="graficaNba"></canvas>
+
+                    <div class="w-1/2 flex flex-col gap-2">
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 grid grid-cols-2 gap-1 text-center text-xs">
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                                <span id="nba-stat-winrate" class="font-montserrat font-black text-orange-500 text-xs">--%</span>
+                            </div>
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
+                                <span id="nba-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
+                            </div>
+                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                                <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
+                                <span id="nba-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
+                            </div>
+                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                                <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
+                                <span id="nba-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 h-20 flex items-center justify-center relative">
+                            <canvas id="graficaNba"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -191,38 +211,44 @@
                 </button>
             </div>
 
-            <!-- MODELO MLB (SLUGGER-IA - AMARILLO NEÓN) -->
-            <div class="bg-white border-2 border-yellow-400 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="w-24 h-24 mb-1 flex items-center justify-center">
-                    <img src="mascota-mlb.png.png" alt="Mascota SLUGGER-IA" class="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(250,204,21,0.6)]">
+            <!-- MODELO MLB (SLUGGER-IA) -->
+            <div class="bg-white border-2 border-yellow-400 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
+                <div class="text-center mb-3">
+                    <span class="bg-slate-900 text-yellow-300 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-yellow-400">
+                        MLB • BÉISBOL
+                    </span>
+                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">SLUGGER-IA</h2>
+                    <p class="text-[10px] text-slate-500 font-medium">xERA, FIP, NRFI, Props K's y F5.</p>
                 </div>
-                <span class="bg-slate-900 text-yellow-300 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 border border-yellow-400">
-                    MLB • BÉISBOL
-                </span>
-                <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase mb-1">SLUGGER-IA</h2>
-                <p class="text-[10px] text-slate-500 font-medium mb-3">xERA, FIP, NRFI, Props K's y F5.</p>
 
-                <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 grid grid-cols-2 gap-2 items-center">
-                    <div class="grid grid-cols-2 gap-1 text-center text-xs">
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
-                            <span id="mlb-stat-winrate" class="font-montserrat font-black text-yellow-500 text-xs">--%</span>
-                        </div>
-                        <div class="bg-white p-1 rounded-xl border">
-                            <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
-                            <span id="mlb-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                        </div>
-                        <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                            <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
-                            <span id="mlb-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                        </div>
-                        <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                            <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
-                            <span id="mlb-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                        </div>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <div class="w-1/2 h-44 flex items-center justify-center">
+                        <img src="mascota-mlb.png.png" alt="Mascota SLUGGER-IA" class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(250,204,21,0.7)]">
                     </div>
-                    <div class="relative h-20 w-full flex items-center justify-center">
-                        <canvas id="graficaMlb"></canvas>
+
+                    <div class="w-1/2 flex flex-col gap-2">
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 grid grid-cols-2 gap-1 text-center text-xs">
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">EFECTIVIDAD</span>
+                                <span id="mlb-stat-winrate" class="font-montserrat font-black text-yellow-500 text-xs">--%</span>
+                            </div>
+                            <div class="bg-white p-1 rounded-xl border">
+                                <span class="text-[7px] text-slate-400 font-bold block">TOTAL</span>
+                                <span id="mlb-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
+                            </div>
+                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
+                                <span class="text-[7px] text-emerald-600 font-bold block">WIN ✅</span>
+                                <span id="mlb-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
+                            </div>
+                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
+                                <span class="text-[7px] text-rose-500 font-bold block">LOSS ❌</span>
+                                <span id="mlb-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 h-20 flex items-center justify-center relative">
+                            <canvas id="graficaMlb"></canvas>
+                        </div>
                     </div>
                 </div>
 
