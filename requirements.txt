@@ -5,3 +5,5 @@ xgboost
 scikit-learn
 requests
 scipy
+flask
+flask-cors
