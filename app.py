@@ -1,11 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Importación de los 4 modelos cuantitativos
-from nhl_model import simular_partido_nhl
-from nfl_model import simular_partido_nfl
-from nba_model import simular_partido_nba
-from mlb_model import simular_partido_mlb
+# Importaciones de los 4 motores de simulación
+import nhl_model
+import nfl_model
+import nba_model
+import mlb_model
 
 app = Flask(__name__)
 CORS(app)  # Permite peticiones desde la interfaz en Vercel
@@ -37,7 +37,11 @@ def analizar_nhl():
         c_over = float(request.args.get('c_over', 1.90))
         c_under = float(request.args.get('c_under', 1.90))
         
-        resultado = simular_partido_nhl(
+        func_nhl = getattr(nhl_model, 'simular_partido_nhl', getattr(nhl_model, 'simular_partido', None))
+        if func_nhl is None:
+            return jsonify({"error": "No se encontró la función de simulación en nhl_model"}), 500
+
+        resultado = func_nhl(
             local, visitante,
             c_ml_loc, c_ml_vis,
             l_pl_loc, c_pl_loc,
@@ -67,7 +71,11 @@ def analizar_nfl():
         c_over = float(request.args.get('c_over', 1.90))
         c_under = float(request.args.get('c_under', 1.90))
         
-        resultado = simular_partido_nfl(
+        func_nfl = getattr(nfl_model, 'simular_partido_nfl', getattr(nfl_model, 'simular_partido', None))
+        if func_nfl is None:
+            return jsonify({"error": "No se encontró la función de simulación en nfl_model"}), 500
+
+        resultado = func_nfl(
             local, visitante,
             c_ml_loc, c_ml_vis,
             l_spread_loc, c_spread_loc,
@@ -97,7 +105,11 @@ def analizar_nba():
         c_over = float(request.args.get('c_over', 1.90))
         c_under = float(request.args.get('c_under', 1.90))
         
-        resultado = simular_partido_nba(
+        func_nba = getattr(nba_model, 'simular_partido_nba', getattr(nba_model, 'simular_partido', None))
+        if func_nba is None:
+            return jsonify({"error": "No se encontró la función de simulación en nba_model"}), 500
+
+        resultado = func_nba(
             local, visitante,
             c_ml_loc, c_ml_vis,
             l_spread_loc, c_spread_loc,
@@ -112,22 +124,26 @@ def analizar_nba():
 @app.route('/api/analizar-mlb', methods=['GET'])
 def analizar_mlb():
     try:
-        local = request.args.get('local', 'Los Angeles Dodgers')
-        visitante = request.args.get('visitante', 'New York Yankees')
+        local = request.args.get('local', 'Milwaukee Brewers')
+        visitante = request.args.get('visitante', 'Tampa Bay Rays')
         
-        c_ml_loc = float(request.args.get('c_ml_loc', 1.80))
-        c_ml_vis = float(request.args.get('c_ml_vis', 2.00))
+        c_ml_loc = float(request.args.get('c_ml_loc', 1.84))
+        c_ml_vis = float(request.args.get('c_ml_vis', 1.96))
         
         l_rl_loc = float(request.args.get('l_rl_loc', -1.5))
-        c_rl_loc = float(request.args.get('c_rl_loc', 2.10))
+        c_rl_loc = float(request.args.get('c_rl_loc', 1.90))
         l_rl_vis = float(request.args.get('l_rl_vis', 1.5))
-        c_rl_vis = float(request.args.get('c_rl_vis', 1.75))
+        c_rl_vis = float(request.args.get('c_rl_vis', 1.90))
         
         l_total = float(request.args.get('l_total', 8.5))
         c_over = float(request.args.get('c_over', 1.90))
         c_under = float(request.args.get('c_under', 1.90))
         
-        resultado = simular_partido_mlb(
+        func_mlb = getattr(mlb_model, 'simular_partido_mlb', getattr(mlb_model, 'simular_partido', None))
+        if func_mlb is None:
+            return jsonify({"error": "No se encontró la función de simulación en mlb_model"}), 500
+
+        resultado = func_mlb(
             local, visitante,
             c_ml_loc, c_ml_vis,
             l_rl_loc, c_rl_loc,
