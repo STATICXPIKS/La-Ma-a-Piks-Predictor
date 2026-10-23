@@ -51,7 +51,6 @@ def simular_poisson_sobredispersa(media: float, dispersion: float = 1.15) -> int
     else:
         p = media / var
     r = (media * p) / (1.0 - p)
-    # Generador sintético de ponches/carreras con varianza real de MLB
     val = sum([1 for _ in range(int(r))] if random.random() < p else 0)
     return max(0, int(random.gauss(media, math.sqrt(var))))
 
@@ -74,7 +73,6 @@ def simular_partido_mlb(
     temp_f: float = 72.0,
     iteraciones: int = 10000
 ):
-    
     abbr_loc = MAPEO_MLB.get(local, local[:3].upper())
     abbr_vis = MAPEO_MLB.get(visitante, visitante[:3].upper())
 
@@ -88,11 +86,10 @@ def simular_partido_mlb(
     pf = PARK_FACTORS.get(abbr_loc, 1.00)
     factor_clima = 1.0 + ((temp_f - 72.0) * 0.0015) + (viento_mph * 0.008)
 
-    # 2. Expectativa de Carreras (F5 vs Juego Completo)
+    # 2. Expectativa de Carreras
     exp_carreras_loc = ((p_vis["xERA"] / 9.0) * (off_loc["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima
     exp_carreras_vis = ((p_loc["xERA"] / 9.0) * (off_vis["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima
 
-    # Expectativa de K's de Pitcher Local (Poisson)
     exp_ks_loc = (p_loc["K_9"] / 9.0) * (p_loc["outs_prom"] / 3.0)
 
     wins_loc, wins_vis = 0, 0
@@ -104,28 +101,23 @@ def simular_partido_mlb(
     overs_outs_loc = 0
 
     for _ in range(iteraciones):
-        # 3. Simulación F5 (Primeras 5 Entradas)
         carreras_f5_loc = simular_poisson_sobredispersa(exp_carreras_loc * 0.55)
         carreras_f5_vis = simular_poisson_sobredispersa(exp_carreras_vis * 0.55)
 
-        # 4. Simulación NRFI / YRFI (1ª Entrada)
         prob_carrera_1a = 1.0 - (math.exp(-exp_carreras_loc * 0.12) * math.exp(-exp_carreras_vis * 0.12))
         if random.random() < prob_carrera_1a:
             yrfi_count += 1
 
-        # 5. Bullpen (Entradas 6 a 9)
         carreras_bp_loc = simular_poisson_sobredispersa((off_vis["bullpen_xERA"] / 9.0) * 2.0)
         carreras_bp_vis = simular_poisson_sobredispersa((off_loc["bullpen_xERA"] / 9.0) * 2.0)
 
         carreras_tot_loc = carreras_f5_loc + carreras_bp_loc
         carreras_tot_vis = carreras_f5_vis + carreras_bp_vis
 
-        # Desempate de Extra Inning si quedan iguales
         if carreras_tot_loc == carreras_tot_vis:
             if random.random() < 0.52: carreras_tot_loc += 1
             else: carreras_tot_vis += 1
 
-        # Evaluaciones de Mercados
         if carreras_tot_loc > carreras_tot_vis: wins_loc += 1
         else: wins_vis += 1
 
@@ -139,14 +131,12 @@ def simular_partido_mlb(
         if carreras_f5_loc > carreras_f5_vis: f5_wins_loc += 1
         else: f5_wins_vis += 1
 
-        # Props de K's y Outs
         sim_ks = simular_poisson_sobredispersa(exp_ks_loc)
         if sim_ks > linea_ks_p_loc: overs_ks_loc += 1
 
         sim_outs = random.gauss(p_loc["outs_prom"], 2.1)
         if sim_outs > linea_outs_p_loc: overs_outs_loc += 1
 
-    # Calibración Bayesiana de Probabilidades finales
     prob_ml_loc = calibrar_probabilidad((wins_loc / iteraciones) * 100, c_ml_loc)
     prob_ml_vis = calibrar_probabilidad((wins_vis / iteraciones) * 100, c_ml_vis)
     prob_rl_loc = calibrar_probabilidad((covers_rl_loc / iteraciones) * 100, c_rl_loc)
@@ -171,5 +161,5 @@ def simular_partido_mlb(
         "nrfi_yrfi": {"nrfi_prob": prob_nrfi, "yrfi_prob": prob_yrfi},
         "f5_ml": {"local_prob": round((f5_wins_loc / iteraciones) * 100, 1)},
         "pitcher_props": {"ks_over_prob": prob_ks_over, "exp_ks": round(exp_ks_loc, 1)},
-        "resumen_explicado": f"SLUGGER-IA procesó Park Factors ({pf}), clima ({temp_f}°F), xERA de abridor ({p_loc['xERA']}) y regresión Poisson de K's para 10,000 iteraciones."
+        "resumen_explicado": f"SLUGGER-IA procesó Park Factors ({pf}), clima ({temp_f}°F) y xERA de abridor para 10,000 iteraciones."
     }
