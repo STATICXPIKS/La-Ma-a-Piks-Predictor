@@ -15,21 +15,18 @@ MAPEO_MLB = {
     "Texas Rangers": "TEX", "Toronto Blue Jays": "TOR", "Washington Nationals": "WSH"
 }
 
-# PARK FACTORS (100 = Neutro, >100 = Bateadores/Coors Field, <100 = Pitchers)
 PARK_FACTORS = {
     "COL": 1.35, "BOS": 1.12, "CIN": 1.08, "PHI": 1.06, "NYY": 1.05,
     "LAD": 1.02, "ATL": 1.01, "HOU": 1.00, "CHC": 1.00, "TOR": 0.99,
     "SD":  0.95, "SEA": 0.91, "SF":  0.90, "OAK": 0.88
 }
 
-# BASE DE DATOS DE PITCHERS ABRIDORES (Métricas Temporadas 2025-2026 y 2026-2027)
 PITCHERS_STATS = {
     "LAD_ACE": {"xERA": 2.85, "FIP": 2.90, "WHIP": 1.02, "K_9": 11.2, "BB_9": 2.1, "K_pct": 31.5, "outs_prom": 18.2},
     "NYY_ACE": {"xERA": 3.10, "FIP": 3.15, "WHIP": 1.08, "K_9": 10.5, "BB_9": 2.3, "K_pct": 28.8, "outs_prom": 17.5},
     "DEFAULT": {"xERA": 4.15, "FIP": 4.20, "WHIP": 1.28, "K_9": 8.5,  "BB_9": 3.2, "K_pct": 22.0, "outs_prom": 15.5}
 }
 
-# OFENSIVAS Y BULLPEN (wRC+, OPS, ERA Bullpen High-Leverage)
 EQUIPOS_SABERMETRICS = {
     "LAD": {"wRC_vs_L": 118, "wRC_vs_R": 122, "OPS": .785, "bullpen_xERA": 3.40},
     "NYY": {"wRC_vs_L": 115, "wRC_vs_R": 112, "OPS": .765, "bullpen_xERA": 3.55},
@@ -37,22 +34,17 @@ EQUIPOS_SABERMETRICS = {
 }
 
 def calibrar_probabilidad(prob_mc: float, cuota: float, peso_mc: float = 0.20) -> float:
-    """Ancla Bayesiana: 80% Peso del Mercado + 20% Modelo Cuantitativo IA"""
     if not cuota or cuota <= 1.0:
         return round(prob_mc, 1)
     prob_impl = (1.0 / cuota) * 100.0
     return round((prob_mc * peso_mc) + (prob_impl * (1.0 - peso_mc)), 1)
 
-def simular_poisson_sobredispersa(media: float, dispersion: float = 1.15) -> int:
-    """Distribución Binomial Negativa / Poisson para Props de K's y Carreras"""
-    var = media * dispersion
-    if var <= media:
-        p = 0.999
-    else:
-        p = media / var
-    r = (media * p) / (1.0 - p)
-    val = sum([1 for _ in range(int(r))] if random.random() < p else 0)
-    return max(0, int(random.gauss(media, math.sqrt(var))))
+def simular_poisson_sobredispersa(media: float) -> int:
+    """Distribución segura y ultrarrápida para Carreras y Props"""
+    if media <= 0: return 0
+    sigma = math.sqrt(max(0.1, media * 1.15))
+    val = random.gauss(media, sigma)
+    return max(0, int(round(val)))
 
 def simular_partido_mlb(
     local: str,
@@ -82,14 +74,11 @@ def simular_partido_mlb(
     off_loc = EQUIPOS_SABERMETRICS.get(abbr_loc, EQUIPOS_SABERMETRICS["DEFAULT"])
     off_vis = EQUIPOS_SABERMETRICS.get(abbr_vis, EQUIPOS_SABERMETRICS["DEFAULT"])
 
-    # 1. Ajuste de Parque y Clima
     pf = PARK_FACTORS.get(abbr_loc, 1.00)
     factor_clima = 1.0 + ((temp_f - 72.0) * 0.0015) + (viento_mph * 0.008)
 
-    # 2. Expectativa de Carreras
     exp_carreras_loc = ((p_vis["xERA"] / 9.0) * (off_loc["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima
     exp_carreras_vis = ((p_loc["xERA"] / 9.0) * (off_vis["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima
-
     exp_ks_loc = (p_loc["K_9"] / 9.0) * (p_loc["outs_prom"] / 3.0)
 
     wins_loc, wins_vis = 0, 0
@@ -98,7 +87,6 @@ def simular_partido_mlb(
     f5_wins_loc, f5_wins_vis = 0, 0
     yrfi_count = 0
     overs_ks_loc = 0
-    overs_outs_loc = 0
 
     for _ in range(iteraciones):
         carreras_f5_loc = simular_poisson_sobredispersa(exp_carreras_loc * 0.55)
@@ -133,9 +121,6 @@ def simular_partido_mlb(
 
         sim_ks = simular_poisson_sobredispersa(exp_ks_loc)
         if sim_ks > linea_ks_p_loc: overs_ks_loc += 1
-
-        sim_outs = random.gauss(p_loc["outs_prom"], 2.1)
-        if sim_outs > linea_outs_p_loc: overs_outs_loc += 1
 
     prob_ml_loc = calibrar_probabilidad((wins_loc / iteraciones) * 100, c_ml_loc)
     prob_ml_vis = calibrar_probabilidad((wins_vis / iteraciones) * 100, c_ml_vis)
