@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Maña Picks • Hub Multideporte Cuantitativo</title>
+    <title>La Maña Picks • Hub Cuantitativo Multideporte</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,7 +66,7 @@
             MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
         </h1>
         <p class="text-slate-600 font-bold text-sm md:text-base max-w-2xl mb-8">
-            Simulaciones Monte Carlo, Sabermetría, Pace, Eficiencia y detección matemática de apuestas con valor (+EV).
+            Simulaciones Monte Carlo, Sabermetría, Pace, Eficiencia y auditoría de apuestas con valor (+EV).
         </p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full max-w-7xl mb-10">
@@ -310,53 +310,53 @@
                     <div class="grid grid-cols-2 gap-3 text-xs">
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota ML Local</label>
-                            <input id="cuota-ml-loc" type="number" step="0.01" value="1.84" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-ml-loc" type="number" step="0.01" value="2.23" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota ML Visitante</label>
-                            <input id="cuota-ml-vis" type="number" step="0.01" value="1.96" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-ml-vis" type="number" step="0.01" value="1.66" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
 
                 <!-- SPREAD / HANDICAP MANUAL -->
                 <div class="border-t border-slate-800 pt-3">
-                    <span id="etiqueta-mercado-spread" class="text-[11px] font-bold text-slate-400 block mb-2">2. SPREAD / HANDICAP MANUAL</span>
+                    <span id="etiqueta-mercado-spread" class="text-[11px] font-bold text-slate-400 block mb-2">2. PUCK LINE (SPREAD MANUAL)</span>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Local</label>
-                            <input id="linea-pl-loc" type="number" step="0.5" value="-1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                            <input id="linea-pl-loc" type="number" step="0.5" value="1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Local</label>
-                            <input id="cuota-pl-loc" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-pl-loc" type="number" step="0.01" value="1.47" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Línea Visitante</label>
-                            <input id="linea-pl-vis" type="number" step="0.5" value="1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                            <input id="linea-pl-vis" type="number" step="0.5" value="-1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Visitante</label>
-                            <input id="cuota-pl-vis" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-pl-vis" type="number" step="0.01" value="2.55" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
 
                 <!-- OVER / UNDER MANUAL -->
                 <div class="border-t border-slate-800 pt-3">
-                    <span id="etiqueta-mercado-totales" class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTALES (OVER / UNDER)</span>
+                    <span id="etiqueta-mercado-totales" class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTAL DE GOLES (OVER / UNDER)</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         <div>
-                            <label class="text-slate-400 block mb-1">Línea Total Puntos/Goles/Carreras</label>
-                            <input id="linea-total-goles" type="number" step="0.5" value="6.0" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                            <label class="text-slate-400 block mb-1">Línea Total</label>
+                            <input id="linea-total-goles" type="number" step="0.5" value="6.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Over</label>
-                            <input id="cuota-over" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-over" type="number" step="0.01" value="1.81" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                         <div>
                             <label class="text-slate-400 block mb-1">Cuota Under</label>
-                            <input id="cuota-under" type="number" step="0.01" value="1.90" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <input id="cuota-under" type="number" step="0.01" value="1.94" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
                         </div>
                     </div>
                 </div>
@@ -516,8 +516,16 @@
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
 
             document.getElementById('linea-pl-loc').value = "1.5";
+            document.getElementById('cuota-pl-loc').value = "1.47";
             document.getElementById('linea-pl-vis').value = "-1.5";
+            document.getElementById('cuota-pl-vis').value = "2.55";
+
+            document.getElementById('cuota-ml-loc').value = "2.23";
+            document.getElementById('cuota-ml-vis').value = "1.66";
+
             document.getElementById('linea-total-goles').value = "6.5";
+            document.getElementById('cuota-over').value = "1.81";
+            document.getElementById('cuota-under').value = "1.94";
             actualizarEscudos();
         }
 
@@ -537,7 +545,9 @@
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
 
             document.getElementById('linea-pl-loc').value = "-3.5";
+            document.getElementById('cuota-pl-loc').value = "1.90";
             document.getElementById('linea-pl-vis').value = "3.5";
+            document.getElementById('cuota-pl-vis').value = "1.90";
             document.getElementById('linea-total-goles').value = "47.5";
             actualizarEscudos();
         }
@@ -558,7 +568,9 @@
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
 
             document.getElementById('linea-pl-loc').value = "-2.5";
+            document.getElementById('cuota-pl-loc').value = "1.90";
             document.getElementById('linea-pl-vis').value = "2.5";
+            document.getElementById('cuota-pl-vis').value = "1.90";
             document.getElementById('linea-total-goles').value = "224.5";
             actualizarEscudos();
         }
@@ -579,7 +591,9 @@
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE CARRERAS (OVER / UNDER)";
 
             document.getElementById('linea-pl-loc').value = "-1.5";
+            document.getElementById('cuota-pl-loc').value = "2.10";
             document.getElementById('linea-pl-vis').value = "1.5";
+            document.getElementById('cuota-pl-vis').value = "1.75";
             document.getElementById('linea-total-goles').value = "8.5";
             actualizarEscudos();
         }
@@ -888,17 +902,17 @@
             const cMlLoc = parseFloat(document.getElementById('cuota-ml-loc').value) || 1.84;
             const cMlVis = parseFloat(document.getElementById('cuota-ml-vis').value) || 1.96;
             
-            const lPlLoc = parseFloat(document.getElementById('linea-pl-loc').value) || -1.5;
-            const cPlLoc = parseFloat(document.getElementById('cuota-pl-loc').value) || 1.90;
-            const lPlVis = parseFloat(document.getElementById('linea-pl-vis').value) || 1.5;
-            const cPlVis = parseFloat(document.getElementById('cuota-pl-vis').value) || 1.90;
+            const lPlLoc = parseFloat(document.getElementById('linea-pl-loc').value) || 1.5;
+            const cPlLoc = parseFloat(document.getElementById('cuota-pl-loc').value) || 1.47;
+            const lPlVis = parseFloat(document.getElementById('linea-pl-vis').value) || -1.5;
+            const cPlVis = parseFloat(document.getElementById('cuota-pl-vis').value) || 2.55;
 
-            const lTotal = parseFloat(document.getElementById('linea-total-goles').value) || 6.0;
-            const cOver = parseFloat(document.getElementById('cuota-over').value) || 1.90;
-            const cUnder = parseFloat(document.getElementById('cuota-under').value) || 1.90;
+            const lTotal = parseFloat(document.getElementById('linea-total-goles').value) || 6.5;
+            const cOver = parseFloat(document.getElementById('cuota-over').value) || 1.81;
+            const cUnder = parseFloat(document.getElementById('cuota-under').value) || 1.94;
 
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">EVALUANDO Y ORDENANDO LAS 6 OPCIONES DE MERCADO POR % EV...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">EVALUANDO MERCADOS CON ANÁLISIS DE VALOR (+EV)...</span>`;
             resContainer.classList.add('hidden');
 
             let endpoint = '/api/analizar-nhl';
@@ -922,61 +936,89 @@
                 const dataSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_local || d.runline_local) : d.spread_local;
                 const dataSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_visitante || d.runline_visitante) : d.spread_visitante;
 
-                // FORMATO DE ETIQUETAS EXACTO SEGÚN SIGNO REAL INGRESADO
                 const strSignLoc = lPlLoc > 0 ? `+${lPlLoc}` : `${lPlLoc}`;
                 const strSignVis = lPlVis > 0 ? `+${lPlVis}` : `${lPlVis}`;
                 const labelSpreadLoc = `${d.equipo_local_abbr} ${strSignLoc}`;
                 const labelSpreadVis = `${d.equipo_visitante_abbr} ${strSignVis}`;
 
-                // CÁLCULO DE VALOR ESPERADO MATEMÁTICO REAL
                 function calcEV(probPercent, odds) {
                     const probDecimal = probPercent / 100.0;
                     return Math.round(((probDecimal * odds) - 1.0) * 1000) / 10.0;
                 }
 
+                // VALIDACIÓN DE COHERENCIA DE SPREAD
+                let probPlLoc = dataSpreadLoc.prob;
+                let probPlVis = dataSpreadVis.prob;
+
+                // Un equipo que da -1.5 nunca puede tener mayor probabilidad de ganar por 2 goles que su propia probabilidad de ganar el juego
+                if (lPlLoc < 0 && probPlLoc > d.ml_local.prob) {
+                    probPlLoc = Math.min(probPlLoc, Math.round(d.ml_local.prob * 0.65));
+                }
+                if (lPlVis < 0 && probPlVis > d.ml_visitante.prob) {
+                    probPlVis = Math.min(probPlVis, Math.round(d.ml_visitante.prob * 0.65));
+                }
+
                 let opciones = [
-                    { titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: calcEV(d.ml_local.prob, cMlLoc), cuota: cMlLoc, prob: d.ml_local.prob },
-                    { titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: calcEV(d.ml_visitante.prob, cMlVis), cuota: cMlVis, prob: d.ml_visitante.prob },
-                    { titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: calcEV(dataSpreadLoc.prob, cPlLoc), cuota: cPlLoc, prob: dataSpreadLoc.prob },
-                    { titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: calcEV(dataSpreadVis.prob, cPlVis), cuota: cPlVis, prob: dataSpreadVis.prob },
-                    { titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: calcEV(d.total_over.prob, cOver), cuota: cOver, prob: d.total_over.prob },
-                    { titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: calcEV(d.total_under.prob, cUnder), cuota: cUnder, prob: d.total_under.prob }
+                    { tipo: 'ML', titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: calcEV(d.ml_local.prob, cMlLoc), cuota: cMlLoc, prob: d.ml_local.prob },
+                    { tipo: 'ML', titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: calcEV(d.ml_visitante.prob, cMlVis), cuota: cMlVis, prob: d.ml_visitante.prob },
+                    { tipo: 'SPREAD', titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: calcEV(probPlLoc, cPlLoc), cuota: cPlLoc, prob: probPlLoc },
+                    { tipo: 'SPREAD', titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: calcEV(probPlVis, cPlVis), cuota: cPlVis, prob: probPlVis },
+                    { tipo: 'TOTAL', titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: calcEV(d.total_over.prob, cOver), cuota: cOver, prob: d.total_over.prob },
+                    { tipo: 'TOTAL', titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: calcEV(d.total_under.prob, cUnder), cuota: cUnder, prob: d.total_under.prob }
                 ];
 
-                // Ordenar rigurosamente de mayor a menor EV
+                // FILTRO DE COHERENCIA DEPORTIVA EN TOTALES:
+                // Si la proyección supera la línea, descartamos el Under como candidato a Bet prioritario
+                const projTotal = d.total_goles_proyectado || d.total_puntos_proyectado || d.total_carreras_proyectado || lTotal;
+                if (projTotal > (lTotal + 0.3)) {
+                    const uIdx = opciones.findIndex(o => o.titulo.includes('UNDER'));
+                    if (uIdx !== -1 && opciones[uIdx].ev > 0) {
+                        opciones[uIdx].ev = -0.1;
+                    }
+                } else if (projTotal < (lTotal - 0.3)) {
+                    const oIdx = opciones.findIndex(o => o.titulo.includes('OVER'));
+                    if (oIdx !== -1 && opciones[oIdx].ev > 0) {
+                        opciones[oIdx].ev = -0.1;
+                    }
+                }
+
                 opciones.sort((a, b) => b.ev - a.ev);
+
+                const mejoresPicks = opciones.filter(o => o.ev >= 2.0);
+                let bannerSinValor = "";
+                if (mejoresPicks.length === 0) {
+                    bannerSinValor = `
+                        <div class="bg-rose-950/80 border-2 border-rose-500 text-rose-200 p-4 rounded-2xl mb-4 text-center font-bold text-xs">
+                            ⚠️ PARTIDO SIN APUESTA RECOMENDADA: El casino tiene el margen matemático a su favor en las 6 líneas. Se recomienda abstenerse.
+                        </div>
+                    `;
+                }
 
                 function renderTarjetaApilada(opc, index) {
                     const btnId = `btn-card-market-${index}`;
-                    const esEVPositivo = opc.ev > 0;
+                    const esEVPositivo = opc.ev >= 2.0;
                     
-                    let bgCard = "bg-slate-950/80 border border-slate-800";
+                    let bgCard = "bg-slate-950/80 border border-slate-800 opacity-80";
                     let bgBadge = "bg-slate-800 text-slate-400";
-                    let textoBadge = `OPCIÓN ${index + 1}`;
+                    let textoBadge = `SIN VALOR ⚠️`;
                     let textEvColor = "text-rose-400";
-                    let btnColor = "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700";
+                    let btnColor = "bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700";
 
-                    // SOLO MARCA 'BET' SI EL EV ES REALMENTE POSITIVO Y MAYOR AL 3.0%
-                    if (index === 0 && opc.ev >= 3.0) {
-                        bgCard = "bg-emerald-950/70 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]";
+                    if (opc.ev >= 5.0 && index === 0) {
+                        bgCard = "bg-emerald-950/70 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)] opacity-100";
                         bgBadge = "bg-emerald-400 text-slate-950 font-black";
                         textoBadge = "BET 🔥 VALOR DETECTADO";
                         textEvColor = "text-emerald-300";
                         btnColor = "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black";
-                    } 
-                    else if ((index === 1 || index === 0) && opc.ev > 0.0) {
-                        bgCard = "bg-amber-950/70 border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]";
+                    } else if (opc.ev >= 2.0) {
+                        bgCard = "bg-amber-950/70 border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)] opacity-100";
                         bgBadge = "bg-amber-400 text-slate-950 font-black";
-                        textoBadge = "MAYBE ⚡ VALOR MARGINAL";
+                        textoBadge = "MAYBE ⚡ VALOR MODERADO";
                         textEvColor = "text-amber-300";
                         btnColor = "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black";
-                    } else if (opc.ev <= 0) {
-                        textoBadge = "NO VALUE ⚠️";
-                        textEvColor = "text-rose-400 font-bold";
                     }
 
                     const evTextoFormatted = opc.ev > 0 ? `(+${opc.ev}% EV)` : `(${opc.ev}% EV)`;
-                    const probFormatted = opc.prob !== undefined ? `${opc.prob}%` : 'N/A';
 
                     return `
                     <div class="${bgCard} p-4 rounded-2xl shadow-lg transition">
@@ -989,8 +1031,8 @@
                         </div>
                         
                         <div class="flex items-center justify-between text-xs my-2 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
-                            <span class="text-slate-400 font-bold">Probabilidad Matemática Real:</span>
-                            <span class="font-montserrat font-black text-white">${probFormatted}</span>
+                            <span class="text-slate-400 font-bold">Probabilidad Real:</span>
+                            <span class="font-montserrat font-black text-white">${opc.prob}%</span>
                         </div>
 
                         <button id="${btnId}" onclick="guardarPickEnHistorial('${btnId}', '${opc.titulo}', '${evTextoFormatted}', '${local}', '${visitante}')" class="w-full mt-2 ${btnColor} font-montserrat font-black text-xs py-3 rounded-xl uppercase transition shadow-md">
@@ -1000,6 +1042,7 @@
                 }
 
                 resContainer.innerHTML = `
+                    ${bannerSinValor}
                     <div class="mb-6 space-y-4">
                         ${opciones.map((o, idx) => renderTarjetaApilada(o, idx)).join('')}
                     </div>
@@ -1010,11 +1053,11 @@
                             <span class="text-xs text-slate-500 font-bold">VS</span>
                             <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr}</span>
                         </div>
-                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos || d.proyeccion_carreras} • Total ${d.total_goles_proyectado || d.total_puntos_proyectado || d.total_carreras_proyectado}</span>
+                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos || d.proyeccion_carreras} • Total ${projTotal}</span>
                     </div>
 
                     <p class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800">
-                        ${d.resumen_explicado || 'Simulación ejecutada con éxito mediante Monte Carlo.'}
+                        ${d.resumen_explicado || 'Simulación completada con éxito.'}
                     </p>
                 `;
                 resContainer.classList.remove('hidden');
