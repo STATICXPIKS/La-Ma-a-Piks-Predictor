@@ -30,7 +30,7 @@ RATINGS_NHL = {
     "DEFAULT": (3.0, 3.0)
 }
 
-def poisson_pmf(k: int, lamb: float) -> float:
+def poisson_prob(k: int, lamb: float) -> float:
     return (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
 
 def simular_partido_nhl(
@@ -45,50 +45,59 @@ def simular_partido_nhl(
     l_total: float,
     c_over: float,
     c_under: float,
-    iteraciones: int = 15000
+    iteraciones: int = 20000
 ):
     abbr_loc = MAPEO_NHL.get(local, local[:3].upper())
     abbr_vis = MAPEO_NHL.get(visitante, visitante[:3].upper())
 
-    # FIJAR SEMILLA DETERMINISTA BASADA EN EL DUELO (Elimina variabilidad al reanalizar)
-    seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_pl_loc}"
+    # Semilla determinista: idéntico resultado cada vez que consultes el partido
+    seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_pl_loc}_{l_pl_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
     rng = random.Random(seed_int)
 
     xg_off_loc, xg_def_loc = RATINGS_NHL.get(abbr_loc, RATINGS_NHL["DEFAULT"])
     xg_off_vis, xg_def_vis = RATINGS_NHL.get(abbr_vis, RATINGS_NHL["DEFAULT"])
 
-    # Goles esperados con factor localía (0.22 goles)
     lambda_loc = round(((xg_off_loc + xg_def_vis) / 2.0) + 0.11, 2)
     lambda_vis = round(((xg_off_vis + xg_def_loc) / 2.0) - 0.11, 2)
     total_esperado = round(lambda_loc + lambda_vis, 2)
+
+    prob_loc_weights = [poisson_prob(i, lambda_loc) for i in range(12)]
+    prob_vis_weights = [poisson_prob(i, lambda_vis) for i in range(12)]
 
     wins_loc, wins_vis = 0, 0
     covers_pl_loc, covers_pl_vis = 0, 0
     overs, unders = 0, 0
 
-    # Simulación Monte Carlo determinista
     for _ in range(iteraciones):
-        goles_loc = rng.choices(range(10), weights=[poisson_pmf(i, lambda_loc) for i in range(10)])[0]
-        goles_vis = rng.choices(range(10), weights=[poisson_pmf(i, lambda_vis) for i in range(10)])[0]
+        goles_loc = rng.choices(range(12), weights=prob_loc_weights)[0]
+        goles_vis = rng.choices(range(12), weights=prob_vis_weights)[0]
 
-        # En hockey siempre hay ganador (Tiempo extra / Shootouts)
-        if goles_loc == goles_vis:
-            if rng.random() < 0.53: goles_loc += 1
-            else: goles_vis += 1
+        # En hockey reglamentario no hay empates (OT/Shootout 50/50 con leve ventaja local)
+        g_final_loc = goles_loc
+        g_final_vis = goles_vis
+        if g_final_loc == g_final_vis:
+            if rng.random() < 0.52: g_final_loc += 1
+            else: g_final_vis += 1
 
-        if goles_loc > goles_vis: wins_loc += 1
+        # 1. Moneyline
+        if g_final_loc > g_final_vis: wins_loc += 1
         else: wins_vis += 1
 
-        # Puck Line exacto con signos respetados
-        if (goles_loc + l_pl_loc) > goles_vis: covers_pl_loc += 1
-        if (goles_vis + l_pl_vis) > goles_loc: covers_pl_vis += 1
+        # 2. Puck Line EXACTO con valor algebraico estricto
+        # Si TOR tiene -1.5, necesita ganar por 2 o más (g_final_vis - 1.5 > g_final_loc)
+        if (g_final_loc + l_pl_loc) > g_final_vis:
+            covers_pl_loc += 1
+        if (g_final_vis + l_pl_vis) > g_final_loc:
+            covers_pl_vis += 1
 
-        total_sim = goles_loc + goles_vis
-        if total_sim > l_total: overs += 1
-        elif total_sim < l_total: unders += 1
+        # 3. Totales (Over/Under)
+        total_partido = g_final_loc + g_final_vis
+        if total_partido > l_total:
+            overs += 1
+        elif total_partido < l_total:
+            unders += 1
         else:
-            # Empate en línea exacta (Push) se divide equitativamente
             overs += 0.5
             unders += 0.5
 
@@ -110,5 +119,5 @@ def simular_partido_nhl(
         "pl_visitante": {"linea": l_pl_vis, "prob": prob_pl_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"FROST-IA ejecutó 15,000 iteraciones Poisson deterministas para {abbr_loc} ({lambda_loc}) vs {abbr_vis} ({lambda_vis}). Total proyectado: {total_esperado} goles."
+        "resumen_explicado": f"FROST-IA simuló {iteraciones} escenarios. Total esperado: {total_esperado} goles."
     }
