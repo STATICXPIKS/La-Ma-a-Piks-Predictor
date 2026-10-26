@@ -2,26 +2,26 @@ import os
 import requests
 import time
 
-# Lectura directa de tus variables de entorno en Render
-API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY", "")
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
+API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY", "")
 OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
 
-# Cache en memoria para no quemar tus límites de peticiones (10 min)
 _CACHE = {}
 
-def get_live_odds(sport_key="icehockey_nhl"):
-    """
-    The Odds API: Obtiene cuotas en vivo de Moneyline, Spreads y Totales
-    sport_key: 'icehockey_nhl', 'americanfootball_nfl', 'basketball_nba', 'baseball_mlb'
-    """
+def fetch_cached(key: str, ttl: int = 900):
     now = time.time()
-    cache_key = f"odds_{sport_key}"
-    if cache_key in _CACHE and (now - _CACHE[cache_key]['time']) < 600:
-        return _CACHE[cache_key]['data']
+    if key in _CACHE and (now - _CACHE[key]["time"]) < ttl:
+        return _CACHE[key]["data"]
+    return None
 
-    if not ODDS_API_KEY:
-        return None
+def set_cached(key: str, data):
+    _CACHE[key] = {"time": time.time(), "data": data}
+
+# 1. The Odds API: Cuotas de mercado en vivo
+def get_live_odds(sport_key="icehockey_nhl"):
+    cached = fetch_cached(f"odds_{sport_key}", ttl=600)
+    if cached: return cached
+    if not ODDS_API_KEY: return None
 
     url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds"
     params = {
@@ -31,63 +31,65 @@ def get_live_odds(sport_key="icehockey_nhl"):
         "oddsFormat": "decimal"
     }
     try:
-        r = requests.get(url, params=params, timeout=5)
+        r = requests.get(url, params=params, timeout=6)
         if r.status_code == 200:
             data = r.json()
-            _CACHE[cache_key] = {'time': now, 'data': data}
+            set_cached(f"odds_{sport_key}", data)
             return data
     except Exception as e:
-        print(f"Error consultando The Odds API: {e}")
+        print(f"Error The Odds API: {e}")
     return None
 
+# 2. OpenWeatherMap: Clima real por ciudad de estadio (MLB / NFL)
 def get_live_weather(ciudad: str):
-    """
-    OpenWeatherMap: Retorna temperatura en Fahrenheit y viento en MPH
-    """
+    cached = fetch_cached(f"weather_{ciudad}", ttl=1800)
+    if cached: return cached
     if not OPENWEATHER_KEY or not ciudad:
-        return {"temp_f": 72.0, "viento_mph": 0.0}
+        return {"temp_f": 72.0, "viento_mph": 0.0, "humedad": 50.0}
 
     url = "https://api.openweathermap.org/data/2.5/weather"
-    params = {
-        "q": ciudad,
-        "appid": OPENWEATHER_KEY,
-        "units": "imperial"
-    }
+    params = {"q": ciudad, "appid": OPENWEATHER_KEY, "units": "imperial"}
     try:
-        r = requests.get(url, params=params, timeout=4)
+        r = requests.get(url, params=params, timeout=5)
         if r.status_code == 200:
             d = r.json()
-            return {
-                "temp_f": d["main"].get("temp", 72.0),
-                "viento_mph": d["wind"].get("speed", 0.0)
+            res = {
+                "temp_f": float(d["main"].get("temp", 72.0)),
+                "viento_mph": float(d["wind"].get("speed", 0.0)),
+                "humedad": float(d["main"].get("humidity", 50.0))
             }
+            set_cached(f"weather_{ciudad}", res)
+            return res
     except Exception as e:
-        print(f"Error consultando OpenWeather: {e}")
-    return {"temp_f": 72.0, "viento_mph": 0.0}
+        print(f"Error OpenWeather: {e}")
+    return {"temp_f": 72.0, "viento_mph": 0.0, "humedad": 50.0}
 
-def get_nhl_team_live_stats(team_name: str):
-    """
-    API-Sports (Hockey): Consulta estadísticas reales actualizadas de la temporada
-    """
-    if not API_SPORTS_KEY:
-        return None
-
-    url = "https://v1.hockey.api-sports.io/teams"
-    headers = {"x-apisports-key": API_SPORTS_KEY}
+# 3. NHL API Oficial Pública: Estadísticas en vivo
+def get_nhl_stats_live(team_abbr: str):
+    cached = fetch_cached(f"nhl_stats_{team_abbr}", ttl=3600)
+    if cached: return cached
+    url = f"https://api-web.nhle.com/v1/club-stats/{team_abbr}/now"
     try:
-        r = requests.get(url, headers=headers, params={"search": team_name}, timeout=4)
+        r = requests.get(url, timeout=5)
         if r.status_code == 200:
-            resp = r.json().get("response", [])
-            if resp:
-                team_id = resp[0]["id"]
-                stat_url = "https://v1.hockey.api-sports.io/teams/statistics"
-                s_resp = requests.get(stat_url, headers=headers, params={"team": team_id, "season": 2026}, timeout=4)
-                if s_resp.status_code == 200:
-                    data = s_resp.json().get("response", {})
-                    goals = data.get("goals", {})
-                    for_avg = float(goals.get("for", {}).get("average", {}).get("total", 3.0) or 3.0)
-                    against_avg = float(goals.get("against", {}).get("average", {}).get("total", 3.0) or 3.0)
-                    return (for_avg, against_avg)
+            data = r.json()
+            set_cached(f"nhl_stats_{team_abbr}", data)
+            return data
     except Exception as e:
-        print(f"Error consultando API-Sports: {e}")
+        print(f"Error NHL API: {e}")
+    return None
+
+# 4. MLB StatsAPI Oficial Pública: Métricas sabermétricas
+def get_mlb_stats_live(team_id: int):
+    cached = fetch_cached(f"mlb_stats_{team_id}", ttl=3600)
+    if cached: return cached
+    url = f"https://statsapi.mlb.com/api/v1/teams/{team_id}/stats?stats=season&group=pitching,hitting"
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            set_cached(f"mlb_stats_{team_id}", data)
+            return data
+    except Exception as e:
+        print(f"Error MLB API: {e}")
     return None
