@@ -1,40 +1,63 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+# Importación del servicio de APIs en vivo (The Odds API, API-Sports, OpenWeather)
+from api_service import get_live_odds, get_live_weather
+
+# Importación de los 4 motores deportivos
 import nhl_model
 import nfl_model
 import nba_model
 import mlb_model
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Permite peticiones seguras desde la interfaz alojada en Vercel
 
 @app.route('/')
 def home():
     return jsonify({
         "status": "online",
         "message": "API de La Maña Picks Operativa",
+        "apis_conectadas": {
+            "odds_api": bool(os.environ.get("ODDS_API_KEY")),
+            "api_sports": bool(os.environ.get("API_SPORTS_KEY")),
+            "openweather": bool(os.environ.get("OPENWEATHER_KEY")),
+            "supabase": bool(os.environ.get("SUPABASE_KEY"))
+        },
         "modelos_disponibles": ["FROST-IA (NHL)", "BLITZ-IA (NFL)", "DUNK-IA (NBA)", "SLUGGER-IA (MLB)"]
     })
+
+# 0. ENDPOINT DE CUOTAS EN VIVO (THE ODDS API)
+@app.route('/api/live-odds', methods=['GET'])
+def live_odds():
+    try:
+        deporte = request.args.get('deporte', 'icehockey_nhl')
+        data = get_live_odds(deporte)
+        if data:
+            return jsonify(data)
+        return jsonify({"error": "No se pudieron obtener cuotas en vivo o límite alcanzado"}), 502
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # 1. ENDPOINT NHL (FROST-IA)
 @app.route('/api/analizar-nhl', methods=['GET'])
 def analizar_nhl():
     try:
-        local = request.args.get('local', 'Colorado Avalanche')
-        visitante = request.args.get('visitante', 'Tampa Bay Lightning')
+        local = request.args.get('local', 'Calgary Flames')
+        visitante = request.args.get('visitante', 'Toronto Maple Leafs')
         
-        c_ml_loc = float(request.args.get('c_ml_loc', 1.84))
-        c_ml_vis = float(request.args.get('c_ml_vis', 1.96))
+        c_ml_loc = float(request.args.get('c_ml_loc', 2.23))
+        c_ml_vis = float(request.args.get('c_ml_vis', 1.66))
         
-        l_pl_loc = float(request.args.get('l_pl_loc', -1.5))
-        c_pl_loc = float(request.args.get('c_pl_loc', 1.90))
-        l_pl_vis = float(request.args.get('l_pl_vis', 1.5))
-        c_pl_vis = float(request.args.get('c_pl_vis', 1.90))
+        l_pl_loc = float(request.args.get('l_pl_loc', 1.5))
+        c_pl_loc = float(request.args.get('c_pl_loc', 1.47))
+        l_pl_vis = float(request.args.get('l_pl_vis', -1.5))
+        c_pl_vis = float(request.args.get('c_pl_vis', 2.55))
         
-        l_total = float(request.args.get('l_total', 6.0))
-        c_over = float(request.args.get('c_over', 1.90))
-        c_under = float(request.args.get('c_under', 1.90))
+        l_total = float(request.args.get('l_total', 6.5))
+        c_over = float(request.args.get('c_over', 1.81))
+        c_under = float(request.args.get('c_under', 1.94))
         
         func_nhl = getattr(nhl_model, 'simular_partido_nhl', getattr(nhl_model, 'simular_partido', None))
         if func_nhl is None:
@@ -123,16 +146,16 @@ def analizar_nba():
 @app.route('/api/analizar-mlb', methods=['GET'])
 def analizar_mlb():
     try:
-        local = request.args.get('local', 'Milwaukee Brewers')
-        visitante = request.args.get('visitante', 'Tampa Bay Rays')
+        local = request.args.get('local', 'Los Angeles Dodgers')
+        visitante = request.args.get('visitante', 'New York Yankees')
         
-        c_ml_loc = float(request.args.get('c_ml_loc', 1.84))
-        c_ml_vis = float(request.args.get('c_ml_vis', 1.96))
+        c_ml_loc = float(request.args.get('c_ml_loc', 1.80))
+        c_ml_vis = float(request.args.get('c_ml_vis', 2.00))
         
         l_rl_loc = float(request.args.get('l_rl_loc', -1.5))
-        c_rl_loc = float(request.args.get('c_rl_loc', 1.90))
+        c_rl_loc = float(request.args.get('c_rl_loc', 2.10))
         l_rl_vis = float(request.args.get('l_rl_vis', 1.5))
-        c_rl_vis = float(request.args.get('c_rl_vis', 1.90))
+        c_rl_vis = float(request.args.get('c_rl_vis', 1.75))
         
         l_total = float(request.args.get('l_total', 8.5))
         c_over = float(request.args.get('c_over', 1.90))
@@ -154,4 +177,5 @@ def analizar_mlb():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    puerto = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=puerto, debug=False)
