@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Maña Picks • Hub Multideporte (NHL, NFL, NBA & MLB)</title>
+    <title>La Maña Picks • Hub Multideporte Cuantitativo</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,7 +66,7 @@
             MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
         </h1>
         <p class="text-slate-600 font-bold text-sm md:text-base max-w-2xl mb-8">
-            Simulaciones Monte Carlo, Sabermetría, Pace, Eficiencia y detección de apuestas con valor (+EV).
+            Simulaciones Monte Carlo, Sabermetría, Pace, Eficiencia y detección matemática de apuestas con valor (+EV).
         </p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full max-w-7xl mb-10">
@@ -82,12 +82,10 @@
                 </div>
 
                 <div class="flex items-center justify-between gap-1 mb-2 relative">
-                    <!-- MASCOTA GIGANTE IZQUIERDA -->
                     <div class="w-7/12 h-52 flex items-center justify-center relative z-10 overflow-visible">
                         <img src="mascota-nhl.png.png" alt="Mascota FROST-IA" class="w-full h-full object-contain scale-125 transform drop-shadow-[0_0_18px_rgba(16,185,129,0.7)]">
                     </div>
 
-                    <!-- MÉTRICAS DERECHA -->
                     <div class="w-5/12 flex flex-col gap-1.5 z-20">
                         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 grid grid-cols-2 gap-1 text-center text-xs shadow-sm">
                             <div class="bg-white p-1 rounded-xl border">
@@ -513,13 +511,13 @@
                 selVis.add(new Option(eq, eq));
             });
 
-            selLoc.value = "New Jersey Devils"; selVis.value = "Colorado Avalanche";
+            selLoc.value = "Calgary Flames"; selVis.value = "Toronto Maple Leafs";
             document.getElementById('etiqueta-mercado-spread').innerText = "2. PUCK LINE (SPREAD MANUAL)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
 
-            document.getElementById('linea-pl-loc').value = "-1.5";
-            document.getElementById('linea-pl-vis').value = "1.5";
-            document.getElementById('linea-total-goles').value = "6.0";
+            document.getElementById('linea-pl-loc').value = "1.5";
+            document.getElementById('linea-pl-vis').value = "-1.5";
+            document.getElementById('linea-total-goles').value = "6.5";
             actualizarEscudos();
         }
 
@@ -616,10 +614,10 @@
             }
 
             imgLocElement.onerror = function() {
-                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png";
+                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png";
             };
             imgVisElement.onerror = function() {
-                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png";
+                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png";
             };
 
             document.getElementById('name-local').innerText = loc;
@@ -924,70 +922,79 @@
                 const dataSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_local || d.runline_local) : d.spread_local;
                 const dataSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_visitante || d.runline_visitante) : d.spread_visitante;
 
-                const labelSpreadLoc = `${d.equipo_local_abbr} ${dataSpreadLoc.linea > 0 ? '+' : ''}${dataSpreadLoc.linea}`;
-                const labelSpreadVis = `${d.equipo_visitante_abbr} ${dataSpreadVis.linea > 0 ? '+' : ''}${dataSpreadVis.linea}`;
+                // FORMATO DE ETIQUETAS EXACTO SEGÚN SIGNO REAL INGRESADO
+                const strSignLoc = lPlLoc > 0 ? `+${lPlLoc}` : `${lPlLoc}`;
+                const strSignVis = lPlVis > 0 ? `+${lPlVis}` : `${lPlVis}`;
+                const labelSpreadLoc = `${d.equipo_local_abbr} ${strSignLoc}`;
+                const labelSpreadVis = `${d.equipo_visitante_abbr} ${strSignVis}`;
 
+                // CÁLCULO DE VALOR ESPERADO MATEMÁTICO REAL
                 function calcEV(probPercent, odds) {
                     const probDecimal = probPercent / 100.0;
                     return Math.round(((probDecimal * odds) - 1.0) * 1000) / 10.0;
                 }
 
                 let opciones = [
-                    { titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: (d.ml_local.ev !== undefined ? d.ml_local.ev : calcEV(d.ml_local.prob, cMlLoc)), cuota: cMlLoc, prob: d.ml_local.prob },
-                    { titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: (d.ml_visitante.ev !== undefined ? d.ml_visitante.ev : calcEV(d.ml_visitante.prob, cMlVis)), cuota: cMlVis, prob: d.ml_visitante.prob },
-                    { titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: (dataSpreadLoc.ev !== undefined ? dataSpreadLoc.ev : calcEV(dataSpreadLoc.prob, cPlLoc)), cuota: cPlLoc, prob: dataSpreadLoc.prob },
-                    { titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: (dataSpreadVis.ev !== undefined ? dataSpreadVis.ev : calcEV(dataSpreadVis.prob, cPlVis)), cuota: cPlVis, prob: dataSpreadVis.prob },
-                    { titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: (d.total_over.ev !== undefined ? d.total_over.ev : calcEV(d.total_over.prob, cOver)), cuota: cOver, prob: d.total_over.prob },
-                    { titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: (d.total_under.ev !== undefined ? d.total_under.ev : calcEV(d.total_under.prob, cUnder)), cuota: cUnder, prob: d.total_under.prob }
+                    { titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: calcEV(d.ml_local.prob, cMlLoc), cuota: cMlLoc, prob: d.ml_local.prob },
+                    { titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: calcEV(d.ml_visitante.prob, cMlVis), cuota: cMlVis, prob: d.ml_visitante.prob },
+                    { titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: calcEV(dataSpreadLoc.prob, cPlLoc), cuota: cPlLoc, prob: dataSpreadLoc.prob },
+                    { titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: calcEV(dataSpreadVis.prob, cPlVis), cuota: cPlVis, prob: dataSpreadVis.prob },
+                    { titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: calcEV(d.total_over.prob, cOver), cuota: cOver, prob: d.total_over.prob },
+                    { titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: calcEV(d.total_under.prob, cUnder), cuota: cUnder, prob: d.total_under.prob }
                 ];
 
+                // Ordenar rigurosamente de mayor a menor EV
                 opciones.sort((a, b) => b.ev - a.ev);
 
                 function renderTarjetaApilada(opc, index) {
                     const btnId = `btn-card-market-${index}`;
-                    const esEVPositivo = opc.ev >= 0;
+                    const esEVPositivo = opc.ev > 0;
                     
-                    let bgCard = "bg-slate-950/90 border border-slate-800";
-                    let bgBadge = "bg-slate-800 text-slate-300";
-                    let textoBadge = `OPCIÓN ${index + 1} 🎯`;
-                    let textEvColor = esEVPositivo ? "text-emerald-400" : "text-rose-400";
-                    let btnColor = "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700";
+                    let bgCard = "bg-slate-950/80 border border-slate-800";
+                    let bgBadge = "bg-slate-800 text-slate-400";
+                    let textoBadge = `OPCIÓN ${index + 1}`;
+                    let textEvColor = "text-rose-400";
+                    let btnColor = "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700";
 
-                    if (index === 0) {
+                    // SOLO MARCA 'BET' SI EL EV ES REALMENTE POSITIVO Y MAYOR AL 3.0%
+                    if (index === 0 && opc.ev >= 3.0) {
                         bgCard = "bg-emerald-950/70 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]";
                         bgBadge = "bg-emerald-400 text-slate-950 font-black";
-                        textoBadge = "BET 🔥";
+                        textoBadge = "BET 🔥 VALOR DETECTADO";
                         textEvColor = "text-emerald-300";
                         btnColor = "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black";
                     } 
-                    else if (index === 1 || index === 2) {
+                    else if ((index === 1 || index === 0) && opc.ev > 0.0) {
                         bgCard = "bg-amber-950/70 border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]";
                         bgBadge = "bg-amber-400 text-slate-950 font-black";
-                        textoBadge = "MAYBE ⚡";
+                        textoBadge = "MAYBE ⚡ VALOR MARGINAL";
                         textEvColor = "text-amber-300";
                         btnColor = "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black";
+                    } else if (opc.ev <= 0) {
+                        textoBadge = "NO VALUE ⚠️";
+                        textEvColor = "text-rose-400 font-bold";
                     }
 
-                    const evTextoFormatted = esEVPositivo ? `(+${opc.ev}% EV)` : `(${opc.ev}% EV)`;
+                    const evTextoFormatted = opc.ev > 0 ? `(+${opc.ev}% EV)` : `(${opc.ev}% EV)`;
                     const probFormatted = opc.prob !== undefined ? `${opc.prob}%` : 'N/A';
 
                     return `
                     <div class="${bgCard} p-4 rounded-2xl shadow-lg transition">
                         <div class="flex justify-between items-start mb-1">
                             <div>
-                                <span class="${bgBadge} text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider block w-fit mb-1">${textoBadge}</span>
+                                <span class="${bgBadge} text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider block w-fit mb-1 font-bold">${textoBadge}</span>
                                 <span class="font-montserrat text-base md:text-lg font-black text-white block">${opc.titulo}</span>
                             </div>
                             <span class="font-montserrat text-sm md:text-base font-black ${textEvColor}">${evTextoFormatted}</span>
                         </div>
                         
                         <div class="flex items-center justify-between text-xs my-2 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
-                            <span class="text-slate-400 font-bold">Probabilidad Modelo:</span>
+                            <span class="text-slate-400 font-bold">Probabilidad Matemática Real:</span>
                             <span class="font-montserrat font-black text-white">${probFormatted}</span>
                         </div>
 
                         <button id="${btnId}" onclick="guardarPickEnHistorial('${btnId}', '${opc.titulo}', '${evTextoFormatted}', '${local}', '${visitante}')" class="w-full mt-2 ${btnColor} font-montserrat font-black text-xs py-3 rounded-xl uppercase transition shadow-md">
-                            📌 APOSTAR Y REGISTRAR EN HISTORIAL
+                            📌 REGISTRAR EN HISTORIAL
                         </button>
                     </div>`;
                 }
