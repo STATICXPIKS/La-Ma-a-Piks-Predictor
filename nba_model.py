@@ -2,9 +2,6 @@ import math
 import hashlib
 import random
 
-PACE_LIGA = 100.2
-OFF_EFF_LIGA = 116.5
-
 MAPEO_NBA = {
     "Atlanta Hawks": "ATL", "Boston Celtics": "BOS", "Brooklyn Nets": "BKN",
     "Charlotte Hornets": "CHA", "Chicago Bulls": "CHI", "Cleveland Cavaliers": "CLE",
@@ -18,57 +15,57 @@ MAPEO_NBA = {
     "Toronto Raptors": "TOR", "Utah Jazz": "UTA", "Washington Wizards": "WAS"
 }
 
-# Ratings de Eficiencia Ofensiva y Defensiva por 100 posesiones
-EQUIPOS_RATINGS = {
-    "BOS": (122.5, 110.2), "OKC": (121.0, 108.5), "DEN": (118.8, 112.5),
-    "MIN": (115.5, 109.0), "MIL": (118.5, 114.5), "NYK": (117.5, 112.0),
-    "DAL": (118.0, 113.8), "PHI": (116.8, 112.5), "PHX": (116.2, 113.5),
-    "LAL": (116.5, 113.2), "LAC": (115.0, 111.5), "MIA": (114.5, 111.8),
-    "IND": (120.0, 118.5), "SAC": (117.0, 115.5), "CLE": (116.0, 111.0),
-    "DEFAULT": (114.0, 114.0)
+# Base de Ritmo (Pace) y Eficiencia por 100 posesiones + Elo: (Pace, OffRating, DefRating, Elo)
+EQUIPOS_NBA_STATS = {
+    "BOS": (100.8, 122.8, 110.5, 1680),
+    "OKC": (101.5, 121.2, 108.8, 1665),
+    "DEN": (99.2,  119.5, 112.8, 1640),
+    "MIN": (98.5,  116.0, 109.2, 1625),
+    "NYK": (97.8,  118.2, 112.5, 1610),
+    "DAL": (100.5, 118.8, 114.0, 1620),
+    "MIL": (101.2, 118.5, 115.2, 1605),
+    "PHI": (99.0,  117.0, 113.0, 1590),
+    "LAL": (101.0, 116.8, 113.8, 1585),
+    "DEFAULT": (100.0, 115.0, 115.0, 1500)
 }
 
-def simular_partido_nba(
-    local: str,
-    visitante: str,
-    c_ml_loc: float,
-    c_ml_vis: float,
-    l_spread_loc: float,
-    c_spread_loc: float,
-    l_spread_vis: float,
-    c_spread_vis: float,
-    l_total: float,
-    c_over: float,
-    c_under: float,
-    iteraciones: int = 25000
-):
+def simular_partido_nba(local, visitante, c_ml_loc, c_ml_vis, l_spread_loc, c_spread_loc, l_spread_vis, c_spread_vis, l_total, c_over, c_under, iteraciones=10000):
     abbr_loc = MAPEO_NBA.get(local, local[:3].upper())
     abbr_vis = MAPEO_NBA.get(visitante, visitante[:3].upper())
+
+    s_loc = EQUIPOS_NBA_STATS.get(abbr_loc, EQUIPOS_NBA_STATS["DEFAULT"])
+    s_vis = EQUIPOS_NBA_STATS.get(abbr_vis, EQUIPOS_NBA_STATS["DEFAULT"])
+
+    # Ritmo esperado del juego
+    pace_esperado = (s_loc[0] + s_vis[0]) / 2.0
+
+    # Rating ofensivo/defensivo cruzado
+    eff_loc = (s_loc[1] + s_vis[2]) / 2.0
+    eff_vis = (s_vis[1] + s_loc[2]) / 2.0
+
+    # Elo Dinámico con localía (+60 Elo)
+    elo_diff = (s_loc[3] + 60) - s_vis[3]
+    prob_elo_loc = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+
+    pts_esperados_loc = round((eff_loc * (pace_esperado / 100.0)) + 1.8, 1)
+    pts_esperados_vis = round((eff_vis * (pace_esperado / 100.0)) - 1.8, 1)
+    total_esperado = round(pts_esperados_loc + pts_esperados_vis, 1)
 
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_spread_loc}_{l_spread_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
     rng = random.Random(seed_int)
 
-    off_loc, def_loc = EQUIPOS_RATINGS.get(abbr_loc, EQUIPOS_RATINGS["DEFAULT"])
-    off_vis, def_vis = EQUIPOS_RATINGS.get(abbr_vis, EQUIPOS_RATINGS["DEFAULT"])
-
-    ventaja_cancha_pts = 2.4
-    pts_esperados_loc = round((((off_loc + def_vis) / 2.0) * (PACE_LIGA / 100.0)) + (ventaja_cancha_pts / 2.0), 1)
-    pts_esperados_vis = round((((off_vis + def_loc) / 2.0) * (PACE_LIGA / 100.0)) - (ventaja_cancha_pts / 2.0), 1)
-    total_esperado = round(pts_esperados_loc + pts_esperados_vis, 1)
-
     wins_loc, wins_vis = 0, 0
     covers_sp_loc, covers_sp_vis = 0, 0
     overs, unders = 0, 0
-
-    std_dev = 11.5
+    std_dev = 11.2
 
     for _ in range(iteraciones):
         p_loc = rng.gauss(pts_esperados_loc, std_dev)
         p_vis = rng.gauss(pts_esperados_vis, std_dev)
 
         if p_loc == p_vis:
-            if rng.random() < 0.52: p_loc += 2
+            if rng.random() < prob_elo_loc: p_loc += 2
             else: p_vis += 2
 
         if p_loc > p_vis: wins_loc += 1
@@ -102,5 +99,5 @@ def simular_partido_nba(
         "spread_visitante": {"linea": l_spread_vis, "prob": prob_sp_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"DUNK-IA procesó Pace ({PACE_LIGA}) y Eficiencia Of/Def para {abbr_loc} ({pts_esperados_loc}) vs {abbr_vis} ({pts_esperados_vis}). Total proyectado: {total_esperado} pts."
+        "resumen_explicado": f"DUNK-IA: Monte Carlo (10,000 iteraciones). Modelo Posesión a Posesión (Pace {pace_esperado}) + Off/Def Rating + Elo ({s_loc[3]}/{s_vis[3]}). Proyección: {total_esperado} pts."
     }
