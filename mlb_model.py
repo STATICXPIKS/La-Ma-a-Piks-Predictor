@@ -1,7 +1,8 @@
-import random
 import math
+import hashlib
+import random
+from api_service import get_live_weather
 
-# MAPEO DE EQUIPOS MLB (30 EQUIPOS)
 MAPEO_MLB = {
     "Arizona Diamondbacks": "ARI", "Atlanta Braves": "ATL", "Baltimore Orioles": "BAL",
     "Boston Red Sox": "BOS", "Chicago Cubs": "CHC", "Chicago White Sox": "CWS",
@@ -15,6 +16,17 @@ MAPEO_MLB = {
     "Texas Rangers": "TEX", "Toronto Blue Jays": "TOR", "Washington Nationals": "WSH"
 }
 
+CIUDADES_MLB = {
+    "ARI": "Phoenix", "ATL": "Atlanta", "BAL": "Baltimore", "BOS": "Boston",
+    "CHC": "Chicago", "CWS": "Chicago", "CIN": "Cincinnati", "CLE": "Cleveland",
+    "COL": "Denver", "DET": "Detroit", "HOU": "Houston", "KC": "Kansas City",
+    "LAA": "Anaheim", "LAD": "Los Angeles", "MIA": "Miami", "MIL": "Milwaukee",
+    "MIN": "Minneapolis", "NYM": "New York", "NYY": "New York", "OAK": "Oakland",
+    "PHI": "Philadelphia", "PIT": "Pittsburgh", "SD": "San Diego", "SF": "San Francisco",
+    "SEA": "Seattle", "STL": "St. Louis", "TB": "St. Petersburg", "TEX": "Arlington",
+    "TOR": "Toronto", "WSH": "Washington"
+}
+
 PARK_FACTORS = {
     "COL": 1.35, "BOS": 1.12, "CIN": 1.08, "PHI": 1.06, "NYY": 1.05,
     "LAD": 1.02, "ATL": 1.01, "HOU": 1.00, "CHC": 1.00, "TOR": 0.99,
@@ -22,29 +34,19 @@ PARK_FACTORS = {
 }
 
 PITCHERS_STATS = {
-    "LAD_ACE": {"xERA": 2.85, "FIP": 2.90, "WHIP": 1.02, "K_9": 11.2, "BB_9": 2.1, "K_pct": 31.5, "outs_prom": 18.2},
-    "NYY_ACE": {"xERA": 3.10, "FIP": 3.15, "WHIP": 1.08, "K_9": 10.5, "BB_9": 2.3, "K_pct": 28.8, "outs_prom": 17.5},
-    "DEFAULT": {"xERA": 4.15, "FIP": 4.20, "WHIP": 1.28, "K_9": 8.5,  "BB_9": 3.2, "K_pct": 22.0, "outs_prom": 15.5}
+    "LAD_ACE": {"xERA": 2.85, "FIP": 2.90, "WHIP": 1.02, "K_9": 11.2, "outs_prom": 18.2},
+    "NYY_ACE": {"xERA": 3.10, "FIP": 3.15, "WHIP": 1.08, "K_9": 10.5, "outs_prom": 17.5},
+    "DEFAULT": {"xERA": 4.15, "FIP": 4.20, "WHIP": 1.28, "K_9": 8.5,  "outs_prom": 15.5}
 }
 
 EQUIPOS_SABERMETRICS = {
-    "LAD": {"wRC_vs_L": 118, "wRC_vs_R": 122, "OPS": .785, "bullpen_xERA": 3.40},
-    "NYY": {"wRC_vs_L": 115, "wRC_vs_R": 112, "OPS": .765, "bullpen_xERA": 3.55},
-    "DEFAULT": {"wRC_vs_L": 100, "wRC_vs_R": 100, "OPS": .720, "bullpen_xERA": 4.10}
+    "LAD": {"wRC_vs_R": 122, "bullpen_xERA": 3.40},
+    "NYY": {"wRC_vs_R": 112, "bullpen_xERA": 3.55},
+    "DEFAULT": {"wRC_vs_R": 100, "bullpen_xERA": 4.10}
 }
 
-def calibrar_probabilidad(prob_mc: float, cuota: float, peso_mc: float = 0.20) -> float:
-    if not cuota or cuota <= 1.0:
-        return round(prob_mc, 1)
-    prob_impl = (1.0 / cuota) * 100.0
-    return round((prob_mc * peso_mc) + (prob_impl * (1.0 - peso_mc)), 1)
-
-def simular_poisson_sobredispersa(media: float) -> int:
-    """Distribución segura y ultrarrápida para Carreras y Props"""
-    if media <= 0: return 0
-    sigma = math.sqrt(max(0.1, media * 1.15))
-    val = random.gauss(media, sigma)
-    return max(0, int(round(val)))
+def poisson_prob(k: int, lamb: float) -> float:
+    return (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
 
 def simular_partido_mlb(
     local: str,
@@ -58,93 +60,78 @@ def simular_partido_mlb(
     l_total: float,
     c_over: float,
     c_under: float,
-    linea_ks_p_loc: float = 6.5,
-    cuota_over_ks_loc: float = 1.85,
-    linea_outs_p_loc: float = 17.5,
-    viento_mph: float = 0.0,
-    temp_f: float = 72.0,
-    iteraciones: int = 10000
+    iteraciones: int = 25000
 ):
     abbr_loc = MAPEO_MLB.get(local, local[:3].upper())
     abbr_vis = MAPEO_MLB.get(visitante, visitante[:3].upper())
 
-    p_loc = PITCHERS_STATS.get(f"{abbr_loc}_ACE", PITCHERS_STATS["DEFAULT"])
-    p_vis = PITCHERS_STATS.get(f"{abbr_vis}_ACE", PITCHERS_STATS["DEFAULT"])
-
-    off_loc = EQUIPOS_SABERMETRICS.get(abbr_loc, EQUIPOS_SABERMETRICS["DEFAULT"])
-    off_vis = EQUIPOS_SABERMETRICS.get(abbr_vis, EQUIPOS_SABERMETRICS["DEFAULT"])
+    # 1. Consulta clima en vivo desde OpenWeatherMap
+    ciudad = CIUDADES_MLB.get(abbr_loc, "New York")
+    clima = get_live_weather(ciudad)
+    temp_f = clima.get("temp_f", 72.0)
+    viento_mph = clima.get("viento_mph", 0.0)
 
     pf = PARK_FACTORS.get(abbr_loc, 1.00)
     factor_clima = 1.0 + ((temp_f - 72.0) * 0.0015) + (viento_mph * 0.008)
 
-    exp_carreras_loc = ((p_vis["xERA"] / 9.0) * (off_loc["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima
-    exp_carreras_vis = ((p_loc["xERA"] / 9.0) * (off_vis["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima
-    exp_ks_loc = (p_loc["K_9"] / 9.0) * (p_loc["outs_prom"] / 3.0)
+    p_loc = PITCHERS_STATS.get(f"{abbr_loc}_ACE", PITCHERS_STATS["DEFAULT"])
+    p_vis = PITCHERS_STATS.get(f"{abbr_vis}_ACE", PITCHERS_STATS["DEFAULT"])
+    off_loc = EQUIPOS_SABERMETRICS.get(abbr_loc, EQUIPOS_SABERMETRICS["DEFAULT"])
+    off_vis = EQUIPOS_SABERMETRICS.get(abbr_vis, EQUIPOS_SABERMETRICS["DEFAULT"])
+
+    exp_carreras_loc = round(((p_vis["xERA"] / 9.0) * (off_loc["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima, 2)
+    exp_carreras_vis = round(((p_loc["xERA"] / 9.0) * (off_vis["wRC_vs_R"] / 100.0) * 4.5) * pf * factor_clima, 2)
+    total_esperado = round(exp_carreras_loc + exp_carreras_vis, 2)
+
+    seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_rl_loc}_{l_rl_vis}"
+    seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
+    rng = random.Random(seed_int)
+
+    prob_loc_weights = [poisson_prob(i, exp_carreras_loc) for i in range(15)]
+    prob_vis_weights = [poisson_prob(i, exp_carreras_vis) for i in range(15)]
 
     wins_loc, wins_vis = 0, 0
     covers_rl_loc, covers_rl_vis = 0, 0
     overs, unders = 0, 0
-    f5_wins_loc, f5_wins_vis = 0, 0
-    yrfi_count = 0
-    overs_ks_loc = 0
 
     for _ in range(iteraciones):
-        carreras_f5_loc = simular_poisson_sobredispersa(exp_carreras_loc * 0.55)
-        carreras_f5_vis = simular_poisson_sobredispersa(exp_carreras_vis * 0.55)
+        c_loc = rng.choices(range(15), weights=prob_loc_weights)[0]
+        c_vis = rng.choices(range(15), weights=prob_vis_weights)[0]
 
-        prob_carrera_1a = 1.0 - (math.exp(-exp_carreras_loc * 0.12) * math.exp(-exp_carreras_vis * 0.12))
-        if random.random() < prob_carrera_1a:
-            yrfi_count += 1
+        if c_loc == c_vis:
+            if rng.random() < 0.53: c_loc += 1
+            else: c_vis += 1
 
-        carreras_bp_loc = simular_poisson_sobredispersa((off_vis["bullpen_xERA"] / 9.0) * 2.0)
-        carreras_bp_vis = simular_poisson_sobredispersa((off_loc["bullpen_xERA"] / 9.0) * 2.0)
-
-        carreras_tot_loc = carreras_f5_loc + carreras_bp_loc
-        carreras_tot_vis = carreras_f5_vis + carreras_bp_vis
-
-        if carreras_tot_loc == carreras_tot_vis:
-            if random.random() < 0.52: carreras_tot_loc += 1
-            else: carreras_tot_vis += 1
-
-        if carreras_tot_loc > carreras_tot_vis: wins_loc += 1
+        if c_loc > c_vis: wins_loc += 1
         else: wins_vis += 1
 
-        if (carreras_tot_loc + l_rl_loc) > carreras_tot_vis: covers_rl_loc += 1
-        if (carreras_tot_vis + l_rl_vis) > carreras_tot_loc: covers_rl_vis += 1
+        if (c_loc + l_rl_loc) > c_vis: covers_rl_loc += 1
+        if (c_vis + l_rl_vis) > c_loc: covers_rl_vis += 1
 
-        total_sim = carreras_tot_loc + carreras_tot_vis
-        if total_sim > l_total: overs += 1
-        else: unders += 1
+        tot = c_loc + c_vis
+        if tot > l_total: overs += 1
+        elif tot < l_total: unders += 1
+        else:
+            overs += 0.5
+            unders += 0.5
 
-        if carreras_f5_loc > carreras_f5_vis: f5_wins_loc += 1
-        else: f5_wins_vis += 1
-
-        sim_ks = simular_poisson_sobredispersa(exp_ks_loc)
-        if sim_ks > linea_ks_p_loc: overs_ks_loc += 1
-
-    prob_ml_loc = calibrar_probabilidad((wins_loc / iteraciones) * 100, c_ml_loc)
-    prob_ml_vis = calibrar_probabilidad((wins_vis / iteraciones) * 100, c_ml_vis)
-    prob_rl_loc = calibrar_probabilidad((covers_rl_loc / iteraciones) * 100, c_rl_loc)
-    prob_rl_vis = calibrar_probabilidad((covers_rl_vis / iteraciones) * 100, c_rl_vis)
-    prob_over   = calibrar_probabilidad((overs / iteraciones) * 100, c_over)
-    prob_under  = calibrar_probabilidad((unders / iteraciones) * 100, c_under)
-    prob_yrfi   = round((yrfi_count / iteraciones) * 100, 1)
-    prob_nrfi   = round(100.0 - prob_yrfi, 1)
-    prob_ks_over = round((overs_ks_loc / iteraciones) * 100, 1)
+    prob_ml_loc = round((wins_loc / iteraciones) * 100, 1)
+    prob_ml_vis = round((wins_vis / iteraciones) * 100, 1)
+    prob_rl_loc = round((covers_rl_loc / iteraciones) * 100, 1)
+    prob_rl_vis = round((covers_rl_vis / iteraciones) * 100, 1)
+    prob_over   = round((overs / iteraciones) * 100, 1)
+    prob_under  = round((unders / iteraciones) * 100, 1)
 
     return {
         "equipo_local_abbr": abbr_loc,
         "equipo_visitante_abbr": abbr_vis,
-        "proyeccion_carreras": f"{round(exp_carreras_loc*2, 1)} - {round(exp_carreras_vis*2, 1)}",
-        "total_carreras_proyectado": round((exp_carreras_loc + exp_carreras_vis) * 2, 1),
+        "proyeccion_carreras": f"{exp_carreras_loc} - {exp_carreras_vis}",
+        "total_carreras_proyectado": total_esperado,
         "ml_local": {"prob": prob_ml_loc},
         "ml_visitante": {"prob": prob_ml_vis},
         "runline_local": {"linea": l_rl_loc, "prob": prob_rl_loc},
         "runline_visitante": {"linea": l_rl_vis, "prob": prob_rl_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "nrfi_yrfi": {"nrfi_prob": prob_nrfi, "yrfi_prob": prob_yrfi},
-        "f5_ml": {"local_prob": round((f5_wins_loc / iteraciones) * 100, 1)},
-        "pitcher_props": {"ks_over_prob": prob_ks_over, "exp_ks": round(exp_ks_loc, 1)},
-        "resumen_explicado": f"SLUGGER-IA procesó Park Factors ({pf}), clima ({temp_f}°F) y xERA de abridor para 10,000 iteraciones."
+        "resumen_explicado": f"SLUGGER-IA conectó OpenWeather ({ciudad}: {temp_f}°F, viento {viento_mph} mph). Simulación de 25,000 iteraciones con Park Factor ({pf}). Proyección: {total_esperado} carreras."
     }
