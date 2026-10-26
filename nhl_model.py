@@ -1,8 +1,8 @@
 import math
 import hashlib
 import random
+from api_service import get_nhl_team_live_stats
 
-# MAPEO COMPLETO DE EQUIPOS NHL
 MAPEO_NHL = {
     "Anaheim Ducks": "ANA", "Boston Bruins": "BOS", "Buffalo Sabres": "BUF",
     "Calgary Flames": "CGY", "Carolina Hurricanes": "CAR", "Chicago Blackhawks": "CHI",
@@ -17,8 +17,8 @@ MAPEO_NHL = {
     "Washington Capitals": "WSH", "Winnipeg Jets": "WPG"
 }
 
-# RATINGS xG A FAVOR Y EN CONTRA POR PARTIDO
-RATINGS_NHL = {
+# Respaldo estadístico en caso de timeout de API-Sports
+RATINGS_RESPALDO = {
     "BOS": (3.4, 2.6), "FLA": (3.5, 2.7), "CAR": (3.4, 2.6), "DAL": (3.5, 2.8),
     "COL": (3.6, 3.0), "EDM": (3.6, 2.9), "NYR": (3.3, 2.7), "VGK": (3.3, 2.8),
     "VAN": (3.4, 2.8), "TOR": (3.5, 3.1), "TB":  (3.4, 3.1), "NJ":  (3.3, 2.9),
@@ -45,22 +45,27 @@ def simular_partido_nhl(
     l_total: float,
     c_over: float,
     c_under: float,
-    iteraciones: int = 20000
+    iteraciones: int = 25000
 ):
     abbr_loc = MAPEO_NHL.get(local, local[:3].upper())
     abbr_vis = MAPEO_NHL.get(visitante, visitante[:3].upper())
 
-    # Semilla determinista: idéntico resultado cada vez que consultes el partido
+    # 1. Consulta estadísticas reales en vivo desde API-Sports
+    live_stats_loc = get_nhl_team_live_stats(local)
+    live_stats_vis = get_nhl_team_live_stats(visitante)
+
+    xg_off_loc, xg_def_loc = live_stats_loc if live_stats_loc else RATINGS_RESPALDO.get(abbr_loc, RATINGS_RESPALDO["DEFAULT"])
+    xg_off_vis, xg_def_vis = live_stats_vis if live_stats_vis else RATINGS_RESPALDO.get(abbr_vis, RATINGS_RESPALDO["DEFAULT"])
+
+    # 2. Cálculo estricto de medias esperadas (Poisson Lambda)
+    lambda_loc = round(((xg_off_loc + xg_def_vis) / 2.0) + 0.12, 2)
+    lambda_vis = round(((xg_off_vis + xg_def_loc) / 2.0) - 0.12, 2)
+    total_esperado = round(lambda_loc + lambda_vis, 2)
+
+    # Semilla fija determinista para que no cambie entre clics
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_pl_loc}_{l_pl_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
     rng = random.Random(seed_int)
-
-    xg_off_loc, xg_def_loc = RATINGS_NHL.get(abbr_loc, RATINGS_NHL["DEFAULT"])
-    xg_off_vis, xg_def_vis = RATINGS_NHL.get(abbr_vis, RATINGS_NHL["DEFAULT"])
-
-    lambda_loc = round(((xg_off_loc + xg_def_vis) / 2.0) + 0.11, 2)
-    lambda_vis = round(((xg_off_vis + xg_def_loc) / 2.0) - 0.11, 2)
-    total_esperado = round(lambda_loc + lambda_vis, 2)
 
     prob_loc_weights = [poisson_prob(i, lambda_loc) for i in range(12)]
     prob_vis_weights = [poisson_prob(i, lambda_vis) for i in range(12)]
@@ -70,33 +75,25 @@ def simular_partido_nhl(
     overs, unders = 0, 0
 
     for _ in range(iteraciones):
-        goles_loc = rng.choices(range(12), weights=prob_loc_weights)[0]
-        goles_vis = rng.choices(range(12), weights=prob_vis_weights)[0]
+        g_loc = rng.choices(range(12), weights=prob_loc_weights)[0]
+        g_vis = rng.choices(range(12), weights=prob_vis_weights)[0]
 
-        # En hockey reglamentario no hay empates (OT/Shootout 50/50 con leve ventaja local)
-        g_final_loc = goles_loc
-        g_final_vis = goles_vis
-        if g_final_loc == g_final_vis:
-            if rng.random() < 0.52: g_final_loc += 1
-            else: g_final_vis += 1
+        # Desempate reglamentario (OT/SO)
+        fin_loc, fin_vis = g_loc, g_vis
+        if fin_loc == fin_vis:
+            if rng.random() < 0.52: fin_loc += 1
+            else: fin_vis += 1
 
-        # 1. Moneyline
-        if g_final_loc > g_final_vis: wins_loc += 1
+        if fin_loc > fin_vis: wins_loc += 1
         else: wins_vis += 1
 
-        # 2. Puck Line EXACTO con valor algebraico estricto
-        # Si TOR tiene -1.5, necesita ganar por 2 o más (g_final_vis - 1.5 > g_final_loc)
-        if (g_final_loc + l_pl_loc) > g_final_vis:
-            covers_pl_loc += 1
-        if (g_final_vis + l_pl_vis) > g_final_loc:
-            covers_pl_vis += 1
+        # Puck Line exacto con signos algebraicos reales
+        if (fin_loc + l_pl_loc) > fin_vis: covers_pl_loc += 1
+        if (fin_vis + l_pl_vis) > fin_loc: covers_pl_vis += 1
 
-        # 3. Totales (Over/Under)
-        total_partido = g_final_loc + g_final_vis
-        if total_partido > l_total:
-            overs += 1
-        elif total_partido < l_total:
-            unders += 1
+        tot = fin_loc + fin_vis
+        if tot > l_total: overs += 1
+        elif tot < l_total: unders += 1
         else:
             overs += 0.5
             unders += 0.5
@@ -108,6 +105,7 @@ def simular_partido_nhl(
     prob_over   = round((overs / iteraciones) * 100, 1)
     prob_under  = round((unders / iteraciones) * 100, 1)
 
+    origen = "API-Sports (Live)" if live_stats_loc else "Métricas Históricas"
     return {
         "equipo_local_abbr": abbr_loc,
         "equipo_visitante_abbr": abbr_vis,
@@ -119,5 +117,5 @@ def simular_partido_nhl(
         "pl_visitante": {"linea": l_pl_vis, "prob": prob_pl_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"FROST-IA simuló {iteraciones} escenarios. Total esperado: {total_esperado} goles."
+        "resumen_explicado": f"FROST-IA consultó {origen}. Simulación determinista de 25,000 escenarios. Proyección: {total_esperado} goles totales."
     }
