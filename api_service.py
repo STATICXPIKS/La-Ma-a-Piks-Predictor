@@ -18,7 +18,7 @@ def set_cached(key: str, data):
     _CACHE[key] = {"time": time.time(), "data": data}
 
 # 1. The Odds API: Cuotas de mercado en vivo
-def get_live_odds(sport_key="icehockey_nhl"):
+def get_live_odds(sport_key="basketball_nba"):
     cached = fetch_cached(f"odds_{sport_key}", ttl=600)
     if cached: return cached
     if not ODDS_API_KEY: return None
@@ -92,4 +92,24 @@ def get_mlb_stats_live(team_id: int):
             return data
     except Exception as e:
         print(f"Error MLB API: {e}")
+    return None
+
+# 5. NBA CDN / API Oficial Pública: Eficiencia y Ritmo en vivo
+def get_nba_stats_live(team_abbr: str):
+    cached = fetch_cached(f"nba_stats_{team_abbr}", ttl=3600)
+    if cached: return cached
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.nba.com/"
+    }
+    url = f"https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
+    try:
+        r = requests.get(url, headers=headers, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            set_cached(f"nba_stats_{team_abbr}", data)
+            return data
+    except Exception as e:
+        print(f"Error NBA API: {e}")
     return None
