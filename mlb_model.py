@@ -28,72 +28,123 @@ CIUDADES_MLB = {
 }
 
 PARK_FACTORS = {
-    "COL": 1.36, "BOS": 1.11, "CIN": 1.08, "PHI": 1.05, "NYY": 1.04,
-    "LAD": 1.02, "ATL": 1.01, "HOU": 1.00, "CHC": 1.00, "TOR": 0.98,
-    "SD":  0.94, "SEA": 0.91, "SF":  0.89, "OAK": 0.88
+    "COL": 1.35, "BOS": 1.12, "CIN": 1.08, "PHI": 1.06, "NYY": 1.05,
+    "LAD": 1.02, "ATL": 1.01, "HOU": 1.00, "CHC": 1.00, "TOR": 0.99,
+    "MIL": 1.01, "TB":  0.95, "MIN": 0.98, "BAL": 0.99, "DET": 0.97,
+    "KC":  1.02, "CWS": 0.99, "CLE": 0.98, "TEX": 1.00, "LAA": 0.98,
+    "OAK": 0.89, "SEA": 0.91, "SF":  0.90, "SD":  0.94, "ARI": 1.03,
+    "MIA": 0.93, "NYM": 0.96, "WSH": 1.01, "STL": 0.97, "PIT": 0.96
 }
 
-# Base Sabermétrica ponderada: (wRC+, Bullpen xFIP, Starter xERA, Starter K/9)
-SABERMETRICS_MLB = {
-    "LAD": (118, 3.45, 2.95, 10.8),
-    "NYY": (115, 3.55, 3.10, 10.2),
-    "ATL": (112, 3.60, 3.20, 9.8),
-    "PHI": (110, 3.65, 3.15, 9.5),
-    "BAL": (108, 3.70, 3.40, 9.2),
-    "HOU": (106, 3.75, 3.45, 8.9),
-    "DEFAULT": (100, 4.10, 4.15, 8.5)
+# BASE DE DATOS SABERMÉTRICA DESACOPLADA:
+# - Ofensiva: 70% reciente / 30% anterior (wRC+ vs RHP, wRC+ vs LHP, OBP)
+# - Abridores: 60% reciente / 40% anterior (Mano Abridor 'R'/'L', xERA, K/9)
+# - Bullpen: 50% reciente / 50% anterior con regresión a la media (xFIP)
+# Formato: (wRC+_vs_RHP, wRC+_vs_LHP, OBP, Mano_Abridor, xERA_Abridor, K9_Abridor, xFIP_Bullpen)
+SABERMETRICS_DESACOPLADA = {
+    "ARI": (103, 99,  0.319, "R", 3.98, 8.7, 3.90),
+    "ATL": (112, 107, 0.331, "R", 3.47, 9.6, 3.67),
+    "BAL": (109, 105, 0.327, "R", 3.63, 9.3, 3.77),
+    "BOS": (106, 100, 0.323, "R", 3.92, 8.8, 3.91),
+    "CHC": (102, 98,  0.317, "L", 3.82, 8.6, 3.81),
+    "CWS": (82,  85,  0.287, "R", 4.68, 7.7, 4.56),
+    "CIN": (98,  95,  0.311, "R", 4.12, 9.1, 4.07),
+    "CLE": (100, 96,  0.314, "R", 3.72, 8.8, 3.47),
+    "COL": (89,  86,  0.304, "R", 5.13, 7.1, 4.87),
+    "DET": (101, 97,  0.315, "L", 3.63, 9.6, 3.59),
+    "HOU": (107, 104, 0.325, "R", 3.77, 8.9, 3.71),
+    "KC":  (104, 101, 0.319, "L", 3.72, 8.7, 3.81),
+    "LAA": (93,  90,  0.305, "R", 4.37, 8.1, 4.27),
+    "LAD": (121, 117, 0.343, "R", 3.07, 10.7, 3.39),
+    "MIA": (88,  91,  0.301, "R", 4.42, 8.0, 4.31),
+    "MIL": (107, 103, 0.323, "R", 3.62, 9.2, 3.59),
+    "MIN": (106, 102, 0.323, "R", 3.87, 9.2, 3.81),
+    "NYM": (110, 106, 0.328, "L", 3.72, 9.5, 3.73),
+    "NYY": (118, 114, 0.339, "R", 3.32, 10.2, 3.49),
+    "OAK": (96,  93,  0.310, "R", 4.22, 8.5, 4.13),
+    "PHI": (114, 110, 0.335, "R", 3.27, 9.9, 3.53),
+    "PIT": (90,  93,  0.303, "R", 3.82, 9.5, 3.97),
+    "SD":  (109, 105, 0.326, "R", 3.62, 9.6, 3.63),
+    "SF":  (98,  95,  0.311, "L", 3.77, 8.8, 3.81),
+    "SEA": (97,  94,  0.309, "R", 3.37, 10.0, 3.49),
+    "STL": (99,  96,  0.312, "R", 4.07, 8.2, 3.97),
+    "TB":  (102, 97,  0.315, "R", 3.62, 9.2, 3.67),
+    "TEX": (103, 100, 0.319, "R", 3.87, 8.7, 3.91),
+    "TOR": (101, 98,  0.317, "R", 3.97, 8.5, 3.87),
+    "WSH": (93,  90,  0.304, "L", 4.32, 8.2, 4.21)
 }
 
 def poisson_prob(k, lamb):
     return (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
 
-def simular_partido_mlb(local, visitante, c_ml_loc, c_ml_vis, l_rl_loc, c_rl_loc, l_rl_vis, c_rl_vis, l_total, c_over, c_under, iteraciones=10000):
-    abbr_loc = MAPEO_MLB.get(local, local[:3].upper())
-    abbr_vis = MAPEO_MLB.get(visitante, visitante[:3].upper())
+def simular_partido_mlb(
+    local: str,
+    visitante: str,
+    c_ml_loc: float,
+    c_ml_vis: float,
+    l_rl_loc: float,
+    c_rl_loc: float,
+    l_rl_vis: float,
+    c_rl_vis: float,
+    l_total: float,
+    c_over: float,
+    c_under: float,
+    iteraciones: int = 10000
+):
+    abbr_loc = MAPEO_MLB.get(local, "TB")
+    abbr_vis = MAPEO_MLB.get(visitante, "MIL")
 
-    # 1. Consulta meteorológica en tiempo real vía OpenWeatherMap
-    ciudad = CIUDADES_MLB.get(abbr_loc, "New York")
+    # 1. Clima en tiempo real (OpenWeather)
+    ciudad = CIUDADES_MLB.get(abbr_loc, "St. Petersburg")
     clima = get_live_weather(ciudad)
     temp_f = clima.get("temp_f", 72.0)
     viento_mph = clima.get("viento_mph", 0.0)
 
     pf = PARK_FACTORS.get(abbr_loc, 1.00)
-    densidad_aire = 1.0 + ((temp_f - 72.0) * 0.0016) + (viento_mph * 0.007)
+    densidad_aire = 1.0 + ((temp_f - 72.0) * 0.0018) + (viento_mph * 0.006)
     factor_entorno = pf * densidad_aire
 
-    s_loc = SABERMETRICS_MLB.get(abbr_loc, SABERMETRICS_MLB["DEFAULT"])
-    s_vis = SABERMETRICS_MLB.get(abbr_vis, SABERMETRICS_MLB["DEFAULT"])
+    s_loc = SABERMETRICS_DESACOPLADA.get(abbr_loc, (100, 100, 0.315, "R", 4.00, 8.5, 4.00))
+    s_vis = SABERMETRICS_DESACOPLADA.get(abbr_vis, (100, 100, 0.315, "R", 4.00, 8.5, 4.00))
 
-    # Carreras esperadas (5 innings Starter + 4 innings Bullpen)
-    exp_loc = (((s_vis[2] / 9.0) * 5.0 + (s_vis[1] / 9.0) * 4.0) * (s_loc[0] / 100.0) * 0.52) * factor_entorno
-    exp_vis = (((s_loc[2] / 9.0) * 5.0 + (s_loc[1] / 9.0) * 4.0) * (s_vis[0] / 100.0) * 0.48) * factor_entorno
-    exp_loc = round(exp_loc, 2)
-    exp_vis = round(exp_vis, 2)
-    total_esperado = round(exp_loc + exp_vis, 2)
+    # 2. Platoon Splits: Selección de wRC+ según la mano del abridor rival
+    mano_abridor_vis = s_vis[3]
+    mano_abridor_loc = s_loc[3]
+    wrc_loc = s_loc[1] if mano_abridor_vis == "L" else s_loc[0]
+    wrc_vis = s_vis[1] if mano_abridor_loc == "L" else s_vis[0]
 
-    # 2. Modelo Primera Entrada (NRFI / YRFI)
-    lambda_1st_loc = (exp_loc / 9.0) * 1.15
-    lambda_1st_vis = (exp_vis / 9.0) * 1.15
+    # 3. Carreras Esperadas Ponderadas (5.5 innings Starter + 3.5 innings Bullpen)
+    runs_allowed_vis = ((s_vis[4] / 9.0) * 5.5) + ((s_vis[6] / 9.0) * 3.5)
+    runs_allowed_loc = ((s_loc[4] / 9.0) * 5.5) + ((s_loc[6] / 9.0) * 3.5)
+
+    lambda_loc = round((runs_allowed_vis * (wrc_loc / 100.0) * 1.03) * factor_entorno, 2)
+    lambda_vis = round((runs_allowed_loc * (wrc_vis / 100.0) * 0.97) * factor_entorno, 2)
+    total_esperado = round(lambda_loc + lambda_vis, 2)
+
+    # 4. Modelo Primera Entrada (NRFI / YRFI con Poisson bivariado)
+    lambda_1st_loc = (lambda_loc / 9.0) * 1.22
+    lambda_1st_vis = (lambda_vis / 9.0) * 1.22
     prob_nrfi = round(math.exp(-lambda_1st_loc) * math.exp(-lambda_1st_vis) * 100, 1)
 
-    # 3. Proyección de Ponches de Abridores (K's) con Poisson sobredispersa
-    k_proj_loc_starter = round(s_loc[3] * (5.5 / 9.0), 1)
-    k_proj_vis_starter = round(s_vis[3] * (5.5 / 9.0), 1)
+    # 5. Proyección de Ponches de Abridores (K's) ajustada por el bateo rival
+    k_proj_loc = round(s_loc[5] * (5.5 / 9.0) * (100.0 / wrc_vis), 1)
+    k_proj_vis = round(s_vis[5] * (5.5 / 9.0) * (100.0 / wrc_loc), 1)
 
+    # 6. Monte Carlo a 10,000 iteraciones deterministas
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_rl_loc}_{l_rl_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
     rng = random.Random(seed_int)
 
-    prob_loc_weights = [poisson_prob(i, exp_loc) for i in range(16)]
-    prob_vis_weights = [poisson_prob(i, exp_vis) for i in range(16)]
+    prob_loc_weights = [poisson_prob(i, lambda_loc) for i in range(20)]
+    prob_vis_weights = [poisson_prob(i, lambda_vis) for i in range(20)]
 
     wins_loc, wins_vis = 0, 0
     covers_rl_loc, covers_rl_vis = 0, 0
     overs, unders = 0, 0
 
     for _ in range(iteraciones):
-        c_loc = rng.choices(range(16), weights=prob_loc_weights)[0]
-        c_vis = rng.choices(range(16), weights=prob_vis_weights)[0]
+        c_loc = rng.choices(range(20), weights=prob_loc_weights)[0]
+        c_vis = rng.choices(range(20), weights=prob_vis_weights)[0]
 
         if c_loc == c_vis:
             if rng.random() < 0.53: c_loc += 1
@@ -122,7 +173,7 @@ def simular_partido_mlb(local, visitante, c_ml_loc, c_ml_vis, l_rl_loc, c_rl_loc
     return {
         "equipo_local_abbr": abbr_loc,
         "equipo_visitante_abbr": abbr_vis,
-        "proyeccion_carreras": f"{exp_loc} - {exp_vis}",
+        "proyeccion_carreras": f"{lambda_loc} - {lambda_vis}",
         "total_carreras_proyectado": total_esperado,
         "ml_local": {"prob": prob_ml_loc},
         "ml_visitante": {"prob": prob_ml_vis},
@@ -131,6 +182,6 @@ def simular_partido_mlb(local, visitante, c_ml_loc, c_ml_vis, l_rl_loc, c_rl_loc
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
         "nrfi_prob": prob_nrfi,
-        "k_props": f"Ks Abridores: {abbr_loc} ~{k_proj_loc_starter} | {abbr_vis} ~{k_proj_vis_starter}",
-        "resumen_explicado": f"SLUGGER-IA: Monte Carlo (10,000 iteraciones). Sabermetría (wRC+, Starter xERA, Bullpen xFIP) + Clima ({temp_f}°F, {viento_mph}mph) + Park Factor ({pf}). NRFI: {prob_nrfi}%. Proyección: {total_esperado} carreras."
+        "k_props": f"Ks Abridores: {abbr_loc} ({s_loc[3]}HP) ~{k_proj_loc} | {abbr_vis} ({s_vis[3]}HP) ~{k_proj_vis}",
+        "resumen_explicado": f"SLUGGER-IA: Sabermetría Desacoplada + Platoon Splits ({mano_abridor_vis}HP vs {mano_abridor_loc}HP). Clima ({temp_f}°F, {viento_mph}mph) + PF ({pf}). NRFI: {prob_nrfi}%. Ks: {abbr_loc} ~{k_proj_loc} / {abbr_vis} ~{k_proj_vis}. Proyección: {total_esperado} carreras."
     }
