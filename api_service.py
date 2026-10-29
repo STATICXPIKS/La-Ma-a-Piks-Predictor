@@ -103,7 +103,7 @@ def get_nba_stats_live(team_abbr: str):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Referer": "https://www.nba.com/"
     }
-    url = f"https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
+    url = "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
     try:
         r = requests.get(url, headers=headers, timeout=5)
         if r.status_code == 200:
@@ -112,4 +112,20 @@ def get_nba_stats_live(team_abbr: str):
             return data
     except Exception as e:
         print(f"Error NBA API: {e}")
+    return None
+
+# 6. ESPN API Pública Gratuita: Estado de partidos, clima y lesiones NFL
+def get_nfl_live_data(team_abbr: str):
+    cached = fetch_cached(f"nfl_live_{team_abbr}", ttl=1800)
+    if cached: return cached
+    
+    url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            set_cached(f"nfl_live_{team_abbr}", data)
+            return data
+    except Exception as e:
+        print(f"Error NFL ESPN API: {e}")
     return None
