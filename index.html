@@ -946,11 +946,9 @@
                     return Math.round(((probDecimal * odds) - 1.0) * 1000) / 10.0;
                 }
 
-                // CÁLCULO DE PROBABILIDAD DE SPREAD DIRECTO Y CONSISTENTE
                 let probSpreadLoc = dataSpreadLoc.prob;
                 let probSpreadVis = dataSpreadVis.prob;
 
-                // Validación de límites: el spread negativo nunca puede superar la probabilidad de ML
                 if (lPlLoc < 0 && probSpreadLoc > d.ml_local.prob) {
                     probSpreadLoc = Math.round(d.ml_local.prob * 0.55 * 10) / 10;
                     probSpreadVis = Math.round((100.0 - probSpreadLoc) * 10) / 10;
@@ -968,7 +966,6 @@
                     { tipo: 'TOTAL', titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: calcEV(d.total_under.prob, cUnder), cuota: cUnder, prob: d.total_under.prob }
                 ];
 
-                // FILTRO DE COHERENCIA EN TOTALES
                 const projTotal = d.total_goles_proyectado || d.total_puntos_proyectado || d.total_carreras_proyectado || lTotal;
                 if (projTotal > (lTotal + 0.3)) {
                     const uIdx = opciones.findIndex(o => o.titulo.includes('UNDER'));
@@ -992,7 +989,6 @@
 
                 function renderTarjetaApilada(opc, index) {
                     const btnId = `btn-card-market-${index}`;
-                    
                     let bgCard = "bg-slate-950/80 border border-slate-800 opacity-80";
                     let bgBadge = "bg-slate-800 text-slate-400";
                     let textoBadge = `SIN VALOR ⚠️`;
@@ -1036,35 +1032,67 @@
                     </div>`;
                 }
 
-                // RENDERIZADO DE PROPS SI VIENEN EN EL RESULTADO (NFL)
+                // RENDERIZADO DE PROPS CON ESCUDOS Y BADGES BET / MAYBE
                 let htmlPropsBloque = "";
                 if (d.props_jugadores && d.props_jugadores.length > 0) {
                     htmlPropsBloque = `
                         <div class="mt-6 pt-5 border-t border-slate-800">
-                            <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider mb-3">
-                                🎯 TOP 4 PROPS DE JUGADORES RECOMENDADAS (+EV):
+                            <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider mb-4 flex items-center gap-2">
+                                🎯 TOP 4 PROPS DE JUGADORES RECOMENDADAS (+EV)
                             </span>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                ${d.props_jugadores.map((p, i) => `
-                                    <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between shadow-md">
-                                        <div class="flex justify-between items-center mb-1.5">
-                                            <span class="font-montserrat font-bold text-xs text-white">🏈 ${p.jugador}</span>
-                                            <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-md font-mono">
-                                                +${p.ev}% EV
-                                            </span>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${d.props_jugadores.map((p, i) => {
+                                    const esBet = p.ev >= 10.0;
+                                    const badgeTxt = esBet ? "BET 🔥 VALOR DETECTADO" : "MAYBE ⚡ VALOR MODERADO";
+                                    const badgeClass = esBet 
+                                        ? "bg-emerald-400 text-slate-950 font-black" 
+                                        : "bg-amber-400 text-slate-950 font-black";
+                                    const cardBorder = esBet 
+                                        ? "border-emerald-400/80 shadow-[0_0_15px_rgba(52,211,153,0.2)] bg-emerald-950/30" 
+                                        : "border-amber-400/80 shadow-[0_0_15px_rgba(251,191,36,0.2)] bg-amber-950/30";
+                                    const textEvClass = esBet ? "text-emerald-300" : "text-amber-300";
+                                    const btnColorClass = esBet 
+                                        ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black" 
+                                        : "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black";
+                                    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${p.equipo_abbr || 'nfl'}.png`;
+
+                                    return `
+                                    <div class="bg-slate-950 p-4 rounded-2xl border-2 ${cardBorder} flex flex-col justify-between shadow-xl transition transform hover:-translate-y-0.5">
+                                        <div>
+                                            <div class="flex justify-between items-center mb-2.5">
+                                                <span class="${badgeClass} text-[9px] px-2.5 py-0.5 rounded-md uppercase tracking-wider block font-black">
+                                                    ${badgeTxt}
+                                                </span>
+                                                <span class="font-montserrat font-black text-sm ${textEvClass}">
+                                                    +${p.ev}% EV
+                                                </span>
+                                            </div>
+
+                                            <div class="flex items-center gap-2.5 mb-2">
+                                                <img src="${logoUrl}" class="w-8 h-8 object-contain drop-shadow" onerror="this.src='https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png'">
+                                                <div>
+                                                    <span class="font-montserrat font-extrabold text-sm text-white block leading-tight">
+                                                        ${p.jugador}
+                                                    </span>
+                                                    <span class="text-[11px] text-slate-300 block mt-0.5">
+                                                        ${p.lado} <b class="text-white">${p.linea}</b> ${p.tipo_prop} @ <b class="text-mana-neon font-mono">${p.cuota}</b>
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="text-[11px] text-slate-300 mb-2">
-                                            ${p.lado} <b class="text-white">${p.linea}</b> ${p.tipo_prop} @ <b class="text-mana-neon">${p.cuota}</b>
+
+                                        <div class="mt-2">
+                                            <div class="flex justify-between text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1.5 rounded-xl border border-slate-800 mb-2">
+                                                <span>Proy: <b class="text-white font-mono">${p.proyeccion}</b></span>
+                                                <span>Prob. Real: <b class="text-white font-mono">${p.prob_real}%</b></span>
+                                            </div>
+                                            <button id="btn-prop-${i}" onclick="guardarPickEnHistorial('btn-prop-${i}', '${p.jugador}: ${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}', '+${p.ev}% EV', '${local}', '${visitante}')" class="w-full ${btnColorClass} text-[10px] font-montserrat font-black py-2.5 rounded-xl uppercase transition shadow-md">
+                                                📌 REGISTRAR EN HISTORIAL
+                                            </button>
                                         </div>
-                                        <div class="flex justify-between text-[10px] text-slate-400 border-t border-slate-900 pt-1.5">
-                                            <span>Proyección: <b class="text-slate-200">${p.proyeccion}</b></span>
-                                            <span>Prob. Real: <b class="text-slate-200">${p.prob_real}%</b></span>
-                                        </div>
-                                        <button id="btn-prop-${i}" onclick="guardarPickEnHistorial('btn-prop-${i}', '${p.jugador}: ${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}', '+${p.ev}% EV', '${local}', '${visitante}')" class="mt-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-montserrat font-black py-2 rounded-xl uppercase transition">
-                                            📌 REGISTRAR EN HISTORIAL
-                                        </button>
                                     </div>
-                                `).join('')}
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
                     `;
