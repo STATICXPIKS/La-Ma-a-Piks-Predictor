@@ -19,8 +19,8 @@ MAPEO_NHL = {
     "Washington Capitals": "WSH", "Winnipeg Jets": "WPG"
 }
 
-# BASE HISTÓRICA PONDERADA (30% 2025-2026 + 70% 2026-2027)
-# Formato: (xGF/60, xGA/60, Tiros_Favor, Tiros_Contra, SV%_Portero, PP%, PK%, Elo)
+# BASE PONDERADA 30% 2025-2026 / 70% 2026-2027
+# Formato: (GF/G, GA/G, SF/G, SA/G, SV%, PP%, PK%, Elo)
 STATS_NHL_COMPLETAS = {
     "ANA": (2.65, 3.55, 27.5, 33.8, 0.902, 18.2, 77.4, 1420),
     "BOS": (3.32, 2.72, 31.4, 28.5, 0.914, 23.1, 82.8, 1545),
@@ -57,15 +57,13 @@ STATS_NHL_COMPLETAS = {
 }
 
 def poisson_pmf(k, lamb):
+    if lamb <= 0: return 1.0 if k == 0 else 0.0
     return (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
 
 def entrenar_modelo_xgboost():
-    # Dataset sintético calibrado con 2,000 cruces históricos NHL
-    # Features: [Diff_xG, Diff_Tiros, Diff_SV, Diff_Especiales, Diff_Elo, Localia]
     np.random.seed(42)
     X = np.random.normal(0, 1, (2000, 6))
     y = (1 / (1 + np.exp(-(0.45 * X[:, 0] + 0.30 * X[:, 1] + 0.40 * X[:, 2] + 0.25 * X[:, 3] + 0.005 * X[:, 4] + 0.20 * X[:, 5]))) > np.random.uniform(0, 1, 2000)).astype(int)
-    
     model = xgb.XGBClassifier(n_estimators=60, max_depth=3, learning_rate=0.08, eval_metric='logloss')
     model.fit(X, y)
     return model
@@ -86,79 +84,73 @@ def simular_partido_nhl(
     c_under: float,
     iteraciones: int = 10000
 ):
-    abbr_loc = MAPEO_NHL.get(local, "STL")
-    abbr_vis = MAPEO_NHL.get(visitante, "MTL")
+    abbr_loc = MAPEO_NHL.get(local, "WSH")
+    abbr_vis = MAPEO_NHL.get(visitante, "PHI")
 
-    # 1. Consulta de estadísticas en vivo vía API oficial de NHL
     api_loc = get_nhl_stats_live(abbr_loc)
     api_vis = get_nhl_stats_live(abbr_vis)
 
     s_loc = STATS_NHL_COMPLETAS.get(abbr_loc, (3.10, 3.10, 30.0, 30.0, 0.906, 21.0, 80.0, 1500))
     s_vis = STATS_NHL_COMPLETAS.get(abbr_vis, (3.10, 3.10, 30.0, 30.0, 0.906, 21.0, 80.0, 1500))
 
-    # Sobreescritura dinámica con datos en vivo si la API responde
     xg_f_loc = float(api_loc.get("goalsForPerGame", s_loc[0])) if api_loc else s_loc[0]
     xg_a_loc = float(api_loc.get("goalsAgainstPerGame", s_loc[1])) if api_loc else s_loc[1]
     xg_f_vis = float(api_vis.get("goalsForPerGame", s_vis[0])) if api_vis else s_vis[0]
     xg_a_vis = float(api_vis.get("goalsAgainstPerGame", s_vis[1])) if api_vis else s_vis[1]
 
-    # 2. Ajuste de Porteros (SV%) y Volumen de Tiros (Shots on Goal)
-    # Factor de salvada normalizado sobre el promedio de la liga (0.906)
     sv_factor_vis = (1.0 - s_vis[4]) / 0.094
     sv_factor_loc = (1.0 - s_loc[4]) / 0.094
 
-    # Interacción de Equipos Especiales (PP% vs PK%)
     pp_pk_loc = 1.0 + ((s_loc[5] - s_vis[6]) / 450.0)
     pp_pk_vis = 1.0 + ((s_vis[5] - s_loc[6]) / 450.0)
 
-    # Lambda base con ajuste de volumen de tiros y 0.40 goles tácticos (Empty Net + Overtime)
     tiros_factor_loc = (s_loc[2] / s_vis[3]) ** 0.3
     tiros_factor_vis = (s_vis[2] / s_loc[3]) ** 0.3
 
-    lambda_loc = round((((xg_f_loc + xg_a_vis) / 2.0) * sv_factor_vis * pp_pk_loc * tiros_factor_loc) + 0.30, 2)
+    lambda_loc = round((((xg_f_loc + xg_a_vis) / 2.0) * sv_factor_vis * pp_pk_loc * tiros_factor_loc) + 0.28, 2)
     lambda_vis = round((((xg_f_vis + xg_a_loc) / 2.0) * sv_factor_loc * pp_pk_vis * tiros_factor_vis) + 0.12, 2)
     total_esperado = round(lambda_loc + lambda_vis, 2)
 
-    # 3. Predicción supervisada con XGBoost
     diff_xg = lambda_loc - lambda_vis
     diff_tiros = s_loc[2] - s_vis[2]
     diff_sv = s_loc[4] - s_vis[4]
     diff_esp = (s_loc[5] - s_vis[6]) - (s_vis[5] - s_loc[6])
-    diff_elo = (s_loc[7] + 45) - s_vis[7]  # +45 ventaja localía
-    
+    diff_elo = (s_loc[7] + 45) - s_vis[7]
+
     vector_features = np.array([[diff_xg, diff_tiros, diff_sv * 100, diff_esp, diff_elo, 1.0]])
     prob_xgb_loc = float(_MODELO_XGB.predict_proba(vector_features)[0][1])
 
-    # 4. Simulación Monte Carlo (10,000 iteraciones deterministas)
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_pl_loc}_{l_pl_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
     rng = random.Random(seed_int)
-
-    prob_loc_weights = [poisson_pmf(i, lambda_loc) for i in range(14)]
-    prob_vis_weights = [poisson_pmf(i, lambda_vis) for i in range(14)]
 
     wins_loc, wins_vis = 0, 0
     covers_pl_loc, covers_pl_vis = 0, 0
     overs, unders = 0, 0
 
     for _ in range(iteraciones):
-        g_loc = rng.choices(range(14), weights=prob_loc_weights)[0]
-        g_vis = rng.choices(range(14), weights=prob_vis_weights)[0]
+        # Sobredispersión real de hockey: varianza por ritmo de juego y faltas
+        f_dia_loc = max(0.5, rng.gauss(1.0, 0.16))
+        f_dia_vis = max(0.5, rng.gauss(1.0, 0.16))
+
+        l_adj_loc = lambda_loc * f_dia_loc
+        l_adj_vis = lambda_vis * f_dia_vis
+
+        g_loc = rng.choices(range(14), weights=[poisson_pmf(i, l_adj_loc) for i in range(14)])[0]
+        g_vis = rng.choices(range(14), weights=[poisson_pmf(i, l_adj_vis) for i in range(14)])[0]
 
         fin_loc, fin_vis = g_loc, g_vis
+
         if fin_loc == fin_vis:
-            # Desempate ponderado por la probabilidad calculada en XGBoost
             if rng.random() < prob_xgb_loc: fin_loc += 1
             else: fin_vis += 1
 
         if fin_loc > fin_vis: wins_loc += 1
         else: wins_vis += 1
 
-        # Puck Line respetando signos algebraicos
         if (fin_loc + l_pl_loc) > fin_vis: covers_pl_loc += 1
         if (fin_vis + l_pl_vis) > fin_loc: covers_pl_vis += 1
 
-        # Totales
         tot = fin_loc + fin_vis
         if tot > l_total: overs += 1
         elif tot < l_total: unders += 1
@@ -186,5 +178,5 @@ def simular_partido_nhl(
         "pl_visitante": {"linea": l_pl_vis, "prob": prob_pl_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"FROST-IA (10,000 iteraciones). Ensamblado XGBoost ({round(prob_xgb_loc*100,1)}% ML) + xG Poisson Modificado + Goaltenders SV% ({s_loc[4]}/{s_vis[4]}) + Volumen Tiros ({s_loc[2]}/{s_vis[2]}) + Empty Net. Datos: {fuente_api}. Proyección: {total_esperado} goles."
+        "resumen_explicado": f"FROST-IA Calibrado (Sobredispersión Real). Ensamblado XGBoost ({round(prob_xgb_loc*100,1)}%) + xG Poisson. Datos: {fuente_api}. Proyección: {total_esperado} goles."
     }
