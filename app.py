@@ -6,19 +6,13 @@ import gradio as gr
 import numpy as np
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 from scipy.stats import norm, poisson
-import spaces
 
 from props_engine import obtener_mejores_props_nfl
 from nfl_model import simular_partido_nfl, MAPEO_NFL
 from nba_model import simular_partido_nba, MAPEO_NBA
 from nhl_model import simular_partido_nhl, MAPEO_NHL
 from mlb_model import simular_partido_mlb, MAPEO_MLB
-
-@spaces.GPU
-def _dummy_gpu():
-    return True
 
 # ==========================================
 # CONFIGURACIÓN DE APIS Y SUPABASE
