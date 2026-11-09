@@ -1036,13 +1036,49 @@
                     </div>`;
                 }
 
+                // RENDERIZADO DE PROPS SI VIENEN EN EL RESULTADO (NFL)
+                let htmlPropsBloque = "";
+                if (d.props_jugadores && d.props_jugadores.length > 0) {
+                    htmlPropsBloque = `
+                        <div class="mt-6 pt-5 border-t border-slate-800">
+                            <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider mb-3">
+                                🎯 TOP 4 PROPS DE JUGADORES RECOMENDADAS (+EV):
+                            </span>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                ${d.props_jugadores.map((p, i) => `
+                                    <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between shadow-md">
+                                        <div class="flex justify-between items-center mb-1.5">
+                                            <span class="font-montserrat font-bold text-xs text-white">🏈 ${p.jugador}</span>
+                                            <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-md font-mono">
+                                                +${p.ev}% EV
+                                            </span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-300 mb-2">
+                                            ${p.lado} <b class="text-white">${p.linea}</b> ${p.tipo_prop} @ <b class="text-mana-neon">${p.cuota}</b>
+                                        </div>
+                                        <div class="flex justify-between text-[10px] text-slate-400 border-t border-slate-900 pt-1.5">
+                                            <span>Proyección: <b class="text-slate-200">${p.proyeccion}</b></span>
+                                            <span>Prob. Real: <b class="text-slate-200">${p.prob_real}%</b></span>
+                                        </div>
+                                        <button id="btn-prop-${i}" onclick="guardarPickEnHistorial('btn-prop-${i}', '${p.jugador}: ${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}', '+${p.ev}% EV', '${local}', '${visitante}')" class="mt-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-montserrat font-black py-2 rounded-xl uppercase transition">
+                                            📌 REGISTRAR EN HISTORIAL
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
                 resContainer.innerHTML = `
                     ${bannerSinValor}
                     <div class="mb-6 space-y-4">
                         ${opciones.map((o, idx) => renderTarjetaApilada(o, idx)).join('')}
                     </div>
 
-                    <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 mb-4">
+                    ${htmlPropsBloque}
+
+                    <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 my-4">
                         <div class="flex items-center gap-3">
                             <span class="font-montserrat font-black text-lg text-white">${d.equipo_local_abbr}</span>
                             <span class="text-xs text-slate-500 font-bold">VS</span>
