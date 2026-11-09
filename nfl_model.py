@@ -32,7 +32,7 @@ CIUDADES_NFL = {
 
 ESTADIOS_TECHADOS = {"ARI", "ATL", "DAL", "DET", "HOU", "IND", "LV", "LAR", "LAC", "MIN", "NO"}
 
-# BASE HISTÓRICA PONDERADA: 35% Temporada 2025-2026 + 65% Temporada 2026-2027
+# BASE PONDERADA 35% 2025-2026 / 65% 2026-2027
 # Formato: (EPA_Pass_Off, EPA_Rush_Off, EPA_Def_Total, QB_EPA_Play, Snaps/Juego, Elo)
 STATS_32_NFL_35_65 = {
     "ARI": (0.038,  0.018,  0.058,  0.076, 64.0, 1478),
@@ -101,7 +101,6 @@ def simular_partido_nfl(
     abbr_loc = MAPEO_NFL.get(local, "PHI")
     abbr_vis = MAPEO_NFL.get(visitante, "DAL")
 
-    # 1. Consulta de Clima en Vivo (OpenWeatherMap)
     ciudad = CIUDADES_NFL.get(abbr_loc, "Philadelphia")
     es_techado = abbr_loc in ESTADIOS_TECHADOS
     factor_clima = 1.0
@@ -112,28 +111,21 @@ def simular_partido_nfl(
         viento_mph = clima.get("viento_mph", 0.0)
         temp_f = clima.get("temp_f", 60.0)
         if viento_mph > 14.0:
-            # Impacto directo del viento en pases largos y goles de campo
             factor_clima -= min(0.18, (viento_mph - 14.0) * 0.012)
         if temp_f < 32.0:
-            # Frío extremo reduce la elasticidad del balón y la velocidad de carrera
             factor_clima -= 0.04
 
-    # 2. Reporte en Vivo de ESPN (Chequeo de Bajas y Estado)
     live_data = get_nfl_live_data(abbr_loc)
-    ajuste_lesion_loc = 0.0
-    ajuste_lesion_vis = 0.0
 
     s_loc = STATS_32_NFL_35_65.get(abbr_loc, (0.05, 0.00, 0.00, 0.08, 63.5, 1500))
     s_vis = STATS_32_NFL_35_65.get(abbr_vis, (0.05, 0.00, 0.00, 0.08, 63.5, 1500))
 
-    # 3. Posesión a Posesión y Volumen de Jugadas (Pace de NFL ~62 a 66 jugadas)
     volumen_snaps = (s_loc[4] + s_vis[4]) / 2.0
 
-    # Eficiencia neta de pase (60%) y carrera (40%) + impacto del QB
-    epa_loc = ((s_loc[0] * 0.60 + s_loc[1] * 0.40) - s_vis[2] + (s_loc[3] * 0.45) + ajuste_lesion_loc) * factor_clima
-    epa_vis = ((s_vis[0] * 0.60 + s_vis[1] * 0.40) - s_loc[2] + (s_vis[3] * 0.45) + ajuste_lesion_vis) * factor_clima
+    epa_loc = ((s_loc[0] * 0.60 + s_loc[1] * 0.40) - s_vis[2] + (s_loc[3] * 0.45)) * factor_clima
+    epa_vis = ((s_vis[0] * 0.60 + s_vis[1] * 0.40) - s_loc[2] + (s_vis[3] * 0.45)) * factor_clima
 
-    # Producción de puntos esperados: Media de liga (21.75) + EPA neto acumulado + localía (+1.8 pts)
+    # Media base liga (21.75 pts) + Localía (+1.8 pts)
     pts_loc = 21.75 + (epa_loc * (volumen_snaps * 0.52)) + 1.8
     pts_vis = 21.75 + (epa_vis * (volumen_snaps * 0.48)) - 1.8
 
@@ -141,18 +133,22 @@ def simular_partido_nfl(
     pts_esperados_vis = round(pts_vis, 1)
     total_esperado = round(pts_esperados_loc + pts_esperados_vis, 1)
 
-    # 4. Ensamble de Predicción con XGBoost
     diff_pass = s_loc[0] - s_vis[0]
     diff_rush = s_loc[1] - s_vis[1]
-    diff_def = s_loc[2] - s_vis[2]
-    diff_qb = s_loc[3] - s_vis[3]
-    diff_elo = (s_loc[5] + 55) - s_vis[5]  # +55 Elo por localía
+    diff_def  = s_loc[2] - s_vis[2]
+    diff_qb   = s_loc[3] - s_vis[3]
+    diff_elo  = (s_loc[5] + 55) - s_vis[5]
     penalizacion_viento = 1.0 if viento_mph > 14.0 else 0.0
 
     vector_features = np.array([[diff_pass, diff_rush, diff_def, diff_qb, diff_elo, 1.0, penalizacion_viento]])
     prob_xgb_loc = float(_MODELO_XGB_NFL.predict_proba(vector_features)[0][1])
 
-    # 5. Simulación Monte Carlo (10,000 iteraciones deterministas con distribución normal)
+    # Dispersión empírica real de la NFL:
+    # Desviación típica observada de totales por juego = 14.8 puntos
+    # Desviación típica del margen entre equipos = 13.4 puntos
+    std_dev_total = 14.8
+    std_dev_spread = 13.4
+
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_spread_loc}_{l_spread_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
     rng = random.Random(seed_int)
@@ -160,12 +156,14 @@ def simular_partido_nfl(
     wins_loc, wins_vis = 0, 0
     covers_sp_loc, covers_sp_vis = 0, 0
     overs, unders = 0, 0
-    # Desviación típica de puntos en NFL (números clave 3, 7, 10)
-    std_dev = 13.6
 
     for _ in range(iteraciones):
-        p_loc = rng.gauss(pts_esperados_loc, std_dev)
-        p_vis = rng.gauss(pts_esperados_vis, std_dev)
+        sim_total = rng.gauss(total_esperado, std_dev_total)
+        margen_esperado = pts_esperados_loc - pts_esperados_vis
+        sim_margen = rng.gauss(margen_esperado, std_dev_spread)
+
+        p_loc = (sim_total + sim_margen) / 2.0
+        p_vis = (sim_total - sim_margen) / 2.0
 
         if round(p_loc) == round(p_vis):
             if rng.random() < prob_xgb_loc: p_loc += 3.0
@@ -174,13 +172,11 @@ def simular_partido_nfl(
         if p_loc > p_vis: wins_loc += 1
         else: wins_vis += 1
 
-        # Point Spread algebraicamente estricto
         if (p_loc + l_spread_loc) > p_vis: covers_sp_loc += 1
         if (p_vis + l_spread_vis) > p_loc: covers_sp_vis += 1
 
-        tot_sim = p_loc + p_vis
-        if tot_sim > l_total: overs += 1
-        elif tot_sim < l_total: unders += 1
+        if sim_total > l_total: overs += 1
+        elif sim_total < l_total: unders += 1
         else:
             overs += 0.5
             unders += 0.5
@@ -206,5 +202,5 @@ def simular_partido_nfl(
         "spread_visitante": {"linea": l_spread_vis, "prob": prob_sp_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"BLITZ-IA (10,000 iteraciones). Ensamblado XGBoost ({round(prob_xgb_loc*100,1)}% ML) + Posesión a Posesión (EPA/Snap) + QB EPA ({s_loc[3]}/{s_vis[3]}) + Clima: {tipo_estadio} + Elo ({s_loc[5]}/{s_vis[5]}). Datos: {fuente_api}. Proyección: {total_esperado} pts."
+        "resumen_explicado": f"BLITZ-IA Calibrado (Dispersión Empírica). Ensamblado XGBoost ({round(prob_xgb_loc*100,1)}% ML) + Posesión a Posesión (EPA/Snap) + QB EPA ({s_loc[3]}/{s_vis[3]}) + Clima: {tipo_estadio} + Elo ({s_loc[5]}/{s_vis[5]}). Datos: {fuente_api}. Proyección: {total_esperado} pts."
     }
