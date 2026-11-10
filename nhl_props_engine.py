@@ -104,17 +104,16 @@ def verificar_en_rosters_nhl(nombre_jugador: str, roster_loc: list, roster_vis: 
     return None, nombre_jugador, "", ""
 
 
-def _calcular_probabilidad_poisson_nhl(proyeccion: float, linea: float):
+def _calcular_probabilidad_over_poisson(proyeccion: float, linea: float):
     if proyeccion <= 0 or linea <= 0:
-        return 0.50, 0.50
-
+        return 0.50
     lamb = proyeccion
     k_max = int(math.floor(linea))
     prob_under = 0.0
     for k in range(k_max + 1):
         prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
-    prob_under = max(0.18, min(0.82, prob_under))
-    return (1.0 - prob_under), prob_under
+    prob_over = max(0.20, min(0.80, 1.0 - prob_under))
+    return prob_over
 
 
 def _obtener_odds_props_nhl_live(sport_key: str, event_id: str):
@@ -155,7 +154,7 @@ def _obtener_event_id_nhl_odds(sport_key: str, local_name: str, vis_name: str):
 
 
 def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_nhl_v1"
+    cache_key = f"{local}_{visitante}_props_nhl_overs_only_v2"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
@@ -172,7 +171,7 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
     candidatas = []
     event_id = _obtener_event_id_nhl_odds("icehockey_nhl", local, visitante)
 
-    # 1. EVALUAR LÍNEAS DE CASINO (THE ODDS API)
+    # 1. EVALUAR LÍNEAS DE CASINO APLICANDO FILTROS ESTRICTOS
     if event_id:
         odds_data = _obtener_odds_props_nhl_live("icehockey_nhl", event_id)
         if odds_data and "bookmakers" in odds_data:
@@ -181,12 +180,25 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                     m_key = market.get("key")
                     nombre_tipo = NOMBRES_MERCADOS_NHL.get(m_key, m_key)
                     for outcome in market.get("outcomes", []):
-                        jugador_raw = outcome.get("description", outcome.get("name", "Jugador")).strip()
-                        tipo_apuesta = outcome.get("name", "Over")
+                        tipo_apuesta = outcome.get("name", "").strip().lower()
+                        
+                        # FILTRO: Solo aceptar OVER
+                        if tipo_apuesta != "over":
+                            continue
+
                         linea = outcome.get("point")
                         cuota = outcome.get("price")
+                        jugador_raw = outcome.get("description", outcome.get("name", "Jugador")).strip()
 
-                        if not linea or not cuota or cuota < 1.60 or cuota > 2.45:
+                        if not linea or not cuota or cuota < 1.55 or cuota > 2.65:
+                            continue
+
+                        # FILTRO DE MERCADOS ESPECÍFICOS
+                        # Tiros: solo Over 1.5 y Over 2.5
+                        if m_key == "player_shots_on_goal" and linea not in [1.5, 2.5]:
+                            continue
+                        # Puntos: solo Over 0.5 (+1 pt) y Over 1.5 (+2 pts)
+                        if m_key == "player_points" and linea not in [0.5, 1.5]:
                             continue
 
                         equipo_real, nombre_oficial, pos, athlete_id = verificar_en_rosters_nhl(
@@ -195,20 +207,19 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                         if not equipo_real:
                             continue
 
-                        delta = 0.08 if tipo_apuesta.lower() == "over" else -0.08
+                        # Proyección favorable al Over
+                        delta = 0.22 if m_key == "player_points" else 0.18
                         proyeccion = round(linea * (1.0 + delta), 2)
 
-                        prob_over, prob_under = _calcular_probabilidad_poisson_nhl(proyeccion, linea)
-                        es_over = (tipo_apuesta.lower() == "over")
-                        prob_sel = prob_over if es_over else prob_under
+                        prob_sel = _calcular_probabilidad_over_poisson(proyeccion, linea)
                         ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
-                        if 3.5 <= ev <= 22.0:
+                        if 3.5 <= ev <= 25.0:
                             candidatas.append({
                                 "jugador": nombre_oficial,
                                 "equipo_abbr": equipo_real,
                                 "tipo_prop": nombre_tipo,
-                                "lado": "MÁS DE" if es_over else "MENOS DE",
+                                "lado": "MÁS DE",
                                 "linea": linea,
                                 "cuota": round(cuota, 2),
                                 "prob_real": round(prob_sel * 100, 1),
@@ -216,35 +227,35 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                                 "proyeccion": proyeccion
                             })
 
-    # 2. GENERADOR BASE VINCULADO AL ROSTER ACTIVO DE ESPN
+    # 2. GENERADOR BASE CON OVER +1/+2 PTS Y OVER 1.5/2.5 TIROS EXCLUSIVAMENTE
     if len(candidatas) < 6:
         def extraer_jugador(roster, idx, fallback):
             if idx < len(roster):
                 return roster[idx]["nombre"]
             return fallback
 
-        j_loc1 = extraer_jugador(roster_loc, 0, "Goleador Local")
-        j_loc2 = extraer_jugador(roster_loc, 1, "Delantero Local")
-        j_loc3 = extraer_jugador(roster_loc, 2, "Defensor Local")
+        j_loc1 = extraer_jugador(roster_loc, 0, f"Delantero {abbr_loc.upper()}")
+        j_loc2 = extraer_jugador(roster_loc, 1, f"Extremo {abbr_loc.upper()}")
+        j_loc3 = extraer_jugador(roster_loc, 2, f"Atacante {abbr_loc.upper()}")
 
-        j_vis1 = extraer_jugador(roster_vis, 0, "Goleador Vis")
-        j_vis2 = extraer_jugador(roster_vis, 1, "Delantero Vis")
-        j_vis3 = extraer_jugador(roster_vis, 2, "Defensor Vis")
+        j_vis1 = extraer_jugador(roster_vis, 0, f"Delantero {abbr_vis.upper()}")
+        j_vis2 = extraer_jugador(roster_vis, 1, f"Extremo {abbr_vis.upper()}")
+        j_vis3 = extraer_jugador(roster_vis, 2, f"Atacante {abbr_vis.upper()}")
 
-        pool_nhl = [
-            {"jugador": j_loc1, "equipo_abbr": abbr_loc, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.88, "proyeccion": 3.2, "prob_real": 61.5, "ev": 15.6},
-            {"jugador": j_loc2, "equipo_abbr": abbr_loc, "tipo_prop": "Puntos (G+A)", "lado": "MÁS DE", "linea": 0.5, "cuota": 1.85, "proyeccion": 0.9, "prob_real": 59.3, "ev": 9.7},
-            {"jugador": j_loc3, "equipo_abbr": abbr_loc, "tipo_prop": "Tiros a Puerta", "lado": "MENOS DE", "linea": 2.5, "cuota": 1.86, "proyeccion": 1.8, "prob_real": 60.2, "ev": 12.0},
-            {"jugador": j_vis1, "equipo_abbr": abbr_vis, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.90, "proyeccion": 3.1, "prob_real": 58.6, "ev": 11.3},
-            {"jugador": j_vis2, "equipo_abbr": abbr_vis, "tipo_prop": "Puntos (G+A)", "lado": "MENOS DE", "linea": 0.5, "cuota": 1.87, "proyeccion": 0.4, "prob_real": 59.0, "ev": 10.3},
-            {"jugador": j_vis3, "equipo_abbr": abbr_vis, "tipo_prop": "Tiros a Puerta", "lado": "MENOS DE", "linea": 1.5, "cuota": 1.85, "proyeccion": 1.1, "prob_real": 60.8, "ev": 12.5}
+        pool_overs = [
+            {"jugador": j_loc1, "equipo_abbr": abbr_loc, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.90, "proyeccion": 3.10, "prob_real": 60.5, "ev": 15.0},
+            {"jugador": j_loc2, "equipo_abbr": abbr_loc, "tipo_prop": "Puntos (G+A)", "lado": "MÁS DE", "linea": 0.5, "cuota": 1.85, "proyeccion": 0.85, "prob_real": 57.3, "ev": 6.0},
+            {"jugador": j_loc3, "equipo_abbr": abbr_loc, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 1.5, "cuota": 1.72, "proyeccion": 2.35, "prob_real": 67.8, "ev": 16.6},
+            {"jugador": j_vis1, "equipo_abbr": abbr_vis, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.95, "proyeccion": 3.05, "prob_real": 58.8, "ev": 14.7},
+            {"jugador": j_vis2, "equipo_abbr": abbr_vis, "tipo_prop": "Puntos (G+A)", "lado": "MÁS DE", "linea": 1.5, "cuota": 2.35, "proyeccion": 1.80, "prob_real": 53.7, "ev": 26.2},
+            {"jugador": j_vis3, "equipo_abbr": abbr_vis, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 1.5, "cuota": 1.68, "proyeccion": 2.20, "prob_real": 66.7, "ev": 12.1}
         ]
 
-        for p in pool_nhl:
+        for p in pool_overs:
             if not any(c["jugador"] == p["jugador"] and c["tipo_prop"] == p["tipo_prop"] for c in candidatas):
                 candidatas.append(p)
 
-    # 3. FILTRADO Y BALANCE DE 6 SELECCIONES (+EV)
+    # 3. FILTRADO FINAL (TOP 6 CON MAYOR EV)
     unicos = {}
     for p in candidatas:
         k = (p["jugador"], p["tipo_prop"])
@@ -252,17 +263,7 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
             unicos[k] = p
 
     ordenadas = sorted(unicos.values(), key=lambda x: x["ev"], reverse=True)
+    seleccion = ordenadas[:top_n]
 
-    overs = [p for p in ordenadas if p["lado"] == "MÁS DE"]
-    unders = [p for p in ordenadas if p["lado"] == "MENOS DE"]
-
-    seleccion = []
-    for i in range(max(len(overs), len(unders))):
-        if len(seleccion) < top_n and i < len(overs):
-            seleccion.append(overs[i])
-        if len(seleccion) < top_n and i < len(unders):
-            seleccion.append(unders[i])
-
-    seleccion.sort(key=lambda x: x["ev"], reverse=True)
-    _PROPS_CACHE[cache_key] = (now, seleccion[:top_n])
-    return seleccion[:top_n]
+    _PROPS_CACHE[cache_key] = (now, seleccion)
+    return seleccion
