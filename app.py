@@ -10,6 +10,7 @@ import uvicorn
 
 from nfl_props_engine import obtener_mejores_props_nfl
 from nba_props_engine import obtener_mejores_props_nba
+from nhl_props_engine import obtener_mejores_props_nhl
 from nfl_model import simular_partido_nfl, MAPEO_NFL
 from nba_model import simular_partido_nba, MAPEO_NBA
 from nhl_model import simular_partido_nhl, MAPEO_NHL
@@ -45,10 +46,9 @@ def api_analizar_nfl(
         l_spread_vis, c_spread_vis,
         l_total, c_over, c_under
     )
-    # Extraer props automáticas de NFL
     try:
         data["props_jugadores"] = obtener_mejores_props_nfl(local, visitante, top_n=6)
-    except Exception as e:
+    except Exception:
         data["props_jugadores"] = []
     return data
 
@@ -60,13 +60,18 @@ def api_analizar_nhl(
     l_rl_vis: float = 1.5, c_rl_vis: float = 1.40,
     l_total: float = 5.5, c_over: float = 1.79, c_under: float = 1.98
 ):
-    return simular_partido_nhl(
+    data = simular_partido_nhl(
         local, visitante,
         c_ml_loc, c_ml_vis,
         l_rl_loc, c_rl_loc,
         l_rl_vis, c_rl_vis,
         l_total, c_over, c_under
     )
+    try:
+        data["props_jugadores"] = obtener_mejores_props_nhl(local, visitante, top_n=6)
+    except Exception:
+        data["props_jugadores"] = []
+    return data
 
 @app.get("/api/analizar-nba")
 def api_analizar_nba(
@@ -83,10 +88,9 @@ def api_analizar_nba(
         l_spread_vis, c_spread_vis,
         l_total, c_over, c_under
     )
-    # Extraer props automáticas de NBA
     try:
         data["props_jugadores"] = obtener_mejores_props_nba(local, visitante, top_n=6)
-    except Exception as e:
+    except Exception:
         data["props_jugadores"] = []
     return data
 
@@ -106,7 +110,6 @@ def api_analizar_mlb(
         l_total, c_over, c_under
     )
 
-# Montar Gradio en la ruta raíz para no perder el visual directo
 with gr.Blocks(title="La Maña Picks Engine") as demo:
     gr.Markdown("### La Maña Picks - API Backend Activa")
 
