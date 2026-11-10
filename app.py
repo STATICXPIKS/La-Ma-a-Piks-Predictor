@@ -9,6 +9,7 @@ import requests
 import uvicorn
 
 from nfl_props_engine import obtener_mejores_props_nfl
+from nba_props_engine import obtener_mejores_props_nba
 from nfl_model import simular_partido_nfl, MAPEO_NFL
 from nba_model import simular_partido_nba, MAPEO_NBA
 from nhl_model import simular_partido_nhl, MAPEO_NHL
@@ -44,7 +45,7 @@ def api_analizar_nfl(
         l_spread_vis, c_spread_vis,
         l_total, c_over, c_under
     )
-    # Extraer props automáticas
+    # Extraer props automáticas de NFL
     try:
         data["props_jugadores"] = obtener_mejores_props_nfl(local, visitante, top_n=6)
     except Exception as e:
@@ -75,13 +76,19 @@ def api_analizar_nba(
     l_spread_vis: float = 2.5, c_spread_vis: float = 1.90,
     l_total: float = 224.5, c_over: float = 1.90, c_under: float = 1.90
 ):
-    return simular_partido_nba(
+    data = simular_partido_nba(
         local, visitante,
         c_ml_loc, c_ml_vis,
         l_spread_loc, c_spread_loc,
         l_spread_vis, c_spread_vis,
         l_total, c_over, c_under
     )
+    # Extraer props automáticas de NBA
+    try:
+        data["props_jugadores"] = obtener_mejores_props_nba(local, visitante, top_n=6)
+    except Exception as e:
+        data["props_jugadores"] = []
+    return data
 
 @app.get("/api/analizar-mlb")
 def api_analizar_mlb(
