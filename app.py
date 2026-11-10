@@ -46,7 +46,7 @@ def api_analizar_nfl(
     )
     # Extraer props automáticas
     try:
-        data["props_jugadores"] = obtener_mejores_props_nfl(local, visitante, top_n=4)
+        data["props_jugadores"] = obtener_mejores_props_nfl(local, visitante, top_n=6)
     except Exception as e:
         data["props_jugadores"] = []
     return data
