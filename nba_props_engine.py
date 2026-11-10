@@ -5,38 +5,17 @@ import requests
 
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
 
-# Mapeo oficial de códigos NBA en la API de ESPN
 MAPEO_EQUIPOS_NBA = {
-    "Atlanta Hawks": "atl",
-    "Boston Celtics": "bos",
-    "Brooklyn Nets": "bkn",
-    "Charlotte Hornets": "cha",
-    "Chicago Bulls": "chi",
-    "Cleveland Cavaliers": "cle",
-    "Dallas Mavericks": "dal",
-    "Denver Nuggets": "den",
-    "Detroit Pistons": "det",
-    "Golden State Warriors": "gsw",
-    "Houston Rockets": "hou",
-    "Indiana Pacers": "ind",
-    "LA Clippers": "lac",
-    "Los Angeles Clippers": "lac",
-    "Los Angeles Lakers": "lal",
-    "Memphis Grizzlies": "mem",
-    "Miami Heat": "mia",
-    "Milwaukee Bucks": "mil",
-    "Minnesota Timberwolves": "min",
-    "New Orleans Pelicans": "nop",
-    "New York Knicks": "nyk",
-    "Oklahoma City Thunder": "okc",
-    "Orlando Magic": "orl",
-    "Philadelphia 76ers": "phi",
-    "Phoenix Suns": "phx",
-    "Portland Trail Blazers": "por",
-    "Sacramento Kings": "sac",
-    "San Antonio Spurs": "sas",
-    "Toronto Raptors": "tor",
-    "Utah Jazz": "uta",
+    "Atlanta Hawks": "atl", "Boston Celtics": "bos", "Brooklyn Nets": "bkn",
+    "Charlotte Hornets": "cha", "Chicago Bulls": "chi", "Cleveland Cavaliers": "cle",
+    "Dallas Mavericks": "dal", "Denver Nuggets": "den", "Detroit Pistons": "det",
+    "Golden State Warriors": "gsw", "Houston Rockets": "hou", "Indiana Pacers": "ind",
+    "LA Clippers": "lac", "Los Angeles Clippers": "lac", "Los Angeles Lakers": "lal",
+    "Memphis Grizzlies": "mem", "Miami Heat": "mia", "Milwaukee Bucks": "mil",
+    "Minnesota Timberwolves": "min", "New Orleans Pelicans": "nop", "New York Knicks": "nyk",
+    "Oklahoma City Thunder": "okc", "Orlando Magic": "orl", "Philadelphia 76ers": "phi",
+    "Phoenix Suns": "phx", "Portland Trail Blazers": "por", "Sacramento Kings": "sac",
+    "San Antonio Spurs": "sas", "Toronto Raptors": "tor", "Utah Jazz": "uta",
     "Washington Wizards": "was"
 }
 
@@ -62,10 +41,6 @@ def _normalizar_texto(texto: str) -> str:
 
 
 def obtener_roster_activo_espn(espn_abbr: str):
-    """
-    Obtiene la plantilla activa de ESPN en tiempo real.
-    Garantiza que solo se tomen atletas registrados actualmente en el equipo.
-    """
     now = time.time()
     if espn_abbr in _ROSTER_CACHE:
         ts, data = _ROSTER_CACHE[espn_abbr]
@@ -75,7 +50,7 @@ def obtener_roster_activo_espn(espn_abbr: str):
     url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{espn_abbr}/roster"
     jugadores = {}
     try:
-        r = requests.get(url, headers=HEADERS_ESPN, timeout=5)
+        r = requests.get(url, headers=HEADERS_ESPN, timeout=4)
         if r.status_code == 200:
             res = r.json()
             for group in res.get("athletes", []):
@@ -98,55 +73,54 @@ def obtener_roster_activo_espn(espn_abbr: str):
     return jugadores
 
 
-def obtener_promedios_reales_espn_nba(athlete_id: str, categoria_prop: str):
+def obtener_todas_las_stats_atleta(athlete_id: str):
     """
-    Consulta promedios ponderados (70% temporada actual / 30% previa).
+    Obtiene puntos, rebotes, asistencias y triples en UNA SOLA consulta HTTP.
     """
     if not athlete_id:
-        return None
+        return {}
 
     now = time.time()
-    cache_key = f"{athlete_id}_{categoria_prop}"
-    if cache_key in _STATS_CACHE:
-        ts, val = _STATS_CACHE[cache_key]
+    if athlete_id in _STATS_CACHE:
+        ts, val = _STATS_CACHE[athlete_id]
         if now - ts < 7200:
             return val
 
     url = f"https://site.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{athlete_id}/stats"
+    res_dict = {}
     try:
-        r = requests.get(url, headers=HEADERS_ESPN, timeout=4)
+        r = requests.get(url, headers=HEADERS_ESPN, timeout=3)
         if r.status_code == 200:
             data = r.json()
-            targets = []
-            if categoria_prop == "player_points":
-                targets = ["avgPoints", "pointsPerGame", "pts"]
-            elif categoria_prop == "player_rebounds":
-                targets = ["avgRebounds", "reboundsPerGame", "reb"]
-            elif categoria_prop == "player_assists":
-                targets = ["avgAssists", "assistsPerGame", "ast"]
-            elif categoria_prop == "player_threes":
-                targets = ["threePointFieldGoalsMadePerGame", "avgThreePointFieldGoalsMade", "3pm"]
+            mapping = {
+                "player_points": ["avgpoints", "pointspergame", "pts"],
+                "player_rebounds": ["avgrebounds", "reboundspergame", "reb"],
+                "player_assists": ["avgassists", "assistspergame", "ast"],
+                "player_threes": ["threepointfieldgoalsmadepergame", "avgthreepointfieldgoalsmade", "3pm"]
+            }
 
-            promedios = []
+            temp_stats = {k: [] for k in mapping}
             for cat in data.get("categories", []):
                 for stat in cat.get("statistics", []):
-                    name_stat = stat.get("name", "")
-                    abbr_stat = stat.get("abbreviation", "").lower()
-                    if name_stat in targets or abbr_stat in targets:
-                        val_str = str(stat.get("displayValue", "0")).replace(",", "")
-                        try:
-                            promedios.append(float(val_str))
-                        except ValueError:
-                            pass
+                    n = stat.get("name", "").lower()
+                    a = stat.get("abbreviation", "").lower()
+                    for m_key, aliases in mapping.items():
+                        if n in aliases or a in aliases:
+                            try:
+                                val_num = float(str(stat.get("displayValue", "0")).replace(",", ""))
+                                temp_stats[m_key].append(val_num)
+                            except ValueError:
+                                pass
 
-            if promedios:
-                val_final = round((promedios[0] * 0.70) + (promedios[1] * 0.30), 1) if len(promedios) >= 2 else round(promedios[0], 1)
-                _STATS_CACHE[cache_key] = (now, val_final)
-                return val_final
+            for m_key, vals in temp_stats.items():
+                if vals:
+                    res_dict[m_key] = round((vals[0] * 0.70) + (vals[1] * 0.30), 1) if len(vals) >= 2 else round(vals[0], 1)
+
+            _STATS_CACHE[athlete_id] = (now, res_dict)
     except Exception:
         pass
 
-    return None
+    return res_dict
 
 
 def verificar_en_rosters_nba(nombre_jugador: str, roster_loc: dict, roster_vis: dict, abbr_loc: str, abbr_vis: str):
@@ -229,7 +203,7 @@ def _obtener_event_id_nba_odds(sport_key: str, local_name: str, vis_name: str):
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_nba_dynamic_v2"
+    cache_key = f"{local}_{visitante}_props_nba_fast_v3"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
@@ -246,7 +220,7 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     candidatas = []
     event_id = _obtener_event_id_nba_odds("basketball_nba", local, visitante)
 
-    # 1. EVALUAR LÍNEAS DE THE ODDS API CON VALIDACIÓN DE ROSTER EN VIVO
+    # 1. EVALUAR LÍNEAS DE CASINO
     if event_id:
         odds_data = _obtener_odds_props_nba_live("basketball_nba", event_id)
         if odds_data and "bookmakers" in odds_data:
@@ -263,16 +237,14 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
                         if not linea or not cuota or cuota < 1.60 or cuota > 2.45:
                             continue
 
-                        # Descarta jugadores que ya no pertenecen al equipo
                         equipo_real, nombre_oficial, pos, athlete_id = verificar_en_rosters_nba(
                             jugador_raw, roster_loc, roster_vis, abbr_loc, abbr_vis
                         )
                         if not equipo_real or not athlete_id:
                             continue
 
-                        promedio_real = obtener_promedios_reales_espn_nba(athlete_id, m_key)
-                        if not promedio_real or promedio_real <= 0:
-                            promedio_real = linea
+                        stats_jugador = obtener_todas_las_stats_atleta(athlete_id)
+                        promedio_real = stats_jugador.get(m_key, linea)
 
                         proyeccion = promedio_real
                         prob_over, prob_under = _calcular_probabilidad_nba(proyeccion, linea, m_key)
@@ -293,62 +265,32 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
                                 "proyeccion": proyeccion
                             })
 
-    # 2. GENERADOR BASADO EN LÍDERES REALES ACTIVOS EN LA PLANTILLA
+    # 2. GENERADOR BASADO EN LA PLANTILLA ACTIVA EN TIEMPO REAL
     if len(candidatas) < 6:
-        def encontrar_lideres(roster):
-            atletas = list(roster.values())[:10]
-            lider_pt = (None, 0.0)
-            lider_reb = (None, 0.0)
-            lider_ast = (None, 0.0)
-            lider_3pt = (None, 0.0)
+        def procesar_plantilla(roster, abbr_eq):
+            props_equipo = []
+            atletas_principales = list(roster.values())[:4]
+            for a in atletas_principales:
+                s = obtener_todas_las_stats_atleta(a["id"])
+                pts = s.get("player_points", 0.0)
+                reb = s.get("player_rebounds", 0.0)
+                ast = s.get("player_assists", 0.0)
+                t3 = s.get("player_threes", 0.0)
 
-            for a in atletas:
-                p_pts = obtener_promedios_reales_espn_nba(a["id"], "player_points") or 0.0
-                p_reb = obtener_promedios_reales_espn_nba(a["id"], "player_rebounds") or 0.0
-                p_ast = obtener_promedios_reales_espn_nba(a["id"], "player_assists") or 0.0
-                p_3pt = obtener_promedios_reales_espn_nba(a["id"], "player_threes") or 0.0
+                if pts >= 15.0:
+                    props_equipo.append({"jugador": a["nombre"], "equipo_abbr": abbr_eq, "tipo_prop": "Puntos", "lado": "MÁS DE", "linea": round(pts - 2.5, 1), "cuota": 1.88, "proyeccion": pts, "prob_real": 61.2, "ev": 15.1})
+                if reb >= 6.0:
+                    props_equipo.append({"jugador": a["nombre"], "equipo_abbr": abbr_eq, "tipo_prop": "Rebotes", "lado": "MÁS DE", "linea": round(reb - 1.5, 1), "cuota": 1.86, "proyeccion": reb, "prob_real": 59.5, "ev": 10.7})
+                if ast >= 4.5:
+                    props_equipo.append({"jugador": a["nombre"], "equipo_abbr": abbr_eq, "tipo_prop": "Asistencias", "lado": "MENOS DE", "linea": round(ast + 1.5, 1), "cuota": 1.85, "proyeccion": ast, "prob_real": 60.1, "ev": 11.2})
+                if t3 >= 1.8:
+                    props_equipo.append({"jugador": a["nombre"], "equipo_abbr": abbr_eq, "tipo_prop": "Triples Anotados", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.92, "proyeccion": t3, "prob_real": 57.8, "ev": 10.9})
+            return props_equipo
 
-                if p_pts > lider_pt[1]:
-                    lider_pt = (a, p_pts)
-                if p_reb > lider_reb[1]:
-                    lider_reb = (a, p_reb)
-                if p_ast > lider_ast[1]:
-                    lider_ast = (a, p_ast)
-                if p_3pt > lider_3pt[1]:
-                    lider_3pt = (a, p_3pt)
+        pool_loc = procesar_plantilla(roster_loc, abbr_loc)
+        pool_vis = procesar_plantilla(roster_vis, abbr_vis)
 
-            return lider_pt, lider_reb, lider_ast, lider_3pt
-
-        pt_l, reb_l, ast_l, _ = encontrar_lideres(roster_loc)
-        pt_v, reb_v, _, t3_v = encontrar_lideres(roster_vis)
-
-        pool = []
-
-        if pt_l[0] and pt_l[1] > 10.0:
-            a, val = pt_l
-            pool.append({"jugador": a["nombre"], "equipo_abbr": abbr_loc, "tipo_prop": "Puntos", "lado": "MÁS DE", "linea": round(val - 2.5, 1), "cuota": 1.88, "proyeccion": val, "prob_real": 61.2, "ev": 15.1})
-
-        if reb_l[0] and reb_l[1] > 4.0:
-            a, val = reb_l
-            pool.append({"jugador": a["nombre"], "equipo_abbr": abbr_loc, "tipo_prop": "Rebotes", "lado": "MÁS DE", "linea": round(val - 1.5, 1), "cuota": 1.86, "proyeccion": val, "prob_real": 59.5, "ev": 10.7})
-
-        if ast_l[0] and ast_l[1] > 3.0:
-            a, val = ast_l
-            pool.append({"jugador": a["nombre"], "equipo_abbr": abbr_loc, "tipo_prop": "Asistencias", "lado": "MENOS DE", "linea": round(val + 1.5, 1), "cuota": 1.85, "proyeccion": val, "prob_real": 60.1, "ev": 11.2})
-
-        if pt_v[0] and pt_v[1] > 10.0:
-            a, val = pt_v
-            pool.append({"jugador": a["nombre"], "equipo_abbr": abbr_vis, "tipo_prop": "Puntos", "lado": "MENOS DE", "linea": round(val + 2.5, 1), "cuota": 1.87, "proyeccion": val, "prob_real": 58.8, "ev": 9.9})
-
-        if reb_v[0] and reb_v[1] > 4.0:
-            a, val = reb_v
-            pool.append({"jugador": a["nombre"], "equipo_abbr": abbr_vis, "tipo_prop": "Rebotes", "lado": "MÁS DE", "linea": round(val - 1.5, 1), "cuota": 1.90, "proyeccion": val, "prob_real": 58.2, "ev": 10.5})
-
-        if t3_v[0] and t3_v[1] > 1.2:
-            a, val = t3_v
-            pool.append({"jugador": a["nombre"], "equipo_abbr": abbr_vis, "tipo_prop": "Triples Anotados", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.92, "proyeccion": val, "prob_real": 57.8, "ev": 10.9})
-
-        for p in pool:
+        for p in pool_loc + pool_vis:
             if not any(c["jugador"] == p["jugador"] and c["tipo_prop"] == p["tipo_prop"] for c in candidatas):
                 candidatas.append(p)
 
