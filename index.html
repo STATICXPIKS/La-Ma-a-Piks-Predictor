@@ -1032,9 +1032,10 @@
                     </div>`;
                 }
 
-                // RENDERIZADO DE PROPS CON ESCUDOS Y BADGES BET / MAYBE
+                // RENDERIZADO DINÁMICO DE PROPS SEGÚN EL DEPORTE
                 let htmlPropsBloque = "";
                 if (d.props_jugadores && d.props_jugadores.length > 0) {
+                    const ligaPath = deporteActual.toLowerCase();
                     htmlPropsBloque = `
                         <div class="mt-6 pt-5 border-t border-slate-800">
                             <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -1054,7 +1055,7 @@
                                     const btnColorClass = esBet 
                                         ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black" 
                                         : "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black";
-                                    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${p.equipo_abbr || 'nfl'}.png`;
+                                    const logoUrl = `https://a.espncdn.com/i/teamlogos/${ligaPath}/500/${p.equipo_abbr || ligaPath}.png`;
 
                                     return `
                                     <div class="bg-slate-950 p-4 rounded-2xl border-2 ${cardBorder} flex flex-col justify-between shadow-xl transition transform hover:-translate-y-0.5">
@@ -1069,7 +1070,7 @@
                                             </div>
 
                                             <div class="flex items-center gap-2.5 mb-2">
-                                                <img src="${logoUrl}" class="w-8 h-8 object-contain drop-shadow" onerror="this.src='https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png'">
+                                                <img src="${logoUrl}" class="w-8 h-8 object-contain drop-shadow" onerror="this.src='https://a.espncdn.com/i/teamlogos/leagues/500/${ligaPath}.png'">
                                                 <div>
                                                     <span class="font-montserrat font-extrabold text-sm text-white block leading-tight">
                                                         ${p.jugador}
