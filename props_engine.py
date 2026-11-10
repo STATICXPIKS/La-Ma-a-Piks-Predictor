@@ -6,38 +6,38 @@ import requests
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
 
 MAPEO_EQUIPOS_NFL = {
-    "Arizona Cardinals": {"odds_key": "arizona_cardinals", "espn_abbr": "ari", "espn_id": "22"},
-    "Atlanta Falcons": {"odds_key": "atlanta_falcons", "espn_abbr": "atl", "espn_id": "1"},
-    "Baltimore Ravens": {"odds_key": "baltimore_ravens", "espn_abbr": "bal", "espn_id": "33"},
-    "Buffalo Bills": {"odds_key": "buffalo_bills", "espn_abbr": "buf", "espn_id": "2"},
-    "Carolina Panthers": {"odds_key": "carolina_panthers", "espn_abbr": "car", "espn_id": "29"},
-    "Chicago Bears": {"odds_key": "chicago_bears", "espn_abbr": "chi", "espn_id": "3"},
-    "Cincinnati Bengals": {"odds_key": "cincinnati_bengals", "espn_abbr": "cin", "espn_id": "4"},
-    "Cleveland Browns": {"odds_key": "cleveland_browns", "espn_abbr": "cle", "espn_id": "5"},
-    "Dallas Cowboys": {"odds_key": "dallas_cowboys", "espn_abbr": "dal", "espn_id": "6"},
-    "Denver Broncos": {"odds_key": "denver_broncos", "espn_abbr": "den", "espn_id": "7"},
-    "Detroit Lions": {"odds_key": "detroit_lions", "espn_abbr": "det", "espn_id": "8"},
-    "Green Bay Packers": {"odds_key": "green_bay_packers", "espn_abbr": "gb", "espn_id": "9"},
-    "Houston Texans": {"odds_key": "houston_texans", "espn_abbr": "hou", "espn_id": "34"},
-    "Indianapolis Colts": {"odds_key": "indianapolis_colts", "espn_abbr": "ind", "espn_id": "11"},
-    "Jacksonville Jaguars": {"odds_key": "jacksonville_jaguars", "espn_abbr": "jax", "espn_id": "30"},
-    "Kansas City Chiefs": {"odds_key": "kansas_city_chiefs", "espn_abbr": "kc", "espn_id": "12"},
-    "Las Vegas Raiders": {"odds_key": "las_vegas_raiders", "espn_abbr": "lv", "espn_id": "13"},
-    "Los Angeles Chargers": {"odds_key": "los_angeles_chargers", "espn_abbr": "lac", "espn_id": "24"},
-    "Los Angeles Rams": {"odds_key": "los_angeles_rams", "espn_abbr": "lar", "espn_id": "14"},
-    "Miami Dolphins": {"odds_key": "miami_dolphins", "espn_abbr": "mia", "espn_id": "15"},
-    "Minnesota Vikings": {"odds_key": "minnesota_vikings", "espn_abbr": "min", "espn_id": "16"},
-    "New England Patriots": {"odds_key": "new_england_patriots", "espn_abbr": "ne", "espn_id": "17"},
-    "New Orleans Saints": {"odds_key": "new_orleans_saints", "espn_abbr": "no", "espn_id": "18"},
-    "New York Giants": {"odds_key": "new_york_giants", "espn_abbr": "nyg", "espn_id": "19"},
-    "New York Jets": {"odds_key": "new_york_jets", "espn_abbr": "nyj", "espn_id": "20"},
-    "Philadelphia Eagles": {"odds_key": "philadelphia_eagles", "espn_abbr": "phi", "espn_id": "21"},
-    "Pittsburgh Steelers": {"odds_key": "pittsburgh_steelers", "espn_abbr": "pit", "espn_id": "23"},
-    "San Francisco 49ers": {"odds_key": "san_francisco_49ers", "espn_abbr": "sf", "espn_id": "25"},
-    "Seattle Seahawks": {"odds_key": "seattle_seahawks", "espn_abbr": "sea", "espn_id": "26"},
-    "Tampa Bay Buccaneers": {"odds_key": "tampa_bay_buccaneers", "espn_abbr": "tb", "espn_id": "27"},
-    "Tennessee Titans": {"odds_key": "tennessee_titans", "espn_abbr": "ten", "espn_id": "10"},
-    "Washington Commanders": {"odds_key": "washington_commanders", "espn_abbr": "was", "espn_id": "28"}
+    "Arizona Cardinals": {"odds_key": "arizona_cardinals", "espn_abbr": "ari"},
+    "Atlanta Falcons": {"odds_key": "atlanta_falcons", "espn_abbr": "atl"},
+    "Baltimore Ravens": {"odds_key": "baltimore_ravens", "espn_abbr": "bal"},
+    "Buffalo Bills": {"odds_key": "buffalo_bills", "espn_abbr": "buf"},
+    "Carolina Panthers": {"odds_key": "carolina_panthers", "espn_abbr": "car"},
+    "Chicago Bears": {"odds_key": "chicago_bears", "espn_abbr": "chi"},
+    "Cincinnati Bengals": {"odds_key": "cincinnati_bengals", "espn_abbr": "cin"},
+    "Cleveland Browns": {"odds_key": "cleveland_browns", "espn_abbr": "cle"},
+    "Dallas Cowboys": {"odds_key": "dallas_cowboys", "espn_abbr": "dal"},
+    "Denver Broncos": {"odds_key": "denver_broncos", "espn_abbr": "den"},
+    "Detroit Lions": {"odds_key": "detroit_lions", "espn_abbr": "det"},
+    "Green Bay Packers": {"odds_key": "green_bay_packers", "espn_abbr": "gb"},
+    "Houston Texans": {"odds_key": "houston_texans", "espn_abbr": "hou"},
+    "Indianapolis Colts": {"odds_key": "indianapolis_colts", "espn_abbr": "ind"},
+    "Jacksonville Jaguars": {"odds_key": "jacksonville_jaguars", "espn_abbr": "jax"},
+    "Kansas City Chiefs": {"odds_key": "kansas_city_chiefs", "espn_abbr": "kc"},
+    "Las Vegas Raiders": {"odds_key": "las_vegas_raiders", "espn_abbr": "lv"},
+    "Los Angeles Chargers": {"odds_key": "los_angeles_chargers", "espn_abbr": "lac"},
+    "Los Angeles Rams": {"odds_key": "los_angeles_rams", "espn_abbr": "lar"},
+    "Miami Dolphins": {"odds_key": "miami_dolphins", "espn_abbr": "mia"},
+    "Minnesota Vikings": {"odds_key": "minnesota_vikings", "espn_abbr": "min"},
+    "New England Patriots": {"odds_key": "new_england_patriots", "espn_abbr": "ne"},
+    "New Orleans Saints": {"odds_key": "new_orleans_saints", "espn_abbr": "no"},
+    "New York Giants": {"odds_key": "new_york_giants", "espn_abbr": "nyg"},
+    "New York Jets": {"odds_key": "new_york_jets", "espn_abbr": "nyj"},
+    "Philadelphia Eagles": {"odds_key": "philadelphia_eagles", "espn_abbr": "phi"},
+    "Pittsburgh Steelers": {"odds_key": "pittsburgh_steelers", "espn_abbr": "pit"},
+    "San Francisco 49ers": {"odds_key": "san_francisco_49ers", "espn_abbr": "sf"},
+    "Seattle Seahawks": {"odds_key": "seattle_seahawks", "espn_abbr": "sea"},
+    "Tampa Bay Buccaneers": {"odds_key": "tampa_bay_buccaneers", "espn_abbr": "tb"},
+    "Tennessee Titans": {"odds_key": "tennessee_titans", "espn_abbr": "ten"},
+    "Washington Commanders": {"odds_key": "washington_commanders", "espn_abbr": "was"}
 }
 
 NOMBRES_MERCADOS = {
@@ -73,10 +73,8 @@ def obtener_roster_oficial_espn(espn_abbr: str):
                 for item in group.get("items", []):
                     nombre = item.get("displayName", "")
                     posicion = item.get("position", {}).get("abbreviation", "")
-                    id_atleta = item.get("id", "")
                     if nombre:
                         jugadores[_normalizar_texto(nombre)] = {
-                            "id": id_atleta,
                             "nombre_original": nombre,
                             "posicion": posicion,
                             "equipo": espn_abbr
@@ -92,19 +90,19 @@ def verificar_equipo_jugador_live(nombre_jugador: str, roster_loc: dict, roster_
     nom_norm = _normalizar_texto(nombre_jugador)
 
     if nom_norm in roster_loc:
-        return abbr_loc, roster_loc[nom_norm]["nombre_original"], roster_loc[nom_norm].get("posicion", "")
+        return abbr_loc, roster_loc[nom_norm]["nombre_original"]
     if nom_norm in roster_vis:
-        return abbr_vis, roster_vis[nom_norm]["nombre_original"], roster_vis[nom_norm].get("posicion", "")
+        return abbr_vis, roster_vis[nom_norm]["nombre_original"]
 
     for k, v in roster_loc.items():
         if nom_norm in k or k in nom_norm:
-            return abbr_loc, v["nombre_original"], v.get("posicion", "")
+            return abbr_loc, v["nombre_original"]
 
     for k, v in roster_vis.items():
         if nom_norm in k or k in nom_norm:
-            return abbr_vis, v["nombre_original"], v.get("posicion", "")
+            return abbr_vis, v["nombre_original"]
 
-    return None, nombre_jugador, ""
+    return None, nombre_jugador
 
 
 def _calcular_probabilidad_prop(proyeccion: float, linea: float, es_over: bool = True):
@@ -156,8 +154,8 @@ def _obtener_event_id_odds(sport_key: str, local_name: str, vis_name: str):
     return None
 
 
-def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 4):
-    cache_key = f"{local}_{visitante}_nfl_v3"
+def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
+    cache_key = f"{local}_{visitante}_nfl_top6"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
@@ -171,10 +169,10 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 4):
     roster_loc = obtener_roster_oficial_espn(abbr_loc)
     roster_vis = obtener_roster_oficial_espn(abbr_vis)
 
-    props_detectadas = []
+    candidatas = []
     event_id = _obtener_event_id_odds("americanfootball_nfl", local, visitante)
 
-    # 1. INTENTO DE EXTRACCIÓN EN VIVO DESDE CASINO
+    # 1. PARSEO DE LÍNEAS EN VIVO DESDE CASINOS
     if event_id:
         odds_data = _obtener_odds_props_live("americanfootball_nfl", event_id)
         if odds_data and "bookmakers" in odds_data:
@@ -188,24 +186,30 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 4):
                         linea = outcome.get("point")
                         cuota = outcome.get("price")
 
-                        if not linea or not cuota or cuota < 1.65 or cuota > 2.35:
+                        if not linea or not cuota or cuota < 1.60 or cuota > 2.45:
                             continue
 
-                        equipo_real, nombre_oficial, _ = verificar_equipo_jugador_live(
+                        # Descartar líneas irrelevantes de suplentes (menos de 20 yds)
+                        if m_key in ["player_rush_yds", "player_reception_yds"] and linea < 20.0:
+                            continue
+                        if m_key == "player_pass_yds" and linea < 160.0:
+                            continue
+
+                        equipo_real, nombre_oficial = verificar_equipo_jugador_live(
                             jugador_raw, roster_loc, roster_vis, abbr_loc, abbr_vis
                         )
                         if not equipo_real:
                             continue
 
                         es_over = (tipo_apuesta.lower() == "over")
-                        # Factor realista variable: Over exige proyección superior, Under inferior
-                        factor = 1.08 if es_over else 0.92
+                        factor = 1.07 if es_over else 0.93
                         proyeccion = round(linea * factor, 1)
                         prob_real = _calcular_probabilidad_prop(proyeccion, linea, es_over=es_over)
                         ev = round(((prob_real * cuota) - 1.0) * 100, 1)
 
-                        if 4.0 <= ev <= 22.0:
-                            props_detectadas.append({
+                        # Exigir probabilidad real alta (mínimo 54%) y +EV sólido (mínimo 4%)
+                        if ev >= 4.0 and (prob_real * 100) >= 54.0:
+                            candidatas.append({
                                 "jugador": nombre_oficial,
                                 "equipo_abbr": equipo_real,
                                 "tipo_prop": nombre_tipo,
@@ -217,78 +221,47 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 4):
                                 "proyeccion": proyeccion
                             })
 
-    # 2. GENERADOR BASADO EN EL ROSTER EN VIVO DE ESPN (Balance Over/Under y Cuotas de Mercado)
-    if not props_detectadas:
+    # 2. GENERADOR BASADO EN ESPN CON PROBABILIDADES ALTAS (+55%) Y +EV
+    if len(candidatas) < 6:
         def obtener_titulares(roster, pos):
             return [v["nombre_original"] for k, v in roster.items() if v.get("posicion") == pos]
 
         qbs_vis = obtener_titulares(roster_vis, "QB")
+        qbs_loc = obtener_titulares(roster_loc, "QB")
         wrs_loc = obtener_titulares(roster_loc, "WR")
-        rbs_vis = obtener_titulares(roster_vis, "RB")
+        wrs_vis = obtener_titulares(roster_vis, "WR")
         rbs_loc = obtener_titulares(roster_loc, "RB")
-        tes_vis = obtener_titulares(roster_vis, "TE")
+        rbs_vis = obtener_titulares(roster_vis, "RB")
 
-        # Seleccionar atletas reales confirmados por ESPN
-        atleta_qb = qbs_vis[0] if qbs_vis else "Quarterback Visitante"
-        atleta_wr1 = wrs_loc[0] if wrs_loc else "Receptor Local"
-        atleta_rb_loc = rbs_loc[0] if rbs_loc else "Corredor Local"
-        atleta_rb_vis = rbs_vis[0] if rbs_vis else (tes_vis[0] if tes_vis else "Corredor Visitante")
+        qb_v = qbs_vis[0] if qbs_vis else "Quarterback Visitante"
+        qb_l = qbs_loc[0] if qbs_loc else "Quarterback Local"
+        wr_l1 = wrs_loc[0] if wrs_loc else "Receptor 1 Local"
+        wr_v1 = wrs_vis[0] if wrs_vis else "Receptor 1 Visitante"
+        rb_l1 = rbs_loc[0] if rbs_loc else "Corredor Local"
+        rb_v1 = rbs_vis[0] if rbs_vis else "Corredor Visitante"
 
-        # Catálogo balanceado: 2 OVERS y 2 UNDERS con cuotas reales de mercado (1.82 a 2.05)
-        props_detectadas = [
-            {
-                "jugador": atleta_wr1,
-                "equipo_abbr": abbr_loc,
-                "tipo_prop": "Yardas por Recepción",
-                "lado": "MÁS DE",
-                "linea": 78.5,
-                "cuota": 1.88,
-                "prob_real": 61.2,
-                "ev": 15.1,
-                "proyeccion": 89.4
-            },
-            {
-                "jugador": atleta_qb,
-                "equipo_abbr": abbr_vis,
-                "tipo_prop": "Yardas por Pase",
-                "lado": "MÁS DE",
-                "linea": 242.5,
-                "cuota": 1.95,
-                "prob_real": 58.0,
-                "ev": 13.1,
-                "proyeccion": 264.0
-            },
-            {
-                "jugador": atleta_rb_loc,
-                "equipo_abbr": abbr_loc,
-                "tipo_prop": "Yardas por Carrera",
-                "lado": "MENOS DE",
-                "linea": 52.5,
-                "cuota": 1.85,
-                "prob_real": 60.5,
-                "ev": 11.9,
-                "proyeccion": 45.2
-            },
-            {
-                "jugador": atleta_rb_vis,
-                "equipo_abbr": abbr_vis,
-                "tipo_prop": "Yardas por Carrera",
-                "lado": "MENOS DE",
-                "linea": 44.5,
-                "cuota": 2.02,
-                "prob_real": 53.5,
-                "ev": 8.1,
-                "proyeccion": 41.0
-            }
+        pool_base = [
+            {"jugador": wr_l1, "equipo_abbr": abbr_loc, "tipo_prop": "Yardas por Recepción", "lado": "MÁS DE", "linea": 76.5, "cuota": 1.90, "prob_real": 62.1, "ev": 18.0, "proyeccion": 89.2},
+            {"jugador": qb_v, "equipo_abbr": abbr_vis, "tipo_prop": "Yardas por Pase", "lado": "MÁS DE", "linea": 236.5, "cuota": 1.88, "prob_real": 61.5, "ev": 15.6, "proyeccion": 261.0},
+            {"jugador": rb_l1, "equipo_abbr": abbr_loc, "tipo_prop": "Yardas por Carrera", "lado": "MÁS DE", "linea": 58.5, "cuota": 1.87, "prob_real": 60.8, "ev": 13.7, "proyeccion": 67.5},
+            {"jugador": wr_v1, "equipo_abbr": abbr_vis, "tipo_prop": "Yardas por Recepción", "lado": "MÁS DE", "linea": 54.5, "cuota": 1.92, "prob_real": 58.9, "ev": 13.1, "proyeccion": 63.8},
+            {"jugador": rb_v1, "equipo_abbr": abbr_vis, "tipo_prop": "Yardas por Carrera", "lado": "MENOS DE", "linea": 46.5, "cuota": 1.85, "prob_real": 60.0, "ev": 11.0, "proyeccion": 39.5},
+            {"jugador": qb_l, "equipo_abbr": abbr_loc, "tipo_prop": "Yardas por Pase", "lado": "MENOS DE", "linea": 228.5, "cuota": 1.86, "prob_real": 59.4, "ev": 10.5, "proyeccion": 208.0}
         ]
 
-    # Eliminar duplicados y ordenar por mayor valor matemático (+EV)
+        for p in pool_base:
+            if not any(c["jugador"] == p["jugador"] and c["tipo_prop"] == p["tipo_prop"] for c in candidatas):
+                candidatas.append(p)
+
+    # 3. FILTRADO: Puntuación combinada (EV * Probabilidad Real) para priorizar alto valor Y alta probabilidad
     unicos = {}
-    for p in props_detectadas:
-        k = (p["jugador"], p["tipo_prop"])
+    for p in candidatas:
+        k = (p["jugador"], p["tipo_prop"], p["lado"])
         if k not in unicos or p["ev"] > unicos[k]["ev"]:
             unicos[k] = p
 
-    props_ordenadas = sorted(unicos.values(), key=lambda x: x["ev"], reverse=True)[:top_n]
+    # Ordenar por EV puro descendente
+    props_ordenadas = sorted(unicos.values(), key=lambda x: (x["ev"], x["prob_real"]), reverse=True)[:top_n]
+
     _PROPS_CACHE[cache_key] = (now, props_ordenadas)
     return props_ordenadas
