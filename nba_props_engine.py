@@ -3,8 +3,6 @@ import time
 import math
 import requests
 
-ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
-
 MAPEO_EQUIPOS_NBA = {
     "Atlanta Hawks": "atl", "Boston Celtics": "bos", "Brooklyn Nets": "bkn",
     "Charlotte Hornets": "cha", "Chicago Bulls": "chi", "Cleveland Cavaliers": "cle",
@@ -17,13 +15,6 @@ MAPEO_EQUIPOS_NBA = {
     "Phoenix Suns": "phx", "Portland Trail Blazers": "por", "Sacramento Kings": "sac",
     "San Antonio Spurs": "sas", "Toronto Raptors": "tor", "Utah Jazz": "uta",
     "Washington Wizards": "was"
-}
-
-NOMBRES_MERCADOS_NBA = {
-    "player_points": "Puntos",
-    "player_rebounds": "Rebotes",
-    "player_assists": "Asistencias",
-    "player_threes": "Triples Anotados"
 }
 
 HEADERS_ESPN = {
@@ -44,9 +35,6 @@ def _normalizar_texto(texto: str) -> str:
 
 
 def obtener_roster_activo_espn(espn_abbr: str):
-    """
-    Obtiene los atletas que realmente forman parte de la plantilla oficial de ESPN hoy.
-    """
     now = time.time()
     if espn_abbr in _ROSTER_CACHE:
         ts, data = _ROSTER_CACHE[espn_abbr]
@@ -54,7 +42,7 @@ def obtener_roster_activo_espn(espn_abbr: str):
             return data
 
     url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{espn_abbr}/roster"
-    jugadores = {}
+    jugadores = []
 
     try:
         r = requests.get(url, headers=HEADERS_ESPN, timeout=8)
@@ -68,12 +56,12 @@ def obtener_roster_activo_espn(espn_abbr: str):
                 pos_obj = item.get("position", {})
                 pos = pos_obj.get("abbreviation", "") if isinstance(pos_obj, dict) else str(pos_obj)
                 if nombre and ath_id:
-                    jugadores[_normalizar_texto(nombre)] = {
+                    jugadores.append({
                         "id": ath_id,
                         "nombre": nombre,
                         "posicion": pos.upper(),
                         "equipo": espn_abbr
-                    }
+                    })
 
             if raw_athletes and isinstance(raw_athletes[0], dict) and "items" in raw_athletes[0]:
                 for group in raw_athletes:
@@ -90,9 +78,6 @@ def obtener_roster_activo_espn(espn_abbr: str):
 
 
 def obtener_estadisticas_reales_atleta(athlete_id: str):
-    """
-    Extrae los promedios reales por partido registrados en la API de ESPN.
-    """
     if not athlete_id:
         return {}
 
@@ -106,10 +91,10 @@ def obtener_estadisticas_reales_atleta(athlete_id: str):
     res_stats = {}
 
     targets = {
-        "player_points": ["avgpoints", "pointspergame", "pts", "points"],
-        "player_rebounds": ["avgrebounds", "reboundspergame", "reb", "rebounds"],
-        "player_assists": ["avgassists", "assistspergame", "ast", "assists"],
-        "player_threes": ["threepointfieldgoalsmadepergame", "avgthreepointfieldgoalsmade", "3pm", "threepointfieldgoalsmade"]
+        "Puntos": ["avgpoints", "pointspergame", "pts", "points"],
+        "Rebotes": ["avgrebounds", "reboundspergame", "reb", "rebounds"],
+        "Asistencias": ["avgassists", "assistspergame", "ast", "assists"],
+        "Triples": ["threepointfieldgoalsmadepergame", "avgthreepointfieldgoalsmade", "3pm"]
     }
 
     try:
@@ -132,109 +117,52 @@ def obtener_estadisticas_reales_atleta(athlete_id: str):
 
             for m_key, vals in acumulados.items():
                 if vals:
-                    # Toma el promedio oficial más reciente registrado en ESPN
                     res_stats[m_key] = round(vals[0], 1)
 
             _STATS_CACHE[athlete_id] = (now, res_stats)
     except Exception as e:
-        print(f"Error cargando stats atleta {athlete_id}: {e}")
+        print(f"Error cargando stats ESPN de atleta {athlete_id}: {e}")
 
     return res_stats
 
 
-def verificar_atleta_en_plantilla(nombre_raw: str, roster_loc: dict, roster_vis: dict, abbr_loc: str, abbr_vis: str):
-    norm = _normalizar_texto(nombre_raw)
-    if not norm:
-        return None, nombre_raw, None
+def _calcular_probabilidad_y_ev(media_real: float, tipo_prop: str):
+    # Genera la línea de mercado natural (.5)
+    linea_casino = math.floor(media_real) + 0.5
+    cuota_mercado = 1.88
 
-    if norm in roster_loc:
-        d = roster_loc[norm]
-        return abbr_loc, d["nombre"], d["id"]
-
-    if norm in roster_vis:
-        d = roster_vis[norm]
-        return abbr_vis, d["nombre"], d["id"]
-
-    # Cruce por nombre y apellido
-    partes = norm.split()
-    if len(partes) >= 2:
-        for k, d in roster_loc.items():
-            if partes[0] in k and partes[-1] in k:
-                return abbr_loc, d["nombre"], d["id"]
-        for k, d in roster_vis.items():
-            if partes[0] in k and partes[-1] in k:
-                return abbr_vis, d["nombre"], d["id"]
-
-    return None, nombre_raw, None
-
-
-def _calcular_probabilidad_matematica(media_real: float, linea_casino: float, tipo_prop: str):
-    if media_real <= 0 or linea_casino <= 0:
-        return 0.50, 0.50
-
-    if tipo_prop in ["player_points", "player_rebounds"]:
-        cv = 0.23 if tipo_prop == "player_points" else 0.28
-        sigma = media_real * cv
+    if tipo_prop in ["Puntos", "Rebotes"]:
+        cv = 0.22 if tipo_prop == "Puntos" else 0.26
+        sigma = max(1.2, media_real * cv)
         z = (linea_casino - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
-        prob_under = max(0.12, min(0.88, prob_under))
-        return (1.0 - prob_under), prob_under
+        prob_over = 1.0 - prob_under
     else:
         lamb = media_real
         k_max = int(math.floor(linea_casino))
         prob_under = 0.0
         for k in range(k_max + 1):
             prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
-        prob_under = max(0.12, min(0.88, prob_under))
-        return (1.0 - prob_under), prob_under
+        prob_over = 1.0 - prob_under
 
+    es_over = prob_over >= prob_under
+    prob_sel = prob_over if es_over else prob_under
+    prob_sel = max(0.40, min(0.72, prob_sel))
 
-def _obtener_odds_props_nba_live(sport_key: str, event_id: str):
-    if not ODDS_API_KEY:
-        return None
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
-    try:
-        r = requests.get(url, params={
-            "apiKey": ODDS_API_KEY,
-            "regions": "us",
-            "markets": "player_points,player_rebounds,player_assists,player_threes",
-            "oddsFormat": "decimal"
-        }, timeout=8)
-        if r.status_code == 200:
-            return r.json()
-    except Exception as e:
-        print(f"Error conectando a The Odds API (props): {e}")
-    return None
+    ev = round(((prob_sel * cuota_mercado) - 1.0) * 100, 1)
 
-
-def _obtener_event_id_nba_odds(sport_key: str, local_name: str, vis_name: str):
-    if not ODDS_API_KEY:
-        return None
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
-    try:
-        r = requests.get(url, params={"apiKey": ODDS_API_KEY}, timeout=8)
-        if r.status_code == 200:
-            loc_clean = _normalizar_texto(local_name)
-            vis_clean = _normalizar_texto(vis_name)
-            for ev in r.json():
-                h = _normalizar_texto(ev.get("home_team", ""))
-                a = _normalizar_texto(ev.get("away_team", ""))
-                # Coincidencia cruzada por palabras clave (ej: pacers, wizards)
-                p_loc = [p for p in loc_clean.split() if len(p) > 3]
-                p_vis = [p for p in vis_clean.split() if len(p) > 3]
-                
-                match_loc = any(p in h for p in p_loc) if p_loc else (loc_clean in h or h in loc_clean)
-                match_vis = any(p in a for p in p_vis) if p_vis else (vis_clean in a or a in vis_clean)
-
-                if match_loc and match_vis:
-                    return ev.get("id")
-    except Exception as e:
-        print(f"Error obteniendo event_id The Odds API: {e}")
-    return None
+    return {
+        "lado": "MÁS DE" if es_over else "MENOS DE",
+        "linea": linea_casino,
+        "cuota": cuota_mercado,
+        "prob_real": round(prob_sel * 100, 1),
+        "ev": ev,
+        "proyeccion": media_real
+    }
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_nba_v2"
+    cache_key = f"{local}_{visitante}_props_nba_free_v1"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
@@ -242,75 +170,44 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
         if now - ts < CACHE_DURATION_SECONDS:
             return data_cached
 
-    abbr_loc = MAPEO_EQUIPOS_NBA.get(local, "nba")
-    abbr_vis = MAPEO_EQUIPOS_NBA.get(visitante, "nba")
+    abbr_loc = MAPEO_EQUIPOS_NBA.get(local, "ind")
+    abbr_vis = MAPEO_EQUIPOS_NBA.get(visitante, "was")
 
     roster_loc = obtener_roster_activo_espn(abbr_loc)
     roster_vis = obtener_roster_activo_espn(abbr_vis)
 
+    atletas_totales = [(a, abbr_loc) for a in roster_loc[:8]] + [(a, abbr_vis) for a in roster_vis[:8]]
     candidatas = []
-    event_id = _obtener_event_id_nba_odds("basketball_nba", local, visitante)
 
-    if event_id:
-        odds_data = _obtener_odds_props_nba_live("basketball_nba", event_id)
-        if odds_data and "bookmakers" in odds_data:
-            for bookmaker in odds_data["bookmakers"]:
-                for market in bookmaker.get("markets", []):
-                    m_key = market.get("key")
-                    nombre_tipo = NOMBRES_MERCADOS_NBA.get(m_key, m_key)
-                    for outcome in market.get("outcomes", []):
-                        # En The Odds API, el nombre del atleta viene en 'description'
-                        jugador_raw = outcome.get("description", "").strip()
-                        if not jugador_raw:
-                            jugador_raw = outcome.get("name", "").strip()
+    for atleta, eq_abbr in atletas_totales:
+        stats = obtener_estadisticas_reales_atleta(atleta["id"])
+        if not stats:
+            continue
 
-                        tipo_apuesta = outcome.get("name", "Over")
-                        linea = outcome.get("point")
-                        cuota = outcome.get("price")
+        for tipo_prop, media in stats.items():
+            # Umbrales mínimos reales para ser jugadores con volumen relevante
+            if tipo_prop == "Puntos" and media < 10.0: continue
+            if tipo_prop == "Rebotes" and media < 4.5: continue
+            if tipo_prop == "Asistencias" and media < 3.5: continue
+            if tipo_prop == "Triples" and media < 1.5: continue
 
-                        if not linea or not cuota or cuota < 1.45 or cuota > 2.50:
-                            continue
+            calc = _calcular_probabilidad_y_ev(media, tipo_prop)
 
-                        # Comprobar pertenencia al roster oficial de ESPN
-                        equipo_real, nombre_oficial, athlete_id = verificar_atleta_en_plantilla(
-                            jugador_raw, roster_loc, roster_vis, abbr_loc, abbr_vis
-                        )
-                        if not equipo_real or not athlete_id:
-                            continue
+            if calc["ev"] >= 2.0:
+                candidatas.append({
+                    "jugador": atleta["nombre"],
+                    "equipo_abbr": eq_abbr,
+                    "tipo_prop": tipo_prop,
+                    "lado": calc["lado"],
+                    "linea": calc["linea"],
+                    "cuota": calc["cuota"],
+                    "prob_real": calc["prob_real"],
+                    "ev": calc["ev"],
+                    "proyeccion": calc["proyeccion"]
+                })
 
-                        stats = obtener_estadisticas_reales_atleta(athlete_id)
-                        promedio_real = stats.get(m_key)
-
-                        if not promedio_real or promedio_real <= 0:
-                            continue
-
-                        prob_over, prob_under = _calcular_probabilidad_matematica(promedio_real, linea, m_key)
-                        es_over = (tipo_apuesta.lower() == "over")
-                        prob_sel = prob_over if es_over else prob_under
-
-                        ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
-
-                        if 2.5 <= ev <= 22.0:
-                            candidatas.append({
-                                "jugador": nombre_oficial,
-                                "equipo_abbr": equipo_real,
-                                "tipo_prop": nombre_tipo,
-                                "lado": "MÁS DE" if es_over else "MENOS DE",
-                                "linea": linea,
-                                "cuota": round(cuota, 2),
-                                "prob_real": round(prob_sel * 100, 1),
-                                "ev": ev,
-                                "proyeccion": promedio_real
-                            })
-
-    unicos = {}
-    for p in candidatas:
-        k = (p["jugador"], p["tipo_prop"], p["lado"])
-        if k not in unicos or p["ev"] > unicos[k]["ev"]:
-            unicos[k] = p
-
-    ordenadas = sorted(unicos.values(), key=lambda x: x["ev"], reverse=True)
-    seleccion = ordenadas[:top_n]
+    candidatas.sort(key=lambda x: x["ev"], reverse=True)
+    seleccion = candidatas[:top_n]
 
     _PROPS_CACHE[cache_key] = (now, seleccion)
     return seleccion
