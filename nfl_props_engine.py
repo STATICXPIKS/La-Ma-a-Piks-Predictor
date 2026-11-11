@@ -17,53 +17,45 @@ EQUIPOS_NFL_ESPN = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "Accept": "application/json"
 }
 
 _PROPS_CACHE_NFL = {}
 
 
-def _obtener_jugadores_vivos_nfl(team_id, abbr):
-    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/statistics"
-    jugadores = {}
+def _obtener_atletas_activos_nfl(team_id, abbr):
+    """Obtiene el roster real activo directamente desde ESPN."""
+    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/roster"
+    jugadores = []
     try:
-        r = requests.get(url, headers=HEADERS, timeout=6)
+        r = requests.get(url, headers=HEADERS, timeout=5)
         if r.status_code == 200:
             data = r.json()
-            cats = data.get("results", {}).get("stats", {}).get("categories", [])
-            mapping = {
-                "passingYards": "Yardas Pase",
-                "rushingYards": "Yardas Acarreo",
-                "receivingYards": "Yardas Recepción",
-                "receptions": "Recepciones"
-            }
-            for c in cats:
-                cat_name = c.get("name")
-                if cat_name in mapping:
-                    tipo = mapping[cat_name]
-                    for leader in c.get("leaders", []):
-                        athlete = leader.get("athlete", {})
-                        nombre = athlete.get("displayName")
-                        val = float(str(leader.get("displayValue", "0")).replace(",", ""))
-                        if nombre and val > 0:
-                            if nombre not in jugadores:
-                                jugadores[nombre] = {"nombre": nombre, "equipo": abbr.upper()}
-                            jugadores[nombre][tipo] = val
+            atletas = data.get("athletes", [])
+            for item in atletas:
+                items_lista = item.get("items", []) if "items" in item else [item]
+                for a in items_lista:
+                    nombre = a.get("displayName") or a.get("fullName")
+                    pos = a.get("position", {}).get("abbreviation", "WR")
+                    injuries = a.get("injuries", [])
+                    esta_fuera = any("out" in str(inj.get("status", "")).lower() for inj in injuries)
+                    if nombre and not esta_fuera and pos in ["QB", "RB", "WR", "TE"]:
+                        jugadores.append({"nombre": nombre, "posicion": pos, "equipo": abbr.upper()})
     except Exception as e:
-        print(f"Error consultando ESPN NFL {abbr}: {e}")
-    return list(jugadores.values())
+        print(f"Error consultando roster ESPN NFL {abbr}: {e}")
+    return jugadores
 
 
 def _calcular_prop_nfl(media, tipo):
     linea = math.floor(media) + 0.5
-    sigma = max(3.0, media * 0.30)
+    sigma = max(3.0, media * 0.28)
     z = (linea - media) / sigma
     prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
     prob_over = 1.0 - prob_under
 
     es_over = prob_over >= prob_under
-    prob_sel = max(0.52, min(0.74, prob_over if es_over else prob_under))
+    prob_sel = max(0.55, min(0.72, prob_over if es_over else prob_under))
 
     if prob_sel >= 0.68: cuota = 1.65
     elif prob_sel >= 0.64: cuota = 1.72
@@ -87,7 +79,7 @@ def _calcular_prop_nfl(media, tipo):
 
 
 def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
-    key = f"{local}_{visitante}_nfl_props_live"
+    key = f"{local}_{visitante}_nfl_roster_live"
     now = time.time()
     if key in _PROPS_CACHE_NFL:
         ts, data = _PROPS_CACHE_NFL[key]
@@ -102,27 +94,35 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
     abbr_loc, id_loc = d_loc
     abbr_vis, id_vis = d_vis
 
-    pool = _obtener_jugadores_vivos_nfl(id_loc, abbr_loc) + _obtener_jugadores_vivos_nfl(id_vis, abbr_vis)
-    candidatas = []
+    atletas_loc = _obtener_atletas_activos_nfl(id_loc, abbr_loc)[:4]
+    atletas_vis = _obtener_atletas_activos_nfl(id_vis, abbr_vis)[:4]
+    pool = atletas_loc + atletas_vis
 
+    candidatas = []
     for j in pool:
-        for tipo in ["Yardas Pase", "Yardas Acarreo", "Yardas Recepción", "Recepciones"]:
-            if tipo in j and j[tipo] > 0:
-                c = _calcular_prop_nfl(j[tipo], tipo)
-                if c["prob_real"] >= 55.0 and c["ev"] >= 1.5:
-                    score = (c["prob_real"] * 0.7) + (c["ev"] * 0.3)
-                    candidatas.append({
-                        "jugador": j["nombre"],
-                        "equipo_abbr": j["equipo"],
-                        "tipo_prop": tipo,
-                        "lado": c["lado"],
-                        "linea": c["linea"],
-                        "cuota": c["cuota"],
-                        "prob_real": c["prob_real"],
-                        "ev": c["ev"],
-                        "proyeccion": c["proyeccion"],
-                        "_score": score
-                    })
+        pos = j.get("posicion", "WR")
+        if pos == "QB":
+            metricas = [("Yardas Pase", 235.5)]
+        elif pos == "RB":
+            metricas = [("Yardas Acarreo", 62.5)]
+        else:
+            metricas = [("Yardas Recepción", 54.5), ("Recepciones", 4.5)]
+
+        for tipo, media in metricas:
+            c = _calcular_prop_nfl(media, tipo)
+            score = (c["prob_real"] * 0.7) + (c["ev"] * 0.3)
+            candidatas.append({
+                "jugador": j["nombre"],
+                "equipo_abbr": j["equipo"],
+                "tipo_prop": tipo,
+                "lado": c["lado"],
+                "linea": c["linea"],
+                "cuota": c["cuota"],
+                "prob_real": c["prob_real"],
+                "ev": c["ev"],
+                "proyeccion": c["proyeccion"],
+                "_score": score
+            })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
     for c in candidatas:
