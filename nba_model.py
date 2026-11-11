@@ -18,8 +18,6 @@ MAPEO_NBA = {
     "Toronto Raptors": "TOR", "Utah Jazz": "UTA", "Washington Wizards": "WAS"
 }
 
-# BASE PONDERADA 30% 2025-2026 / 70% 2026-2027
-# Formato: (ORtg, DRtg, Pace, TS%, eFG%, Elo)
 STATS_30_NBA_PONDERADAS = {
     "ATL": (115.8, 117.2, 101.4, 0.575, 0.538, 1490),
     "BOS": (122.5, 110.8, 98.8, 0.605, 0.568, 1685),
@@ -85,16 +83,29 @@ def simular_partido_nba(
     s_loc = STATS_30_NBA_PONDERADAS.get(abbr_loc, (115.0, 115.0, 99.0, 0.575, 0.535, 1500))
     s_vis = STATS_30_NBA_PONDERADAS.get(abbr_vis, (115.0, 115.0, 99.0, 0.575, 0.535, 1500))
 
-    pace_estimado = round((s_loc[2] + s_vis[2]) / 2.0, 1)
-    media_liga_rtg = 114.5
+    media_liga_pace = 99.4
+    media_liga_rtg = 114.8
 
+    # 1. Posesiones efectivas (Pace ajustado de forma cruzada)
+    pace_estimado = round((s_loc[2] * s_vis[2]) / media_liga_pace, 1)
+
+    # 2. Eficiencia ofensiva esperada normalizada
     ortg_esperado_loc = (s_loc[0] * s_vis[1]) / media_liga_rtg
     ortg_esperado_vis = (s_vis[0] * s_loc[1]) / media_liga_rtg
 
-    # Factor de localía estándar (+2.4 pts)
-    pts_esperados_loc = round((ortg_esperado_loc * (pace_estimado / 100.0)) + 2.4, 1)
-    pts_esperados_vis = round((ortg_esperado_vis * (pace_estimado / 100.0)) - 0.4, 1)
-    total_esperado = round(pts_esperados_loc + pts_esperados_vis, 1)
+    # 3. Puntos esperados con ventaja de localía empírica (+2.1 pts)
+    pts_raw_loc = (ortg_esperado_loc * (pace_estimado / 100.0)) + 2.1
+    pts_raw_vis = (ortg_esperado_vis * (pace_estimado / 100.0)) - 0.5
+
+    # 4. Ajuste cuantitativo Bayesiano con la línea de mercado para evitar dispersiones irreales
+    total_raw = pts_raw_loc + pts_raw_vis
+    peso_modelo = 0.65
+    peso_mercado = 0.35
+    total_esperado = round((total_raw * peso_modelo) + (l_total * peso_mercado), 1)
+
+    ratio_loc = pts_raw_loc / total_raw
+    pts_esperados_loc = round(total_esperado * ratio_loc, 1)
+    pts_esperados_vis = round(total_esperado * (1.0 - ratio_loc), 1)
 
     diff_ortg = s_loc[0] - s_vis[0]
     diff_drtg = s_vis[1] - s_loc[1]
@@ -105,11 +116,9 @@ def simular_partido_nba(
     vector_features = np.array([[diff_ortg, diff_drtg, diff_ts, diff_efg, diff_elo]])
     prob_xgb_loc = float(_MODELO_XGB_NBA.predict_proba(vector_features)[0][1])
 
-    # Dispersión histórica real empírica de la NBA:
-    # Desviación de puntos totales por juego = 19.4 puntos
-    # Desviación del margen de victoria = 12.2 puntos
-    std_dev_total = 19.4
-    std_dev_spread = 12.2
+    # Dispersión histórica calibrada de la NBA
+    std_dev_total = 15.8
+    std_dev_spread = 11.4
 
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_spread_loc}_{l_spread_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
@@ -119,9 +128,10 @@ def simular_partido_nba(
     covers_sp_loc, covers_sp_vis = 0, 0
     overs, unders = 0, 0
 
+    margen_esperado = pts_esperados_loc - pts_esperados_vis
+
     for _ in range(iteraciones):
         sim_total = rng.gauss(total_esperado, std_dev_total)
-        margen_esperado = pts_esperados_loc - pts_esperados_vis
         sim_margen = rng.gauss(margen_esperado, std_dev_spread)
 
         p_loc = (sim_total + sim_margen) / 2.0
@@ -171,5 +181,5 @@ def simular_partido_nba(
         "spread_visitante": {"linea": l_spread_vis, "prob": prob_sp_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"DUNK-IA Calibrado (Dispersión Empírica). Ensamblado XGBoost ({round(prob_xgb_loc*100,1)}% ML) + Posesión a Posesión (Pace {pace_estimado}) + ORtg/DRtg ({s_loc[0]}/{s_vis[0]}) + Elo ({s_loc[5]}/{s_vis[5]}). Datos: {fuente_api}. Proyección: {total_esperado} pts."
+        "resumen_explicado": f"DUNK-IA Calibrado. Ensamblado XGBoost ({round(prob_xgb_loc*100,1)}% ML) + Posesión a Posesión (Pace {pace_estimado}) + ORtg/DRtg ({s_loc[0]}/{s_vis[0]}) + Elo ({s_loc[5]}/{s_vis[5]}). Datos: {fuente_api}. Proyección: {total_esperado} pts."
     }
