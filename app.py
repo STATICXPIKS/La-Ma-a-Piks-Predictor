@@ -28,7 +28,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API KEY con respaldo directo para eliminar el Error 401
 ODDS_API_KEY = os.getenv("ODDS_API_KEY", "826e995b77fba63fd42c2915877b1037").strip()
 
 DEPORTE_TO_SPORT_KEY = {
@@ -37,10 +36,6 @@ DEPORTE_TO_SPORT_KEY = {
     "nfl": "americanfootball_nfl",
     "mlb": "baseball_mlb"
 }
-
-# ==========================================
-# ENDPOINT THE ODDS API EN VIVO
-# ==========================================
 
 @app.get("/api/live-odds")
 def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante: str = Query(...)):
@@ -57,9 +52,11 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
     }
 
     try:
-        r = requests.get(url, params=params, timeout=7)
+        r = requests.get(url, params=params, timeout=6)
+        if r.status_code == 401:
+            return {"success": False, "error": "Tu cuota mensual de The Odds API se ha agotado o la clave expiró. Puedes ingresar las cuotas manualmente."}
         if r.status_code != 200:
-            return {"success": False, "error": f"Respuesta no válida de Odds API: Código {r.status_code}"}
+            return {"success": False, "error": f"Odds API no disponible (Código {r.status_code})"}
 
         eventos = r.json()
         evento_encontrado = None
@@ -81,12 +78,12 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
         if not evento_encontrado:
             return {
                 "success": False,
-                "error": f"No hay líneas abiertas en vivo para {local} vs {visitante} actualmente."
+                "error": f"No hay líneas abiertas en mercado para {local} vs {visitante} hoy."
             }
 
         bookmakers = evento_encontrado.get("bookmakers", [])
         if not bookmakers:
-            return {"success": False, "error": "No hay cuotas disponibles para este evento en el mercado."}
+            return {"success": False, "error": "No hay cuotas disponibles para este evento actualmente."}
 
         bm = bookmakers[0]
         for b in bookmakers:
@@ -95,7 +92,7 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
                 break
 
         datos_cuotas = {
-            "bookmaker": bm.get("title", "Casino de Mercado"),
+            "bookmaker": bm.get("title", "Casino"),
             "cuota_ml_local": None,
             "cuota_ml_visitante": None,
             "linea_spread_local": None,
@@ -141,12 +138,7 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
         return {"success": True, "data": datos_cuotas}
 
     except Exception as e:
-        return {"success": False, "error": f"Error del servidor: {str(e)}"}
-
-
-# ==========================================
-# ENDPOINTS REST API DE ANÁLISIS
-# ==========================================
+        return {"success": False, "error": f"Error de conexión: {str(e)}"}
 
 @app.get("/api/analizar-nba")
 def api_analizar_nba(
@@ -166,10 +158,9 @@ def api_analizar_nba(
     try:
         data["props_jugadores"] = obtener_mejores_props_nba(local, visitante, top_n=6)
     except Exception as e:
-        print(f"Error procesando props NBA: {e}")
+        print(f"Error props NBA: {e}")
         data["props_jugadores"] = []
     return data
-
 
 @app.get("/api/analizar-nfl")
 def api_analizar_nfl(
@@ -189,10 +180,9 @@ def api_analizar_nfl(
     try:
         data["props_jugadores"] = obtener_mejores_props_nfl(local, visitante, top_n=6)
     except Exception as e:
-        print(f"Error procesando props NFL: {e}")
+        print(f"Error props NFL: {e}")
         data["props_jugadores"] = []
     return data
-
 
 @app.get("/api/analizar-nhl")
 def api_analizar_nhl(
@@ -212,10 +202,9 @@ def api_analizar_nhl(
     try:
         data["props_jugadores"] = obtener_mejores_props_nhl(local, visitante, top_n=6)
     except Exception as e:
-        print(f"Error procesando props NHL: {e}")
+        print(f"Error props NHL: {e}")
         data["props_jugadores"] = []
     return data
-
 
 @app.get("/api/analizar-mlb")
 def api_analizar_mlb(
@@ -235,10 +224,9 @@ def api_analizar_mlb(
     try:
         data["props_jugadores"] = obtener_mejores_props_mlb(local, visitante, top_n=6)
     except Exception as e:
-        print(f"Error procesando props MLB: {e}")
+        print(f"Error props MLB: {e}")
         data["props_jugadores"] = []
     return data
-
 
 with gr.Blocks(title="La Maña Picks Engine") as demo:
     gr.Markdown("### La Maña Picks - API Backend Activa")
