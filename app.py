@@ -2,7 +2,7 @@ import os
 import json
 import math
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import gradio as gr
 import requests
@@ -27,6 +27,136 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================================
+# CONSTANTES DE THE ODDS API
+# ==========================================
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
+
+DEPORTE_TO_SPORT_KEY = {
+    "nba": "basketball_nba",
+    "nhl": "icehockey_nhl",
+    "nfl": "americanfootball_nfl",
+    "mlb": "baseball_mlb"
+}
+
+# ==========================================
+# ENDPOINT PARA CARGA DE CUOTAS EN VIVO
+# ==========================================
+
+@app.get("/api/live-odds")
+def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante: str = Query(...)):
+    if not ODDS_API_KEY:
+        return {
+            "success": False,
+            "error": "Falta configurar la variable ODDS_API_KEY en el entorno de Render."
+        }
+
+    sport_key = DEPORTE_TO_SPORT_KEY.get(deporte.lower())
+    if not sport_key:
+        return {"success": False, "error": f"Deporte '{deporte}' no soportado."}
+
+    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
+    params = {
+        "apiKey": ODDS_API_KEY,
+        "regions": "us,eu",
+        "markets": "h2h,spreads,totals",
+        "oddsFormat": "decimal"
+    }
+
+    try:
+        r = requests.get(url, params=params, timeout=6)
+        if r.status_code != 200:
+            return {"success": False, "error": f"Respuesta no válida de Odds API: Código {r.status_code}"}
+
+        eventos = r.json()
+        evento_encontrado = None
+
+        def limpiar_nombre(n):
+            return n.lower().replace("la ", "").replace("los angeles ", "").replace("new york ", "").strip()
+
+        loc_clean = limpiar_nombre(local)
+        vis_clean = limpiar_nombre(visitante)
+
+        for ev in eventos:
+            home = ev.get("home_team", "").lower()
+            away = ev.get("away_team", "").lower()
+
+            match_loc = (loc_clean in home) or (home in loc_clean) or (local.lower() in home)
+            match_vis = (vis_clean in away) or (away in vis_clean) or (visitante.lower() in away)
+
+            if match_loc and match_vis:
+                evento_encontrado = ev
+                break
+
+        if not evento_encontrado:
+            return {
+                "success": False,
+                "error": f"No hay líneas activas de mercado para {local} vs {visitante} en este momento."
+            }
+
+        bookmakers = evento_encontrado.get("bookmakers", [])
+        if not bookmakers:
+            return {"success": False, "error": "No se encontraron casas de apuestas con líneas abiertas para este juego."}
+
+        # Priorizar casas con volumen de mercado
+        bm = bookmakers[0]
+        for b in bookmakers:
+            if b.get("key") in ["draftkings", "fanduel", "pinnacle", "bovada", "betonlineag"]:
+                bm = b
+                break
+
+        datos_cuotas = {
+            "bookmaker": bm.get("title", "Línea de Casino"),
+            "cuota_ml_local": None,
+            "cuota_ml_visitante": None,
+            "linea_spread_local": None,
+            "cuota_spread_local": None,
+            "linea_spread_visitante": None,
+            "cuota_spread_visitante": None,
+            "linea_total": None,
+            "cuota_total_over": None,
+            "cuota_total_under": None
+        }
+
+        for market in bm.get("markets", []):
+            m_key = market.get("key")
+            outcomes = market.get("outcomes", [])
+
+            # Moneyline (h2h)
+            if m_key == "h2h":
+                for out in outcomes:
+                    t_name = out.get("name", "").lower()
+                    if (loc_clean in t_name) or (local.lower() in t_name):
+                        datos_cuotas["cuota_ml_local"] = out.get("price")
+                    elif (vis_clean in t_name) or (visitante.lower() in t_name):
+                        datos_cuotas["cuota_ml_visitante"] = out.get("price")
+
+            # Handicap / Spreads
+            elif m_key == "spreads":
+                for out in outcomes:
+                    t_name = out.get("name", "").lower()
+                    if (loc_clean in t_name) or (local.lower() in t_name):
+                        datos_cuotas["linea_spread_local"] = out.get("point")
+                        datos_cuotas["cuota_spread_local"] = out.get("price")
+                    elif (vis_clean in t_name) or (visitante.lower() in t_name):
+                        datos_cuotas["linea_spread_visitante"] = out.get("point")
+                        datos_cuotas["cuota_spread_visitante"] = out.get("price")
+
+            # Totales (Over/Under)
+            elif m_key == "totals":
+                for out in outcomes:
+                    lado = out.get("name", "").lower()
+                    if lado == "over":
+                        datos_cuotas["linea_total"] = out.get("point")
+                        datos_cuotas["cuota_total_over"] = out.get("price")
+                    elif lado == "under":
+                        datos_cuotas["cuota_total_under"] = out.get("price")
+
+        return {"success": True, "data": datos_cuotas}
+
+    except Exception as e:
+        return {"success": False, "error": f"Excepción interna: {str(e)}"}
 
 # ==========================================
 # ENDPOINTS REST API PARA FRONTEND EN VERCEL
