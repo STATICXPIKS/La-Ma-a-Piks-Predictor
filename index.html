@@ -3,1130 +3,475 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Maña Picks • Hub Cuantitativo Multideporte</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
-    
+    <title>La Maña Picks - Centro Cuantitativo</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        montserrat: ['Montserrat', 'sans-serif'],
-                        inter: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        mana: {
-                            neon: '#00FF66',
-                            emerald: '#059669',
-                            gold: '#F59E0B',
-                            orange: '#F97316',
-                            yellow: '#FACC15',
-                            bg: '#F8FAFC'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        .neon-shield {
-            filter: drop-shadow(0px 0px 8px rgba(0, 255, 102, 0.75)) drop-shadow(0px 0px 18px rgba(0, 255, 102, 0.35));
-            transition: filter 0.3s ease-in-out;
-        }
+        body { background-color: #0b0f19; color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-bg { background-color: #111827; border: 1px solid #1f2937; }
+        .accent-border { border-color: #10b981; }
+        .accent-text { color: #10b981; }
+        .accent-bg { background-color: #10b981; }
     </style>
 </head>
-<body class="bg-mana-bg text-slate-900 font-inter min-h-screen flex flex-col justify-between" onload="cargarMetricasYGraficas()">
+<body class="min-h-screen pb-12">
 
-    <!-- HEADER -->
-    <header class="bg-white border-b-2 border-slate-200 py-4 px-6 relative">
-        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-mana-neon via-sky-400 via-mana-orange to-yellow-400"></div>
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <button onclick="volverHome()" class="font-montserrat text-2xl font-black tracking-tight text-slate-900 text-left">
-                LA MAÑA <span class="text-emerald-600">PICKS</span>
-            </button>
-            
-            <div class="flex items-center gap-3">
-                <button onclick="abrirModalHistorial('TODOS')" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl flex items-center gap-2 border border-slate-700 shadow-sm transition">
-                    <span class="text-[10px] text-slate-400 font-extrabold uppercase">GLOBAL:</span>
-                    <span id="win-rate-display" class="font-montserrat text-xs font-black text-mana-neon">--%</span>
-                    <span class="text-xs">📜</span>
-                </button>
+    <!-- BARRA SUPERIOR -->
+    <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🎯</span>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white">LA MAÑA PICKS</h1>
+                <p class="text-xs text-gray-400">Motor Cuantitativo Multideporte (+EV)</p>
             </div>
         </div>
+
+        <!-- SELECTOR DE LIGAS -->
+        <div class="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
+            <button onclick="cambiarDeporte('NHL')" id="tab-NHL" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all bg-emerald-500 text-white">NHL 🏒</button>
+            <button onclick="cambiarDeporte('NFL')" id="tab-NFL" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">NFL 🏈</button>
+            <button onclick="cambiarDeporte('NBA')" id="tab-NBA" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">NBA 🏀</button>
+            <button onclick="cambiarDeporte('MLB')" id="tab-MLB" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">MLB ⚾</button>
+        </div>
+
+        <button onclick="abrirModalHistorial()" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+            <i class="fa-solid fa-list-check text-emerald-400"></i> Historial y Auditoría
+        </button>
     </header>
 
-    <!-- PANTALLA 1: HUB PRINCIPAL MULTIDEPORTE (4 MODELOS) -->
-    <section id="view-home" class="max-w-7xl mx-auto w-full px-4 py-8 flex-grow flex flex-col items-center justify-center text-center">
-        <h1 class="font-montserrat text-3xl md:text-5xl font-black text-slate-900 mb-2 uppercase tracking-tight">
-            MODELOS CUANTITATIVOS <span class="text-emerald-600">IA</span>
-        </h1>
-        <p class="text-slate-600 font-bold text-sm md:text-base max-w-2xl mb-8">
-            Simulaciones Monte Carlo, Sabermetría, Pace, Eficiencia y auditoría de apuestas con valor (+EV).
-        </p>
+    <main class="max-w-7xl mx-auto px-4 mt-6">
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full max-w-7xl mb-10">
-            
-            <!-- MODELO NHL (FROST-IA) -->
-            <div class="bg-white border-2 border-emerald-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
-                <div class="text-center mb-2">
-                    <span class="bg-slate-900 text-mana-neon font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-emerald-400">
-                        NHL • HOCKEY
-                    </span>
-                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">FROST-IA</h2>
-                    <p class="text-[10px] text-slate-500 font-medium">xG, Corsi, Moneyline y Totales.</p>
+        <!-- CONFIGURADOR DEL PARTIDO -->
+        <div class="card-bg rounded-xl p-6 shadow-xl mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Equipo Local</label>
+                    <select id="sel-local" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"></select>
                 </div>
-
-                <div class="flex items-center justify-between gap-1 mb-2 relative">
-                    <div class="w-7/12 h-52 flex items-center justify-center relative z-10 overflow-visible">
-                        <img src="mascota-nhl.png.png" alt="Mascota FROST-IA" class="w-full h-full object-contain scale-125 transform drop-shadow-[0_0_18px_rgba(16,185,129,0.7)]">
-                    </div>
-
-                    <div class="w-5/12 flex flex-col gap-1.5 z-20">
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 grid grid-cols-2 gap-1 text-center text-xs shadow-sm">
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">EFECT.</span>
-                                <span id="nhl-stat-winrate" class="font-montserrat font-black text-emerald-600 text-xs">--%</span>
-                            </div>
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">TOTAL</span>
-                                <span id="nhl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                            </div>
-                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                                <span class="text-[6px] text-emerald-600 font-bold block">WIN ✅</span>
-                                <span id="nhl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                            </div>
-                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                                <span class="text-[6px] text-rose-500 font-bold block">LOSS ❌</span>
-                                <span id="nhl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 h-16 flex items-center justify-center relative shadow-sm">
-                            <canvas id="graficaNhl"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="seleccionarDeporte('NHL')" class="w-full mt-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
-                    ENTRAR AL HIELO 🏒
-                </button>
-            </div>
-
-            <!-- MODELO NFL (BLITZ-IA) -->
-            <div class="bg-white border-2 border-sky-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
-                <div class="text-center mb-2">
-                    <span class="bg-slate-900 text-sky-400 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-sky-400">
-                        NFL • FÚTBOL AMERICANO
-                    </span>
-                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">BLITZ-IA</h2>
-                    <p class="text-[10px] text-slate-500 font-medium">EPA/Drive, Spread y Totales.</p>
-                </div>
-
-                <div class="flex items-center justify-between gap-1 mb-2 relative">
-                    <div class="w-7/12 h-52 flex items-center justify-center relative z-10 overflow-visible">
-                        <img src="mascota-nfl.png.png" alt="Mascota BLITZ-IA" class="w-full h-full object-contain scale-125 transform drop-shadow-[0_0_18px_rgba(14,165,233,0.7)]">
-                    </div>
-
-                    <div class="w-5/12 flex flex-col gap-1.5 z-20">
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 grid grid-cols-2 gap-1 text-center text-xs shadow-sm">
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">EFECT.</span>
-                                <span id="nfl-stat-winrate" class="font-montserrat font-black text-sky-500 text-xs">--%</span>
-                            </div>
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">TOTAL</span>
-                                <span id="nfl-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                            </div>
-                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                                <span class="text-[6px] text-emerald-600 font-bold block">WIN ✅</span>
-                                <span id="nfl-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                            </div>
-                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                                <span class="text-[6px] text-rose-500 font-bold block">LOSS ❌</span>
-                                <span id="nfl-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 h-16 flex items-center justify-center relative shadow-sm">
-                            <canvas id="graficaNfl"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="seleccionarDeporte('NFL')" class="w-full mt-auto bg-gradient-to-r from-sky-500 to-sky-600 text-white font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
-                    ENTRAR AL EMPARRILLADO 🏈
-                </button>
-            </div>
-
-            <!-- MODELO NBA (DUNK-IA) -->
-            <div class="bg-white border-2 border-orange-500 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
-                <div class="text-center mb-2">
-                    <span class="bg-slate-900 text-mana-orange font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-orange-400">
-                        NBA • BALONCESTO
-                    </span>
-                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">DUNK-IA</h2>
-                    <p class="text-[10px] text-slate-500 font-medium">Pace, Off/Def Rating y Totales.</p>
-                </div>
-
-                <div class="flex items-center justify-between gap-1 mb-2 relative">
-                    <div class="w-7/12 h-52 flex items-center justify-center relative z-10 overflow-visible">
-                        <img src="mascota-nba.png.png" alt="Mascota DUNK-IA" class="w-full h-full object-contain scale-125 transform drop-shadow-[0_0_18px_rgba(249,115,22,0.7)]">
-                    </div>
-
-                    <div class="w-5/12 flex flex-col gap-1.5 z-20">
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 grid grid-cols-2 gap-1 text-center text-xs shadow-sm">
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">EFECT.</span>
-                                <span id="nba-stat-winrate" class="font-montserrat font-black text-orange-500 text-xs">--%</span>
-                            </div>
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">TOTAL</span>
-                                <span id="nba-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                            </div>
-                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                                <span class="text-[6px] text-emerald-600 font-bold block">WIN ✅</span>
-                                <span id="nba-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                            </div>
-                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                                <span class="text-[6px] text-rose-500 font-bold block">LOSS ❌</span>
-                                <span id="nba-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 h-16 flex items-center justify-center relative shadow-sm">
-                            <canvas id="graficaNba"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="seleccionarDeporte('NBA')" class="w-full mt-auto bg-gradient-to-r from-orange-500 to-orange-600 text-white font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
-                    ENTRAR A LA DUELA 🏀
-                </button>
-            </div>
-
-            <!-- MODELO MLB (SLUGGER-IA) -->
-            <div class="bg-white border-2 border-yellow-400 rounded-3xl p-4 shadow-xl transition transform hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden">
-                <div class="text-center mb-2">
-                    <span class="bg-slate-900 text-yellow-300 font-montserrat text-[9px] font-black px-2.5 py-0.5 rounded-full mb-1 inline-block border border-yellow-400">
-                        MLB • BÉISBOL
-                    </span>
-                    <h2 class="font-montserrat text-lg font-black text-slate-900 uppercase">SLUGGER-IA</h2>
-                    <p class="text-[10px] text-slate-500 font-medium">xERA, FIP, NRFI, Props K's y F5.</p>
-                </div>
-
-                <div class="flex items-center justify-between gap-1 mb-2 relative">
-                    <div class="w-7/12 h-52 flex items-center justify-center relative z-10 overflow-visible">
-                        <img src="mascota-mlb.png.png" alt="Mascota SLUGGER-IA" class="w-full h-full object-contain scale-125 transform drop-shadow-[0_0_18px_rgba(250,204,21,0.8)]">
-                    </div>
-
-                    <div class="w-5/12 flex flex-col gap-1.5 z-20">
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 grid grid-cols-2 gap-1 text-center text-xs shadow-sm">
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">EFECT.</span>
-                                <span id="mlb-stat-winrate" class="font-montserrat font-black text-yellow-500 text-xs">--%</span>
-                            </div>
-                            <div class="bg-white p-1 rounded-xl border">
-                                <span class="text-[6px] text-slate-400 font-bold block">TOTAL</span>
-                                <span id="mlb-stat-totales" class="font-montserrat font-black text-slate-800 text-xs">0</span>
-                            </div>
-                            <div class="bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                                <span class="text-[6px] text-emerald-600 font-bold block">WIN ✅</span>
-                                <span id="mlb-stat-wins" class="font-montserrat font-black text-emerald-700 text-xs">0</span>
-                            </div>
-                            <div class="bg-rose-50 p-1 rounded-xl border border-rose-200">
-                                <span class="text-[6px] text-rose-500 font-bold block">LOSS ❌</span>
-                                <span id="mlb-stat-losses" class="font-montserrat font-black text-rose-600 text-xs">0</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 h-16 flex items-center justify-center relative shadow-sm">
-                            <canvas id="graficaMlb"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="seleccionarDeporte('MLB')" class="w-full mt-auto bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-950 font-montserrat font-black py-2.5 rounded-2xl uppercase tracking-wider text-[11px] shadow-md hover:scale-105 transition">
-                    ENTRAR AL DIAMANTE ⚾
-                </button>
-            </div>
-
-        </div>
-    </section>
-
-    <!-- PANTALLA 2: SIMULADOR DINÁMICO -->
-    <main id="view-simulador" class="hidden max-w-4xl mx-auto w-full p-4 my-4 flex-grow">
-        <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl mb-8">
-            <div class="flex justify-between items-center mb-6 pb-2 border-b">
-                <div class="flex items-center gap-2">
-                    <span id="simulador-badge-deporte" class="bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border">
-                        NHL
-                    </span>
-                    <h2 id="simulador-titulo-modelo" class="font-montserrat text-lg font-black text-slate-900 uppercase">
-                        FROST-IA • CONFIGURACIÓN
-                    </h2>
-                </div>
-                <button onclick="volverHome()" class="text-xs font-bold text-slate-400 hover:text-slate-600 underline">← Volver a Hub</button>
-            </div>
-
-            <!-- SELECTOR DE EQUIPOS -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div class="bg-slate-50 p-3 rounded-2xl border">
-                    <label class="block text-xs font-extrabold text-slate-500 mb-1">LOCAL 🏠</label>
-                    <select id="select-local" onchange="actualizarEscudos()" class="w-full bg-white border p-2 rounded-xl text-sm font-bold"></select>
-                </div>
-                <div class="bg-slate-50 p-3 rounded-2xl border">
-                    <label class="block text-xs font-extrabold text-slate-500 mb-1">VISITANTE ✈️</label>
-                    <select id="select-visitante" onchange="actualizarEscudos()" class="w-full bg-white border p-2 rounded-xl text-sm font-bold"></select>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Equipo Visitante</label>
+                    <select id="sel-visitante" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"></select>
                 </div>
             </div>
 
-            <!-- ESCUDOS CON SILUETA NEÓN -->
-            <div class="flex justify-around items-center bg-slate-950 text-white p-4 rounded-2xl mb-6 border border-slate-800">
-                <div class="text-center w-5/12">
-                    <img id="img-local" class="w-16 h-16 object-contain mx-auto mb-1 neon-shield" referrerpolicy="no-referrer">
-                    <span id="name-local" class="font-montserrat text-xs font-bold block truncate"></span>
-                </div>
-                <span class="font-montserrat text-mana-neon font-black italic">VS</span>
-                <div class="text-center w-5/12">
-                    <img id="img-visitante" class="w-16 h-16 object-contain mx-auto mb-1 neon-shield" referrerpolicy="no-referrer">
-                    <span id="name-visitante" class="font-montserrat text-xs font-bold block truncate"></span>
-                </div>
-            </div>
-
-            <!-- PANEL DE CUOTAS Y LÍNEAS MANUALES -->
-            <div class="bg-slate-900 text-white p-5 rounded-2xl mb-6 space-y-4">
-                <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider">
-                    🎯 CONFIGURA LAS LÍNEAS Y CUOTAS REALES DE TU CASINO:
-                </span>
-
+            <!-- ENTRADA DE LÍNEAS / CUOTAS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-800 text-xs">
                 <!-- MONEYLINE -->
-                <div class="border-t border-slate-800 pt-3">
-                    <span class="text-[11px] font-bold text-slate-400 block mb-2">1. MONEYLINE (ML)</span>
-                    <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
+                    <p class="font-bold text-gray-300 mb-2">1. LÍNEA DE DINERO (MONEYLINE)</p>
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-slate-400 block mb-1">Cuota ML Local</label>
-                            <input id="cuota-ml-loc" type="number" step="0.01" value="1.73" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <span class="text-gray-400 block mb-1">Cuota Local:</span>
+                            <input type="number" step="0.01" id="c-ml-loc" value="1.75" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-400 block mb-1">Cuota ML Visitante</label>
-                            <input id="cuota-ml-vis" type="number" step="0.01" value="2.10" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SPREAD / HANDICAP MANUAL -->
-                <div class="border-t border-slate-800 pt-3">
-                    <span id="etiqueta-mercado-spread" class="text-[11px] font-bold text-slate-400 block mb-2">2. PUCK LINE (SPREAD MANUAL)</span>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                        <div>
-                            <label class="text-slate-400 block mb-1">Línea Local</label>
-                            <input id="linea-pl-loc" type="number" step="0.5" value="-1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
-                        </div>
-                        <div>
-                            <label class="text-slate-400 block mb-1">Cuota Local</label>
-                            <input id="cuota-pl-loc" type="number" step="0.01" value="2.85" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
-                        </div>
-                        <div>
-                            <label class="text-slate-400 block mb-1">Línea Visitante</label>
-                            <input id="linea-pl-vis" type="number" step="0.5" value="1.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
-                        </div>
-                        <div>
-                            <label class="text-slate-400 block mb-1">Cuota Visitante</label>
-                            <input id="cuota-pl-vis" type="number" step="0.01" value="1.40" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <span class="text-gray-400 block mb-1">Cuota Visita:</span>
+                            <input type="number" step="0.01" id="c-ml-vis" value="2.10" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
                         </div>
                     </div>
                 </div>
 
-                <!-- OVER / UNDER MANUAL -->
-                <div class="border-t border-slate-800 pt-3">
-                    <span id="etiqueta-mercado-totales" class="text-[11px] font-bold text-slate-400 block mb-2">3. TOTAL DE GOLES (OVER / UNDER)</span>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <!-- SPREAD / HANDICAP / RUN LINE -->
+                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
+                    <p class="font-bold text-gray-300 mb-2" id="etiqueta-mercado-spread">2. PUCK LINE (HANDICAP)</p>
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-slate-400 block mb-1">Línea Total</label>
-                            <input id="linea-total-goles" type="number" step="0.5" value="5.5" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-mana-neon font-black">
+                            <span class="text-gray-400 block mb-1">Línea Loc / Cuota:</span>
+                            <div class="flex gap-1">
+                                <input type="number" step="0.5" id="l-spread-loc" value="-1.5" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
+                                <input type="number" step="0.01" id="c-spread-loc" value="2.80" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                            </div>
                         </div>
                         <div>
-                            <label class="text-slate-400 block mb-1">Cuota Over</label>
-                            <input id="cuota-over" type="number" step="0.01" value="1.79" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <span class="text-gray-400 block mb-1">Línea Vis / Cuota:</span>
+                            <div class="flex gap-1">
+                                <input type="number" step="0.5" id="l-spread-vis" value="1.5" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
+                                <input type="number" step="0.01" id="c-spread-vis" value="1.42" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOTALES -->
+                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
+                    <p class="font-bold text-gray-300 mb-2" id="etiqueta-mercado-totales">3. TOTAL DE GOLES (OVER / UNDER)</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <span class="text-gray-400 block mb-1">Línea:</span>
+                            <input type="number" step="0.5" id="l-total" value="5.5" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-bold">
                         </div>
                         <div>
-                            <label class="text-slate-400 block mb-1">Cuota Under</label>
-                            <input id="cuota-under" type="number" step="0.01" value="1.98" class="w-full bg-slate-800 border border-slate-700 p-2 rounded-lg text-white font-bold">
+                            <span class="text-gray-400 block mb-1">Cuota Over:</span>
+                            <input type="number" step="0.01" id="c-over" value="1.85" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">Cuota Under:</span>
+                            <input type="number" step="0.01" id="c-under" value="1.95" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <button onclick="ejecutarSimulacionLive()" id="btn-analizar" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-montserrat font-black py-4 rounded-2xl uppercase tracking-wider text-sm shadow-lg">
-                EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀
+            <button onclick="ejecutarSimulacionLive()" class="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold py-3 rounded-lg text-sm tracking-wide shadow-lg transition flex justify-center items-center gap-2">
+                <i class="fa-solid fa-calculator"></i> SIMULAR PARTIDO Y CALCULAR PROPS (+EV)
             </button>
         </div>
 
-        <div id="resultado-container" class="hidden bg-slate-900 text-white border-2 border-slate-800 rounded-3xl p-6 shadow-2xl"></div>
+        <!-- PANEL DE CARGA -->
+        <div id="loader" class="hidden text-center py-12">
+            <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-400 mb-3"></i>
+            <p class="text-gray-400 text-sm">Consultando APIs y calculando modelos matemáticos...</p>
+        </div>
+
+        <!-- CONTENEDOR DE RESULTADOS -->
+        <div id="contenedor-resultados" class="hidden space-y-6">
+
+            <!-- RESUMEN PROYECCIÓN -->
+            <div class="card-bg rounded-xl p-5 border-l-4 border-emerald-500 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Encuentro Analizado</h3>
+                    <p class="text-lg font-bold text-white mt-1" id="resumen-matchup">LOCAL vs VISITANTE</p>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Marcador Estimado</h3>
+                    <p class="text-lg font-bold text-emerald-400 mt-1" id="resumen-marcador">0.0 - 0.0 (Total: 0.0)</p>
+                </div>
+            </div>
+
+            <!-- SECCIÓN PROPS DE JUGADORES -->
+            <div class="card-bg rounded-xl p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-xl">🎯</span>
+                    <h2 class="text-base font-bold text-white tracking-wide">TOP PROPS DE JUGADORES RECOMENDADAS (+EV)</h2>
+                </div>
+
+                <div id="grid-props" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Tarjetas generadas dinámicamente -->
+                </div>
+            </div>
+        </div>
     </main>
 
-    <!-- MODAL HISTORIAL INTERACTIVO -->
-    <div id="modal-historial" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-5 border-b border-slate-800 flex justify-between items-center">
-                <h3 class="font-montserrat text-sm font-black text-white uppercase">HISTORIAL DE APUESTAS REGISTRADAS</h3>
-                <button onclick="cerrarModalHistorial()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
+    <!-- MODAL DE HISTORIAL CON FILTROS POR DEPORTE -->
+    <div id="modal-historial" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="card-bg border border-gray-700 w-full max-w-4xl rounded-2xl p-6 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-4 mb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i> Historial de Apuestas Registradas
+                </h3>
+                <button onclick="cerrarModalHistorial()" class="text-gray-400 hover:text-white text-xl">&times;</button>
             </div>
 
-            <div class="bg-slate-950 px-5 py-2 border-b border-slate-800 flex gap-2 flex-wrap">
-                <button onclick="filtrarHistorial('TODOS')" id="btn-f-todos" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-white">TODOS</button>
-                <button onclick="filtrarHistorial('NHL')" id="btn-f-nhl" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white">NHL 🏒</button>
-                <button onclick="filtrarHistorial('NFL')" id="btn-f-nfl" class="px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950">NFL 🏈</button>
-                <button onclick="filtrarHistorial('NBA')" id="btn-f-nba" class="px-3 py-1 rounded-lg text-xs font-bold bg-orange-500 text-slate-950">NBA 🏀</button>
-                <button onclick="filtrarHistorial('MLB')" id="btn-f-mlb" class="px-3 py-1 rounded-lg text-xs font-bold bg-yellow-400 text-slate-950">MLB ⚾</button>
+            <!-- FILTRO POR DEPORTE DENTRO DEL HISTORIAL -->
+            <div class="flex gap-2 mb-4 pb-2 border-b border-gray-800/60 overflow-x-auto text-xs">
+                <button onclick="filtrarHistorialPor('TODOS')" id="filtro-TODOS" class="px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-gray-900">TODOS</button>
+                <button onclick="filtrarHistorialPor('NHL')" id="filtro-NHL" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">NHL 🏒</button>
+                <button onclick="filtrarHistorialPor('NFL')" id="filtro-NFL" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">NFL 🏈</button>
+                <button onclick="filtrarHistorialPor('NBA')" id="filtro-NBA" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">NBA 🏀</button>
+                <button onclick="filtrarHistorialPor('MLB')" id="filtro-MLB" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">MLB ⚾</button>
+            </div>
+            
+            <div id="lista-historial" class="overflow-y-auto space-y-3 flex-1 pr-2 text-sm">
+                <!-- Se llena vía JS -->
             </div>
 
-            <div id="lista-historial-content" class="p-5 overflow-y-auto flex-grow space-y-3"></div>
-
-            <div class="p-4 border-t border-slate-800 bg-slate-950 text-right">
-                <button onclick="cerrarModalHistorial()" class="bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl">Cerrar</button>
+            <div class="pt-4 border-t border-gray-800 flex justify-between items-center mt-4">
+                <button onclick="limpiarHistorial()" class="text-red-400 hover:text-red-300 text-xs font-semibold">Borrar todo el historial</button>
+                <button onclick="cerrarModalHistorial()" class="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2 rounded-lg text-sm font-semibold">Cerrar</button>
             </div>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
-        const RENDER_API_URL = "https://la-ma-a-piks-predictor.onrender.com";
+        // BACKEND URL EN RENDER
+        const BACKEND_URL = "https://la-mana-picks-backend.onrender.com";
 
         let deporteActual = "NHL";
         let filtroHistorialActual = "TODOS";
 
-        const EQUIPOS_NHL = {
-            "Anaheim Ducks": "ana", "Boston Bruins": "bos", "Buffalo Sabres": "buf",
-            "Calgary Flames": "cgy", "Carolina Hurricanes": "car", "Chicago Blackhawks": "chi",
-            "Colorado Avalanche": "col", "Columbus Blue Jackets": "cbj", "Dallas Stars": "dal",
-            "Detroit Red Wings": "det", "Edmonton Oilers": "edm", "Florida Panthers": "fla",
-            "Los Angeles Kings": "la", "Minnesota Wild": "min", "Montreal Canadiens": "mtl",
-            "Nashville Predators": "nsh", "New Jersey Devils": "nj", "New York Islanders": "nyi",
-            "New York Rangers": "nyr", "Ottawa Senators": "ott", "Philadelphia Flyers": "phi",
-            "Pittsburgh Penguins": "pit", "San Jose Sharks": "sj", "Seattle Kraken": "sea",
-            "St. Louis Blues": "stl", "Tampa Bay Lightning": "tb", "Toronto Maple Leafs": "tor",
-            "Utah Hockey Club": "utah", "Vancouver Canucks": "van", "Vegas Golden Knights": "vgk",
-            "Washington Capitals": "wsh", "Winnipeg Jets": "wpg"
+        const EQUIPOS = {
+            "NHL": ["Anaheim Ducks", "Boston Bruins", "Buffalo Sabres", "Calgary Flames", "Carolina Hurricanes", "Chicago Blackhawks", "Colorado Avalanche", "Columbus Blue Jackets", "Dallas Stars", "Detroit Red Wings", "Edmonton Oilers", "Florida Panthers", "Los Angeles Kings", "Minnesota Wild", "Montreal Canadiens", "Nashville Predators", "New Jersey Devils", "New York Islanders", "New York Rangers", "Ottawa Senators", "Philadelphia Flyers", "Pittsburgh Penguins", "San Jose Sharks", "Seattle Kraken", "St. Louis Blues", "Tampa Bay Lightning", "Toronto Maple Leafs", "Utah Hockey Club", "Vancouver Canucks", "Vegas Golden Knights", "Washington Capitals", "Winnipeg Jets"],
+            "NFL": ["Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills", "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns", "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers", "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins", "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants", "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"],
+            "NBA": ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"],
+            "MLB": ["Arizona Diamondbacks", "Atlanta Braves", "Baltimore Orioles", "Boston Red Sox", "Chicago Cubs", "Chicago White Sox", "Cincinnati Reds", "Cleveland Guardians", "Colorado Rockies", "Detroit Tigers", "Houston Astros", "Kansas City Royals", "Los Angeles Angels", "Los Angeles Dodgers", "Miami Marlins", "Milwaukee Brewers", "Minnesota Twins", "New York Mets", "New York Yankees", "Oakland Athletics", "Philadelphia Phillies", "Pittsburgh Pirates", "San Diego Padres", "San Francisco Giants", "Seattle Mariners", "St. Louis Cardinals", "Tampa Bay Rays", "Texas Rangers", "Toronto Blue Jays", "Washington Nationals"]
         };
 
-        const EQUIPOS_NFL = {
-            "Arizona Cardinals": "ari", "Atlanta Falcons": "atl", "Baltimore Ravens": "bal",
-            "Buffalo Bills": "buf", "Carolina Panthers": "car", "Chicago Bears": "chi",
-            "Cincinnati Bengals": "cin", "Cleveland Browns": "cle", "Dallas Cowboys": "dal",
-            "Denver Broncos": "den", "Detroit Lions": "det", "Green Bay Packers": "gb",
-            "Houston Texans": "hou", "Indianapolis Colts": "ind", "Jacksonville Jaguars": "jax",
-            "Kansas City Chiefs": "kc", "Las Vegas Raiders": "lv", "Los Angeles Chargers": "lac",
-            "Los Angeles Rams": "lar", "Miami Dolphins": "mia", "Minnesota Vikings": "min",
-            "New England Patriots": "ne", "New Orleans Saints": "no", "New York Giants": "nyg",
-            "New York Jets": "nyj", "Philadelphia Eagles": "phi", "Pittsburgh Steelers": "pit",
-            "San Francisco 49ers": "sf", "Seattle Seahawks": "sea", "Tampa Bay Buccaneers": "tb",
-            "Tennessee Titans": "ten", "Washington Commanders": "was"
-        };
-
-        const EQUIPOS_NBA = {
-            "Atlanta Hawks": "atl", "Boston Celtics": "bos", "Brooklyn Nets": "bkn",
-            "Charlotte Hornets": "cha", "Chicago Bulls": "chi", "Cleveland Cavaliers": "cle",
-            "Dallas Mavericks": "dal", "Denver Nuggets": "den", "Detroit Pistons": "det",
-            "Golden State Warriors": "gsw", "Houston Rockets": "hou", "Indiana Pacers": "ind",
-            "LA Clippers": "lac", "Los Angeles Lakers": "lal", "Memphis Grizzlies": "mem",
-            "Miami Heat": "mia", "Milwaukee Bucks": "mil", "Minnesota Timberwolves": "min",
-            "New Orleans Pelicans": "nop", "New York Knicks": "nyk", "Oklahoma City Thunder": "okc",
-            "Orlando Magic": "orl", "Philadelphia 76ers": "phi", "Phoenix Suns": "phx",
-            "Portland Trail Blazers": "por", "Sacramento Kings": "sac", "San Antonio Spurs": "sas",
-            "Toronto Raptors": "tor", "Utah Jazz": "uta", "Washington Wizards": "was"
-        };
-
-        const EQUIPOS_MLB = {
-            "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
-            "Boston Red Sox": "bos", "Chicago Cubs": "chc", "Chicago White Sox": "chw",
-            "Cincinnati Reds": "cin", "Cleveland Guardians": "cle", "Colorado Rockies": "col",
-            "Detroit Tigers": "det", "Houston Astros": "hou", "Kansas City Royals": "kc",
-            "Los Angeles Angels": "laa", "Los Angeles Dodgers": "lad", "Miami Marlins": "mia",
-            "Milwaukee Brewers": "mil", "Minnesota Twins": "min", "New York Mets": "nym",
-            "New York Yankees": "nyy", "Oakland Athletics": "oak", "Philadelphia Phillies": "phi",
-            "Pittsburgh Pirates": "pit", "San Diego Padres": "sd", "San Francisco Giants": "sf",
-            "Seattle Mariners": "sea", "St. Louis Cardinals": "stl", "Tampa Bay Rays": "tb",
-            "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh"
-        };
-
-        let chartNhl = null, chartNfl = null, chartNba = null, chartMlb = null;
-
-        function obtenerPicksGuardados() {
-            try { return JSON.parse(localStorage.getItem('picks_historial_local')) || []; }
-            catch (e) { return []; }
+        function poblarEquipos(dep) {
+            const loc = document.getElementById("sel-local");
+            const vis = document.getElementById("sel-visitante");
+            loc.innerHTML = "";
+            vis.innerHTML = "";
+            EQUIPOS[dep].forEach((eq, idx) => {
+                loc.innerHTML += `<option value="${eq}" ${idx === 0 ? 'selected' : ''}>${eq}</option>`;
+                vis.innerHTML += `<option value="${eq}" ${idx === 1 ? 'selected' : ''}>${eq}</option>`;
+            });
         }
 
-        function guardarPickEnLocal(pickObj) {
-            const lista = obtenerPicksGuardados();
-            lista.unshift(pickObj);
-            localStorage.setItem('picks_historial_local', JSON.stringify(lista));
-        }
-
-        function seleccionarDeporte(dep) {
+        function cambiarDeporte(dep) {
             deporteActual = dep;
-            document.getElementById('view-home').classList.add('hidden');
-            document.getElementById('view-simulador').classList.remove('hidden');
-
-            const badge = document.getElementById('simulador-badge-deporte');
-            const titulo = document.getElementById('simulador-titulo-modelo');
-
-            if (dep === 'NHL') {
-                badge.innerText = "NHL";
-                badge.className = "bg-slate-900 text-mana-neon font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-400";
-                titulo.innerText = "FROST-IA • SIMULADOR HOCKEY";
-                cargarOpcionesNHL();
-            } else if (dep === 'NFL') {
-                badge.innerText = "NFL";
-                badge.className = "bg-slate-900 text-mana-gold font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-amber-400";
-                titulo.innerText = "BLITZ-IA • SIMULADOR EMPARRILLADO";
-                cargarOpcionesNFL();
-            } else if (dep === 'NBA') {
-                badge.innerText = "NBA";
-                badge.className = "bg-slate-900 text-mana-orange font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-orange-400";
-                titulo.innerText = "DUNK-IA • SIMULADOR BALONCESTO";
-                cargarOpcionesNBA();
-            } else {
-                badge.innerText = "MLB";
-                badge.className = "bg-slate-900 text-yellow-300 font-montserrat text-[10px] font-black px-2.5 py-0.5 rounded-full border border-yellow-400";
-                titulo.innerText = "SLUGGER-IA • MOTOR SABERMÉTRICO BÉISBOL";
-                cargarOpcionesMLB();
-            }
-        }
-
-        function cargarOpcionesNHL() {
-            const dic = EQUIPOS_NHL;
-            const selLoc = document.getElementById('select-local');
-            const selVis = document.getElementById('select-visitante');
-            selLoc.innerHTML = ''; selVis.innerHTML = '';
-
-            Object.keys(dic).sort().forEach(eq => {
-                selLoc.add(new Option(eq, eq));
-                selVis.add(new Option(eq, eq));
-            });
-
-            selLoc.value = "New York Rangers"; selVis.value = "Los Angeles Kings";
-            document.getElementById('etiqueta-mercado-spread').innerText = "2. PUCK LINE (SPREAD MANUAL)";
-            document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
-
-            document.getElementById('linea-pl-loc').value = "-1.5";
-            document.getElementById('cuota-pl-loc').value = "2.85";
-            document.getElementById('linea-pl-vis').value = "1.5";
-            document.getElementById('cuota-pl-vis').value = "1.40";
-
-            document.getElementById('cuota-ml-loc').value = "1.73";
-            document.getElementById('cuota-ml-vis').value = "2.10";
-
-            document.getElementById('linea-total-goles').value = "5.5";
-            document.getElementById('cuota-over').value = "1.79";
-            document.getElementById('cuota-under').value = "1.98";
-            actualizarEscudos();
-        }
-
-        function cargarOpcionesNFL() {
-            const dic = EQUIPOS_NFL;
-            const selLoc = document.getElementById('select-local');
-            const selVis = document.getElementById('select-visitante');
-            selLoc.innerHTML = ''; selVis.innerHTML = '';
-
-            Object.keys(dic).sort().forEach(eq => {
-                selLoc.add(new Option(eq, eq));
-                selVis.add(new Option(eq, eq));
-            });
-
-            selLoc.value = "Philadelphia Eagles"; selVis.value = "Dallas Cowboys";
-            document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
-            document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
-
-            document.getElementById('linea-pl-loc').value = "-2.5";
-            document.getElementById('cuota-pl-loc').value = "1.90";
-            document.getElementById('linea-pl-vis').value = "2.5";
-            document.getElementById('cuota-pl-vis').value = "1.90";
-            document.getElementById('linea-total-goles').value = "46.5";
-            actualizarEscudos();
-        }
-
-        function cargarOpcionesNBA() {
-            const dic = EQUIPOS_NBA;
-            const selLoc = document.getElementById('select-local');
-            const selVis = document.getElementById('select-visitante');
-            selLoc.innerHTML = ''; selVis.innerHTML = '';
-
-            Object.keys(dic).sort().forEach(eq => {
-                selLoc.add(new Option(eq, eq));
-                selVis.add(new Option(eq, eq));
-            });
-
-            selLoc.value = "Boston Celtics"; selVis.value = "Denver Nuggets";
-            document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
-            document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
-
-            document.getElementById('linea-pl-loc').value = "-2.5";
-            document.getElementById('cuota-pl-loc').value = "1.90";
-            document.getElementById('linea-pl-vis').value = "2.5";
-            document.getElementById('cuota-pl-vis').value = "1.90";
-            document.getElementById('linea-total-goles').value = "224.5";
-            actualizarEscudos();
-        }
-
-        function cargarOpcionesMLB() {
-            const dic = EQUIPOS_MLB;
-            const selLoc = document.getElementById('select-local');
-            const selVis = document.getElementById('select-visitante');
-            selLoc.innerHTML = ''; selVis.innerHTML = '';
-
-            Object.keys(dic).sort().forEach(eq => {
-                selLoc.add(new Option(eq, eq));
-                selVis.add(new Option(eq, eq));
-            });
-
-            selLoc.value = "Los Angeles Dodgers"; selVis.value = "New York Yankees";
-            document.getElementById('etiqueta-mercado-spread').innerText = "2. RUN LINE (HANDICAP CARRERAS)";
-            document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE CARRERAS (OVER / UNDER)";
-
-            document.getElementById('linea-pl-loc').value = "-1.5";
-            document.getElementById('cuota-pl-loc').value = "2.10";
-            document.getElementById('linea-pl-vis').value = "1.5";
-            document.getElementById('cuota-pl-vis').value = "1.75";
-            document.getElementById('linea-total-goles').value = "8.5";
-            actualizarEscudos();
-        }
-
-        function actualizarEscudos() {
-            const loc = document.getElementById('select-local').value;
-            const vis = document.getElementById('select-visitante').value;
-
-            const imgLocElement = document.getElementById('img-local');
-            const imgVisElement = document.getElementById('img-visitante');
-
-            if (deporteActual === 'NHL') {
-                const codeLoc = EQUIPOS_NHL[loc] || "nhl";
-                const codeVis = EQUIPOS_NHL[vis] || "nhl";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nhl/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nhl/500/${codeVis}.png`;
-            } else if (deporteActual === 'NFL') {
-                const codeLoc = EQUIPOS_NFL[loc] || "nfl";
-                const codeVis = EQUIPOS_NFL[vis] || "nfl";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nfl/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nfl/500/${codeVis}.png`;
-            } else if (deporteActual === 'NBA') {
-                const codeLoc = EQUIPOS_NBA[loc] || "nba";
-                const codeVis = EQUIPOS_NBA[vis] || "nba";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nba/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nba/500/${codeVis}.png`;
-            } else {
-                const codeLoc = EQUIPOS_MLB[loc] || "mlb";
-                const codeVis = EQUIPOS_MLB[vis] || "mlb";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/mlb/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/mlb/500/${codeVis}.png`;
-            }
-
-            imgLocElement.onerror = function() {
-                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png";
-            };
-            imgVisElement.onerror = function() {
-                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png";
-            };
-
-            document.getElementById('name-local').innerText = loc;
-            document.getElementById('name-visitante').innerText = vis;
-        }
-
-        function volverHome() {
-            document.getElementById('view-simulador').classList.add('hidden');
-            document.getElementById('view-home').classList.remove('hidden');
-        }
-
-        function abrirModalHistorial(filtro) {
-            filtroHistorialActual = filtro || 'TODOS';
-            document.getElementById('modal-historial').classList.remove('hidden');
-            renderizarListaHistorial();
-        }
-
-        function filtrarHistorial(dep) {
-            filtroHistorialActual = dep;
-            document.getElementById('btn-f-todos').className = dep === 'TODOS' ? "px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-white" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
-            document.getElementById('btn-f-nhl').className = dep === 'NHL' ? "px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
-            document.getElementById('btn-f-nfl').className = dep === 'NFL' ? "px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
-            document.getElementById('btn-f-nba').className = dep === 'NBA' ? "px-3 py-1 rounded-lg text-xs font-bold bg-orange-500 text-slate-950" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
-            document.getElementById('btn-f-mlb').className = dep === 'MLB' ? "px-3 py-1 rounded-lg text-xs font-bold bg-yellow-400 text-slate-950" : "px-3 py-1 rounded-lg text-xs font-bold bg-slate-900 text-slate-400";
-            renderizarListaHistorial();
-        }
-
-        async function resolverPick(idPick, nuevoEstado) {
-            let picksLocal = obtenerPicksGuardados();
-            const idx = picksLocal.findIndex(p => p.id === idPick);
-            if(idx !== -1) {
-                picksLocal[idx].estado = nuevoEstado;
-                localStorage.setItem('picks_historial_local', JSON.stringify(picksLocal));
-            }
-
-            try {
-                if (idPick) {
-                    await fetch(`${SUPABASE_URL}/rest/v1/picks?id=eq.${idPick}`, {
-                        method: "PATCH",
-                        headers: {
-                            "apikey": SUPABASE_KEY,
-                            "Authorization": `Bearer ${SUPABASE_KEY}`,
-                            "Content-Type": "application/json",
-                            "Prefer": "return=minimal"
-                        },
-                        body: JSON.stringify({ estado: nuevoEstado })
-                    });
-                }
-            } catch(err) {}
-
-            await renderizarListaHistorial();
-            cargarMetricasYGraficas();
-        }
-
-        async function renderizarListaHistorial() {
-            const container = document.getElementById('lista-historial-content');
-            let picks = obtenerPicksGuardados();
-
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=*&order=id.desc`, {
-                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-                });
-                const picksSupa = await res.json();
-                if (picksSupa && Array.isArray(picksSupa) && picksSupa.length > 0) {
-                    picks = picksSupa;
-                }
-            } catch (err) {}
-
-            if (filtroHistorialActual !== 'TODOS') {
-                picks = picks.filter(p => (p.deporte || 'NHL').toUpperCase() === filtroHistorialActual);
-            }
-
-            if (!picks || picks.length === 0) {
-                container.innerHTML = `<p class="text-slate-400 text-center text-sm font-medium">Aún no hay apuestas registradas en ${filtroHistorialActual}.</p>`;
-                return;
-            }
-
-            container.innerHTML = picks.map(p => {
-                let badgeContent = "";
-                const idLabel = p.id ? `#${p.id}` : '#N/A';
-                
-                if (p.estado === "WIN") {
-                    badgeContent = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black border bg-emerald-500/20 text-emerald-400 border-emerald-500/40">GANADA ✅</span>`;
-                } else if (p.estado === "LOSS") {
-                    badgeContent = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black border bg-rose-500/20 text-rose-400 border-rose-500/40">PERDIDA ❌</span>`;
+            ["NHL", "NFL", "NBA", "MLB"].forEach(d => {
+                const b = document.getElementById(`tab-${d}`);
+                if (d === dep) {
+                    b.className = "px-4 py-1.5 rounded-md text-sm font-semibold transition-all bg-emerald-500 text-white";
                 } else {
-                    badgeContent = `
-                        <div class="flex gap-1.5 items-center">
-                            <button onclick="resolverPick(${p.id}, 'WIN')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg transition shadow">✅ WIN</button>
-                            <button onclick="resolverPick(${p.id}, 'LOSS')" class="bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg transition shadow">❌ LOSS</button>
-                        </div>
-                    `;
+                    b.className = "px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white";
                 }
+            });
 
-                return `
-                    <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex justify-between items-center">
-                        <div>
-                            <span class="text-[10px] text-slate-500 font-bold block">${idLabel} • ${p.fecha || 'N/A'} • ${p.deporte || 'NHL'}</span>
-                            <span class="font-montserrat font-bold text-xs text-white block">${p.equipo_local} vs ${p.equipo_visitante}</span>
-                            <span class="font-montserrat font-black text-xs text-mana-neon block mt-0.5">${p.pick_recomendado}</span>
-                        </div>
-                        <div class="text-right">${badgeContent}</div>
-                    </div>
-                `;
-            }).join('');
-        }
+            poblarEquipos(dep);
 
-        function cerrarModalHistorial() {
-            document.getElementById('modal-historial').classList.add('hidden');
-        }
+            const spreadLbl = document.getElementById('etiqueta-mercado-spread');
+            const totalLbl = document.getElementById('etiqueta-mercado-totales');
 
-        async function guardarPickEnHistorial(btnId, pickTexto, evTexto, local, visitante) {
-            const btnElement = document.getElementById(btnId);
-            if(!btnElement) return;
-
-            btnElement.disabled = true;
-            btnElement.innerText = "⏳ REGISTRANDO APUESTA...";
-
-            const nuevoPick = {
-                fecha: new Date().toISOString().split('T')[0],
-                deporte: deporteActual,
-                equipo_local: String(local),
-                equipo_visitante: String(visitante),
-                pick_recomendado: String(pickTexto),
-                ev_porcentaje: parseFloat(String(evTexto).replace(/[^0-9.-]/g, '')) || 0.0,
-                estado: "PENDING"
-            };
-
-            guardarPickEnLocal(nuevoPick);
-
-            try {
-                fetch(`${SUPABASE_URL}/rest/v1/picks`, {
-                    method: "POST",
-                    headers: {
-                        "apikey": SUPABASE_KEY,
-                        "Authorization": `Bearer ${SUPABASE_KEY}`,
-                        "Content-Type": "application/json",
-                        "Prefer": "return=minimal"
-                    },
-                    body: JSON.stringify(nuevoPick)
-                });
-            } catch (err) {}
-
-            setTimeout(() => {
-                btnElement.innerText = "✅ ¡APUESTA REGISTRADA EN HISTORIAL!";
-                btnElement.className = "w-full mt-3 bg-slate-800 text-mana-neon font-montserrat font-black text-xs py-3 rounded-xl uppercase border border-emerald-500/30 shadow-md";
-                cargarMetricasYGraficas();
-            }, 300);
-        }
-
-        async function cargarMetricasYGraficas() {
-            let picks = obtenerPicksGuardados();
-
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/picks?select=estado,deporte`, {
-                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-                });
-                const picksSupa = await res.json();
-                if(picksSupa && Array.isArray(picksSupa) && picksSupa.length > 0) { picks = picksSupa; }
-            } catch (err) {}
-
-            const nhlPicks = picks.filter(p => (p.deporte || 'NHL').toUpperCase() === 'NHL');
-            const nflPicks = picks.filter(p => (p.deporte || '').toUpperCase() === 'NFL');
-            const nbaPicks = picks.filter(p => (p.deporte || '').toUpperCase() === 'NBA');
-            const mlbPicks = picks.filter(p => (p.deporte || '').toUpperCase() === 'MLB');
-
-            function calcStats(lista) {
-                const wins = lista.filter(p => p.estado === 'WIN').length;
-                const losses = lista.filter(p => p.estado === 'LOSS').length;
-                const pending = lista.filter(p => p.estado === 'PENDING').length;
-                const fin = wins + losses;
-                const wr = fin > 0 ? Math.round((wins / fin) * 100) : 100;
-                return { total: lista.length, wins, losses, pending, wr };
+            if (dep === "NHL") {
+                spreadLbl.innerText = "2. PUCK LINE (HANDICAP)";
+                totalLbl.innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
+                document.getElementById('c-ml-loc').value = "1.75";
+                document.getElementById('c-ml-vis').value = "2.10";
+                document.getElementById('l-spread-loc').value = "-1.5";
+                document.getElementById('c-spread-loc').value = "2.80";
+                document.getElementById('l-spread-vis').value = "1.5";
+                document.getElementById('c-spread-vis').value = "1.42";
+                document.getElementById('l-total').value = "5.5";
+                document.getElementById('c-over').value = "1.85";
+                document.getElementById('c-under').value = "1.95";
+            } else if (dep === "MLB") {
+                spreadLbl.innerText = "2. RUN LINE (HANDICAP CARRERAS)";
+                totalLbl.innerText = "3. TOTAL DE CARRERAS (OVER / UNDER)";
+                document.getElementById('c-ml-loc').value = "1.80";
+                document.getElementById('c-ml-vis').value = "2.05";
+                document.getElementById('l-spread-loc').value = "-1.5";
+                document.getElementById('c-spread-loc').value = "2.20";
+                document.getElementById('l-spread-vis').value = "1.5";
+                document.getElementById('c-spread-vis').value = "1.68";
+                document.getElementById('l-total').value = "8.5";
+                document.getElementById('c-over').value = "1.90";
+                document.getElementById('c-under').value = "1.90";
+            } else if (dep === "NFL") {
+                spreadLbl.innerText = "2. POINT SPREAD";
+                totalLbl.innerText = "3. TOTAL DE PUNTOS";
+                document.getElementById('c-ml-loc').value = "1.90";
+                document.getElementById('c-ml-vis').value = "1.90";
+                document.getElementById('l-spread-loc').value = "-2.5";
+                document.getElementById('c-spread-loc').value = "1.90";
+                document.getElementById('l-spread-vis').value = "2.5";
+                document.getElementById('c-spread-vis').value = "1.90";
+                document.getElementById('l-total').value = "45.5";
+                document.getElementById('c-over').value = "1.90";
+                document.getElementById('c-under').value = "1.90";
+            } else if (dep === "NBA") {
+                spreadLbl.innerText = "2. POINT SPREAD";
+                totalLbl.innerText = "3. TOTAL DE PUNTOS";
+                document.getElementById('c-ml-loc').value = "1.90";
+                document.getElementById('c-ml-vis').value = "1.90";
+                document.getElementById('l-spread-loc').value = "-2.5";
+                document.getElementById('c-spread-loc').value = "1.90";
+                document.getElementById('l-spread-vis').value = "2.5";
+                document.getElementById('c-spread-vis').value = "1.90";
+                document.getElementById('l-total').value = "224.5";
+                document.getElementById('c-over').value = "1.90";
+                document.getElementById('c-under').value = "1.90";
             }
 
-            const nhl = calcStats(nhlPicks);
-            const nfl = calcStats(nflPicks);
-            const nba = calcStats(nbaPicks);
-            const mlb = calcStats(mlbPicks);
-
-            document.getElementById('nhl-stat-winrate').innerText = `${nhl.wr}%`;
-            document.getElementById('nhl-stat-totales').innerText = nhl.total;
-            document.getElementById('nhl-stat-wins').innerText = nhl.wins;
-            document.getElementById('nhl-stat-losses').innerText = nhl.losses;
-
-            document.getElementById('nfl-stat-winrate').innerText = `${nfl.wr}%`;
-            document.getElementById('nfl-stat-totales').innerText = nfl.total;
-            document.getElementById('nfl-stat-wins').innerText = nfl.wins;
-            document.getElementById('nfl-stat-losses').innerText = nfl.losses;
-
-            document.getElementById('nba-stat-winrate').innerText = `${nba.wr}%`;
-            document.getElementById('nba-stat-totales').innerText = nba.total;
-            document.getElementById('nba-stat-wins').innerText = nba.wins;
-            document.getElementById('nba-stat-losses').innerText = nba.losses;
-
-            document.getElementById('mlb-stat-winrate').innerText = `${mlb.wr}%`;
-            document.getElementById('mlb-stat-totales').innerText = mlb.total;
-            document.getElementById('mlb-stat-wins').innerText = mlb.wins;
-            document.getElementById('mlb-stat-losses').innerText = mlb.losses;
-
-            const finGlobal = nhl.wins + nfl.wins + nba.wins + mlb.wins + nhl.losses + nfl.losses + nba.losses + mlb.losses;
-            const wrGlobal = finGlobal > 0 ? Math.round(((nhl.wins + nfl.wins + nba.wins + mlb.wins) / finGlobal) * 100) : 100;
-            document.getElementById('win-rate-display').innerText = `${wrGlobal}%`;
-
-            const ctxNhl = document.getElementById('graficaNhl').getContext('2d');
-            if (chartNhl) { chartNhl.destroy(); }
-            chartNhl = new Chart(ctxNhl, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Ganadas', 'Perdidas', 'Pendientes'],
-                    datasets: [{
-                        data: [nhl.wins > 0 ? nhl.wins : 1, nhl.losses, nhl.pending > 0 ? nhl.pending : (nhl.total == 0 ? 1 : 0)],
-                        backgroundColor: ['#10B981', '#F43F5E', '#F59E0B'], borderWidth: 2, borderColor: '#FFFFFF'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
-            });
-
-            const ctxNfl = document.getElementById('graficaNfl').getContext('2d');
-            if (chartNfl) { chartNfl.destroy(); }
-            chartNfl = new Chart(ctxNfl, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Ganadas', 'Perdidas', 'Pendientes'],
-                    datasets: [{
-                        data: [nfl.wins > 0 ? nfl.wins : 1, nfl.losses, nfl.pending > 0 ? nfl.pending : (nfl.total == 0 ? 1 : 0)],
-                        backgroundColor: ['#F59E0B', '#F43F5E', '#3B82F6'], borderWidth: 2, borderColor: '#FFFFFF'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
-            });
-
-            const ctxNba = document.getElementById('graficaNba').getContext('2d');
-            if (chartNba) { chartNba.destroy(); }
-            chartNba = new Chart(ctxNba, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Ganadas', 'Perdidas', 'Pendientes'],
-                    datasets: [{
-                        data: [nba.wins > 0 ? nba.wins : 1, nba.losses, nba.pending > 0 ? nba.pending : (nba.total == 0 ? 1 : 0)],
-                        backgroundColor: ['#F97316', '#F43F5E', '#10B981'], borderWidth: 2, borderColor: '#FFFFFF'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
-            });
-
-            const ctxMlb = document.getElementById('graficaMlb').getContext('2d');
-            if (chartMlb) { chartMlb.destroy(); }
-            chartMlb = new Chart(ctxMlb, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Ganadas', 'Perdidas', 'Pendientes'],
-                    datasets: [{
-                        data: [mlb.wins > 0 ? mlb.wins : 1, mlb.losses, mlb.pending > 0 ? mlb.pending : (mlb.total == 0 ? 1 : 0)],
-                        backgroundColor: ['#FACC15', '#F43F5E', '#10B981'], borderWidth: 2, borderColor: '#FFFFFF'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
-            });
+            document.getElementById("contenedor-resultados").classList.add("hidden");
         }
 
         async function ejecutarSimulacionLive() {
-            const btn = document.getElementById('btn-analizar');
-            const resContainer = document.getElementById('resultado-container');
-            const local = document.getElementById('select-local').value;
-            const visitante = document.getElementById('select-visitante').value;
+            const loc = document.getElementById("sel-local").value;
+            const vis = document.getElementById("sel-visitante").value;
 
-            const cMlLoc = parseFloat(document.getElementById('cuota-ml-loc').value) || 1.84;
-            const cMlVis = parseFloat(document.getElementById('cuota-ml-vis').value) || 1.96;
-            
-            const lPlLoc = parseFloat(document.getElementById('linea-pl-loc').value) || -1.5;
-            const cPlLoc = parseFloat(document.getElementById('cuota-pl-loc').value) || 1.90;
-            const lPlVis = parseFloat(document.getElementById('linea-pl-vis').value) || 1.5;
-            const cPlVis = parseFloat(document.getElementById('cuota-pl-vis').value) || 1.90;
+            if (loc === vis) {
+                alert("Selecciona dos equipos diferentes.");
+                return;
+            }
 
-            const lTotal = parseFloat(document.getElementById('linea-total-goles').value) || 5.5;
-            const cOver = parseFloat(document.getElementById('cuota-over').value) || 1.90;
-            const cUnder = parseFloat(document.getElementById('cuota-under').value) || 1.90;
+            const c_ml_loc = parseFloat(document.getElementById("c-ml-loc").value) || 1.90;
+            const c_ml_vis = parseFloat(document.getElementById("c-ml-vis").value) || 1.90;
+            const l_sp_loc = parseFloat(document.getElementById("l-spread-loc").value) || -1.5;
+            const c_sp_loc = parseFloat(document.getElementById("c-spread-loc").value) || 1.90;
+            const l_sp_vis = parseFloat(document.getElementById("l-spread-vis").value) || 1.5;
+            const c_sp_vis = parseFloat(document.getElementById("c-spread-vis").value) || 1.90;
+            const l_tot = parseFloat(document.getElementById("l-total").value) || 5.5;
+            const c_ov = parseFloat(document.getElementById("c-over").value) || 1.90;
+            const c_un = parseFloat(document.getElementById("c-under").value) || 1.90;
 
-            btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">EVALUANDO MERCADOS CON MONTE CARLO...</span>`;
-            resContainer.classList.add('hidden');
+            document.getElementById("loader").classList.remove("hidden");
+            document.getElementById("contenedor-resultados").classList.add("hidden");
 
-            let endpoint = '/api/analizar-nhl';
-            if (deporteActual === 'NFL') endpoint = '/api/analizar-nfl';
-            if (deporteActual === 'NBA') endpoint = '/api/analizar-nba';
-            if (deporteActual === 'MLB') endpoint = '/api/analizar-mlb';
+            let endpoint = "";
+            let params = new URLSearchParams();
+            params.append("local", loc);
+            params.append("visitante", vis);
+            params.append("c_ml_loc", c_ml_loc);
+            params.append("c_ml_vis", c_ml_vis);
+            params.append("l_total", l_tot);
+            params.append("c_over", c_ov);
+            params.append("c_under", c_un);
 
-            const paramSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'l_rl_loc' : 'l_spread_loc';
-            const paramSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'l_rl_vis' : 'l_spread_vis';
-            const paramCuotaSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'c_rl_loc' : 'c_spread_loc';
-            const paramCuotaSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? 'c_rl_vis' : 'c_spread_vis';
+            if (deporteActual === "NHL" || deporteActual === "MLB") {
+                endpoint = deporteActual === "NHL" ? "/api/analizar-nhl" : "/api/analizar-mlb";
+                params.append("l_rl_loc", l_sp_loc);
+                params.append("c_rl_loc", c_sp_loc);
+                params.append("l_rl_vis", l_sp_vis);
+                params.append("c_rl_vis", c_sp_vis);
+            } else {
+                endpoint = deporteActual === "NFL" ? "/api/analizar-nfl" : "/api/analizar-nba";
+                params.append("l_spread_loc", l_sp_loc);
+                params.append("c_spread_loc", c_sp_loc);
+                params.append("l_spread_vis", l_sp_vis);
+                params.append("c_spread_vis", c_sp_vis);
+            }
 
             try {
-                const url = `${RENDER_API_URL}${endpoint}?local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}&c_ml_loc=${cMlLoc}&c_ml_vis=${cMlVis}&${paramSpreadLoc}=${lPlLoc}&${paramCuotaSpreadLoc}=${cPlLoc}&${paramSpreadVis}=${lPlVis}&${paramCuotaSpreadVis}=${cPlVis}&l_total=${lTotal}&c_over=${cOver}&c_under=${cUnder}`;
-                const response = await fetch(url);
-                const d = await response.json();
-
-                btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀`;
-
-                const dataSpreadLoc = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_local || d.runline_local) : d.spread_local;
-                const dataSpreadVis = (deporteActual === 'NHL' || deporteActual === 'MLB') ? (d.pl_visitante || d.runline_visitante) : d.spread_visitante;
-
-                const strSignLoc = lPlLoc > 0 ? `+${lPlLoc}` : `${lPlLoc}`;
-                const strSignVis = lPlVis > 0 ? `+${lPlVis}` : `${lPlVis}`;
-                const labelSpreadLoc = `${d.equipo_local_abbr} ${strSignLoc}`;
-                const labelSpreadVis = `${d.equipo_visitante_abbr} ${strSignVis}`;
-
-                function calcEV(probPercent, odds) {
-                    const probDecimal = probPercent / 100.0;
-                    return Math.round(((probDecimal * odds) - 1.0) * 1000) / 10.0;
-                }
-
-                let probSpreadLoc = dataSpreadLoc.prob;
-                let probSpreadVis = dataSpreadVis.prob;
-
-                if (lPlLoc < 0 && probSpreadLoc > d.ml_local.prob) {
-                    probSpreadLoc = Math.round(d.ml_local.prob * 0.55 * 10) / 10;
-                    probSpreadVis = Math.round((100.0 - probSpreadLoc) * 10) / 10;
-                } else if (lPlVis < 0 && probSpreadVis > d.ml_visitante.prob) {
-                    probSpreadVis = Math.round(d.ml_visitante.prob * 0.55 * 10) / 10;
-                    probSpreadLoc = Math.round((100.0 - probSpreadVis) * 10) / 10;
-                }
-
-                let opciones = [
-                    { tipo: 'ML', titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: calcEV(d.ml_local.prob, cMlLoc), cuota: cMlLoc, prob: d.ml_local.prob },
-                    { tipo: 'ML', titulo: `${d.equipo_visitante_abbr} ML @ ${cMlVis}`, desc: `${visitante} ML`, ev: calcEV(d.ml_visitante.prob, cMlVis), cuota: cMlVis, prob: d.ml_visitante.prob },
-                    { tipo: 'SPREAD', titulo: `${labelSpreadLoc} @ ${cPlLoc}`, desc: labelSpreadLoc, ev: calcEV(probSpreadLoc, cPlLoc), cuota: cPlLoc, prob: probSpreadLoc },
-                    { tipo: 'SPREAD', titulo: `${labelSpreadVis} @ ${cPlVis}`, desc: labelSpreadVis, ev: calcEV(probSpreadVis, cPlVis), cuota: cPlVis, prob: probSpreadVis },
-                    { tipo: 'TOTAL', titulo: `OVER ${d.total_over.linea} @ ${cOver}`, desc: `OVER ${d.total_over.linea}`, ev: calcEV(d.total_over.prob, cOver), cuota: cOver, prob: d.total_over.prob },
-                    { tipo: 'TOTAL', titulo: `UNDER ${d.total_under.linea} @ ${cUnder}`, desc: `UNDER ${d.total_under.linea}`, ev: calcEV(d.total_under.prob, cUnder), cuota: cUnder, prob: d.total_under.prob }
-                ];
-
-                const projTotal = d.total_goles_proyectado || d.total_puntos_proyectado || d.total_carreras_proyectado || lTotal;
-                if (projTotal > (lTotal + 0.3)) {
-                    const uIdx = opciones.findIndex(o => o.titulo.includes('UNDER'));
-                    if (uIdx !== -1 && opciones[uIdx].ev > 0) opciones[uIdx].ev = -0.1;
-                } else if (projTotal < (lTotal - 0.3)) {
-                    const oIdx = opciones.findIndex(o => o.titulo.includes('OVER'));
-                    if (oIdx !== -1 && opciones[oIdx].ev > 0) opciones[oIdx].ev = -0.1;
-                }
-
-                opciones.sort((a, b) => b.ev - a.ev);
-
-                const mejoresPicks = opciones.filter(o => o.ev >= 2.0);
-                let bannerSinValor = "";
-                if (mejoresPicks.length === 0) {
-                    bannerSinValor = `
-                        <div class="bg-rose-950/80 border-2 border-rose-500 text-rose-200 p-4 rounded-2xl mb-4 text-center font-bold text-xs">
-                            ⚠️ PARTIDO SIN APUESTA RECOMENDADA: El casino tiene el margen matemático a su favor en las 6 líneas. Se recomienda abstenerse.
-                        </div>
-                    `;
-                }
-
-                function renderTarjetaApilada(opc, index) {
-                    const btnId = `btn-card-market-${index}`;
-                    let bgCard = "bg-slate-950/80 border border-slate-800 opacity-80";
-                    let bgBadge = "bg-slate-800 text-slate-400";
-                    let textoBadge = `SIN VALOR ⚠️`;
-                    let textEvColor = "text-rose-400";
-                    let btnColor = "bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700";
-
-                    if (opc.ev >= 5.0 && index === 0) {
-                        bgCard = "bg-emerald-950/70 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)] opacity-100";
-                        bgBadge = "bg-emerald-400 text-slate-950 font-black";
-                        textoBadge = "BET 🔥 VALOR DETECTADO";
-                        textEvColor = "text-emerald-300";
-                        btnColor = "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black";
-                    } else if (opc.ev >= 2.0) {
-                        bgCard = "bg-amber-950/70 border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)] opacity-100";
-                        bgBadge = "bg-amber-400 text-slate-950 font-black";
-                        textoBadge = "MAYBE ⚡ VALOR MODERADO";
-                        textEvColor = "text-amber-300";
-                        btnColor = "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black";
-                    }
-
-                    const evTextoFormatted = opc.ev > 0 ? `(+${opc.ev}% EV)` : `(${opc.ev}% EV)`;
-
-                    return `
-                    <div class="${bgCard} p-4 rounded-2xl shadow-lg transition">
-                        <div class="flex justify-between items-start mb-1">
-                            <div>
-                                <span class="${bgBadge} text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider block w-fit mb-1 font-bold">${textoBadge}</span>
-                                <span class="font-montserrat text-base md:text-lg font-black text-white block">${opc.titulo}</span>
-                            </div>
-                            <span class="font-montserrat text-sm md:text-base font-black ${textEvColor}">${evTextoFormatted}</span>
-                        </div>
-                        
-                        <div class="flex items-center justify-between text-xs my-2 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
-                            <span class="text-slate-400 font-bold">Probabilidad Real:</span>
-                            <span class="font-montserrat font-black text-white">${opc.prob}%</span>
-                        </div>
-
-                        <button id="${btnId}" onclick="guardarPickEnHistorial('${btnId}', '${opc.titulo}', '${evTextoFormatted}', '${local}', '${visitante}')" class="w-full mt-2 ${btnColor} font-montserrat font-black text-xs py-3 rounded-xl uppercase transition shadow-md">
-                            📌 REGISTRAR EN HISTORIAL
-                        </button>
-                    </div>`;
-                }
-
-                // RENDERIZADO DINÁMICO DE PROPS SEGÚN EL DEPORTE
-                let htmlPropsBloque = "";
-                if (d.props_jugadores && d.props_jugadores.length > 0) {
-                    const ligaPath = deporteActual.toLowerCase();
-                    htmlPropsBloque = `
-                        <div class="mt-6 pt-5 border-t border-slate-800">
-                            <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider mb-4 flex items-center gap-2">
-                                🎯 TOP 6 PROPS DE JUGADORES RECOMENDADAS (+EV)
-                            </span>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${d.props_jugadores.map((p, i) => {
-                                    const esBet = p.ev >= 10.0;
-                                    const badgeTxt = esBet ? "BET 🔥 VALOR DETECTADO" : "MAYBE ⚡ VALOR MODERADO";
-                                    const badgeClass = esBet 
-                                        ? "bg-emerald-400 text-slate-950 font-black" 
-                                        : "bg-amber-400 text-slate-950 font-black";
-                                    const cardBorder = esBet 
-                                        ? "border-emerald-400/80 shadow-[0_0_15px_rgba(52,211,153,0.2)] bg-emerald-950/30" 
-                                        : "border-amber-400/80 shadow-[0_0_15px_rgba(251,191,36,0.2)] bg-amber-950/30";
-                                    const textEvClass = esBet ? "text-emerald-300" : "text-amber-300";
-                                    const btnColorClass = esBet 
-                                        ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black" 
-                                        : "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black";
-                                    const logoUrl = `https://a.espncdn.com/i/teamlogos/${ligaPath}/500/${p.equipo_abbr || ligaPath}.png`;
-
-                                    return `
-                                    <div class="bg-slate-950 p-4 rounded-2xl border-2 ${cardBorder} flex flex-col justify-between shadow-xl transition transform hover:-translate-y-0.5">
-                                        <div>
-                                            <div class="flex justify-between items-center mb-2.5">
-                                                <span class="${badgeClass} text-[9px] px-2.5 py-0.5 rounded-md uppercase tracking-wider block font-black">
-                                                    ${badgeTxt}
-                                                </span>
-                                                <span class="font-montserrat font-black text-sm ${textEvClass}">
-                                                    +${p.ev}% EV
-                                                </span>
-                                            </div>
-
-                                            <div class="flex items-center gap-2.5 mb-2">
-                                                <img src="${logoUrl}" class="w-8 h-8 object-contain drop-shadow" onerror="this.src='https://a.espncdn.com/i/teamlogos/leagues/500/${ligaPath}.png'">
-                                                <div>
-                                                    <span class="font-montserrat font-extrabold text-sm text-white block leading-tight">
-                                                        ${p.jugador}
-                                                    </span>
-                                                    <span class="text-[11px] text-slate-300 block mt-0.5">
-                                                        ${p.lado} <b class="text-white">${p.linea}</b> ${p.tipo_prop} @ <b class="text-mana-neon font-mono">${p.cuota}</b>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="mt-2">
-                                            <div class="flex justify-between text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1.5 rounded-xl border border-slate-800 mb-2">
-                                                <span>Proy: <b class="text-white font-mono">${p.proyeccion}</b></span>
-                                                <span>Prob. Real: <b class="text-white font-mono">${p.prob_real}%</b></span>
-                                            </div>
-                                            <button id="btn-prop-${i}" onclick="guardarPickEnHistorial('btn-prop-${i}', '${p.jugador}: ${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}', '+${p.ev}% EV', '${local}', '${visitante}')" class="w-full ${btnColorClass} text-[10px] font-montserrat font-black py-2.5 rounded-xl uppercase transition shadow-md">
-                                                📌 REGISTRAR EN HISTORIAL
-                                            </button>
-                                        </div>
-                                    </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                resContainer.innerHTML = `
-                    ${bannerSinValor}
-                    <div class="mb-6 space-y-4">
-                        ${opciones.map((o, idx) => renderTarjetaApilada(o, idx)).join('')}
-                    </div>
-
-                    ${htmlPropsBloque}
-
-                    <div class="flex justify-between items-center border-t border-b border-slate-800 py-3 my-4">
-                        <div class="flex items-center gap-3">
-                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_local_abbr}</span>
-                            <span class="text-xs text-slate-500 font-bold">VS</span>
-                            <span class="font-montserrat font-black text-lg text-white">${d.equipo_visitante_abbr}</span>
-                        </div>
-                        <span class="text-xs text-slate-400 font-bold">Proyección ${d.proyeccion_goles || d.proyeccion_puntos || d.proyeccion_carreras} • Total ${projTotal}</span>
-                    </div>
-
-                    <p class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800">
-                        ${d.resumen_explicado || 'Simulación Monte Carlo completada con éxito.'}
-                    </p>
-                `;
-                resContainer.classList.remove('hidden');
+                const res = await fetch(`${BACKEND_URL}${endpoint}?${params.toString()}`);
+                const data = await res.json();
+                renderizarResultados(data, loc, vis);
             } catch (err) {
-                btn.disabled = false;
-                btn.innerHTML = `EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀`;
-                alert("Error de conexión con Render.");
+                alert("Error de conexión con el backend: " + err.message);
+            } finally {
+                document.getElementById("loader").classList.add("hidden");
             }
         }
+
+        function renderizarResultados(data, loc, vis) {
+            document.getElementById("resumen-matchup").innerText = `${loc} vs ${vis}`;
+            const projLoc = data.proyeccion_local || data.goles_esperados_local || data.puntos_esperados_local || 0;
+            const projVis = data.proyeccion_visita || data.goles_esperados_visita || data.puntos_esperados_visita || 0;
+            const total = (projLoc + projVis).toFixed(1);
+            document.getElementById("resumen-marcador").innerText = `${projLoc} - ${projVis} (Total: ${total})`;
+
+            const grid = document.getElementById("grid-props");
+            grid.innerHTML = "";
+
+            const props = data.props_jugadores || [];
+
+            if (props.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-8 text-center text-gray-500 font-medium">No se detectaron props con valor (+EV) suficiente en este momento para este encuentro.</div>`;
+            } else {
+                props.forEach(p => {
+                    const ligaPath = deporteActual.toLowerCase();
+                    const logoUrl = `https://a.espncdn.com/i/teamlogos/${ligaPath}/500/${p.equipo_abbr || ligaPath}.png`;
+                    
+                    grid.innerHTML += `
+                        <div class="bg-gray-900 border border-gray-700/80 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-500 transition">
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded">VALOR DETECTADO</span>
+                                    <span class="text-xs font-bold text-emerald-400">+${p.ev}% EV</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <img src="${logoUrl}" class="w-8 h-8 object-contain" onerror="this.src='https://a.espncdn.com/i/teamlogos/default-team-logo-500.png'">
+                                    <div>
+                                        <p class="font-bold text-white text-sm">${p.jugador}</p>
+                                        <p class="text-xs text-gray-400 font-semibold mt-0.5">${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-4 border-t border-gray-800 pt-2 font-mono">
+                                    <span>Proy: <strong class="text-gray-200">${p.proyeccion}</strong></span>
+                                    <span>Prob: <strong class="text-gray-200">${p.prob_real}%</strong></span>
+                                </div>
+                            </div>
+                            <button onclick="guardarEnHistorial('${p.jugador}: ${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}', '${loc} vs ${vis}')" class="w-full mt-4 bg-gray-800 hover:bg-emerald-500 hover:text-gray-900 text-gray-300 font-bold py-1.5 rounded-lg text-xs transition flex justify-center items-center gap-1.5">
+                                <i class="fa-solid fa-thumbtack text-[10px]"></i> REGISTRAR EN HISTORIAL
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById("contenedor-resultados").classList.remove("hidden");
+        }
+
+        function guardarEnHistorial(propTexto, matchup) {
+            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
+            const nuevo = {
+                id: Date.now(),
+                fecha: new Date().toISOString().split('T')[0],
+                deporte: deporteActual,
+                matchup: matchup,
+                pick: propTexto,
+                resultado: "PENDIENTE"
+            };
+            hist.unshift(nuevo);
+            localStorage.setItem("historial_picks", JSON.stringify(hist));
+            alert("Pick registrado exitosamente en el historial.");
+        }
+
+        function filtrarHistorialPor(dep) {
+            filtroHistorialActual = dep;
+            ["TODOS", "NHL", "NFL", "NBA", "MLB"].forEach(d => {
+                const b = document.getElementById(`filtro-${d}`);
+                if (b) {
+                    if (d === dep) {
+                        b.className = "px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-gray-900";
+                    } else {
+                        b.className = "px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700";
+                    }
+                }
+            });
+            renderizarListaHistorial();
+        }
+
+        function abrirModalHistorial() {
+            filtrarHistorialPor("TODOS");
+            document.getElementById("modal-historial").classList.remove("hidden");
+        }
+
+        function renderizarListaHistorial() {
+            const contenedor = document.getElementById("lista-historial");
+            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
+
+            if (filtroHistorialActual !== "TODOS") {
+                hist = hist.filter(h => h.deporte === filtroHistorialActual);
+            }
+
+            contenedor.innerHTML = "";
+
+            if (hist.length === 0) {
+                contenedor.innerHTML = `<p class='text-gray-500 text-center py-8'>No hay apuestas registradas en ${filtroHistorialActual}.</p>`;
+            } else {
+                hist.forEach(h => {
+                    contenedor.innerHTML += `
+                        <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700 flex justify-between items-center gap-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-mono font-bold">${h.deporte}</span>
+                                    <span class="text-xs text-gray-400">${h.fecha}</span>
+                                </div>
+                                <p class="text-xs text-gray-400 font-medium">${h.matchup}</p>
+                                <p class="text-sm font-bold text-white mt-0.5">${h.pick}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="marcarResultado(${h.id}, 'GANADA')" class="px-2.5 py-1 text-xs font-bold rounded ${h.resultado === 'GANADA' ? 'bg-emerald-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-emerald-600'}">GANADA</button>
+                                <button onclick="marcarResultado(${h.id}, 'PERDIDA')" class="px-2.5 py-1 text-xs font-bold rounded ${h.resultado === 'PERDIDA' ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-red-600'}">PERDIDA</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function marcarResultado(id, res) {
+            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
+            hist = hist.map(h => h.id === id ? { ...h, resultado: res } : h);
+            localStorage.setItem("historial_picks", JSON.stringify(hist));
+            renderizarListaHistorial();
+        }
+
+        function cerrarModalHistorial() {
+            document.getElementById("modal-historial").classList.add("hidden");
+        }
+
+        function limpiarHistorial() {
+            if (confirm("¿Estás seguro de que deseas eliminar todo el historial de picks?")) {
+                localStorage.removeItem("historial_picks");
+                renderizarListaHistorial();
+            }
+        }
+
+        window.onload = () => {
+            cambiarDeporte("NHL");
+        };
     </script>
 </body>
 </html>
