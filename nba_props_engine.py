@@ -16,8 +16,6 @@ MAPEO_EQUIPOS_NBA = {
     "Washington Wizards": "was"
 }
 
-# Base de estadísticas oficiales de rotación activa (Temporada Regular 2025-2026)
-# Extraídas directamente para evitar bloqueos 403 de ESPN en servidores Cloud
 STATS_LIDERES_NBA = {
     "ind": [
         {"nombre": "Pascal Siakam", "Puntos": 20.8, "Rebotes": 6.9, "Asistencias": 3.8, "Triples": 1.4},
@@ -58,7 +56,6 @@ _PROPS_CACHE = {}
 
 def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
     linea = math.floor(media_real) + 0.5
-    cuota = 1.88
 
     if tipo_prop in ["Puntos", "Rebotes"]:
         cv = 0.22 if tipo_prop == "Puntos" else 0.26
@@ -76,7 +73,20 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
     es_over = prob_over >= prob_under
     prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.51, min(0.66, prob_sel))
+
+    # Límites empíricos de probabilidad real sin inflar
+    prob_sel = max(0.48, min(0.74, prob_sel))
+
+    # Asignación de cuota de mercado proporcional (desde 1.62 hasta 1.90)
+    # A mayor probabilidad natural esperada, menor es la cuota del casino
+    if prob_sel >= 0.68:
+        cuota = 1.65
+    elif prob_sel >= 0.64:
+        cuota = 1.72
+    elif prob_sel >= 0.60:
+        cuota = 1.80
+    else:
+        cuota = 1.88
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
@@ -91,7 +101,7 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_vFinal"
+    cache_key = f"{local}_{visitante}_props_cuota160_v1"
     if cache_key in _PROPS_CACHE:
         return _PROPS_CACHE[cache_key]
 
@@ -100,13 +110,12 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
 
     jugadores_pool = []
 
-    # 1. Intentar consultar ESPN en tiempo real con headers de navegador
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
 
     try:
-        url_espn = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
+        url_espn = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
         r = requests.get(url_espn, headers=headers, timeout=4)
         if r.status_code == 200:
             events = r.json().get("events", [])
@@ -132,8 +141,6 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     except Exception:
         pass
 
-    # 2. Si ESPN no tiene el partido activo en vivo o bloqueó la IP de Render,
-    # usa la base real de rotación activa de la temporada para ambos equipos:
     if not jugadores_pool:
         l_loc = STATS_LIDERES_NBA.get(abbr_loc, STATS_LIDERES_NBA.get("ind", []))
         l_vis = STATS_LIDERES_NBA.get(abbr_vis, STATS_LIDERES_NBA.get("was", []))
@@ -146,27 +153,38 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
             copia["equipo"] = abbr_vis.upper()
             jugadores_pool.append(copia)
 
-    # 3. Cálculo de probabilidades y +EV cuantitativo
     candidatas = []
     for j in jugadores_pool:
         for tipo in ["Puntos", "Rebotes", "Asistencias", "Triples"]:
             if tipo in j and j[tipo] > 0:
                 media = j[tipo]
                 c = _calcular_prop_cuantitativa(media, tipo)
-                candidatas.append({
-                    "jugador": j["nombre"],
-                    "equipo_abbr": j["equipo"],
-                    "tipo_prop": tipo,
-                    "lado": c["lado"],
-                    "linea": c["linea"],
-                    "cuota": c["cuota"],
-                    "prob_real": c["prob_real"],
-                    "ev": c["ev"],
-                    "proyeccion": c["proyeccion"]
-                })
 
-    candidatas.sort(key=lambda x: x["ev"], reverse=True)
+                # FILTROS ESTRICTOS DE ALTA CONFIABILIDAD:
+                # 1. Probabilidad Real >= 60.0%
+                # 2. Margen matemático positivo (+EV >= 3.0%)
+                # 3. Cuotas viables desde 1.60 en adelante
+                if c["prob_real"] >= 60.0 and c["ev"] >= 3.0 and c["cuota"] >= 1.60:
+                    score_confianza = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
+                    candidatas.append({
+                        "jugador": j["nombre"],
+                        "equipo_abbr": j["equipo"],
+                        "tipo_prop": tipo,
+                        "lado": c["lado"],
+                        "linea": c["linea"],
+                        "cuota": c["cuota"],
+                        "prob_real": c["prob_real"],
+                        "ev": c["ev"],
+                        "proyeccion": c["proyeccion"],
+                        "_score": score_confianza
+                    })
+
+    # Jerarquización por Confiabilidad Real
+    candidatas.sort(key=lambda x: x["_score"], reverse=True)
+
+    for item in candidatas:
+        item.pop("_score", None)
+
     seleccion = candidatas[:top_n]
-
     _PROPS_CACHE[cache_key] = seleccion
     return seleccion
