@@ -17,28 +17,30 @@ EQUIPOS_NBA_ESPN = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json"
 }
 
 _PROPS_CACHE = {}
 
 
-def _extraer_stats_equipo_nba(team_id, abbr):
+def _extraer_atletas_reales_nba(team_id, abbr):
+    """Consulta la API de ESPN para extraer los atletas activos con sus estadísticas reales."""
     jugadores = {}
-    
-    # 1. Feed primario de líderes oficiales de equipo
-    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}?enable=leaders"
+
+    # Método 1: Leaders oficiales de la franquicia en ESPN
+    url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}?enable=leaders"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=4)
+        r = requests.get(url_leaders, headers=HEADERS, timeout=4)
         if r.status_code == 200:
-            cats = r.json().get("team", {}).get("leaders", [])
-            for c in cats:
-                cat_name = c.get("name", "").lower()
+            leaders = r.json().get("team", {}).get("leaders", [])
+            for c in leaders:
+                c_name = c.get("name", "").lower()
                 tipo = None
-                if "point" in cat_name or "pts" in cat_name: tipo = "Puntos"
-                elif "rebound" in cat_name or "reb" in cat_name: tipo = "Rebotes"
-                elif "assist" in cat_name or "ast" in cat_name: tipo = "Asistencias"
-                
+                if "point" in c_name or "pts" in c_name: tipo = "Puntos"
+                elif "rebound" in c_name or "reb" in c_name: tipo = "Rebotes"
+                elif "assist" in c_name or "ast" in c_name: tipo = "Asistencias"
+
                 if tipo:
                     for l in c.get("leaders", []):
                         nom = l.get("athlete", {}).get("displayName")
@@ -50,11 +52,11 @@ def _extraer_stats_equipo_nba(team_id, abbr):
     except Exception:
         pass
 
-    # 2. Feed secundario si el primero no devolvió suficientes atletas
+    # Método 2: Roster con promedios por atleta en caso de faltar categorías
     if len(jugadores) < 2:
         try:
-            url_alt = f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/teams/{team_id}/athletes/statistics"
-            r2 = requests.get(url_alt, headers=HEADERS, timeout=4)
+            url_roster = f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/teams/{team_id}/athletes/statistics"
+            r2 = requests.get(url_roster, headers=HEADERS, timeout=4)
             if r2.status_code == 200:
                 for cat in r2.json().get("categories", []):
                     for ath in cat.get("athletes", []):
@@ -76,6 +78,7 @@ def _extraer_stats_equipo_nba(team_id, abbr):
 
 
 def _calcular_prop_nba(media_real, tipo_prop):
+    # La línea de mercado (.5) se define a partir de su media real
     linea = math.floor(media_real) + 0.5
 
     if tipo_prop in ["Puntos", "Rebotes"]:
@@ -91,13 +94,14 @@ def _calcular_prop_nba(media_real, tipo_prop):
         prob_over = 1.0 - prob_under
 
     es_over = prob_over >= prob_under
-    prob_sel = max(0.51, min(0.75, prob_over if es_over else prob_under))
+    prob_sel = max(0.51, min(0.76, prob_over if es_over else prob_under))
 
-    if prob_sel >= 0.68: cuota = 1.65
-    elif prob_sel >= 0.64: cuota = 1.72
-    elif prob_sel >= 0.60: cuota = 1.80
-    elif prob_sel >= 0.55: cuota = 1.86
-    else: cuota = 1.91
+    # Cuotas según certeza real
+    if prob_sel >= 0.70: cuota = 1.55
+    elif prob_sel >= 0.65: cuota = 1.65
+    elif prob_sel >= 0.60: cuota = 1.75
+    elif prob_sel >= 0.55: cuota = 1.84
+    else: cuota = 1.90
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
@@ -116,7 +120,7 @@ def _calcular_prop_nba(media_real, tipo_prop):
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    key = f"{local}_{visitante}_nba_props"
+    key = f"{local}_{visitante}_nba_props_clean"
     now = time.time()
     if key in _PROPS_CACHE:
         ts, data = _PROPS_CACHE[key]
@@ -131,14 +135,14 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     abbr_loc, id_loc = d_loc
     abbr_vis, id_vis = d_vis
 
-    pool = _extraer_stats_equipo_nba(id_loc, abbr_loc) + _extraer_stats_equipo_nba(id_vis, abbr_vis)
+    pool = _extraer_atletas_reales_nba(id_loc, abbr_loc) + _extraer_atletas_reales_nba(id_vis, abbr_vis)
     todas = []
 
     for j in pool:
         for tipo in ["Puntos", "Rebotes", "Asistencias", "Triples"]:
             if tipo in j and j[tipo] > 0:
                 c = _calcular_prop_nba(j[tipo], tipo)
-                score = (c["prob_real"] * 0.70) + (c["ev"] * 0.30)
+                score = (c["prob_real"] * 0.75) + (c["ev"] * 0.25)
                 todas.append({
                     "jugador": j["nombre"],
                     "equipo_abbr": j["equipo"],
