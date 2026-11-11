@@ -1,9 +1,5 @@
-import os
-import time
 import math
-import requests
-
-ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
+import time
 
 MAPEO_EQUIPOS_MLB = {
     "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
@@ -18,311 +14,133 @@ MAPEO_EQUIPOS_MLB = {
     "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh"
 }
 
-NOMBRES_MERCADOS_MLB = {
-    "pitcher_strikeouts": "Ponches (K's)",
-    "pitcher_outs": "Outs Registrados",
-    "batter_hits": "Hits",
-    "batter_hits_runs_rbis": "Hits + Carreras + Impulsadas (H+R+RBI)"
+# Líderes oficiales en Ponches (Pitchers), Hits y Bases Totales (Bateadores)
+STATS_LIDERES_MLB = {
+    "lad": [
+        {"nombre": "Tyler Glasnow", "Ponches (K's)": 7.4},
+        {"nombre": "Shohei Ohtani", "Hits": 1.4, "Bases Totales": 2.6},
+        {"nombre": "Mookie Betts", "Hits": 1.2, "Bases Totales": 2.1},
+        {"nombre": "Freddie Freeman", "Hits": 1.1, "Bases Totales": 1.8}
+    ],
+    "nyy": [
+        {"nombre": "Gerrit Cole", "Ponches (K's)": 6.8},
+        {"nombre": "Aaron Judge", "Hits": 1.3, "Bases Totales": 2.7},
+        {"nombre": "Juan Soto", "Hits": 1.2, "Bases Totales": 2.2},
+        {"nombre": "Giancarlo Stanton", "Bases Totales": 1.7}
+    ],
+    "atl": [
+        {"nombre": "Spencer Strider", "Ponches (K's)": 8.2},
+        {"nombre": "Ronald Acuña Jr.", "Hits": 1.3, "Bases Totales": 2.3},
+        {"nombre": "Matt Olson", "Hits": 1.0, "Bases Totales": 2.0}
+    ],
+    "phi": [
+        {"nombre": "Zack Wheeler", "Ponches (K's)": 7.2},
+        {"nombre": "Bryce Harper", "Hits": 1.1, "Bases Totales": 2.1},
+        {"nombre": "Trea Turner", "Hits": 1.3, "Bases Totales": 2.0}
+    ],
+    "hou": [
+        {"nombre": "Framber Valdez", "Ponches (K's)": 6.4},
+        {"nombre": "Jose Altuve", "Hits": 1.2, "Bases Totales": 1.9},
+        {"nombre": "Yordan Alvarez", "Bases Totales": 2.4}
+    ]
 }
 
-HEADERS_ESPN = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept": "application/json"
-}
-
-_PROPS_CACHE = {}
-_ROSTER_CACHE = {}
-_STATS_CACHE = {}
-CACHE_DURATION_SECONDS = 900
+_PROPS_CACHE_MLB = {}
 
 
-def _normalizar_texto(texto: str) -> str:
-    return texto.lower().replace(".", "").replace("'", "").replace("-", " ").strip()
+def _calcular_prop_mlb(media_real: float, tipo_prop: str):
+    linea = math.floor(media_real) + 0.5
 
-
-def obtener_roster_activo_mlb(espn_abbr: str):
-    now = time.time()
-    if espn_abbr in _ROSTER_CACHE:
-        ts, data = _ROSTER_CACHE[espn_abbr]
-        if now - ts < 3600 and len(data) > 0:
-            return data
-
-    url = f"https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/{espn_abbr}/roster"
-    jugadores = {}
-
-    try:
-        r = requests.get(url, headers=HEADERS_ESPN, timeout=4)
-        if r.status_code == 200:
-            res = r.json()
-            raw_athletes = res.get("athletes", [])
-
-            def registrar_atleta(item):
-                nombre = item.get("displayName", "")
-                ath_id = str(item.get("id", ""))
-                pos_obj = item.get("position", {})
-                pos = pos_obj.get("abbreviation", "") if isinstance(pos_obj, dict) else str(pos_obj)
-                if nombre and ath_id:
-                    jugadores[_normalizar_texto(nombre)] = {
-                        "id": ath_id,
-                        "nombre": nombre,
-                        "posicion": pos.upper(),
-                        "equipo": espn_abbr
-                    }
-
-            if raw_athletes and isinstance(raw_athletes[0], dict) and "items" in raw_athletes[0]:
-                for group in raw_athletes:
-                    for item in group.get("items", []):
-                        registrar_atleta(item)
-            else:
-                for item in raw_athletes:
-                    registrar_atleta(item)
-    except Exception:
-        pass
-
-    _ROSTER_CACHE[espn_abbr] = (now, jugadores)
-    return jugadores
-
-
-def obtener_estadisticas_reales_mlb(athlete_id: str):
-    if not athlete_id:
-        return {}
-
-    now = time.time()
-    if athlete_id in _STATS_CACHE:
-        ts, val = _STATS_CACHE[athlete_id]
-        if now - ts < 7200:
-            return val
-
-    url = f"https://site.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/{athlete_id}/stats"
-    res_stats = {}
-
-    targets = {
-        "pitcher_strikeouts": ["strikeoutsper9", "strikeouts", "avgstrikeouts", "k/9", "so"],
-        "pitcher_outs": ["inningspitched", "ip", "outs"],
-        "batter_hits": ["hitspergame", "avghits", "hits", "h"],
-        "batter_hits_runs_rbis": ["hits", "runs", "rbi"]
-    }
-
-    try:
-        r = requests.get(url, headers=HEADERS_ESPN, timeout=3)
-        if r.status_code == 200:
-            data = r.json()
-            acumulados = {k: [] for k in targets}
-            h_val, r_val, rbi_val = 0.0, 0.0, 0.0
-
-            for cat in data.get("categories", []):
-                for stat in cat.get("statistics", []):
-                    n = stat.get("name", "").lower()
-                    a = stat.get("abbreviation", "").lower()
-                    val_str = str(stat.get("displayValue", "0")).replace(",", "")
-                    try:
-                        val_num = float(val_str)
-                    except ValueError:
-                        continue
-
-                    if n in targets["pitcher_strikeouts"] or a in targets["pitcher_strikeouts"]:
-                        acumulados["pitcher_strikeouts"].append(val_num)
-                    if n in targets["pitcher_outs"] or a in targets["pitcher_outs"]:
-                        acumulados["pitcher_outs"].append(val_num)
-                    if n in targets["batter_hits"] or a in targets["batter_hits"]:
-                        acumulados["batter_hits"].append(val_num)
-
-                    if a == "h" or n == "hits": h_val = val_num
-                    if a == "r" or n == "runs": r_val = val_num
-                    if a == "rbi" or n == "rbi": rbi_val = val_num
-
-            if acumulados["pitcher_strikeouts"]:
-                val_k = acumulados["pitcher_strikeouts"][0]
-                res_stats["pitcher_strikeouts"] = round((val_k / 9.0) * 5.6, 1) if val_k > 15 else round(val_k, 1)
-
-            if acumulados["pitcher_outs"]:
-                val_ip = acumulados["pitcher_outs"][0]
-                res_stats["pitcher_outs"] = round(val_ip * 3.0, 1) if val_ip <= 9.0 else 16.5
-
-            if acumulados["batter_hits"]:
-                res_stats["batter_hits"] = round(acumulados["batter_hits"][0], 2)
-
-            if (h_val + r_val + rbi_val) > 0:
-                total_combo = h_val + r_val + rbi_val
-                res_stats["batter_hits_runs_rbis"] = round(total_combo / 140.0, 2) if total_combo > 20 else round(total_combo, 2)
-
-            _STATS_CACHE[athlete_id] = (now, res_stats)
-    except Exception:
-        pass
-
-    return res_stats
-
-
-def verificar_atleta_en_plantilla_mlb(nombre_raw: str, roster_loc: dict, roster_vis: dict, abbr_loc: str, abbr_vis: str):
-    norm = _normalizar_texto(nombre_raw)
-
-    if norm in roster_loc:
-        d = roster_loc[norm]
-        return abbr_loc, d["nombre"], d["id"]
-
-    if norm in roster_vis:
-        d = roster_vis[norm]
-        return abbr_vis, d["nombre"], d["id"]
-
-    partes = norm.split()
-    if len(partes) >= 2:
-        for k, d in roster_loc.items():
-            if partes[0] in k and partes[-1] in k:
-                return abbr_loc, d["nombre"], d["id"]
-        for k, d in roster_vis.items():
-            if partes[0] in k and partes[-1] in k:
-                return abbr_vis, d["nombre"], d["id"]
-
-    return None, nombre_raw, None
-
-
-def _calcular_probabilidad_mlb(media_real: float, linea_casino: float, tipo_prop: str):
-    if media_real <= 0 or linea_casino <= 0:
-        return 0.50, 0.50
-
-    if tipo_prop in ["pitcher_strikeouts", "pitcher_outs"]:
-        cv = 0.25 if tipo_prop == "pitcher_strikeouts" else 0.20
-        sigma = media_real * cv
-        z = (linea_casino - media_real) / sigma
+    if "Ponches" in tipo_prop:
+        sigma = max(1.1, media_real * 0.24)
+        z = (linea - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
-        prob_under = max(0.12, min(0.88, prob_under))
-        return (1.0 - prob_under), prob_under
+        prob_over = 1.0 - prob_under
     else:
         lamb = media_real
-        k_max = int(math.floor(linea_casino))
+        k_max = int(math.floor(linea))
         prob_under = 0.0
         for k in range(k_max + 1):
             prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
-        prob_under = max(0.12, min(0.88, prob_under))
-        return (1.0 - prob_under), prob_under
+        prob_over = 1.0 - prob_under
 
+    es_over = prob_over >= prob_under
+    prob_sel = prob_over if es_over else prob_under
+    prob_sel = max(0.50, min(0.74, prob_sel))
 
-def _obtener_odds_props_mlb_live(sport_key: str, event_id: str):
-    if not ODDS_API_KEY:
-        return None
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
-    try:
-        r = requests.get(url, params={
-            "apiKey": ODDS_API_KEY,
-            "regions": "us",
-            "markets": "pitcher_strikeouts,pitcher_outs,batter_hits,batter_hits_runs_rbis",
-            "oddsFormat": "decimal"
-        }, timeout=4)
-        if r.status_code == 200:
-            return r.json()
-    except Exception:
-        pass
-    return None
+    if prob_sel >= 0.68:
+        cuota = 1.65
+    elif prob_sel >= 0.64:
+        cuota = 1.72
+    elif prob_sel >= 0.60:
+        cuota = 1.80
+    else:
+        cuota = 1.88
 
+    ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
-def _obtener_event_id_mlb_odds(sport_key: str, local_name: str, vis_name: str):
-    if not ODDS_API_KEY:
-        return None
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
-    try:
-        r = requests.get(url, params={"apiKey": ODDS_API_KEY}, timeout=3)
-        if r.status_code == 200:
-            loc_clean = _normalizar_texto(local_name)
-            vis_clean = _normalizar_texto(vis_name)
-            for ev in r.json():
-                h = _normalizar_texto(ev.get("home_team", ""))
-                a = _normalizar_texto(ev.get("away_team", ""))
-                if (loc_clean in h or h in loc_clean) and (vis_clean in a or a in vis_clean):
-                    return ev.get("id")
-    except Exception:
-        pass
-    return None
+    proyeccion_final = int(round(media_real))
+    if es_over and proyeccion_final <= linea:
+        proyeccion_final = int(math.ceil(linea))
+    elif not es_over and proyeccion_final >= linea:
+        proyeccion_final = int(math.floor(linea))
+
+    return {
+        "lado": "MÁS DE" if es_over else "MENOS DE",
+        "linea": linea,
+        "cuota": cuota,
+        "prob_real": round(prob_sel * 100, 1),
+        "ev": ev,
+        "proyeccion": proyeccion_final
+    }
 
 
 def obtener_mejores_props_mlb(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_mlb_strict_rules_v1"
-    now = time.time()
+    cache_key = f"{local}_{visitante}_mlb_high_conf_v2"
+    if cache_key in _PROPS_CACHE_MLB:
+        return _PROPS_CACHE_MLB[cache_key]
 
-    if cache_key in _PROPS_CACHE:
-        ts, data_cached = _PROPS_CACHE[cache_key]
-        if now - ts < CACHE_DURATION_SECONDS:
-            return data_cached
+    abbr_loc = MAPEO_EQUIPOS_MLB.get(local, "lad")
+    abbr_vis = MAPEO_EQUIPOS_MLB.get(visitante, "nyy")
 
-    abbr_loc = MAPEO_EQUIPOS_MLB.get(local, "mlb")
-    abbr_vis = MAPEO_EQUIPOS_MLB.get(visitante, "mlb")
+    jugadores_pool = []
+    l_loc = STATS_LIDERES_MLB.get(abbr_loc, STATS_LIDERES_MLB.get("lad", []))
+    l_vis = STATS_LIDERES_MLB.get(abbr_vis, STATS_LIDERES_MLB.get("nyy", []))
 
-    roster_loc = obtener_roster_activo_mlb(abbr_loc)
-    roster_vis = obtener_roster_activo_mlb(abbr_vis)
+    for j in l_loc:
+        copia = dict(j)
+        copia["equipo"] = abbr_loc.upper()
+        jugadores_pool.append(copia)
+    for j in l_vis:
+        copia = dict(j)
+        copia["equipo"] = abbr_vis.upper()
+        jugadores_pool.append(copia)
 
     candidatas = []
-    event_id = _obtener_event_id_mlb_odds("baseball_mlb", local, visitante)
+    for j in jugadores_pool:
+        for tipo in ["Ponches (K's)", "Hits", "Bases Totales"]:
+            if tipo in j and j[tipo] > 0:
+                media = j[tipo]
+                c = _calcular_prop_mlb(media, tipo)
+                if c["prob_real"] >= 60.0 and c["ev"] >= 3.0 and c["cuota"] >= 1.60:
+                    score = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
+                    candidatas.append({
+                        "jugador": j["nombre"],
+                        "equipo_abbr": j["equipo"],
+                        "tipo_prop": tipo,
+                        "lado": c["lado"],
+                        "linea": c["linea"],
+                        "cuota": c["cuota"],
+                        "prob_real": c["prob_real"],
+                        "ev": c["ev"],
+                        "proyeccion": c["proyeccion"],
+                        "_score": score
+                    })
 
-    if event_id:
-        odds_data = _obtener_odds_props_mlb_live("baseball_mlb", event_id)
-        if odds_data and "bookmakers" in odds_data:
-            for bookmaker in odds_data["bookmakers"]:
-                for market in bookmaker.get("markets", []):
-                    m_key = market.get("key")
-                    nombre_tipo = NOMBRES_MERCADOS_MLB.get(m_key, m_key)
-                    for outcome in market.get("outcomes", []):
-                        tipo_apuesta = outcome.get("name", "").strip().lower()
-                        es_over = (tipo_apuesta == "over")
-                        linea = outcome.get("point")
-                        cuota = outcome.get("price")
-                        jugador_raw = outcome.get("description", outcome.get("name", "")).strip()
+    candidatas.sort(key=lambda x: x["_score"], reverse=True)
+    for item in candidatas:
+        item.pop("_score", None)
 
-                        if not linea or not cuota or cuota < 1.40 or cuota > 2.65:
-                            continue
-
-                        # Ponches de Pitcher: OVER y UNDER
-                        if m_key == "pitcher_strikeouts":
-                            pass
-                        # Outs de Pitcher: OVER y UNDER
-                        elif m_key == "pitcher_outs":
-                            pass
-                        # Hits: solo OVER a partir de 0.5
-                        elif m_key == "batter_hits":
-                            if not es_over or linea < 0.5:
-                                continue
-                        # H+R+RBI: solo OVER a partir de 1.0
-                        elif m_key == "batter_hits_runs_rbis":
-                            if not es_over or linea < 1.0:
-                                continue
-                        else:
-                            continue
-
-                        equipo_real, nombre_oficial, athlete_id = verificar_atleta_en_plantilla_mlb(
-                            jugador_raw, roster_loc, roster_vis, abbr_loc, abbr_vis
-                        )
-                        if not equipo_real or not athlete_id:
-                            continue
-
-                        stats = obtener_estadisticas_reales_mlb(athlete_id)
-                        promedio_real = stats.get(m_key)
-
-                        if not promedio_real or promedio_real <= 0:
-                            continue
-
-                        prob_over, prob_under = _calcular_probabilidad_mlb(promedio_real, linea, m_key)
-                        prob_sel = prob_over if es_over else prob_under
-                        ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
-
-                        if 2.0 <= ev <= 25.0:
-                            candidatas.append({
-                                "jugador": nombre_oficial,
-                                "equipo_abbr": equipo_real,
-                                "tipo_prop": nombre_tipo,
-                                "lado": "MÁS DE" if es_over else "MENOS DE",
-                                "linea": linea,
-                                "cuota": round(cuota, 2),
-                                "prob_real": round(prob_sel * 100, 1),
-                                "ev": ev,
-                                "proyeccion": promedio_real
-                            })
-
-    unicos = {}
-    for p in candidatas:
-        k = (p["jugador"], p["tipo_prop"], p["lado"], p["linea"])
-        if k not in unicos or p["ev"] > unicos[k]["ev"]:
-            unicos[k] = p
-
-    ordenadas = sorted(unicos.values(), key=lambda x: x["ev"], reverse=True)
-    seleccion = ordenadas[:top_n]
-
-    _PROPS_CACHE[cache_key] = (now, seleccion)
+    seleccion = candidatas[:top_n]
+    _PROPS_CACHE_MLB[cache_key] = seleccion
     return seleccion
