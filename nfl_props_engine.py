@@ -17,27 +17,27 @@ EQUIPOS_NFL_ESPN = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json"
 }
 
 _PROPS_CACHE_NFL = {}
 
 
-def _extraer_stats_equipo_nfl(team_id, abbr):
+def _extraer_atletas_reales_nfl(team_id, abbr):
     jugadores = {}
-    
-    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}?enable=leaders"
+    url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}?enable=leaders"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=4)
+        r = requests.get(url_leaders, headers=HEADERS, timeout=4)
         if r.status_code == 200:
-            cats = r.json().get("team", {}).get("leaders", [])
-            for c in cats:
-                cat_name = c.get("name", "").lower()
+            leaders = r.json().get("team", {}).get("leaders", [])
+            for c in leaders:
+                c_name = c.get("name", "").lower()
                 tipo = None
-                if "passing" in cat_name: tipo = "Yardas Pase"
-                elif "rushing" in cat_name: tipo = "Yardas Acarreo"
-                elif "receiving" in cat_name: tipo = "Yardas Recepción"
-                
+                if "passing" in c_name: tipo = "Yardas Pase"
+                elif "rushing" in c_name: tipo = "Yardas Acarreo"
+                elif "receiving" in c_name: tipo = "Yardas Recepción"
+
                 if tipo:
                     for l in c.get("leaders", []):
                         nom = l.get("athlete", {}).get("displayName")
@@ -51,8 +51,8 @@ def _extraer_stats_equipo_nfl(team_id, abbr):
 
     if len(jugadores) < 2:
         try:
-            url_alt = f"https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/teams/{team_id}/athletes/statistics"
-            r2 = requests.get(url_alt, headers=HEADERS, timeout=4)
+            url_roster = f"https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/teams/{team_id}/athletes/statistics"
+            r2 = requests.get(url_roster, headers=HEADERS, timeout=4)
             if r2.status_code == 200:
                 for cat in r2.json().get("categories", []):
                     for ath in cat.get("athletes", []):
@@ -81,13 +81,13 @@ def _calcular_prop_nfl(media_real, tipo_prop):
     prob_over = 1.0 - prob_under
 
     es_over = prob_over >= prob_under
-    prob_sel = max(0.51, min(0.75, prob_over if es_over else prob_under))
+    prob_sel = max(0.51, min(0.76, prob_over if es_over else prob_under))
 
-    if prob_sel >= 0.68: cuota = 1.65
-    elif prob_sel >= 0.64: cuota = 1.72
-    elif prob_sel >= 0.60: cuota = 1.80
-    elif prob_sel >= 0.55: cuota = 1.86
-    else: cuota = 1.91
+    if prob_sel >= 0.70: cuota = 1.55
+    elif prob_sel >= 0.65: cuota = 1.65
+    elif prob_sel >= 0.60: cuota = 1.75
+    elif prob_sel >= 0.55: cuota = 1.84
+    else: cuota = 1.90
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
@@ -106,7 +106,7 @@ def _calcular_prop_nfl(media_real, tipo_prop):
 
 
 def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
-    key = f"{local}_{visitante}_nfl_props"
+    key = f"{local}_{visitante}_nfl_props_clean"
     now = time.time()
     if key in _PROPS_CACHE_NFL:
         ts, data = _PROPS_CACHE_NFL[key]
@@ -121,14 +121,14 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
     abbr_loc, id_loc = d_loc
     abbr_vis, id_vis = d_vis
 
-    pool = _extraer_stats_equipo_nfl(id_loc, abbr_loc) + _extraer_stats_equipo_nfl(id_vis, abbr_vis)
+    pool = _extraer_atletas_reales_nfl(id_loc, abbr_loc) + _extraer_atletas_reales_nfl(id_vis, abbr_vis)
     todas = []
 
     for j in pool:
         for tipo in ["Yardas Pase", "Yardas Acarreo", "Yardas Recepción", "Recepciones"]:
             if tipo in j and j[tipo] > 0:
                 c = _calcular_prop_nfl(j[tipo], tipo)
-                score = (c["prob_real"] * 0.70) + (c["ev"] * 0.30)
+                score = (c["prob_real"] * 0.75) + (c["ev"] * 0.25)
                 todas.append({
                     "jugador": j["nombre"],
                     "equipo_abbr": j["equipo"],
