@@ -31,6 +31,7 @@ HEADERS_ESPN = {
 
 _PROPS_CACHE = {}
 _ROSTER_CACHE = {}
+_STATS_CACHE = {}
 CACHE_DURATION_SECONDS = 900
 
 
@@ -39,6 +40,9 @@ def _normalizar_texto(texto: str) -> str:
 
 
 def obtener_roster_activo_nhl(espn_abbr: str):
+    """
+    Obtiene la plantilla activa de ESPN para validar la pertenencia real del jugador.
+    """
     now = time.time()
     if espn_abbr in _ROSTER_CACHE:
         ts, data = _ROSTER_CACHE[espn_abbr]
@@ -46,7 +50,7 @@ def obtener_roster_activo_nhl(espn_abbr: str):
             return data
 
     url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/teams/{espn_abbr}/roster"
-    jugadores = []
+    jugadores = {}
 
     try:
         r = requests.get(url, headers=HEADERS_ESPN, timeout=4)
@@ -54,33 +58,26 @@ def obtener_roster_activo_nhl(espn_abbr: str):
             res = r.json()
             raw_athletes = res.get("athletes", [])
 
+            def registrar_atleta(item):
+                nombre = item.get("displayName", "")
+                ath_id = str(item.get("id", ""))
+                pos_obj = item.get("position", {})
+                pos = pos_obj.get("abbreviation", "") if isinstance(pos_obj, dict) else str(pos_obj)
+                if nombre and ath_id:
+                    jugadores[_normalizar_texto(nombre)] = {
+                        "id": ath_id,
+                        "nombre": nombre,
+                        "posicion": pos.upper(),
+                        "equipo": espn_abbr
+                    }
+
             if raw_athletes and isinstance(raw_athletes[0], dict) and "items" in raw_athletes[0]:
                 for group in raw_athletes:
                     for item in group.get("items", []):
-                        nombre = item.get("displayName", "")
-                        pos_obj = item.get("position", {})
-                        pos = pos_obj.get("abbreviation", "") if isinstance(pos_obj, dict) else str(pos_obj)
-                        ath_id = str(item.get("id", ""))
-                        if nombre:
-                            jugadores.append({
-                                "id": ath_id,
-                                "nombre": nombre,
-                                "posicion": pos.upper(),
-                                "equipo": espn_abbr
-                            })
+                        registrar_atleta(item)
             else:
                 for item in raw_athletes:
-                    nombre = item.get("displayName", "")
-                    pos_obj = item.get("position", {})
-                    pos = pos_obj.get("abbreviation", "") if isinstance(pos_obj, dict) else str(pos_obj)
-                    ath_id = str(item.get("id", ""))
-                    if nombre:
-                        jugadores.append({
-                            "id": ath_id,
-                            "nombre": nombre,
-                            "posicion": pos.upper(),
-                            "equipo": espn_abbr
-                        })
+                    registrar_atleta(item)
     except Exception:
         pass
 
@@ -88,31 +85,89 @@ def obtener_roster_activo_nhl(espn_abbr: str):
     return jugadores
 
 
-def verificar_en_rosters_nhl(nombre_jugador: str, roster_loc: list, roster_vis: list, abbr_loc: str, abbr_vis: str):
-    nom_norm = _normalizar_texto(nombre_jugador)
+def obtener_estadisticas_reales_nhl(athlete_id: str):
+    """
+    Consulta los promedios reales por partido en la API de ESPN (tiros y puntos).
+    """
+    if not athlete_id:
+        return {}
 
-    for d in roster_loc:
-        nom_atleta = _normalizar_texto(d["nombre"])
-        if nom_norm == nom_atleta or nom_norm in nom_atleta or nom_atleta in nom_norm:
-            return abbr_loc, d["nombre"], d.get("posicion", ""), d.get("id", "")
+    now = time.time()
+    if athlete_id in _STATS_CACHE:
+        ts, val = _STATS_CACHE[athlete_id]
+        if now - ts < 7200:
+            return val
 
-    for d in roster_vis:
-        nom_atleta = _normalizar_texto(d["nombre"])
-        if nom_norm == nom_atleta or nom_norm in nom_atleta or nom_atleta in nom_norm:
-            return abbr_vis, d["nombre"], d.get("posicion", ""), d.get("id", "")
+    url = f"https://site.api.espn.com/apis/common/v3/sports/hockey/nhl/athletes/{athlete_id}/stats"
+    res_stats = {}
 
-    return None, nombre_jugador, "", ""
+    targets = {
+        "player_shots_on_goal": ["avgshots", "shotspergame", "sog", "shots"],
+        "player_points": ["avgpoints", "pointspergame", "pts", "points"]
+    }
+
+    try:
+        r = requests.get(url, headers=HEADERS_ESPN, timeout=3)
+        if r.status_code == 200:
+            data = r.json()
+            acumulados = {k: [] for k in targets}
+
+            for cat in data.get("categories", []):
+                for stat in cat.get("statistics", []):
+                    n = stat.get("name", "").lower()
+                    a = stat.get("abbreviation", "").lower()
+                    for m_key, aliases in targets.items():
+                        if n in aliases or a in aliases:
+                            try:
+                                val_num = float(str(stat.get("displayValue", "0")).replace(",", ""))
+                                acumulados[m_key].append(val_num)
+                            except ValueError:
+                                pass
+
+            for m_key, vals in acumulados.items():
+                if vals:
+                    promedio = round((vals[0] * 0.70) + (vals[1] * 0.30), 2) if len(vals) >= 2 else round(vals[0], 2)
+                    res_stats[m_key] = promedio
+
+            _STATS_CACHE[athlete_id] = (now, res_stats)
+    except Exception:
+        pass
+
+    return res_stats
 
 
-def _calcular_probabilidad_over_poisson(proyeccion: float, linea: float):
-    if proyeccion <= 0 or linea <= 0:
+def verificar_atleta_en_plantilla_nhl(nombre_raw: str, roster_loc: dict, roster_vis: dict, abbr_loc: str, abbr_vis: str):
+    norm = _normalizar_texto(nombre_raw)
+
+    if norm in roster_loc:
+        d = roster_loc[norm]
+        return abbr_loc, d["nombre"], d["id"]
+
+    if norm in roster_vis:
+        d = roster_vis[norm]
+        return abbr_vis, d["nombre"], d["id"]
+
+    partes = norm.split()
+    if len(partes) >= 2:
+        for k, d in roster_loc.items():
+            if partes[0] in k and partes[-1] in k:
+                return abbr_loc, d["nombre"], d["id"]
+        for k, d in roster_vis.items():
+            if partes[0] in k and partes[-1] in k:
+                return abbr_vis, d["nombre"], d["id"]
+
+    return None, nombre_raw, None
+
+
+def _calcular_probabilidad_over_poisson(media_real: float, linea_casino: float):
+    if media_real <= 0 or linea_casino <= 0:
         return 0.50
-    lamb = proyeccion
-    k_max = int(math.floor(linea))
+    lamb = media_real
+    k_max = int(math.floor(linea_casino))
     prob_under = 0.0
     for k in range(k_max + 1):
         prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
-    prob_over = max(0.20, min(0.88, 1.0 - prob_under))
+    prob_over = max(0.15, min(0.88, 1.0 - prob_under))
     return prob_over
 
 
@@ -141,11 +196,11 @@ def _obtener_event_id_nhl_odds(sport_key: str, local_name: str, vis_name: str):
     try:
         r = requests.get(url, params={"apiKey": ODDS_API_KEY}, timeout=3)
         if r.status_code == 200:
-            loc_clean = local_name.lower()
-            vis_clean = vis_name.lower()
+            loc_clean = _normalizar_texto(local_name)
+            vis_clean = _normalizar_texto(vis_name)
             for ev in r.json():
-                h = ev.get("home_team", "").lower()
-                a = ev.get("away_team", "").lower()
+                h = _normalizar_texto(ev.get("home_team", ""))
+                a = _normalizar_texto(ev.get("away_team", ""))
                 if (loc_clean in h or h in loc_clean) and (vis_clean in a or a in vis_clean):
                     return ev.get("id")
     except Exception:
@@ -154,7 +209,7 @@ def _obtener_event_id_nhl_odds(sport_key: str, local_name: str, vis_name: str):
 
 
 def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_nhl_calibrated_v3"
+    cache_key = f"{local}_{visitante}_props_nhl_real_data_v1"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
@@ -171,7 +226,7 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
     candidatas = []
     event_id = _obtener_event_id_nhl_odds("icehockey_nhl", local, visitante)
 
-    # 1. EVALUAR LÍNEAS REALES CON LOS RANGOS Y CONDICIONES EXACTAS
+    # EVALUAR LÍNEAS REALES CON ESTADÍSTICAS REALES DE ESPN
     if event_id:
         odds_data = _obtener_odds_props_nhl_live("icehockey_nhl", event_id)
         if odds_data and "bookmakers" in odds_data:
@@ -182,25 +237,25 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                     for outcome in market.get("outcomes", []):
                         tipo_apuesta = outcome.get("name", "").strip().lower()
 
-                        # Regla 1: Solo Over
+                        # Regla 1: Exclusivamente OVER (MÁS DE)
                         if tipo_apuesta != "over":
                             continue
 
                         linea = outcome.get("point")
                         cuota = outcome.get("price")
-                        jugador_raw = outcome.get("description", outcome.get("name", "Jugador")).strip()
+                        jugador_raw = outcome.get("description", outcome.get("name", "")).strip()
 
                         if not linea or not cuota:
                             continue
 
-                        # Regla 2: Puntos (+1 o +2 puntos) con momios desde 1.25 hasta 3.20 (1.30, 1.42, 1.47, 1.53, etc.)
+                        # Regla 2: Puntos (+1 o +2 puntos) con cuotas desde 1.25 hasta 3.20
                         if m_key == "player_points":
                             if linea not in [0.5, 1.5]:
                                 continue
                             if cuota < 1.25 or cuota > 3.20:
                                 continue
 
-                        # Regla 3: Tiros a puerta (solo 1.5 y 2.5) con momio estrictamente arriba de 1.50
+                        # Regla 3: Tiros a puerta (solo 1.5 y 2.5) con cuota mayor a 1.50
                         elif m_key == "player_shots_on_goal":
                             if linea not in [1.5, 2.5]:
                                 continue
@@ -209,24 +264,25 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                         else:
                             continue
 
-                        equipo_real, nombre_oficial, pos, athlete_id = verificar_en_rosters_nhl(
+                        # Verificación estricta de pertenencia al equipo
+                        equipo_real, nombre_oficial, athlete_id = verificar_atleta_en_plantilla_nhl(
                             jugador_raw, roster_loc, roster_vis, abbr_loc, abbr_vis
                         )
-                        if not equipo_real:
+                        if not equipo_real or not athlete_id:
                             continue
 
-                        # Proyección matemática según el mercado
-                        if m_key == "player_points":
-                            # En cuotas cortas (1.30-1.55), la proyección refleja un jugador de alto impacto
-                            proyeccion = round(linea * (1.35 if cuota <= 1.55 else 1.20), 2)
-                        else:
-                            proyeccion = round(linea * 1.22, 2)
+                        stats = obtener_estadisticas_reales_nhl(athlete_id)
+                        promedio_real = stats.get(m_key)
 
-                        prob_sel = _calcular_probabilidad_over_poisson(proyeccion, linea)
+                        # Sin estadística real, no se emite propuesta
+                        if not promedio_real or promedio_real <= 0:
+                            continue
+
+                        prob_sel = _calcular_probabilidad_over_poisson(promedio_real, linea)
                         ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
-                        # Acepta valor positivo para capturar cuotas desde 1.30 en adelante
-                        if ev >= 1.0:
+                        # Filtro de valor positivo real
+                        if 1.0 <= ev <= 25.0:
                             candidatas.append({
                                 "jugador": nombre_oficial,
                                 "equipo_abbr": equipo_real,
@@ -236,42 +292,13 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                                 "cuota": round(cuota, 2),
                                 "prob_real": round(prob_sel * 100, 1),
                                 "ev": ev,
-                                "proyeccion": proyeccion
+                                "proyeccion": promedio_real
                             })
 
-    # 2. GENERADOR BASE CON MOMIOS REALISTAS SEGÚN TUS CONDICIONES
-    if len(candidatas) < 6:
-        def extraer_jugador(roster, idx, fallback):
-            if idx < len(roster):
-                return roster[idx]["nombre"]
-            return fallback
-
-        j_loc1 = extraer_jugador(roster_loc, 0, f"Delantero {abbr_loc.upper()}")
-        j_loc2 = extraer_jugador(roster_loc, 1, f"Extremo {abbr_loc.upper()}")
-        j_loc3 = extraer_jugador(roster_loc, 2, f"Atacante {abbr_loc.upper()}")
-
-        j_vis1 = extraer_jugador(roster_vis, 0, f"Delantero {abbr_vis.upper()}")
-        j_vis2 = extraer_jugador(roster_vis, 1, f"Extremo {abbr_vis.upper()}")
-        j_vis3 = extraer_jugador(roster_vis, 2, f"Atacante {abbr_vis.upper()}")
-
-        # Pool variado: Puntos con momios entre 1.42 y 2.10, Tiros con momios > 1.50
-        pool_calibrado = [
-            {"jugador": j_loc1, "equipo_abbr": abbr_loc, "tipo_prop": "Puntos (G+A)", "lado": "MÁS DE", "linea": 0.5, "cuota": 1.42, "proyeccion": 1.15, "prob_real": 68.3, "ev": 8.0},
-            {"jugador": j_loc2, "equipo_abbr": abbr_loc, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.88, "proyeccion": 3.20, "prob_real": 62.0, "ev": 16.6},
-            {"jugador": j_loc3, "equipo_abbr": abbr_loc, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 1.5, "cuota": 1.55, "proyeccion": 2.30, "prob_real": 69.8, "ev": 8.2},
-            {"jugador": j_vis1, "equipo_abbr": abbr_vis, "tipo_prop": "Puntos (G+A)", "lado": "MÁS DE", "linea": 0.5, "cuota": 1.53, "proyeccion": 1.05, "prob_real": 65.0, "ev": 9.5},
-            {"jugador": j_vis2, "equipo_abbr": abbr_vis, "tipo_prop": "Puntos (G+A)", "lado": "MÁS DE", "linea": 1.5, "cuota": 2.15, "proyeccion": 1.75, "prob_real": 52.3, "ev": 12.4},
-            {"jugador": j_vis3, "equipo_abbr": abbr_vis, "tipo_prop": "Tiros a Puerta", "lado": "MÁS DE", "linea": 2.5, "cuota": 1.95, "proyeccion": 3.10, "prob_real": 59.5, "ev": 16.0}
-        ]
-
-        for p in pool_calibrado:
-            if not any(c["jugador"] == p["jugador"] and c["tipo_prop"] == p["tipo_prop"] for c in candidatas):
-                candidatas.append(p)
-
-    # 3. FILTRADO FINAL (TOP 6 CON MEJOR RELACIÓN EV Y PROBABILIDAD)
+    # Filtrar picks duplicados quedándose con la opción de mayor EV
     unicos = {}
     for p in candidatas:
-        k = (p["jugador"], p["tipo_prop"])
+        k = (p["jugador"], p["tipo_prop"], p["linea"])
         if k not in unicos or p["ev"] > unicos[k]["ev"]:
             unicos[k] = p
 
