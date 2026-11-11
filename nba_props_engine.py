@@ -17,33 +17,30 @@ EQUIPOS_NBA_ESPN = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
 _PROPS_CACHE = {}
 
 
-def _obtener_lideres_nba(team_id, abbr):
-    """Obtiene los líderes de estadísticas por juego reales de ESPN."""
-    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}"
+def _extraer_stats_equipo_nba(team_id, abbr):
     jugadores = {}
-
+    
+    # 1. Feed primario de líderes oficiales de equipo
+    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}?enable=leaders"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=5)
+        r = requests.get(url, headers=HEADERS, timeout=4)
         if r.status_code == 200:
-            data = r.json()
-            # 1. Leaders del equipo
-            leaders = data.get("team", {}).get("leaders", [])
-            for cat in leaders:
-                cat_name = cat.get("name", "").lower()
+            cats = r.json().get("team", {}).get("leaders", [])
+            for c in cats:
+                cat_name = c.get("name", "").lower()
                 tipo = None
                 if "point" in cat_name or "pts" in cat_name: tipo = "Puntos"
                 elif "rebound" in cat_name or "reb" in cat_name: tipo = "Rebotes"
                 elif "assist" in cat_name or "ast" in cat_name: tipo = "Asistencias"
-
+                
                 if tipo:
-                    for l in cat.get("leaders", []):
+                    for l in c.get("leaders", []):
                         nom = l.get("athlete", {}).get("displayName")
                         val = float(str(l.get("value", 0)).replace(",", ""))
                         if nom and val > 0:
@@ -53,30 +50,25 @@ def _obtener_lideres_nba(team_id, abbr):
     except Exception:
         pass
 
-    # Si falta, consulta el endpoint de statistics
-    if not jugadores:
+    # 2. Feed secundario si el primero no devolvió suficientes atletas
+    if len(jugadores) < 2:
         try:
-            url_stats = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/statistics"
-            r2 = requests.get(url_stats, headers=HEADERS, timeout=5)
+            url_alt = f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/teams/{team_id}/athletes/statistics"
+            r2 = requests.get(url_alt, headers=HEADERS, timeout=4)
             if r2.status_code == 200:
-                cats2 = r2.json().get("results", {}).get("stats", {}).get("categories", [])
-                mapeo = {
-                    "avgPoints": "Puntos",
-                    "avgRebounds": "Rebotes",
-                    "avgAssists": "Asistencias",
-                    "avgThreePointFieldGoalsMade": "Triples"
-                }
-                for c in cats2:
-                    c_name = c.get("name")
-                    if c_name in mapeo:
-                        tipo = mapeo[c_name]
-                        for lead in c.get("leaders", []):
-                            nom = lead.get("athlete", {}).get("displayName")
-                            val = float(str(lead.get("displayValue", 0)).replace(",", ""))
-                            if nom and val > 0:
-                                if nom not in jugadores:
-                                    jugadores[nom] = {"nombre": nom, "equipo": abbr.upper()}
-                                jugadores[nom][tipo] = val
+                for cat in r2.json().get("categories", []):
+                    for ath in cat.get("athletes", []):
+                        nom = ath.get("athlete", {}).get("displayName")
+                        if not nom: continue
+                        if nom not in jugadores:
+                            jugadores[nom] = {"nombre": nom, "equipo": abbr.upper()}
+                        for st in ath.get("stats", []):
+                            s_name = st.get("name", "").lower()
+                            s_val = float(str(st.get("value", 0)).replace(",", ""))
+                            if "avgpoints" in s_name and s_val > 5.0: jugadores[nom]["Puntos"] = s_val
+                            elif "avgrebounds" in s_name and s_val > 2.0: jugadores[nom]["Rebotes"] = s_val
+                            elif "avgassists" in s_name and s_val > 1.5: jugadores[nom]["Asistencias"] = s_val
+                            elif "avgthreepointfieldgoalsmade" in s_name and s_val > 0.8: jugadores[nom]["Triples"] = s_val
         except Exception:
             pass
 
@@ -84,10 +76,7 @@ def _obtener_lideres_nba(team_id, abbr):
 
 
 def _calcular_prop_nba(media_real, tipo_prop):
-    # La línea de casino se ubica medio punto por debajo del promedio para Over seguro
-    linea = math.floor(media_real) - 0.5
-    if linea < 0.5:
-        linea = 0.5
+    linea = math.floor(media_real) + 0.5
 
     if tipo_prop in ["Puntos", "Rebotes"]:
         cv = 0.22 if tipo_prop == "Puntos" else 0.25
@@ -102,13 +91,13 @@ def _calcular_prop_nba(media_real, tipo_prop):
         prob_over = 1.0 - prob_under
 
     es_over = prob_over >= prob_under
-    prob_sel = max(0.53, min(0.78, prob_over if es_over else prob_under))
+    prob_sel = max(0.51, min(0.75, prob_over if es_over else prob_under))
 
-    # Asignación de cuota según probabilidad real
-    if prob_sel >= 0.70: cuota = 1.55
-    elif prob_sel >= 0.65: cuota = 1.65
-    elif prob_sel >= 0.60: cuota = 1.75
-    else: cuota = 1.85
+    if prob_sel >= 0.68: cuota = 1.65
+    elif prob_sel >= 0.64: cuota = 1.72
+    elif prob_sel >= 0.60: cuota = 1.80
+    elif prob_sel >= 0.55: cuota = 1.86
+    else: cuota = 1.91
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
@@ -127,7 +116,7 @@ def _calcular_prop_nba(media_real, tipo_prop):
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    key = f"{local}_{visitante}_nba_props_vFinal"
+    key = f"{local}_{visitante}_nba_props"
     now = time.time()
     if key in _PROPS_CACHE:
         ts, data = _PROPS_CACHE[key]
@@ -142,27 +131,26 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     abbr_loc, id_loc = d_loc
     abbr_vis, id_vis = d_vis
 
-    pool = _obtener_lideres_nba(id_loc, abbr_loc) + _obtener_lideres_nba(id_vis, abbr_vis)
+    pool = _extraer_stats_equipo_nba(id_loc, abbr_loc) + _extraer_stats_equipo_nba(id_vis, abbr_vis)
     todas = []
 
     for j in pool:
         for tipo in ["Puntos", "Rebotes", "Asistencias", "Triples"]:
             if tipo in j and j[tipo] > 0:
                 c = _calcular_prop_nba(j[tipo], tipo)
-                if c["prob_real"] >= 52.0:
-                    score = (c["prob_real"] * 0.75) + (c["ev"] * 0.25)
-                    todas.append({
-                        "jugador": j["nombre"],
-                        "equipo_abbr": j["equipo"],
-                        "tipo_prop": tipo,
-                        "lado": c["lado"],
-                        "linea": c["linea"],
-                        "cuota": c["cuota"],
-                        "prob_real": c["prob_real"],
-                        "ev": c["ev"],
-                        "proyeccion": c["proyeccion"],
-                        "_score": score
-                    })
+                score = (c["prob_real"] * 0.70) + (c["ev"] * 0.30)
+                todas.append({
+                    "jugador": j["nombre"],
+                    "equipo_abbr": j["equipo"],
+                    "tipo_prop": tipo,
+                    "lado": c["lado"],
+                    "linea": c["linea"],
+                    "cuota": c["cuota"],
+                    "prob_real": c["prob_real"],
+                    "ev": c["ev"],
+                    "proyeccion": c["proyeccion"],
+                    "_score": score
+                })
 
     todas.sort(key=lambda x: x["_score"], reverse=True)
     for p in todas:
