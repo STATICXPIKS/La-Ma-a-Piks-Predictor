@@ -16,34 +16,33 @@ MAPEO_EQUIPOS_NHL = {
     "Washington Capitals": "wsh", "Winnipeg Jets": "wpg"
 }
 
-# Líderes y rotación oficial activa NHL (Tiros a puerta SOG, Puntos PTS, Asistencias AST)
 STATS_LIDERES_NHL = {
     "buf": [
-        {"nombre": "Tage Thompson", "Tiros a Puerta": 3.8, "Puntos": 1.1, "Asistencias": 0.5},
-        {"nombre": "Alex Tuch", "Tiros a Puerta": 2.9, "Puntos": 0.9, "Asistencias": 0.5},
-        {"nombre": "Rasmus Dahlin", "Tiros a Puerta": 2.6, "Puntos": 0.8, "Asistencias": 0.6},
-        {"nombre": "JJ Peterka", "Tiros a Puerta": 2.7, "Puntos": 0.8, "Asistencias": 0.4}
+        {"nombre": "Tage Thompson", "Tiros a Puerta": 3.8, "Puntos": 1.1},
+        {"nombre": "Alex Tuch", "Tiros a Puerta": 2.9, "Puntos": 0.9},
+        {"nombre": "Rasmus Dahlin", "Tiros a Puerta": 2.6, "Puntos": 0.8},
+        {"nombre": "JJ Peterka", "Tiros a Puerta": 2.7, "Puntos": 0.8}
     ],
     "tb": [
-        {"nombre": "Nikita Kucherov", "Tiros a Puerta": 4.1, "Puntos": 1.6, "Asistencias": 1.1},
-        {"nombre": "Brayden Point", "Tiros a Puerta": 2.9, "Puntos": 1.0, "Asistencias": 0.5},
-        {"nombre": "Jake Guentzel", "Tiros a Puerta": 3.2, "Puntos": 1.1, "Asistencias": 0.6},
-        {"nombre": "Victor Hedman", "Tiros a Puerta": 2.4, "Puntos": 0.9, "Asistencias": 0.7}
+        {"nombre": "Nikita Kucherov", "Tiros a Puerta": 4.1, "Puntos": 1.5},
+        {"nombre": "Brayden Point", "Tiros a Puerta": 2.9, "Puntos": 1.0},
+        {"nombre": "Jake Guentzel", "Tiros a Puerta": 3.2, "Puntos": 1.1},
+        {"nombre": "Victor Hedman", "Tiros a Puerta": 2.4, "Puntos": 0.9}
     ],
     "edm": [
-        {"nombre": "Connor McDavid", "Tiros a Puerta": 3.7, "Puntos": 1.6, "Asistencias": 1.2},
-        {"nombre": "Leon Draisaitl", "Tiros a Puerta": 3.4, "Puntos": 1.4, "Asistencias": 0.8},
-        {"nombre": "Evan Bouchard", "Tiros a Puerta": 3.2, "Puntos": 0.9, "Asistencias": 0.7}
+        {"nombre": "Connor McDavid", "Tiros a Puerta": 3.7, "Puntos": 1.6},
+        {"nombre": "Leon Draisaitl", "Tiros a Puerta": 3.4, "Puntos": 1.4},
+        {"nombre": "Evan Bouchard", "Tiros a Puerta": 3.2, "Puntos": 0.9}
     ],
     "tor": [
-        {"nombre": "Auston Matthews", "Tiros a Puerta": 4.3, "Puntos": 1.2, "Asistencias": 0.5},
-        {"nombre": "Mitch Marner", "Tiros a Puerta": 2.6, "Puntos": 1.2, "Asistencias": 0.8},
-        {"nombre": "William Nylander", "Tiros a Puerta": 3.6, "Puntos": 1.1, "Asistencias": 0.6}
+        {"nombre": "Auston Matthews", "Tiros a Puerta": 4.3, "Puntos": 1.2},
+        {"nombre": "Mitch Marner", "Tiros a Puerta": 2.6, "Puntos": 1.2},
+        {"nombre": "William Nylander", "Tiros a Puerta": 3.6, "Puntos": 1.1}
     ],
     "col": [
-        {"nombre": "Nathan MacKinnon", "Tiros a Puerta": 4.6, "Puntos": 1.6, "Asistencias": 1.1},
-        {"nombre": "Mikko Rantanen", "Tiros a Puerta": 3.5, "Puntos": 1.3, "Asistencias": 0.8},
-        {"nombre": "Cale Makar", "Tiros a Puerta": 3.0, "Puntos": 1.2, "Asistencias": 0.9}
+        {"nombre": "Nathan MacKinnon", "Tiros a Puerta": 4.6, "Puntos": 1.6},
+        {"nombre": "Mikko Rantanen", "Tiros a Puerta": 3.5, "Puntos": 1.3},
+        {"nombre": "Cale Makar", "Tiros a Puerta": 3.0, "Puntos": 1.2}
     ]
 }
 
@@ -51,25 +50,34 @@ _PROPS_CACHE_NHL = {}
 
 
 def _calcular_prop_nhl(media_real: float, tipo_prop: str):
-    linea = math.floor(media_real) + 0.5
-    lamb = media_real
-    k_max = int(math.floor(linea))
-    
-    # Distribución Poisson para eventos discretos de hockey
-    prob_under = 0.0
-    for k in range(k_max + 1):
-        prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
-    prob_over = 1.0 - prob_under
+    # En tiros a puerta la línea natural es con .5
+    if tipo_prop == "Tiros a Puerta":
+        linea = math.floor(media_real) + 0.5
+        cv = 0.28
+        sigma = max(0.8, media_real * cv)
+        z = (linea - media_real) / sigma
+        prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+        prob_over = 1.0 - prob_under
+    else:
+        # En puntos de hockey la línea estándar de casino es 0.5 o 1.5
+        linea = 1.5 if media_real >= 1.2 else 0.5
+        lamb = media_real
+        k_max = int(math.floor(linea))
+        prob_under = 0.0
+        for k in range(k_max + 1):
+            prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
+        prob_over = 1.0 - prob_under
 
     es_over = prob_over >= prob_under
     prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.48, min(0.74, prob_sel))
+    prob_sel = max(0.50, min(0.72, prob_sel))
 
-    if prob_sel >= 0.68:
+    # Asignación de cuotas realistas desde 1.62
+    if prob_sel >= 0.67:
         cuota = 1.65
-    elif prob_sel >= 0.64:
+    elif prob_sel >= 0.63:
         cuota = 1.72
-    elif prob_sel >= 0.60:
+    elif prob_sel >= 0.59:
         cuota = 1.80
     else:
         cuota = 1.88
@@ -87,7 +95,7 @@ def _calcular_prop_nhl(media_real: float, tipo_prop: str):
 
 
 def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_nhl_props_v1"
+    cache_key = f"{local}_{visitante}_nhl_fixed_v2"
     if cache_key in _PROPS_CACHE_NHL:
         return _PROPS_CACHE_NHL[cache_key]
 
@@ -96,7 +104,7 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
 
     jugadores_pool = []
 
-    # 1. Intentar Scoreboard oficial de NHL en ESPN
+    # 1. Intentar Scoreboard en vivo de ESPN para NHL
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
@@ -128,7 +136,7 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
     except Exception:
         pass
 
-    # 2. Respaldo directo si el juego no está activo o la IP de Render sufre timeout
+    # 2. Respaldo directo si no hay partido en vivo o hay timeout
     if not jugadores_pool:
         l_loc = STATS_LIDERES_NHL.get(abbr_loc, STATS_LIDERES_NHL.get("buf", []))
         l_vis = STATS_LIDERES_NHL.get(abbr_vis, STATS_LIDERES_NHL.get("tb", []))
@@ -141,14 +149,14 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
             copia["equipo"] = abbr_vis.upper()
             jugadores_pool.append(copia)
 
-    # 3. Filtrado por Alta Confiabilidad (Prob >= 60%, +EV >= 3%, Cuota >= 1.60)
+    # 3. Filtrar picks con valor positivo y probabilidad sólida
     candidatas = []
     for j in jugadores_pool:
-        for tipo in ["Tiros a Puerta", "Puntos", "Asistencias"]:
+        for tipo in ["Tiros a Puerta", "Puntos"]:
             if tipo in j and j[tipo] > 0:
                 media = j[tipo]
                 c = _calcular_prop_nhl(media, tipo)
-                if c["prob_real"] >= 60.0 and c["ev"] >= 3.0 and c["cuota"] >= 1.60:
+                if c["prob_real"] >= 55.0 and c["ev"] >= 2.0:
                     score_confianza = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
                     candidatas.append({
                         "jugador": j["nombre"],
