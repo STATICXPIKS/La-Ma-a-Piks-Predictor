@@ -33,7 +33,7 @@ EQUIPOS_ESPN_NBA = {
     "Sacramento Kings": ("sac", "23"),
     "San Antonio Spurs": ("sas", "24"),
     "Toronto Raptors": ("tor", "28"),
-    "Utah Jazz": "uta", "26",
+    "Utah Jazz": ("uta", "26"),
     "Washington Wizards": ("was", "27")
 }
 
@@ -48,8 +48,7 @@ _STATS_TEAM_CACHE = {}
 
 def _obtener_lideres_reales_equipo_espn(team_id: str, abbr: str):
     """
-    Descarga en 1 sola llamada la tabla oficial de promedios de toda la plantilla viva.
-    Cero nombres fijos: lee directamente lo que ESPN reporte hoy.
+    Descarga en 1 sola llamada la tabla oficial de promedios de la plantilla viva de ESPN.
     """
     now = time.time()
     if team_id in _STATS_TEAM_CACHE:
@@ -66,7 +65,6 @@ def _obtener_lideres_reales_equipo_espn(team_id: str, abbr: str):
             res = r.json()
             cats = res.get("results", {}).get("stats", {}).get("categories", [])
             
-            # Mapeo de métricas clave por partido
             metricas_clave = {
                 "avgPoints": "Puntos",
                 "avgRebounds": "Rebotes",
@@ -128,7 +126,6 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
-    # Proyección entera discreta sin fracciones
     proyeccion_final = int(round(media_real))
     if es_over and proyeccion_final <= linea:
         proyeccion_final = int(math.ceil(linea))
@@ -146,7 +143,7 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_live_espn_v1"
+    cache_key = f"{local}_{visitante}_props_live_espn_v2"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
@@ -157,10 +154,9 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     datos_loc = EQUIPOS_ESPN_NBA.get(local, ("ind", "11"))
     datos_vis = EQUIPOS_ESPN_NBA.get(visitante, ("was", "27"))
 
-    abbr_loc, id_loc = (datos_loc[0], str(datos_loc[1])) if isinstance(datos_loc, tuple) else ("ind", "11")
-    abbr_vis, id_vis = (datos_vis[0], str(datos_vis[1])) if isinstance(datos_vis, tuple) else ("was", "27")
+    abbr_loc, id_loc = datos_loc
+    abbr_vis, id_vis = datos_vis
 
-    # Extrae en tiempo real de ESPN
     jugadores_loc = _obtener_lideres_reales_equipo_espn(id_loc, abbr_loc)
     jugadores_vis = _obtener_lideres_reales_equipo_espn(id_vis, abbr_vis)
 
