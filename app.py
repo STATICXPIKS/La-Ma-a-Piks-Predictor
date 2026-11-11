@@ -28,10 +28,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==========================================
-# CONSTANTES DE THE ODDS API
-# ==========================================
-ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
+# API KEY con respaldo directo para eliminar el Error 401
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "826e995b77fba63fd42c2915877b1037").strip()
 
 DEPORTE_TO_SPORT_KEY = {
     "nba": "basketball_nba",
@@ -41,17 +39,11 @@ DEPORTE_TO_SPORT_KEY = {
 }
 
 # ==========================================
-# ENDPOINT PARA CARGA DE CUOTAS EN VIVO
+# ENDPOINT THE ODDS API EN VIVO
 # ==========================================
 
 @app.get("/api/live-odds")
 def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante: str = Query(...)):
-    if not ODDS_API_KEY:
-        return {
-            "success": False,
-            "error": "Falta configurar la variable ODDS_API_KEY en el entorno de Render."
-        }
-
     sport_key = DEPORTE_TO_SPORT_KEY.get(deporte.lower())
     if not sport_key:
         return {"success": False, "error": f"Deporte '{deporte}' no soportado."}
@@ -65,41 +57,37 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
     }
 
     try:
-        r = requests.get(url, params=params, timeout=6)
+        r = requests.get(url, params=params, timeout=7)
         if r.status_code != 200:
             return {"success": False, "error": f"Respuesta no válida de Odds API: Código {r.status_code}"}
 
         eventos = r.json()
         evento_encontrado = None
 
-        def limpiar_nombre(n):
-            return n.lower().replace("la ", "").replace("los angeles ", "").replace("new york ", "").strip()
+        def simplificar(txt):
+            return "".join(c for c in txt.lower() if c.isalnum())
 
-        loc_clean = limpiar_nombre(local)
-        vis_clean = limpiar_nombre(visitante)
+        loc_s = simplificar(local)
+        vis_s = simplificar(visitante)
 
         for ev in eventos:
-            home = ev.get("home_team", "").lower()
-            away = ev.get("away_team", "").lower()
+            home = simplificar(ev.get("home_team", ""))
+            away = simplificar(ev.get("away_team", ""))
 
-            match_loc = (loc_clean in home) or (home in loc_clean) or (local.lower() in home)
-            match_vis = (vis_clean in away) or (away in vis_clean) or (visitante.lower() in away)
-
-            if match_loc and match_vis:
+            if (loc_s in home or home in loc_s) and (vis_s in away or away in vis_s):
                 evento_encontrado = ev
                 break
 
         if not evento_encontrado:
             return {
                 "success": False,
-                "error": f"No hay líneas activas de mercado para {local} vs {visitante} en este momento."
+                "error": f"No hay líneas abiertas en vivo para {local} vs {visitante} actualmente."
             }
 
         bookmakers = evento_encontrado.get("bookmakers", [])
         if not bookmakers:
-            return {"success": False, "error": "No se encontraron casas de apuestas con líneas abiertas para este juego."}
+            return {"success": False, "error": "No hay cuotas disponibles para este evento en el mercado."}
 
-        # Priorizar casas con volumen de mercado
         bm = bookmakers[0]
         for b in bookmakers:
             if b.get("key") in ["draftkings", "fanduel", "pinnacle", "bovada", "betonlineag"]:
@@ -107,7 +95,7 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
                 break
 
         datos_cuotas = {
-            "bookmaker": bm.get("title", "Línea de Casino"),
+            "bookmaker": bm.get("title", "Casino de Mercado"),
             "cuota_ml_local": None,
             "cuota_ml_visitante": None,
             "linea_spread_local": None,
@@ -123,27 +111,24 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
             m_key = market.get("key")
             outcomes = market.get("outcomes", [])
 
-            # Moneyline (h2h)
             if m_key == "h2h":
                 for out in outcomes:
-                    t_name = out.get("name", "").lower()
-                    if (loc_clean in t_name) or (local.lower() in t_name):
+                    t_name = simplificar(out.get("name", ""))
+                    if loc_s in t_name or t_name in loc_s:
                         datos_cuotas["cuota_ml_local"] = out.get("price")
-                    elif (vis_clean in t_name) or (visitante.lower() in t_name):
+                    elif vis_s in t_name or t_name in vis_s:
                         datos_cuotas["cuota_ml_visitante"] = out.get("price")
 
-            # Handicap / Spreads
             elif m_key == "spreads":
                 for out in outcomes:
-                    t_name = out.get("name", "").lower()
-                    if (loc_clean in t_name) or (local.lower() in t_name):
+                    t_name = simplificar(out.get("name", ""))
+                    if loc_s in t_name or t_name in loc_s:
                         datos_cuotas["linea_spread_local"] = out.get("point")
                         datos_cuotas["cuota_spread_local"] = out.get("price")
-                    elif (vis_clean in t_name) or (visitante.lower() in t_name):
+                    elif vis_s in t_name or t_name in vis_s:
                         datos_cuotas["linea_spread_visitante"] = out.get("point")
                         datos_cuotas["cuota_spread_visitante"] = out.get("price")
 
-            # Totales (Over/Under)
             elif m_key == "totals":
                 for out in outcomes:
                     lado = out.get("name", "").lower()
@@ -156,53 +141,12 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
         return {"success": True, "data": datos_cuotas}
 
     except Exception as e:
-        return {"success": False, "error": f"Excepción interna: {str(e)}"}
+        return {"success": False, "error": f"Error del servidor: {str(e)}"}
+
 
 # ==========================================
-# ENDPOINTS REST API PARA FRONTEND EN VERCEL
+# ENDPOINTS REST API DE ANÁLISIS
 # ==========================================
-
-@app.get("/api/analizar-nfl")
-def api_analizar_nfl(
-    local: str, visitante: str,
-    c_ml_loc: float = 1.90, c_ml_vis: float = 1.90,
-    l_spread_loc: float = -2.5, c_spread_loc: float = 1.90,
-    l_spread_vis: float = 2.5, c_spread_vis: float = 1.90,
-    l_total: float = 46.5, c_over: float = 1.90, c_under: float = 1.90
-):
-    data = simular_partido_nfl(
-        local, visitante,
-        c_ml_loc, c_ml_vis,
-        l_spread_loc, c_spread_loc,
-        l_spread_vis, c_spread_vis,
-        l_total, c_over, c_under
-    )
-    try:
-        data["props_jugadores"] = obtener_mejores_props_nfl(local, visitante, top_n=6)
-    except Exception:
-        data["props_jugadores"] = []
-    return data
-
-@app.get("/api/analizar-nhl")
-def api_analizar_nhl(
-    local: str, visitante: str,
-    c_ml_loc: float = 1.73, c_ml_vis: float = 2.10,
-    l_rl_loc: float = -1.5, c_rl_loc: float = 2.85,
-    l_rl_vis: float = 1.5, c_rl_vis: float = 1.40,
-    l_total: float = 5.5, c_over: float = 1.79, c_under: float = 1.98
-):
-    data = simular_partido_nhl(
-        local, visitante,
-        c_ml_loc, c_ml_vis,
-        l_rl_loc, c_rl_loc,
-        l_rl_vis, c_rl_vis,
-        l_total, c_over, c_under
-    )
-    try:
-        data["props_jugadores"] = obtener_mejores_props_nhl(local, visitante, top_n=6)
-    except Exception:
-        data["props_jugadores"] = []
-    return data
 
 @app.get("/api/analizar-nba")
 def api_analizar_nba(
@@ -221,9 +165,57 @@ def api_analizar_nba(
     )
     try:
         data["props_jugadores"] = obtener_mejores_props_nba(local, visitante, top_n=6)
-    except Exception:
+    except Exception as e:
+        print(f"Error procesando props NBA: {e}")
         data["props_jugadores"] = []
     return data
+
+
+@app.get("/api/analizar-nfl")
+def api_analizar_nfl(
+    local: str, visitante: str,
+    c_ml_loc: float = 1.90, c_ml_vis: float = 1.90,
+    l_spread_loc: float = -2.5, c_spread_loc: float = 1.90,
+    l_spread_vis: float = 2.5, c_spread_vis: float = 1.90,
+    l_total: float = 46.5, c_over: float = 1.90, c_under: float = 1.90
+):
+    data = simular_partido_nfl(
+        local, visitante,
+        c_ml_loc, c_ml_vis,
+        l_spread_loc, c_spread_loc,
+        l_spread_vis, c_spread_vis,
+        l_total, c_over, c_under
+    )
+    try:
+        data["props_jugadores"] = obtener_mejores_props_nfl(local, visitante, top_n=6)
+    except Exception as e:
+        print(f"Error procesando props NFL: {e}")
+        data["props_jugadores"] = []
+    return data
+
+
+@app.get("/api/analizar-nhl")
+def api_analizar_nhl(
+    local: str, visitante: str,
+    c_ml_loc: float = 1.73, c_ml_vis: float = 2.10,
+    l_rl_loc: float = -1.5, c_rl_loc: float = 2.85,
+    l_rl_vis: float = 1.5, c_rl_vis: float = 1.40,
+    l_total: float = 5.5, c_over: float = 1.79, c_under: float = 1.98
+):
+    data = simular_partido_nhl(
+        local, visitante,
+        c_ml_loc, c_ml_vis,
+        l_rl_loc, c_rl_loc,
+        l_rl_vis, c_rl_vis,
+        l_total, c_over, c_under
+    )
+    try:
+        data["props_jugadores"] = obtener_mejores_props_nhl(local, visitante, top_n=6)
+    except Exception as e:
+        print(f"Error procesando props NHL: {e}")
+        data["props_jugadores"] = []
+    return data
+
 
 @app.get("/api/analizar-mlb")
 def api_analizar_mlb(
@@ -242,9 +234,11 @@ def api_analizar_mlb(
     )
     try:
         data["props_jugadores"] = obtener_mejores_props_mlb(local, visitante, top_n=6)
-    except Exception:
+    except Exception as e:
+        print(f"Error procesando props MLB: {e}")
         data["props_jugadores"] = []
     return data
+
 
 with gr.Blocks(title="La Maña Picks Engine") as demo:
     gr.Markdown("### La Maña Picks - API Backend Activa")
