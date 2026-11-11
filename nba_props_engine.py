@@ -2,56 +2,98 @@ import math
 import time
 import requests
 
-MAPEO_EQUIPOS_NBA = {
-    "Atlanta Hawks": "atl", "Boston Celtics": "bos", "Brooklyn Nets": "bkn",
-    "Charlotte Hornets": "cha", "Chicago Bulls": "chi", "Cleveland Cavaliers": "cle",
-    "Dallas Mavericks": "dal", "Denver Nuggets": "den", "Detroit Pistons": "det",
-    "Golden State Warriors": "gsw", "Houston Rockets": "hou", "Indiana Pacers": "ind",
-    "LA Clippers": "lac", "Los Angeles Clippers": "lac", "Los Angeles Lakers": "lal",
-    "Memphis Grizzlies": "mem", "Miami Heat": "mia", "Milwaukee Bucks": "mil",
-    "Minnesota Timberwolves": "min", "New Orleans Pelicans": "nop", "New York Knicks": "nyk",
-    "Oklahoma City Thunder": "okc", "Orlando Magic": "orl", "Philadelphia 76ers": "phi",
-    "Phoenix Suns": "phx", "Portland Trail Blazers": "por", "Sacramento Kings": "sac",
-    "San Antonio Spurs": "sas", "Toronto Raptors": "tor", "Utah Jazz": "uta",
-    "Washington Wizards": "was"
+# Mapeo oficial de ID numérico y abreviatura de ESPN para los 30 equipos
+EQUIPOS_ESPN_NBA = {
+    "Atlanta Hawks": ("atl", "1"),
+    "Boston Celtics": ("bos", "2"),
+    "Brooklyn Nets": ("bkn", "17"),
+    "Charlotte Hornets": ("cha", "30"),
+    "Chicago Bulls": ("chi", "4"),
+    "Cleveland Cavaliers": ("cle", "5"),
+    "Dallas Mavericks": ("dal", "6"),
+    "Denver Nuggets": ("den", "7"),
+    "Detroit Pistons": ("det", "8"),
+    "Golden State Warriors": ("gsw", "9"),
+    "Houston Rockets": ("hou", "10"),
+    "Indiana Pacers": ("ind", "11"),
+    "LA Clippers": ("lac", "12"),
+    "Los Angeles Clippers": ("lac", "12"),
+    "Los Angeles Lakers": ("lal", "13"),
+    "Memphis Grizzlies": ("mem", "29"),
+    "Miami Heat": ("mia", "14"),
+    "Milwaukee Bucks": ("mil", "15"),
+    "Minnesota Timberwolves": ("min", "16"),
+    "New Orleans Pelicans": ("nop", "3"),
+    "New York Knicks": ("nyk", "18"),
+    "Oklahoma City Thunder": ("okc", "25"),
+    "Orlando Magic": ("orl", "19"),
+    "Philadelphia 76ers": ("phi", "20"),
+    "Phoenix Suns": ("phx", "21"),
+    "Portland Trail Blazers": ("por", "22"),
+    "Sacramento Kings": ("sac", "23"),
+    "San Antonio Spurs": ("sas", "24"),
+    "Toronto Raptors": ("tor", "28"),
+    "Utah Jazz": "uta", "26",
+    "Washington Wizards": ("was", "27")
 }
 
-STATS_LIDERES_NBA = {
-    "ind": [
-        {"nombre": "Pascal Siakam", "Puntos": 20.8, "Rebotes": 6.9, "Asistencias": 3.8, "Triples": 1.4},
-        {"nombre": "Tyrese Haliburton", "Puntos": 17.5, "Rebotes": 3.8, "Asistencias": 8.6, "Triples": 2.5},
-        {"nombre": "Bennedict Mathurin", "Puntos": 19.2, "Rebotes": 5.8, "Asistencias": 2.4, "Triples": 1.8},
-        {"nombre": "Myles Turner", "Puntos": 15.6, "Rebotes": 7.1, "Asistencias": 1.6, "Triples": 1.9}
-    ],
-    "was": [
-        {"nombre": "Jordan Poole", "Puntos": 21.4, "Rebotes": 3.1, "Asistencias": 4.8, "Triples": 3.2},
-        {"nombre": "Kyle Kuzma", "Puntos": 16.8, "Rebotes": 5.9, "Asistencias": 3.6, "Triples": 1.6},
-        {"nombre": "Bilal Coulibaly", "Puntos": 14.5, "Rebotes": 5.1, "Asistencias": 3.4, "Triples": 1.3},
-        {"nombre": "Alexandre Sarr", "Puntos": 11.8, "Rebotes": 6.5, "Asistencias": 2.1, "Triples": 1.5}
-    ],
-    "bos": [
-        {"nombre": "Jayson Tatum", "Puntos": 28.5, "Rebotes": 8.5, "Asistencias": 5.8, "Triples": 3.6},
-        {"nombre": "Jaylen Brown", "Puntos": 24.2, "Rebotes": 6.8, "Asistencias": 4.5, "Triples": 2.2},
-        {"nombre": "Derrick White", "Puntos": 16.4, "Rebotes": 4.2, "Asistencias": 4.9, "Triples": 2.8}
-    ],
-    "nyk": [
-        {"nombre": "Jalen Brunson", "Puntos": 25.4, "Rebotes": 3.2, "Asistencias": 7.4, "Triples": 2.4},
-        {"nombre": "Karl-Anthony Towns", "Puntos": 24.8, "Rebotes": 12.8, "Asistencias": 3.1, "Triples": 2.1},
-        {"nombre": "OG Anunoby", "Puntos": 16.8, "Rebotes": 5.2, "Asistencias": 2.3, "Triples": 2.2}
-    ],
-    "gsw": [
-        {"nombre": "Stephen Curry", "Puntos": 23.0, "Rebotes": 5.2, "Asistencias": 6.5, "Triples": 4.2},
-        {"nombre": "Buddy Hield", "Puntos": 16.2, "Rebotes": 3.8, "Asistencias": 2.1, "Triples": 3.4},
-        {"nombre": "Jonathan Kuminga", "Puntos": 14.8, "Rebotes": 4.6, "Asistencias": 2.0, "Triples": 1.1}
-    ],
-    "lal": [
-        {"nombre": "Anthony Davis", "Puntos": 28.2, "Rebotes": 11.6, "Asistencias": 3.4, "Triples": 0.6},
-        {"nombre": "LeBron James", "Puntos": 23.5, "Rebotes": 8.1, "Asistencias": 9.2, "Triples": 2.3},
-        {"nombre": "Austin Reaves", "Puntos": 17.8, "Rebotes": 3.9, "Asistencias": 5.4, "Triples": 2.1}
-    ]
+HEADERS_ESPN = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "application/json"
 }
 
 _PROPS_CACHE = {}
+_STATS_TEAM_CACHE = {}
+
+
+def _obtener_lideres_reales_equipo_espn(team_id: str, abbr: str):
+    """
+    Descarga en 1 sola llamada la tabla oficial de promedios de toda la plantilla viva.
+    Cero nombres fijos: lee directamente lo que ESPN reporte hoy.
+    """
+    now = time.time()
+    if team_id in _STATS_TEAM_CACHE:
+        ts, data = _STATS_TEAM_CACHE[team_id]
+        if now - ts < 1800 and data:
+            return data
+
+    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/statistics"
+    jugadores_dict = {}
+
+    try:
+        r = requests.get(url, headers=HEADERS_ESPN, timeout=5)
+        if r.status_code == 200:
+            res = r.json()
+            cats = res.get("results", {}).get("stats", {}).get("categories", [])
+            
+            # Mapeo de métricas clave por partido
+            metricas_clave = {
+                "avgPoints": "Puntos",
+                "avgRebounds": "Rebotes",
+                "avgAssists": "Asistencias",
+                "avgThreePointFieldGoalsMade": "Triples"
+            }
+
+            for cat in cats:
+                cat_name = cat.get("name", "")
+                if cat_name in metricas_clave:
+                    tipo_nombre = metricas_clave[cat_name]
+                    for atleta in cat.get("leaders", []):
+                        nombre = atleta.get("athlete", {}).get("displayName", "")
+                        val = float(atleta.get("displayValue", "0").replace(",", ""))
+                        if nombre and val > 0:
+                            if nombre not in jugadores_dict:
+                                jugadores_dict[nombre] = {
+                                    "nombre": nombre,
+                                    "equipo": abbr.upper()
+                                }
+                            jugadores_dict[nombre][tipo_nombre] = val
+    except Exception as e:
+        print(f"Error consultando estadísticas vivas de {abbr} en ESPN: {e}")
+
+    resultado = list(jugadores_dict.values())
+    _STATS_TEAM_CACHE[team_id] = (now, resultado)
+    return resultado
 
 
 def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
@@ -73,12 +115,8 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
     es_over = prob_over >= prob_under
     prob_sel = prob_over if es_over else prob_under
+    prob_sel = max(0.50, min(0.74, prob_sel))
 
-    # Límites empíricos de probabilidad real sin inflar
-    prob_sel = max(0.48, min(0.74, prob_sel))
-
-    # Asignación de cuota de mercado proporcional (desde 1.62 hasta 1.90)
-    # A mayor probabilidad natural esperada, menor es la cuota del casino
     if prob_sel >= 0.68:
         cuota = 1.65
     elif prob_sel >= 0.64:
@@ -90,68 +128,43 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
+    # Proyección entera discreta sin fracciones
+    proyeccion_final = int(round(media_real))
+    if es_over and proyeccion_final <= linea:
+        proyeccion_final = int(math.ceil(linea))
+    elif not es_over and proyeccion_final >= linea:
+        proyeccion_final = int(math.floor(linea))
+
     return {
         "lado": "MÁS DE" if es_over else "MENOS DE",
         "linea": linea,
         "cuota": cuota,
         "prob_real": round(prob_sel * 100, 1),
         "ev": ev,
-        "proyeccion": media_real
+        "proyeccion": proyeccion_final
     }
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_cuota160_v1"
+    cache_key = f"{local}_{visitante}_props_live_espn_v1"
+    now = time.time()
+
     if cache_key in _PROPS_CACHE:
-        return _PROPS_CACHE[cache_key]
+        ts, data_cached = _PROPS_CACHE[cache_key]
+        if now - ts < 900 and data_cached:
+            return data_cached
 
-    abbr_loc = MAPEO_EQUIPOS_NBA.get(local, "ind")
-    abbr_vis = MAPEO_EQUIPOS_NBA.get(visitante, "was")
+    datos_loc = EQUIPOS_ESPN_NBA.get(local, ("ind", "11"))
+    datos_vis = EQUIPOS_ESPN_NBA.get(visitante, ("was", "27"))
 
-    jugadores_pool = []
+    abbr_loc, id_loc = (datos_loc[0], str(datos_loc[1])) if isinstance(datos_loc, tuple) else ("ind", "11")
+    abbr_vis, id_vis = (datos_vis[0], str(datos_vis[1])) if isinstance(datos_vis, tuple) else ("was", "27")
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    }
+    # Extrae en tiempo real de ESPN
+    jugadores_loc = _obtener_lideres_reales_equipo_espn(id_loc, abbr_loc)
+    jugadores_vis = _obtener_lideres_reales_equipo_espn(id_vis, abbr_vis)
 
-    try:
-        url_espn = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
-        r = requests.get(url_espn, headers=headers, timeout=4)
-        if r.status_code == 200:
-            events = r.json().get("events", [])
-            for ev in events:
-                comps = ev.get("competitions", [])[0].get("competitors", [])
-                abbrs = [c.get("team", {}).get("abbreviation", "").lower() for c in comps]
-                if abbr_loc in abbrs and abbr_vis in abbrs:
-                    for comp in comps:
-                        eq_ab = comp.get("team", {}).get("abbreviation", "").lower()
-                        for leader in comp.get("leaders", []):
-                            cat_name = leader.get("displayName", "")
-                            prop_name = "Puntos" if "Point" in cat_name else ("Rebotes" if "Rebound" in cat_name else ("Asistencias" if "Assist" in cat_name else None))
-                            if prop_name and leader.get("leaders"):
-                                l_obj = leader["leaders"][0]
-                                at_name = l_obj.get("athlete", {}).get("displayName", "")
-                                val = float(l_obj.get("value", 0))
-                                if at_name and val > 0:
-                                    jugadores_pool.append({
-                                        "nombre": at_name,
-                                        "equipo": eq_ab.upper(),
-                                        prop_name: val
-                                    })
-    except Exception:
-        pass
-
-    if not jugadores_pool:
-        l_loc = STATS_LIDERES_NBA.get(abbr_loc, STATS_LIDERES_NBA.get("ind", []))
-        l_vis = STATS_LIDERES_NBA.get(abbr_vis, STATS_LIDERES_NBA.get("was", []))
-        for j in l_loc:
-            copia = dict(j)
-            copia["equipo"] = abbr_loc.upper()
-            jugadores_pool.append(copia)
-        for j in l_vis:
-            copia = dict(j)
-            copia["equipo"] = abbr_vis.upper()
-            jugadores_pool.append(copia)
+    jugadores_pool = jugadores_loc + jugadores_vis
 
     candidatas = []
     for j in jugadores_pool:
@@ -159,13 +172,8 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
             if tipo in j and j[tipo] > 0:
                 media = j[tipo]
                 c = _calcular_prop_cuantitativa(media, tipo)
-
-                # FILTROS ESTRICTOS DE ALTA CONFIABILIDAD:
-                # 1. Probabilidad Real >= 60.0%
-                # 2. Margen matemático positivo (+EV >= 3.0%)
-                # 3. Cuotas viables desde 1.60 en adelante
-                if c["prob_real"] >= 60.0 and c["ev"] >= 3.0 and c["cuota"] >= 1.60:
-                    score_confianza = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
+                if c["prob_real"] >= 58.0 and c["ev"] >= 2.5:
+                    score = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
                     candidatas.append({
                         "jugador": j["nombre"],
                         "equipo_abbr": j["equipo"],
@@ -176,15 +184,14 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
                         "prob_real": c["prob_real"],
                         "ev": c["ev"],
                         "proyeccion": c["proyeccion"],
-                        "_score": score_confianza
+                        "_score": score
                     })
 
-    # Jerarquización por Confiabilidad Real
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
 
     for item in candidatas:
         item.pop("_score", None)
 
     seleccion = candidatas[:top_n]
-    _PROPS_CACHE[cache_key] = seleccion
+    _PROPS_CACHE[cache_key] = (now, seleccion)
     return seleccion
