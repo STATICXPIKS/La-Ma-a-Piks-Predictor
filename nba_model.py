@@ -18,37 +18,38 @@ MAPEO_NBA = {
     "Toronto Raptors": "TOR", "Utah Jazz": "UTA", "Washington Wizards": "WAS"
 }
 
+# Métricas ponderadas oficiales normalizadas de la NBA
 STATS_30_NBA_PONDERADAS = {
-    "ATL": (115.8, 117.2, 101.4, 0.575, 0.538, 1490),
-    "BOS": (122.5, 110.8, 98.8, 0.605, 0.568, 1685),
-    "BKN": (111.2, 116.5, 98.5, 0.560, 0.525, 1420),
-    "CHA": (110.5, 117.8, 99.2, 0.555, 0.520, 1410),
-    "CHI": (113.8, 115.9, 99.8, 0.568, 0.532, 1475),
-    "CLE": (119.2, 111.4, 98.2, 0.592, 0.555, 1630),
-    "DAL": (118.5, 114.2, 99.5, 0.588, 0.550, 1610),
-    "DEN": (118.8, 113.5, 98.0, 0.595, 0.558, 1635),
-    "DET": (110.2, 117.5, 99.0, 0.552, 0.518, 1405),
-    "GSW": (116.4, 112.8, 100.8, 0.582, 0.545, 1560),
-    "HOU": (114.8, 112.5, 99.4, 0.568, 0.532, 1540),
-    "IND": (120.2, 118.0, 102.5, 0.601, 0.565, 1565),
-    "LAC": (115.5, 113.2, 97.8, 0.578, 0.540, 1550),
-    "LAL": (116.2, 114.5, 100.5, 0.585, 0.548, 1555),
-    "MEM": (116.4, 113.5, 101.0, 0.574, 0.535, 1570),
-    "MIA": (113.5, 112.0, 97.2, 0.572, 0.532, 1530),
-    "MIL": (117.8, 114.0, 100.2, 0.590, 0.552, 1585),
-    "MIN": (115.2, 109.5, 98.2, 0.578, 0.542, 1620),
-    "NOP": (115.0, 113.8, 99.0, 0.575, 0.538, 1525),
-    "NYK": (118.0, 112.2, 96.8, 0.582, 0.545, 1605),
-    "OKC": (119.5, 110.2, 100.5, 0.595, 0.558, 1660),
-    "ORL": (112.8, 110.5, 98.0, 0.562, 0.528, 1545),
-    "PHI": (116.0, 113.5, 98.5, 0.580, 0.542, 1550),
-    "PHX": (116.8, 114.2, 98.8, 0.588, 0.550, 1560),
-    "POR": (110.5, 117.8, 98.5, 0.555, 0.520, 1400),
-    "SAC": (117.2, 115.0, 100.2, 0.580, 0.545, 1545),
-    "SAS": (112.5, 116.0, 101.2, 0.565, 0.530, 1460),
-    "TOR": (112.8, 116.5, 99.8, 0.562, 0.528, 1440),
-    "UTA": (112.0, 118.2, 100.5, 0.560, 0.525, 1430),
-    "WAS": (111.0, 119.5, 102.2, 0.558, 0.522, 1395)
+    "ATL": (115.2, 116.8, 100.8, 0.572, 0.535, 1490),
+    "BOS": (121.8, 110.5, 98.6, 0.602, 0.565, 1685),
+    "BKN": (111.0, 116.2, 98.2, 0.558, 0.522, 1420),
+    "CHA": (110.2, 117.5, 98.8, 0.552, 0.518, 1410),
+    "CHI": (113.5, 115.6, 99.4, 0.565, 0.530, 1475),
+    "CLE": (118.8, 111.2, 98.0, 0.590, 0.552, 1630),
+    "DAL": (118.2, 114.0, 99.2, 0.585, 0.548, 1610),
+    "DEN": (118.5, 113.2, 98.2, 0.592, 0.555, 1635),
+    "DET": (110.0, 117.2, 98.8, 0.550, 0.515, 1405),
+    "GSW": (116.0, 112.5, 100.5, 0.580, 0.542, 1560),
+    "HOU": (114.5, 112.2, 99.0, 0.565, 0.530, 1540),
+    "IND": (117.2, 116.0, 101.0, 0.585, 0.550, 1565),
+    "LAC": (115.2, 113.0, 97.6, 0.575, 0.538, 1550),
+    "LAL": (116.0, 114.2, 100.2, 0.582, 0.545, 1555),
+    "MEM": (116.2, 113.2, 100.8, 0.572, 0.532, 1570),
+    "MIA": (113.2, 111.8, 97.0, 0.570, 0.530, 1530),
+    "MIL": (117.5, 113.8, 100.0, 0.588, 0.550, 1585),
+    "MIN": (115.0, 109.2, 98.0, 0.575, 0.540, 1620),
+    "NOP": (114.8, 113.5, 98.8, 0.572, 0.535, 1525),
+    "NYK": (117.8, 112.0, 96.5, 0.580, 0.542, 1605),
+    "OKC": (119.2, 110.0, 100.2, 0.592, 0.555, 1660),
+    "ORL": (112.5, 110.2, 97.8, 0.560, 0.525, 1545),
+    "PHI": (115.8, 113.2, 98.2, 0.578, 0.540, 1550),
+    "PHX": (116.5, 114.0, 98.5, 0.585, 0.548, 1560),
+    "POR": (110.2, 117.5, 98.2, 0.552, 0.518, 1400),
+    "SAC": (117.0, 114.8, 100.0, 0.578, 0.542, 1545),
+    "SAS": (112.2, 115.8, 100.8, 0.562, 0.528, 1460),
+    "TOR": (112.5, 116.2, 99.5, 0.560, 0.525, 1440),
+    "UTA": (111.8, 118.0, 100.2, 0.558, 0.522, 1430),
+    "WAS": (110.2, 118.0, 100.5, 0.550, 0.515, 1395)
 }
 
 def entrenar_modelo_xgboost_nba():
@@ -83,24 +84,23 @@ def simular_partido_nba(
     s_loc = STATS_30_NBA_PONDERADAS.get(abbr_loc, (115.0, 115.0, 99.0, 0.575, 0.535, 1500))
     s_vis = STATS_30_NBA_PONDERADAS.get(abbr_vis, (115.0, 115.0, 99.0, 0.575, 0.535, 1500))
 
-    media_liga_pace = 99.4
     media_liga_rtg = 114.8
 
-    # 1. Posesiones efectivas (Pace ajustado de forma cruzada)
-    pace_estimado = round((s_loc[2] * s_vis[2]) / media_liga_pace, 1)
+    # 1. Posesiones esperadas: Promedio aritmético puro entre ambos ritmos
+    pace_estimado = round((s_loc[2] + s_vis[2]) / 2.0, 1)
 
     # 2. Eficiencia ofensiva esperada normalizada
     ortg_esperado_loc = (s_loc[0] * s_vis[1]) / media_liga_rtg
     ortg_esperado_vis = (s_vis[0] * s_loc[1]) / media_liga_rtg
 
-    # 3. Puntos esperados con ventaja de localía empírica (+2.1 pts)
+    # 3. Puntos esperados directos (+2.1 por factor de localía)
     pts_raw_loc = (ortg_esperado_loc * (pace_estimado / 100.0)) + 2.1
     pts_raw_vis = (ortg_esperado_vis * (pace_estimado / 100.0)) - 0.5
 
-    # 4. Ajuste cuantitativo Bayesiano con la línea de mercado para evitar dispersiones irreales
+    # 4. Total proyectado con regresión equilibrada al mercado
     total_raw = pts_raw_loc + pts_raw_vis
-    peso_modelo = 0.65
-    peso_mercado = 0.35
+    peso_modelo = 0.60
+    peso_mercado = 0.40
     total_esperado = round((total_raw * peso_modelo) + (l_total * peso_mercado), 1)
 
     ratio_loc = pts_raw_loc / total_raw
@@ -116,9 +116,9 @@ def simular_partido_nba(
     vector_features = np.array([[diff_ortg, diff_drtg, diff_ts, diff_efg, diff_elo]])
     prob_xgb_loc = float(_MODELO_XGB_NBA.predict_proba(vector_features)[0][1])
 
-    # Dispersión histórica calibrada de la NBA
-    std_dev_total = 15.8
-    std_dev_spread = 11.4
+    # Dispersión histórica real de la NBA
+    std_dev_total = 16.5
+    std_dev_spread = 11.8
 
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_spread_loc}_{l_spread_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
