@@ -298,6 +298,14 @@
                 </div>
             </div>
 
+            <!-- BOTÓN EN VIVO THE ODDS API -->
+            <div class="mb-6">
+                <button id="btn-live-odds" onclick="cargarCuotasEnVivo()" class="w-full bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-montserrat font-black py-3 rounded-2xl uppercase tracking-wider text-xs shadow-lg transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 border border-cyan-400/30">
+                    <span>⚡</span> <span>CARGAR CUOTAS Y LÍNEAS EN VIVO (THE ODDS API)</span>
+                </button>
+                <div id="odds-api-status" class="hidden text-center text-[11px] font-bold mt-2 py-1.5 px-3 rounded-xl"></div>
+            </div>
+
             <!-- PANEL DE CUOTAS Y LÍNEAS MANUALES -->
             <div class="bg-slate-900 text-white p-5 rounded-2xl mb-6 space-y-4">
                 <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider">
@@ -477,6 +485,8 @@
 
             const badge = document.getElementById('simulador-badge-deporte');
             const titulo = document.getElementById('simulador-titulo-modelo');
+            const statusDiv = document.getElementById('odds-api-status');
+            if (statusDiv) statusDiv.classList.add('hidden');
 
             if (dep === 'NHL') {
                 badge.innerText = "NHL";
@@ -641,6 +651,84 @@
 
             document.getElementById('name-local').innerText = loc;
             document.getElementById('name-visitante').innerText = vis;
+
+            const statusDiv = document.getElementById('odds-api-status');
+            if (statusDiv) statusDiv.classList.add('hidden');
+        }
+
+        // ==========================================
+        // CARGA DE CUOTAS EN VIVO (THE ODDS API)
+        // ==========================================
+        async function cargarCuotasEnVivo() {
+            const btn = document.getElementById('btn-live-odds');
+            const statusDiv = document.getElementById('odds-api-status');
+            const local = document.getElementById('select-local').value;
+            const visitante = document.getElementById('select-visitante').value;
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">⏳ BUSCANDO LÍNEAS EN THE ODDS API...</span>`;
+            statusDiv.classList.remove('hidden');
+            statusDiv.className = "text-center text-[11px] font-bold mt-2 py-1.5 px-3 rounded-xl bg-slate-800 text-sky-400 border border-sky-500/30";
+            statusDiv.innerText = "Consultando cuotas en tiempo real...";
+
+            const depParam = deporteActual.toLowerCase();
+
+            try {
+                const url = `${RENDER_API_URL}/api/live-odds?deporte=${depParam}&local=${encodeURIComponent(local)}&visitante=${encodeURIComponent(visitante)}`;
+                const response = await fetch(url);
+                const res = await response.json();
+
+                if (!res.success) {
+                    statusDiv.className = "text-center text-[11px] font-bold mt-2 py-1.5 px-3 rounded-xl bg-rose-950/80 text-rose-300 border border-rose-500/40";
+                    statusDiv.innerText = `⚠️ ${res.error || "No se encontraron líneas en vivo para este partido."}`;
+                    return;
+                }
+
+                const d = res.data;
+
+                // 1. Moneyline
+                if (d.cuota_ml_local !== null && d.cuota_ml_local !== undefined) {
+                    document.getElementById('cuota-ml-loc').value = d.cuota_ml_local;
+                }
+                if (d.cuota_ml_visitante !== null && d.cuota_ml_visitante !== undefined) {
+                    document.getElementById('cuota-ml-vis').value = d.cuota_ml_visitante;
+                }
+
+                // 2. Spread / Puck Line / Run Line
+                if (d.linea_spread_local !== null && d.linea_spread_local !== undefined) {
+                    document.getElementById('linea-pl-loc').value = d.linea_spread_local;
+                }
+                if (d.cuota_spread_local !== null && d.cuota_spread_local !== undefined) {
+                    document.getElementById('cuota-pl-loc').value = d.cuota_spread_local;
+                }
+                if (d.linea_spread_visitante !== null && d.linea_spread_visitante !== undefined) {
+                    document.getElementById('linea-pl-vis').value = d.linea_spread_visitante;
+                }
+                if (d.cuota_spread_visitante !== null && d.cuota_spread_visitante !== undefined) {
+                    document.getElementById('cuota-pl-vis').value = d.cuota_spread_visitante;
+                }
+
+                // 3. Totales (Over / Under)
+                if (d.linea_total !== null && d.linea_total !== undefined) {
+                    document.getElementById('linea-total-goles').value = d.linea_total;
+                }
+                if (d.cuota_total_over !== null && d.cuota_total_over !== undefined) {
+                    document.getElementById('cuota-over').value = d.cuota_total_over;
+                }
+                if (d.cuota_total_under !== null && d.cuota_total_under !== undefined) {
+                    document.getElementById('cuota-under').value = d.cuota_total_under;
+                }
+
+                statusDiv.className = "text-center text-[11px] font-bold mt-2 py-1.5 px-3 rounded-xl bg-emerald-950/80 text-emerald-300 border border-emerald-500/40";
+                statusDiv.innerText = `✅ ¡Cuotas cargadas con éxito desde ${d.bookmaker}! Puedes editarlas manualmente si tu casino difiere.`;
+
+            } catch (err) {
+                statusDiv.className = "text-center text-[11px] font-bold mt-2 py-1.5 px-3 rounded-xl bg-rose-950/80 text-rose-300 border border-rose-500/40";
+                statusDiv.innerText = "❌ Error de conexión al consultar las cuotas en vivo.";
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>⚡</span> <span>CARGAR CUOTAS Y LÍNEAS EN VIVO (THE ODDS API)</span>`;
+            }
         }
 
         function volverHome() {
@@ -946,7 +1034,6 @@
                 const labelSpreadLoc = `${d.equipo_local_abbr} ${strSignLoc}`;
                 const labelSpreadVis = `${d.equipo_visitante_abbr} ${strSignVis}`;
 
-                // CÁLCULO DE VALOR ESPERADO PURO (SIN PARCHES)
                 function calcEV(probPercent, odds) {
                     const probDecimal = probPercent / 100.0;
                     return Math.round(((probDecimal * odds) - 1.0) * 1000) / 10.0;
@@ -1038,7 +1125,6 @@
                     </div>`;
                 }
 
-                // RENDERIZADO DINÁMICO DE PROPS SEGÚN EL DEPORTE
                 let htmlPropsBloque = "";
                 const listaProps = d.props_jugadores || [];
                 if (listaProps.length > 0) {
