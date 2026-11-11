@@ -1,101 +1,80 @@
 import math
 import time
+import requests
 
-MAPEO_EQUIPOS_NFL = {
-    "Arizona Cardinals": "ari", "Atlanta Falcons": "atl", "Baltimore Ravens": "bal",
-    "Buffalo Bills": "buf", "Carolina Panthers": "car", "Chicago Bears": "chi",
-    "Cincinnati Bengals": "cin", "Cleveland Browns": "cle", "Dallas Cowboys": "dal",
-    "Denver Broncos": "den", "Detroit Lions": "det", "Green Bay Packers": "gb",
-    "Houston Texans": "hou", "Indianapolis Colts": "ind", "Jacksonville Jaguars": "jax",
-    "Kansas City Chiefs": "kc", "Las Vegas Raiders": "lv", "Los Angeles Chargers": "lac",
-    "Los Angeles Rams": "lar", "Miami Dolphins": "mia", "Minnesota Vikings": "min",
-    "New England Patriots": "ne", "New Orleans Saints": "no", "New York Giants": "nyg",
-    "New York Jets": "nyj", "Philadelphia Eagles": "phi", "Pittsburgh Steelers": "pit",
-    "San Francisco 49ers": "sf", "Seattle Seahawks": "sea", "Tampa Bay Buccaneers": "tb",
-    "Tennessee Titans": "ten", "Washington Commanders": "was"
+EQUIPOS_NFL_ESPN = {
+    "Arizona Cardinals": ("ari", "22"), "Atlanta Falcons": ("atl", "1"), "Baltimore Ravens": ("bal", "33"),
+    "Buffalo Bills": ("buf", "2"), "Carolina Panthers": ("car", "29"), "Chicago Bears": ("chi", "3"),
+    "Cincinnati Bengals": ("cin", "4"), "Cleveland Browns": ("cle", "5"), "Dallas Cowboys": ("dal", "6"),
+    "Denver Broncos": ("den", "7"), "Detroit Lions": ("det", "8"), "Green Bay Packers": ("gb", "9"),
+    "Houston Texans": ("hou", "34"), "Indianapolis Colts": ("ind", "11"), "Jacksonville Jaguars": ("jax", "30"),
+    "Kansas City Chiefs": ("kc", "12"), "Las Vegas Raiders": ("lv", "13"), "Los Angeles Chargers": ("lac", "24"),
+    "Los Angeles Rams": ("lar", "14"), "Miami Dolphins": ("mia", "15"), "Minnesota Vikings": ("min", "16"),
+    "New England Patriots": ("ne", "17"), "New Orleans Saints": ("no", "18"), "New York Giants": ("nyg", "19"),
+    "New York Jets": ("nyj", "20"), "Philadelphia Eagles": ("phi", "21"), "Pittsburgh Steelers": ("pit", "23"),
+    "San Francisco 49ers": ("sf", "25"), "Seattle Seahawks": ("sea", "26"), "Tampa Bay Buccaneers": ("tb", "27"),
+    "Tennessee Titans": ("ten", "10"), "Washington Commanders": ("was", "28")
 }
 
-# Rotación activa con métricas de yardas y volumen de pases completos
-STATS_LIDERES_NFL = {
-    "phi": [
-        {"nombre": "Jalen Hurts", "Yardas Pase": 224.5, "Pases Completos": 19.4},
-        {"nombre": "Saquon Barkley", "Yardas Carrera": 108.2},
-        {"nombre": "A.J. Brown", "Yardas Recepción": 76.4},
-        {"nombre": "DeVonta Smith", "Yardas Recepción": 56.8}
-    ],
-    "dal": [
-        {"nombre": "Dak Prescott", "Yardas Pase": 248.0, "Pases Completos": 22.1},
-        {"nombre": "CeeDee Lamb", "Yardas Recepción": 82.5},
-        {"nombre": "Rico Dowdle", "Yardas Carrera": 52.4},
-        {"nombre": "Jake Ferguson", "Yardas Recepción": 44.0}
-    ],
-    "kc": [
-        {"nombre": "Patrick Mahomes", "Yardas Pase": 254.0, "Pases Completos": 23.2},
-        {"nombre": "Travis Kelce", "Yardas Recepción": 64.0},
-        {"nombre": "Kareem Hunt", "Yardas Carrera": 62.0}
-    ],
-    "sf": [
-        {"nombre": "Brock Purdy", "Yardas Pase": 260.0, "Pases Completos": 20.8},
-        {"nombre": "Christian McCaffrey", "Yardas Carrera": 78.0, "Yardas Recepción": 40.5},
-        {"nombre": "George Kittle", "Yardas Recepción": 66.0}
-    ],
-    "bal": [
-        {"nombre": "Lamar Jackson", "Yardas Pase": 238.0, "Yardas Carrera": 54.0},
-        {"nombre": "Derrick Henry", "Yardas Carrera": 104.5},
-        {"nombre": "Zay Flowers", "Yardas Recepción": 62.8}
-    ],
-    "det": [
-        {"nombre": "Jared Goff", "Yardas Pase": 252.0, "Pases Completos": 21.8},
-        {"nombre": "Jahmyr Gibbs", "Yardas Carrera": 74.0, "Yardas Recepción": 28.0},
-        {"nombre": "Amon-Ra St. Brown", "Yardas Recepción": 81.2}
-    ]
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json"
 }
 
 _PROPS_CACHE_NFL = {}
 
 
-def _calcular_prop_nfl(media_real: float, tipo_prop: str):
-    es_discreto = (tipo_prop == "Pases Completos")
+def _obtener_jugadores_vivos_nfl(team_id, abbr):
+    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/statistics"
+    jugadores = {}
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=6)
+        if r.status_code == 200:
+            data = r.json()
+            cats = data.get("results", {}).get("stats", {}).get("categories", [])
+            mapping = {
+                "passingYards": "Yardas Pase",
+                "rushingYards": "Yardas Acarreo",
+                "receivingYards": "Yardas Recepción",
+                "receptions": "Recepciones"
+            }
+            for c in cats:
+                cat_name = c.get("name")
+                if cat_name in mapping:
+                    tipo = mapping[cat_name]
+                    for leader in c.get("leaders", []):
+                        athlete = leader.get("athlete", {})
+                        nombre = athlete.get("displayName")
+                        val = float(str(leader.get("displayValue", "0")).replace(",", ""))
+                        if nombre and val > 0:
+                            if nombre not in jugadores:
+                                jugadores[nombre] = {"nombre": nombre, "equipo": abbr.upper()}
+                            jugadores[nombre][tipo] = val
+    except Exception as e:
+        print(f"Error consultando ESPN NFL {abbr}: {e}")
+    return list(jugadores.values())
 
-    if es_discreto:
-        linea = math.floor(media_real) + 0.5
-        lamb = media_real
-        k_max = int(math.floor(linea))
-        prob_under = 0.0
-        for k in range(k_max + 1):
-            prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
-        prob_over = 1.0 - prob_under
-    else:
-        linea = math.floor(media_real) + 0.5
-        cv = 0.22 if "Pase" in tipo_prop else (0.27 if "Carrera" in tipo_prop else 0.31)
-        sigma = max(4.0, media_real * cv)
-        z = (linea - media_real) / sigma
-        prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
-        prob_over = 1.0 - prob_under
+
+def _calcular_prop_nfl(media, tipo):
+    linea = math.floor(media) + 0.5
+    sigma = max(3.0, media * 0.30)
+    z = (linea - media) / sigma
+    prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+    prob_over = 1.0 - prob_under
 
     es_over = prob_over >= prob_under
-    prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.50, min(0.74, prob_sel))
+    prob_sel = max(0.52, min(0.74, prob_over if es_over else prob_under))
 
-    if prob_sel >= 0.68:
-        cuota = 1.65
-    elif prob_sel >= 0.64:
-        cuota = 1.72
-    elif prob_sel >= 0.60:
-        cuota = 1.80
-    else:
-        cuota = 1.88
+    if prob_sel >= 0.68: cuota = 1.65
+    elif prob_sel >= 0.64: cuota = 1.72
+    elif prob_sel >= 0.60: cuota = 1.80
+    else: cuota = 1.88
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
-    if es_discreto:
-        proyeccion_final = int(round(media_real))
-        if es_over and proyeccion_final <= linea:
-            proyeccion_final = int(math.ceil(linea))
-        elif not es_over and proyeccion_final >= linea:
-            proyeccion_final = int(math.floor(linea))
-    else:
-        proyeccion_final = round(media_real, 1)
+    proy = int(round(media))
+    if es_over and proy <= linea: proy = int(math.ceil(linea))
+    elif not es_over and proy >= linea: proy = int(math.floor(linea))
 
     return {
         "lado": "MÁS DE" if es_over else "MENOS DE",
@@ -103,39 +82,35 @@ def _calcular_prop_nfl(media_real: float, tipo_prop: str):
         "cuota": cuota,
         "prob_real": round(prob_sel * 100, 1),
         "ev": ev,
-        "proyeccion": proyeccion_final
+        "proyeccion": proy
     }
 
 
 def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_nfl_high_conf_v2"
-    if cache_key in _PROPS_CACHE_NFL:
-        return _PROPS_CACHE_NFL[cache_key]
+    key = f"{local}_{visitante}_nfl_props_live"
+    now = time.time()
+    if key in _PROPS_CACHE_NFL:
+        ts, data = _PROPS_CACHE_NFL[key]
+        if now - ts < 1800 and data:
+            return data
 
-    abbr_loc = MAPEO_EQUIPOS_NFL.get(local, "phi")
-    abbr_vis = MAPEO_EQUIPOS_NFL.get(visitante, "dal")
+    d_loc = EQUIPOS_NFL_ESPN.get(local)
+    d_vis = EQUIPOS_NFL_ESPN.get(visitante)
+    if not d_loc or not d_vis:
+        return []
 
-    jugadores_pool = []
-    l_loc = STATS_LIDERES_NFL.get(abbr_loc, STATS_LIDERES_NFL.get("phi", []))
-    l_vis = STATS_LIDERES_NFL.get(abbr_vis, STATS_LIDERES_NFL.get("dal", []))
+    abbr_loc, id_loc = d_loc
+    abbr_vis, id_vis = d_vis
 
-    for j in l_loc:
-        copia = dict(j)
-        copia["equipo"] = abbr_loc.upper()
-        jugadores_pool.append(copia)
-    for j in l_vis:
-        copia = dict(j)
-        copia["equipo"] = abbr_vis.upper()
-        jugadores_pool.append(copia)
-
+    pool = _obtener_jugadores_vivos_nfl(id_loc, abbr_loc) + _obtener_jugadores_vivos_nfl(id_vis, abbr_vis)
     candidatas = []
-    for j in jugadores_pool:
-        for tipo in ["Yardas Pase", "Yardas Carrera", "Yardas Recepción", "Pases Completos"]:
+
+    for j in pool:
+        for tipo in ["Yardas Pase", "Yardas Acarreo", "Yardas Recepción", "Recepciones"]:
             if tipo in j and j[tipo] > 0:
-                media = j[tipo]
-                c = _calcular_prop_nfl(media, tipo)
-                if c["prob_real"] >= 60.0 and c["ev"] >= 3.0 and c["cuota"] >= 1.60:
-                    score = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
+                c = _calcular_prop_nfl(j[tipo], tipo)
+                if c["prob_real"] >= 55.0 and c["ev"] >= 1.5:
+                    score = (c["prob_real"] * 0.7) + (c["ev"] * 0.3)
                     candidatas.append({
                         "jugador": j["nombre"],
                         "equipo_abbr": j["equipo"],
@@ -150,9 +125,9 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
                     })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
-    for item in candidatas:
-        item.pop("_score", None)
+    for c in candidatas:
+        c.pop("_score", None)
 
-    seleccion = candidatas[:top_n]
-    _PROPS_CACHE_NFL[cache_key] = seleccion
-    return seleccion
+    res = candidatas[:top_n]
+    _PROPS_CACHE_NFL[key] = (now, res)
+    return res
