@@ -1,66 +1,55 @@
 import math
 import time
-import requests
 
-MAPEO_EQUIPOS_NHL = {
-    "Anaheim Ducks": "ana", "Boston Bruins": "bos", "Buffalo Sabres": "buf",
-    "Calgary Flames": "cgy", "Carolina Hurricanes": "car", "Chicago Blackhawks": "chi",
-    "Colorado Avalanche": "col", "Columbus Blue Jackets": "cbj", "Dallas Stars": "dal",
-    "Detroit Red Wings": "det", "Edmonton Oilers": "edm", "Florida Panthers": "fla",
-    "Los Angeles Kings": "la", "Minnesota Wild": "min", "Montreal Canadiens": "mtl",
-    "Nashville Predators": "nsh", "New Jersey Devils": "nj", "New York Islanders": "nyi",
-    "New York Rangers": "nyr", "Ottawa Senators": "ott", "Philadelphia Flyers": "phi",
-    "Pittsburgh Penguins": "pit", "San Jose Sharks": "sj", "Seattle Kraken": "sea",
-    "St. Louis Blues": "stl", "Tampa Bay Lightning": "tb", "Toronto Maple Leafs": "tor",
-    "Utah Hockey Club": "utah", "Vancouver Canucks": "van", "Vegas Golden Knights": "vgk",
-    "Washington Capitals": "wsh", "Winnipeg Jets": "wpg"
+MAPEO_EQUIPOS_MLB = {
+    "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
+    "Boston Red Sox": "bos", "Chicago Cubs": "chc", "Chicago White Sox": "chw",
+    "Cincinnati Reds": "cin", "Cleveland Guardians": "cle", "Colorado Rockies": "col",
+    "Detroit Tigers": "det", "Houston Astros": "hou", "Kansas City Royals": "kc",
+    "Los Angeles Angels": "laa", "Los Angeles Dodgers": "lad", "Miami Marlins": "mia",
+    "Milwaukee Brewers": "mil", "Minnesota Twins": "min", "New York Mets": "nym",
+    "New York Yankees": "nyy", "Oakland Athletics": "oak", "Philadelphia Phillies": "phi",
+    "Pittsburgh Pirates": "pit", "San Diego Padres": "sd", "San Francisco Giants": "sf",
+    "Seattle Mariners": "sea", "St. Louis Cardinals": "stl", "Tampa Bay Rays": "tb",
+    "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh"
 }
 
-STATS_LIDERES_NHL = {
-    "buf": [
-        {"nombre": "Tage Thompson", "Tiros a Puerta": 3.8, "Puntos": 1.1},
-        {"nombre": "Alex Tuch", "Tiros a Puerta": 2.9, "Puntos": 0.9},
-        {"nombre": "Rasmus Dahlin", "Tiros a Puerta": 2.6, "Puntos": 0.8},
-        {"nombre": "JJ Peterka", "Tiros a Puerta": 2.7, "Puntos": 0.8}
+STATS_LIDERES_MLB = {
+    "lad": [
+        {"nombre": "Shohei Ohtani", "Hits": 1.3, "Bases Totales": 2.6},
+        {"nombre": "Mookie Betts", "Hits": 1.2, "Bases Totales": 2.1},
+        {"nombre": "Freddie Freeman", "Hits": 1.1, "Bases Totales": 1.9},
+        {"nombre": "Tyler Glasnow", "Ponches (K's)": 7.4}
     ],
-    "tb": [
-        {"nombre": "Nikita Kucherov", "Tiros a Puerta": 4.1, "Puntos": 1.5},
-        {"nombre": "Brayden Point", "Tiros a Puerta": 2.9, "Puntos": 1.0},
-        {"nombre": "Jake Guentzel", "Tiros a Puerta": 3.2, "Puntos": 1.1},
-        {"nombre": "Victor Hedman", "Tiros a Puerta": 2.4, "Puntos": 0.9}
+    "nyy": [
+        {"nombre": "Aaron Judge", "Hits": 1.2, "Bases Totales": 2.7},
+        {"nombre": "Juan Soto", "Hits": 1.1, "Bases Totales": 2.2},
+        {"nombre": "Gerrit Cole", "Ponches (K's)": 6.8}
     ],
-    "edm": [
-        {"nombre": "Connor McDavid", "Tiros a Puerta": 3.7, "Puntos": 1.6},
-        {"nombre": "Leon Draisaitl", "Tiros a Puerta": 3.4, "Puntos": 1.4},
-        {"nombre": "Evan Bouchard", "Tiros a Puerta": 3.2, "Puntos": 0.9}
+    "atl": [
+        {"nombre": "Ronald Acuña Jr.", "Hits": 1.2, "Bases Totales": 2.2},
+        {"nombre": "Spencer Strider", "Ponches (K's)": 8.2},
+        {"nombre": "Matt Olson", "Hits": 1.0, "Bases Totales": 2.0}
     ],
-    "tor": [
-        {"nombre": "Auston Matthews", "Tiros a Puerta": 4.3, "Puntos": 1.2},
-        {"nombre": "Mitch Marner", "Tiros a Puerta": 2.6, "Puntos": 1.2},
-        {"nombre": "William Nylander", "Tiros a Puerta": 3.6, "Puntos": 1.1}
-    ],
-    "col": [
-        {"nombre": "Nathan MacKinnon", "Tiros a Puerta": 4.6, "Puntos": 1.6},
-        {"nombre": "Mikko Rantanen", "Tiros a Puerta": 3.5, "Puntos": 1.3},
-        {"nombre": "Cale Makar", "Tiros a Puerta": 3.0, "Puntos": 1.2}
+    "phi": [
+        {"nombre": "Bryce Harper", "Hits": 1.1, "Bases Totales": 2.1},
+        {"nombre": "Zack Wheeler", "Ponches (K's)": 7.1},
+        {"nombre": "Trea Turner", "Hits": 1.3, "Bases Totales": 2.0}
     ]
 }
 
-_PROPS_CACHE_NHL = {}
+_PROPS_CACHE_MLB = {}
 
 
-def _calcular_prop_nhl(media_real: float, tipo_prop: str):
-    # En tiros a puerta la línea natural es con .5
-    if tipo_prop == "Tiros a Puerta":
-        linea = math.floor(media_real) + 0.5
-        cv = 0.28
-        sigma = max(0.8, media_real * cv)
+def _calcular_prop_mlb(media_real: float, tipo_prop: str):
+    linea = math.floor(media_real) + 0.5
+    
+    if "Ponches" in tipo_prop:
+        sigma = max(1.1, media_real * 0.24)
         z = (linea - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
         prob_over = 1.0 - prob_under
     else:
-        # En puntos de hockey la línea estándar de casino es 0.5 o 1.5
-        linea = 1.5 if media_real >= 1.2 else 0.5
         lamb = media_real
         k_max = int(math.floor(linea))
         prob_under = 0.0
@@ -70,14 +59,13 @@ def _calcular_prop_nhl(media_real: float, tipo_prop: str):
 
     es_over = prob_over >= prob_under
     prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.50, min(0.72, prob_sel))
+    prob_sel = max(0.50, min(0.74, prob_sel))
 
-    # Asignación de cuotas realistas desde 1.62
-    if prob_sel >= 0.67:
+    if prob_sel >= 0.68:
         cuota = 1.65
-    elif prob_sel >= 0.63:
+    elif prob_sel >= 0.64:
         cuota = 1.72
-    elif prob_sel >= 0.59:
+    elif prob_sel >= 0.60:
         cuota = 1.80
     else:
         cuota = 1.88
@@ -90,74 +78,39 @@ def _calcular_prop_nhl(media_real: float, tipo_prop: str):
         "cuota": cuota,
         "prob_real": round(prob_sel * 100, 1),
         "ev": ev,
-        "proyeccion": media_real
+        "proyeccion": round(media_real, 1)
     }
 
 
-def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_nhl_fixed_v2"
-    if cache_key in _PROPS_CACHE_NHL:
-        return _PROPS_CACHE_NHL[cache_key]
+def obtener_mejores_props_mlb(local: str, visitante: str, top_n: int = 6):
+    cache_key = f"{local}_{visitante}_mlb_props_v1"
+    if cache_key in _PROPS_CACHE_MLB:
+        return _PROPS_CACHE_MLB[cache_key]
 
-    abbr_loc = MAPEO_EQUIPOS_NHL.get(local, "buf")
-    abbr_vis = MAPEO_EQUIPOS_NHL.get(visitante, "tb")
+    abbr_loc = MAPEO_EQUIPOS_MLB.get(local, "lad")
+    abbr_vis = MAPEO_EQUIPOS_MLB.get(visitante, "nyy")
 
     jugadores_pool = []
+    l_loc = STATS_LIDERES_MLB.get(abbr_loc, STATS_LIDERES_MLB.get("lad", []))
+    l_vis = STATS_LIDERES_MLB.get(abbr_vis, STATS_LIDERES_MLB.get("nyy", []))
 
-    # 1. Intentar Scoreboard en vivo de ESPN para NHL
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
+    for j in l_loc:
+        copia = dict(j)
+        copia["equipo"] = abbr_loc.upper()
+        jugadores_pool.append(copia)
+    for j in l_vis:
+        copia = dict(j)
+        copia["equipo"] = abbr_vis.upper()
+        jugadores_pool.append(copia)
 
-    try:
-        url_espn = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
-        r = requests.get(url_espn, headers=headers, timeout=4)
-        if r.status_code == 200:
-            events = r.json().get("events", [])
-            for ev in events:
-                comps = ev.get("competitions", [])[0].get("competitors", [])
-                abbrs = [c.get("team", {}).get("abbreviation", "").lower() for c in comps]
-                if abbr_loc in abbrs and abbr_vis in abbrs:
-                    for comp in comps:
-                        eq_ab = comp.get("team", {}).get("abbreviation", "").lower()
-                        for leader in comp.get("leaders", []):
-                            cat_name = leader.get("displayName", "")
-                            prop_name = "Puntos" if "Point" in cat_name else ("Tiros a Puerta" if "Shot" in cat_name else None)
-                            if prop_name and leader.get("leaders"):
-                                l_obj = leader["leaders"][0]
-                                at_name = l_obj.get("athlete", {}).get("displayName", "")
-                                val = float(l_obj.get("value", 0))
-                                if at_name and val > 0:
-                                    jugadores_pool.append({
-                                        "nombre": at_name,
-                                        "equipo": eq_ab.upper(),
-                                        prop_name: val
-                                    })
-    except Exception:
-        pass
-
-    # 2. Respaldo directo si no hay partido en vivo o hay timeout
-    if not jugadores_pool:
-        l_loc = STATS_LIDERES_NHL.get(abbr_loc, STATS_LIDERES_NHL.get("buf", []))
-        l_vis = STATS_LIDERES_NHL.get(abbr_vis, STATS_LIDERES_NHL.get("tb", []))
-        for j in l_loc:
-            copia = dict(j)
-            copia["equipo"] = abbr_loc.upper()
-            jugadores_pool.append(copia)
-        for j in l_vis:
-            copia = dict(j)
-            copia["equipo"] = abbr_vis.upper()
-            jugadores_pool.append(copia)
-
-    # 3. Filtrar picks con valor positivo y probabilidad sólida
     candidatas = []
     for j in jugadores_pool:
-        for tipo in ["Tiros a Puerta", "Puntos"]:
+        for tipo in ["Ponches (K's)", "Hits", "Bases Totales"]:
             if tipo in j and j[tipo] > 0:
                 media = j[tipo]
-                c = _calcular_prop_nhl(media, tipo)
-                if c["prob_real"] >= 55.0 and c["ev"] >= 2.0:
-                    score_confianza = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
+                c = _calcular_prop_mlb(media, tipo)
+                if c["prob_real"] >= 58.0 and c["ev"] >= 2.5:
+                    score = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
                     candidatas.append({
                         "jugador": j["nombre"],
                         "equipo_abbr": j["equipo"],
@@ -168,14 +121,13 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                         "prob_real": c["prob_real"],
                         "ev": c["ev"],
                         "proyeccion": c["proyeccion"],
-                        "_score": score_confianza
+                        "_score": score
                     })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
-
     for item in candidatas:
         item.pop("_score", None)
 
     seleccion = candidatas[:top_n]
-    _PROPS_CACHE_NHL[cache_key] = seleccion
+    _PROPS_CACHE_MLB[cache_key] = seleccion
     return seleccion
