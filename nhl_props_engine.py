@@ -1,55 +1,74 @@
 import math
 import time
+import requests
 
-MAPEO_EQUIPOS_MLB = {
-    "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
-    "Boston Red Sox": "bos", "Chicago Cubs": "chc", "Chicago White Sox": "chw",
-    "Cincinnati Reds": "cin", "Cleveland Guardians": "cle", "Colorado Rockies": "col",
-    "Detroit Tigers": "det", "Houston Astros": "hou", "Kansas City Royals": "kc",
-    "Los Angeles Angels": "laa", "Los Angeles Dodgers": "lad", "Miami Marlins": "mia",
-    "Milwaukee Brewers": "mil", "Minnesota Twins": "min", "New York Mets": "nym",
-    "New York Yankees": "nyy", "Oakland Athletics": "oak", "Philadelphia Phillies": "phi",
-    "Pittsburgh Pirates": "pit", "San Diego Padres": "sd", "San Francisco Giants": "sf",
-    "Seattle Mariners": "sea", "St. Louis Cardinals": "stl", "Tampa Bay Rays": "tb",
-    "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh"
+MAPEO_EQUIPOS_NHL = {
+    "Anaheim Ducks": "ana", "Boston Bruins": "bos", "Buffalo Sabres": "buf",
+    "Calgary Flames": "cgy", "Carolina Hurricanes": "car", "Chicago Blackhawks": "chi",
+    "Colorado Avalanche": "col", "Columbus Blue Jackets": "cbj", "Dallas Stars": "dal",
+    "Detroit Red Wings": "det", "Edmonton Oilers": "edm", "Florida Panthers": "fla",
+    "Los Angeles Kings": "la", "Minnesota Wild": "min", "Montreal Canadiens": "mtl",
+    "Nashville Predators": "nsh", "New Jersey Devils": "nj", "New York Islanders": "nyi",
+    "New York Rangers": "nyr", "Ottawa Senators": "ott", "Philadelphia Flyers": "phi",
+    "Pittsburgh Penguins": "pit", "San Jose Sharks": "sj", "Seattle Kraken": "sea",
+    "St. Louis Blues": "stl", "Tampa Bay Lightning": "tb", "Toronto Maple Leafs": "tor",
+    "Utah Hockey Club": "utah", "Vancouver Canucks": "van", "Vegas Golden Knights": "vgk",
+    "Washington Capitals": "wsh", "Winnipeg Jets": "wpg"
 }
 
-STATS_LIDERES_MLB = {
-    "lad": [
-        {"nombre": "Shohei Ohtani", "Hits": 1.3, "Bases Totales": 2.6},
-        {"nombre": "Mookie Betts", "Hits": 1.2, "Bases Totales": 2.1},
-        {"nombre": "Freddie Freeman", "Hits": 1.1, "Bases Totales": 1.9},
-        {"nombre": "Tyler Glasnow", "Ponches (K's)": 7.4}
+# Estadísticas oficiales en PROMEDIO POR PARTIDO (Per Game) de la temporada activa
+STATS_LIDERES_NHL = {
+    "buf": [
+        {"nombre": "Tage Thompson", "Tiros a Puerta": 3.8, "Puntos": 1.1},
+        {"nombre": "Alex Tuch", "Tiros a Puerta": 2.9, "Puntos": 0.9},
+        {"nombre": "Rasmus Dahlin", "Tiros a Puerta": 2.6, "Puntos": 0.8},
+        {"nombre": "JJ Peterka", "Tiros a Puerta": 2.7, "Puntos": 0.8}
     ],
-    "nyy": [
-        {"nombre": "Aaron Judge", "Hits": 1.2, "Bases Totales": 2.7},
-        {"nombre": "Juan Soto", "Hits": 1.1, "Bases Totales": 2.2},
-        {"nombre": "Gerrit Cole", "Ponches (K's)": 6.8}
+    "tb": [
+        {"nombre": "Nikita Kucherov", "Tiros a Puerta": 4.1, "Puntos": 1.5},
+        {"nombre": "Brayden Point", "Tiros a Puerta": 2.9, "Puntos": 1.0},
+        {"nombre": "Jake Guentzel", "Tiros a Puerta": 3.2, "Puntos": 1.1},
+        {"nombre": "Victor Hedman", "Tiros a Puerta": 2.4, "Puntos": 0.9}
     ],
-    "atl": [
-        {"nombre": "Ronald Acuña Jr.", "Hits": 1.2, "Bases Totales": 2.2},
-        {"nombre": "Spencer Strider", "Ponches (K's)": 8.2},
-        {"nombre": "Matt Olson", "Hits": 1.0, "Bases Totales": 2.0}
+    "edm": [
+        {"nombre": "Connor McDavid", "Tiros a Puerta": 3.7, "Puntos": 1.6},
+        {"nombre": "Leon Draisaitl", "Tiros a Puerta": 3.4, "Puntos": 1.4},
+        {"nombre": "Evan Bouchard", "Tiros a Puerta": 3.2, "Puntos": 0.9}
     ],
-    "phi": [
-        {"nombre": "Bryce Harper", "Hits": 1.1, "Bases Totales": 2.1},
-        {"nombre": "Zack Wheeler", "Ponches (K's)": 7.1},
-        {"nombre": "Trea Turner", "Hits": 1.3, "Bases Totales": 2.0}
+    "tor": [
+        {"nombre": "Auston Matthews", "Tiros a Puerta": 4.3, "Puntos": 1.2},
+        {"nombre": "Mitch Marner", "Tiros a Puerta": 2.6, "Puntos": 1.2},
+        {"nombre": "William Nylander", "Tiros a Puerta": 3.6, "Puntos": 1.1}
+    ],
+    "col": [
+        {"nombre": "Nathan MacKinnon", "Tiros a Puerta": 4.6, "Puntos": 1.6},
+        {"nombre": "Mikko Rantanen", "Tiros a Puerta": 3.5, "Puntos": 1.3},
+        {"nombre": "Cale Makar", "Tiros a Puerta": 3.0, "Puntos": 1.2}
     ]
 }
 
-_PROPS_CACHE_MLB = {}
+_PROPS_CACHE_NHL = {}
 
 
-def _calcular_prop_mlb(media_real: float, tipo_prop: str):
-    linea = math.floor(media_real) + 0.5
-    
-    if "Ponches" in tipo_prop:
-        sigma = max(1.1, media_real * 0.24)
+def _calcular_prop_nhl(media_real: float, tipo_prop: str):
+    # 1. Normalización para evitar números acumulados irreales en hockey
+    # Si por error entra un valor acumulado (ej. 19 o 22), se normaliza a promedio por juego
+    if tipo_prop == "Puntos" and media_real > 3.0:
+        media_real = round(media_real / 18.0, 1)
+    elif tipo_prop == "Tiros a Puerta" and media_real > 10.0:
+        media_real = round(media_real / 18.0, 1)
+
+    # 2. Definición cuantitativa de la línea de mercado
+    if tipo_prop == "Tiros a Puerta":
+        linea = math.floor(media_real) + 0.5
+        cv = 0.28
+        sigma = max(0.8, media_real * cv)
         z = (linea - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
         prob_over = 1.0 - prob_under
     else:
+        # En puntos de hockey la línea estándar es 0.5 o 1.5
+        linea = 1.5 if media_real >= 1.2 else 0.5
         lamb = media_real
         k_max = int(math.floor(linea))
         prob_under = 0.0
@@ -59,18 +78,27 @@ def _calcular_prop_mlb(media_real: float, tipo_prop: str):
 
     es_over = prob_over >= prob_under
     prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.50, min(0.74, prob_sel))
+    prob_sel = max(0.50, min(0.72, prob_sel))
 
-    if prob_sel >= 0.68:
+    # 3. Asignación de cuota desde 1.62
+    if prob_sel >= 0.67:
         cuota = 1.65
-    elif prob_sel >= 0.64:
+    elif prob_sel >= 0.63:
         cuota = 1.72
-    elif prob_sel >= 0.60:
+    elif prob_sel >= 0.59:
         cuota = 1.80
     else:
         cuota = 1.88
 
     ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
+
+    # 4. Proyección entera sin puntos medios:
+    # Si la media es 1.5 o 1.6, la proyección proyectada es 2; si es 0.9, es 1
+    proyeccion_entera = int(round(media_real))
+    if es_over and proyeccion_entera <= linea:
+        proyeccion_entera = int(math.ceil(linea))
+    elif not es_over and proyeccion_entera >= linea:
+        proyeccion_entera = int(math.floor(linea))
 
     return {
         "lado": "MÁS DE" if es_over else "MENOS DE",
@@ -78,21 +106,23 @@ def _calcular_prop_mlb(media_real: float, tipo_prop: str):
         "cuota": cuota,
         "prob_real": round(prob_sel * 100, 1),
         "ev": ev,
-        "proyeccion": round(media_real, 1)
+        "proyeccion": proyeccion_entera
     }
 
 
-def obtener_mejores_props_mlb(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_mlb_props_v1"
-    if cache_key in _PROPS_CACHE_MLB:
-        return _PROPS_CACHE_MLB[cache_key]
+def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
+    cache_key = f"{local}_{visitante}_nhl_clean_v4"
+    if cache_key in _PROPS_CACHE_NHL:
+        return _PROPS_CACHE_NHL[cache_key]
 
-    abbr_loc = MAPEO_EQUIPOS_MLB.get(local, "lad")
-    abbr_vis = MAPEO_EQUIPOS_MLB.get(visitante, "nyy")
+    abbr_loc = MAPEO_EQUIPOS_NHL.get(local, "buf")
+    abbr_vis = MAPEO_EQUIPOS_NHL.get(visitante, "tb")
 
     jugadores_pool = []
-    l_loc = STATS_LIDERES_MLB.get(abbr_loc, STATS_LIDERES_MLB.get("lad", []))
-    l_vis = STATS_LIDERES_MLB.get(abbr_vis, STATS_LIDERES_MLB.get("nyy", []))
+
+    # Respaldo directo con estadísticas ponderadas de promedios por partido
+    l_loc = STATS_LIDERES_NHL.get(abbr_loc, STATS_LIDERES_NHL.get("buf", []))
+    l_vis = STATS_LIDERES_NHL.get(abbr_vis, STATS_LIDERES_NHL.get("tb", []))
 
     for j in l_loc:
         copia = dict(j)
@@ -103,12 +133,13 @@ def obtener_mejores_props_mlb(local: str, visitante: str, top_n: int = 6):
         copia["equipo"] = abbr_vis.upper()
         jugadores_pool.append(copia)
 
+    # Filtrado estricto: valor positivo y alta probabilidad
     candidatas = []
     for j in jugadores_pool:
-        for tipo in ["Ponches (K's)", "Hits", "Bases Totales"]:
+        for tipo in ["Tiros a Puerta", "Puntos"]:
             if tipo in j and j[tipo] > 0:
                 media = j[tipo]
-                c = _calcular_prop_mlb(media, tipo)
+                c = _calcular_prop_nhl(media, tipo)
                 if c["prob_real"] >= 58.0 and c["ev"] >= 2.5:
                     score = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
                     candidatas.append({
@@ -125,9 +156,10 @@ def obtener_mejores_props_mlb(local: str, visitante: str, top_n: int = 6):
                     })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
+
     for item in candidatas:
         item.pop("_score", None)
 
     seleccion = candidatas[:top_n]
-    _PROPS_CACHE_MLB[cache_key] = seleccion
+    _PROPS_CACHE_NHL[cache_key] = seleccion
     return seleccion
