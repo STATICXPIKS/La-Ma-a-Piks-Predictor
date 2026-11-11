@@ -1,477 +1,420 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Maña Picks - Centro Cuantitativo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #0b0f19; color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card-bg { background-color: #111827; border: 1px solid #1f2937; }
-        .accent-border { border-color: #10b981; }
-        .accent-text { color: #10b981; }
-        .accent-bg { background-color: #10b981; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Maña Picks - Centro Cuantitativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0b0f19; color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-bg { background-color: #111827; border: 1px solid #1f2937; }
+        .accent-border { border-color: #10b981; }
+        .accent-text { color: #10b981; }
+        .accent-bg { background-color: #10b981; }
+    </style>
 </head>
 <body class="min-h-screen pb-12">
 
-    <!-- BARRA SUPERIOR -->
-    <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-        <div class="flex items-center gap-3">
-            <span class="text-2xl">🎯</span>
-            <div>
-                <h1 class="text-xl font-bold tracking-wide text-white">LA MAÑA PICKS</h1>
-                <p class="text-xs text-gray-400">Motor Cuantitativo Multideporte (+EV)</p>
-            </div>
-        </div>
+    <!-- BARRA SUPERIOR -->
+    <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🎯</span>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white">LA MAÑA PICKS</h1>
+                <p class="text-xs text-gray-400">Motor Cuantitativo Multideporte (+EV)</p>
+            </div>
+        </div>
 
-        <!-- SELECTOR DE LIGAS -->
-        <div class="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
-            <button onclick="cambiarDeporte('NHL')" id="tab-NHL" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all bg-emerald-500 text-white">NHL 🏒</button>
-            <button onclick="cambiarDeporte('NFL')" id="tab-NFL" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">NFL 🏈</button>
-            <button onclick="cambiarDeporte('NBA')" id="tab-NBA" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">NBA 🏀</button>
-            <button onclick="cambiarDeporte('MLB')" id="tab-MLB" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">MLB ⚾</button>
-        </div>
+        <!-- SELECTOR DE LIGAS -->
+        <div class="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
+            <button onclick="cambiarDeporte('NHL')" id="tab-NHL" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all bg-emerald-500 text-white">NHL 🏒</button>
+            <button onclick="cambiarDeporte('NFL')" id="tab-NFL" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">NFL 🏈</button>
+            <button onclick="cambiarDeporte('NBA')" id="tab-NBA" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">NBA 🏀</button>
+            <button onclick="cambiarDeporte('MLB')" id="tab-MLB" class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white">MLB ⚾</button>
+        </div>
 
-        <button onclick="abrirModalHistorial()" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
-            <i class="fa-solid fa-list-check text-emerald-400"></i> Historial y Auditoría
-        </button>
-    </header>
+        <button onclick="abrirModalHistorial()" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+            <i class="fa-solid fa-list-check text-emerald-400"></i> Historial y Auditoría
+        </button>
+    </header>
 
-    <main class="max-w-7xl mx-auto px-4 mt-6">
+    <main class="max-w-7xl mx-auto px-4 mt-6">
 
-        <!-- CONFIGURADOR DEL PARTIDO -->
-        <div class="card-bg rounded-xl p-6 shadow-xl mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Equipo Local</label>
-                    <select id="sel-local" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"></select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Equipo Visitante</label>
-                    <select id="sel-visitante" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"></select>
-                </div>
-            </div>
+        <!-- CONFIGURADOR DEL PARTIDO -->
+        <div class="card-bg rounded-xl p-6 shadow-xl mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Equipo Local</label>
+                    <select id="sel-local" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Equipo Visitante</label>
+                    <select id="sel-visitante" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"></select>
+                </div>
+            </div>
 
-            <!-- ENTRADA DE LÍNEAS / CUOTAS -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-800 text-xs">
-                <!-- MONEYLINE -->
-                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
-                    <p class="font-bold text-gray-300 mb-2">1. LÍNEA DE DINERO (MONEYLINE)</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <span class="text-gray-400 block mb-1">Cuota Local:</span>
-                            <input type="number" step="0.01" id="c-ml-loc" value="1.75" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
-                        </div>
-                        <div>
-                            <span class="text-gray-400 block mb-1">Cuota Visita:</span>
-                            <input type="number" step="0.01" id="c-ml-vis" value="2.10" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
-                        </div>
-                    </div>
-                </div>
+            <!-- ENTRADA DE LÍNEAS / CUOTAS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-800 text-xs">
+                <!-- MONEYLINE -->
+                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
+                    <p class="font-bold text-gray-300 mb-2">1. LÍNEA DE DINERO (MONEYLINE)</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-gray-400 block mb-1">Cuota Local:</span>
+                            <input type="number" step="0.01" id="c-ml-loc" value="1.90" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">Cuota Visita:</span>
+                            <input type="number" step="0.01" id="c-ml-vis" value="1.90" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                        </div>
+                    </div>
+                </div>
 
-                <!-- SPREAD / HANDICAP / RUN LINE -->
-                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
-                    <p class="font-bold text-gray-300 mb-2" id="etiqueta-mercado-spread">2. PUCK LINE (HANDICAP)</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <span class="text-gray-400 block mb-1">Línea Loc / Cuota:</span>
-                            <div class="flex gap-1">
-                                <input type="number" step="0.5" id="l-spread-loc" value="-1.5" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
-                                <input type="number" step="0.01" id="c-spread-loc" value="2.80" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
-                            </div>
-                        </div>
-                        <div>
-                            <span class="text-gray-400 block mb-1">Línea Vis / Cuota:</span>
-                            <div class="flex gap-1">
-                                <input type="number" step="0.5" id="l-spread-vis" value="1.5" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
-                                <input type="number" step="0.01" id="c-spread-vis" value="1.42" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- SPREAD / HANDICAP -->
+                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
+                    <p class="font-bold text-gray-300 mb-2" id="etiqueta-mercado-spread">2. PUCK LINE / SPREAD</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-gray-400 block mb-1">Línea Loc / Cuota:</span>
+                            <div class="flex gap-1">
+                                <input type="number" step="0.5" id="l-spread-loc" value="-1.5" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
+                                <input type="number" step="0.01" id="c-spread-loc" value="2.80" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">Línea Vis / Cuota:</span>
+                            <div class="flex gap-1">
+                                <input type="number" step="0.5" id="l-spread-vis" value="1.5" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
+                                <input type="number" step="0.01" id="c-spread-vis" value="1.42" class="w-1/2 bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- TOTALES -->
-                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
-                    <p class="font-bold text-gray-300 mb-2" id="etiqueta-mercado-totales">3. TOTAL DE GOLES (OVER / UNDER)</p>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div>
-                            <span class="text-gray-400 block mb-1">Línea:</span>
-                            <input type="number" step="0.5" id="l-total" value="5.5" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-bold">
-                        </div>
-                        <div>
-                            <span class="text-gray-400 block mb-1">Cuota Over:</span>
-                            <input type="number" step="0.01" id="c-over" value="1.85" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
-                        </div>
-                        <div>
-                            <span class="text-gray-400 block mb-1">Cuota Under:</span>
-                            <input type="number" step="0.01" id="c-under" value="1.95" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
-                        </div>
-                    </div>
-                </div>
-            </div>
+                <!-- TOTALES -->
+                <div class="bg-gray-800/60 p-3 rounded-lg border border-gray-700/50">
+                    <p class="font-bold text-gray-300 mb-2" id="etiqueta-mercado-totales">3. TOTALES (OVER / UNDER)</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <span class="text-gray-400 block mb-1">Línea:</span>
+                            <input type="number" step="0.5" id="l-total" value="5.5" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-bold">
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">Cuota Over:</span>
+                            <input type="number" step="0.01" id="c-over" value="1.85" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">Cuota Under:</span>
+                            <input type="number" step="0.01" id="c-under" value="1.95" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white font-semibold">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <button onclick="ejecutarSimulacionLive()" class="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold py-3 rounded-lg text-sm tracking-wide shadow-lg transition flex justify-center items-center gap-2">
-                <i class="fa-solid fa-calculator"></i> SIMULAR PARTIDO Y CALCULAR PROPS (+EV)
-            </button>
-        </div>
+            <button onclick="ejecutarSimulacionLive()" class="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold py-3 rounded-lg text-sm tracking-wide shadow-lg transition flex justify-center items-center gap-2">
+                <i class="fa-solid fa-calculator"></i> SIMULAR PARTIDO Y CALCULAR PROPS (+EV)
+            </button>
+        </div>
 
-        <!-- PANEL DE CARGA -->
-        <div id="loader" class="hidden text-center py-12">
-            <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-400 mb-3"></i>
-            <p class="text-gray-400 text-sm">Consultando APIs y calculando modelos matemáticos...</p>
-        </div>
+        <!-- PANEL DE CARGA -->
+        <div id="loader" class="hidden text-center py-12">
+            <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-400 mb-3"></i>
+            <p class="text-gray-400 text-sm">Consultando APIs y calculando modelos matemáticos...</p>
+        </div>
 
-        <!-- CONTENEDOR DE RESULTADOS -->
-        <div id="contenedor-resultados" class="hidden space-y-6">
+        <!-- CONTENEDOR DE RESULTADOS -->
+        <div id="contenedor-resultados" class="hidden space-y-6">
 
-            <!-- RESUMEN PROYECCIÓN -->
-            <div class="card-bg rounded-xl p-5 border-l-4 border-emerald-500 flex flex-wrap justify-between items-center gap-4">
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Encuentro Analizado</h3>
-                    <p class="text-lg font-bold text-white mt-1" id="resumen-matchup">LOCAL vs VISITANTE</p>
-                </div>
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Marcador Estimado</h3>
-                    <p class="text-lg font-bold text-emerald-400 mt-1" id="resumen-marcador">0.0 - 0.0 (Total: 0.0)</p>
-                </div>
-            </div>
+            <!-- RESUMEN PROYECCIÓN -->
+            <div class="card-bg rounded-xl p-5 border-l-4 border-emerald-500 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Encuentro Analizado</h3>
+                    <p class="text-lg font-bold text-white mt-1" id="resumen-matchup">LOCAL vs VISITANTE</p>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Marcador Estimado</h3>
+                    <p class="text-lg font-bold text-emerald-400 mt-1" id="resumen-marcador">0.0 - 0.0 (Total: 0.0)</p>
+                </div>
+            </div>
 
-            <!-- SECCIÓN PROPS DE JUGADORES -->
-            <div class="card-bg rounded-xl p-6">
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="text-xl">🎯</span>
-                    <h2 class="text-base font-bold text-white tracking-wide">TOP PROPS DE JUGADORES RECOMENDADAS (+EV)</h2>
-                </div>
+            <!-- SECCIÓN PROPS DE JUGADORES -->
+            <div class="card-bg rounded-xl p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-xl">🎯</span>
+                    <h2 class="text-base font-bold text-white tracking-wide">TOP PROPS DE JUGADORES RECOMENDADAS (+EV)</h2>
+                </div>
 
-                <div id="grid-props" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Tarjetas generadas dinámicamente -->
-                </div>
-            </div>
-        </div>
-    </main>
+                <div id="grid-props" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Tarjetas generadas dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </main>
 
-    <!-- MODAL DE HISTORIAL CON FILTROS POR DEPORTE -->
-    <div id="modal-historial" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
-        <div class="card-bg border border-gray-700 w-full max-w-4xl rounded-2xl p-6 max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-4 mb-3">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line text-emerald-400"></i> Historial de Apuestas Registradas
-                </h3>
-                <button onclick="cerrarModalHistorial()" class="text-gray-400 hover:text-white text-xl">&times;</button>
-            </div>
+    <!-- MODAL DE HISTORIAL -->
+    <div id="modal-historial" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="card-bg border border-gray-700 w-full max-w-4xl rounded-2xl p-6 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-4 mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i> Historial de Apuestas Registradas
+                </h3>
+                <button onclick="cerrarModalHistorial()" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            
+            <div id="lista-historial" class="overflow-y-auto space-y-3 flex-1 pr-2 text-sm">
+                <!-- Se llena vía JS -->
+            </div>
 
-            <!-- FILTRO POR DEPORTE DENTRO DEL HISTORIAL -->
-            <div class="flex gap-2 mb-4 pb-2 border-b border-gray-800/60 overflow-x-auto text-xs">
-                <button onclick="filtrarHistorialPor('TODOS')" id="filtro-TODOS" class="px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-gray-900">TODOS</button>
-                <button onclick="filtrarHistorialPor('NHL')" id="filtro-NHL" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">NHL 🏒</button>
-                <button onclick="filtrarHistorialPor('NFL')" id="filtro-NFL" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">NFL 🏈</button>
-                <button onclick="filtrarHistorialPor('NBA')" id="filtro-NBA" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">NBA 🏀</button>
-                <button onclick="filtrarHistorialPor('MLB')" id="filtro-MLB" class="px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700">MLB ⚾</button>
-            </div>
-            
-            <div id="lista-historial" class="overflow-y-auto space-y-3 flex-1 pr-2 text-sm">
-                <!-- Se llena vía JS -->
-            </div>
+            <div class="pt-4 border-t border-gray-800 flex justify-between items-center mt-4">
+                <button onclick="limpiarHistorial()" class="text-red-400 hover:text-red-300 text-xs font-semibold">Borrar todo el historial</button>
+                <button onclick="cerrarModalHistorial()" class="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2 rounded-lg text-sm font-semibold">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
-            <div class="pt-4 border-t border-gray-800 flex justify-between items-center mt-4">
-                <button onclick="limpiarHistorial()" class="text-red-400 hover:text-red-300 text-xs font-semibold">Borrar todo el historial</button>
-                <button onclick="cerrarModalHistorial()" class="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2 rounded-lg text-sm font-semibold">Cerrar</button>
-            </div>
-        </div>
-    </div>
+    <script>
+        // BACKEND URL EN RENDER
+        const BACKEND_URL = "https://la-mana-picks-backend.onrender.com";
 
-    <script>
-        // BACKEND URL EN RENDER
-        const BACKEND_URL = "https://la-mana-picks-backend.onrender.com";
+        let deporteActual = "NHL";
 
-        let deporteActual = "NHL";
-        let filtroHistorialActual = "TODOS";
+        const EQUIPOS = {
+            "NHL": ["Anaheim Ducks", "Boston Bruins", "Buffalo Sabres", "Calgary Flames", "Carolina Hurricanes", "Chicago Blackhawks", "Colorado Avalanche", "Columbus Blue Jackets", "Dallas Stars", "Detroit Red Wings", "Edmonton Oilers", "Florida Panthers", "Los Angeles Kings", "Minnesota Wild", "Montreal Canadiens", "Nashville Predators", "New Jersey Devils", "New York Islanders", "New York Rangers", "Ottawa Senators", "Philadelphia Flyers", "Pittsburgh Penguins", "San Jose Sharks", "Seattle Kraken", "St. Louis Blues", "Tampa Bay Lightning", "Toronto Maple Leafs", "Utah Hockey Club", "Vancouver Canucks", "Vegas Golden Knights", "Washington Capitals", "Winnipeg Jets"],
+            "NFL": ["Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills", "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns", "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers", "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins", "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants", "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"],
+            "NBA": ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"],
+            "MLB": ["Arizona Diamondbacks", "Atlanta Braves", "Baltimore Orioles", "Boston Red Sox", "Chicago Cubs", "Chicago White Sox", "Cincinnati Reds", "Cleveland Guardians", "Colorado Rockies", "Detroit Tigers", "Houston Astros", "Kansas City Royals", "Los Angeles Angels", "Los Angeles Dodgers", "Miami Marlins", "Milwaukee Brewers", "Minnesota Twins", "New York Mets", "New York Yankees", "Oakland Athletics", "Philadelphia Phillies", "Pittsburgh Pirates", "San Diego Padres", "San Francisco Giants", "Seattle Mariners", "St. Louis Cardinals", "Tampa Bay Rays", "Texas Rangers", "Toronto Blue Jays", "Washington Nationals"]
+        };
 
-        const EQUIPOS = {
-            "NHL": ["Anaheim Ducks", "Boston Bruins", "Buffalo Sabres", "Calgary Flames", "Carolina Hurricanes", "Chicago Blackhawks", "Colorado Avalanche", "Columbus Blue Jackets", "Dallas Stars", "Detroit Red Wings", "Edmonton Oilers", "Florida Panthers", "Los Angeles Kings", "Minnesota Wild", "Montreal Canadiens", "Nashville Predators", "New Jersey Devils", "New York Islanders", "New York Rangers", "Ottawa Senators", "Philadelphia Flyers", "Pittsburgh Penguins", "San Jose Sharks", "Seattle Kraken", "St. Louis Blues", "Tampa Bay Lightning", "Toronto Maple Leafs", "Utah Hockey Club", "Vancouver Canucks", "Vegas Golden Knights", "Washington Capitals", "Winnipeg Jets"],
-            "NFL": ["Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills", "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns", "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers", "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins", "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants", "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"],
-            "NBA": ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"],
-            "MLB": ["Arizona Diamondbacks", "Atlanta Braves", "Baltimore Orioles", "Boston Red Sox", "Chicago Cubs", "Chicago White Sox", "Cincinnati Reds", "Cleveland Guardians", "Colorado Rockies", "Detroit Tigers", "Houston Astros", "Kansas City Royals", "Los Angeles Angels", "Los Angeles Dodgers", "Miami Marlins", "Milwaukee Brewers", "Minnesota Twins", "New York Mets", "New York Yankees", "Oakland Athletics", "Philadelphia Phillies", "Pittsburgh Pirates", "San Diego Padres", "San Francisco Giants", "Seattle Mariners", "St. Louis Cardinals", "Tampa Bay Rays", "Texas Rangers", "Toronto Blue Jays", "Washington Nationals"]
-        };
+        function poblarEquipos(dep) {
+            const loc = document.getElementById("sel-local");
+            const vis = document.getElementById("sel-visitante");
+            loc.innerHTML = "";
+            vis.innerHTML = "";
+            EQUIPOS[dep].forEach((eq, idx) => {
+                loc.innerHTML += `<option value="${eq}" ${idx === 0 ? 'selected' : ''}>${eq}</option>`;
+                vis.innerHTML += `<option value="${eq}" ${idx === 1 ? 'selected' : ''}>${eq}</option>`;
+            });
+        }
 
-        function poblarEquipos(dep) {
-            const loc = document.getElementById("sel-local");
-            const vis = document.getElementById("sel-visitante");
-            loc.innerHTML = "";
-            vis.innerHTML = "";
-            EQUIPOS[dep].forEach((eq, idx) => {
-                loc.innerHTML += `<option value="${eq}" ${idx === 0 ? 'selected' : ''}>${eq}</option>`;
-                vis.innerHTML += `<option value="${eq}" ${idx === 1 ? 'selected' : ''}>${eq}</option>`;
-            });
-        }
+        function cambiarDeporte(dep) {
+            deporteActual = dep;
+            ["NHL", "NFL", "NBA", "MLB"].forEach(d => {
+                const b = document.getElementById(`tab-${d}`);
+                if (d === dep) {
+                    b.className = "px-4 py-1.5 rounded-md text-sm font-semibold transition-all bg-emerald-500 text-white";
+                } else {
+                    b.className = "px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white";
+                }
+            });
 
-        function cambiarDeporte(dep) {
-            deporteActual = dep;
-            ["NHL", "NFL", "NBA", "MLB"].forEach(d => {
-                const b = document.getElementById(`tab-${d}`);
-                if (d === dep) {
-                    b.className = "px-4 py-1.5 rounded-md text-sm font-semibold transition-all bg-emerald-500 text-white";
-                } else {
-                    b.className = "px-4 py-1.5 rounded-md text-sm font-semibold transition-all text-gray-400 hover:text-white";
-                }
-            });
+            poblarEquipos(dep);
 
-            poblarEquipos(dep);
+            const spreadLbl = document.getElementById('etiqueta-mercado-spread');
+            const totalLbl = document.getElementById('etiqueta-mercado-totales');
 
-            const spreadLbl = document.getElementById('etiqueta-mercado-spread');
-            const totalLbl = document.getElementById('etiqueta-mercado-totales');
+            if (dep === "NHL") {
+                spreadLbl.innerText = "2. PUCK LINE (HANDICAP)";
+                totalLbl.innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
+                document.getElementById('l-spread-loc').value = "-1.5";
+                document.getElementById('l-spread-vis').value = "1.5";
+                document.getElementById('l-total').value = "5.5";
+            } else if (dep === "MLB") {
+                spreadLbl.innerText = "2. RUN LINE (HANDICAP CARRERAS)";
+                totalLbl.innerText = "3. TOTAL DE CARRERAS (OVER / UNDER)";
+                document.getElementById('l-spread-loc').value = "-1.5";
+                document.getElementById('l-spread-vis').value = "1.5";
+                document.getElementById('l-total').value = "8.5";
+            } else if (dep === "NFL") {
+                spreadLbl.innerText = "2. POINT SPREAD";
+                totalLbl.innerText = "3. TOTAL DE PUNTOS";
+                document.getElementById('l-spread-loc').value = "-2.5";
+                document.getElementById('l-spread-vis').value = "2.5";
+                document.getElementById('l-total').value = "45.5";
+            } else if (dep === "NBA") {
+                spreadLbl.innerText = "2. POINT SPREAD";
+                totalLbl.innerText = "3. TOTAL DE PUNTOS";
+                document.getElementById('l-spread-loc').value = "-2.5";
+                document.getElementById('l-spread-vis').value = "2.5";
+                document.getElementById('l-total').value = "224.5";
+            }
 
-            if (dep === "NHL") {
-                spreadLbl.innerText = "2. PUCK LINE (HANDICAP)";
-                totalLbl.innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
-                document.getElementById('c-ml-loc').value = "1.75";
-                document.getElementById('c-ml-vis').value = "2.10";
-                document.getElementById('l-spread-loc').value = "-1.5";
-                document.getElementById('c-spread-loc').value = "2.80";
-                document.getElementById('l-spread-vis').value = "1.5";
-                document.getElementById('c-spread-vis').value = "1.42";
-                document.getElementById('l-total').value = "5.5";
-                document.getElementById('c-over').value = "1.85";
-                document.getElementById('c-under').value = "1.95";
-            } else if (dep === "MLB") {
-                spreadLbl.innerText = "2. RUN LINE (HANDICAP CARRERAS)";
-                totalLbl.innerText = "3. TOTAL DE CARRERAS (OVER / UNDER)";
-                document.getElementById('c-ml-loc').value = "1.80";
-                document.getElementById('c-ml-vis').value = "2.05";
-                document.getElementById('l-spread-loc').value = "-1.5";
-                document.getElementById('c-spread-loc').value = "2.20";
-                document.getElementById('l-spread-vis').value = "1.5";
-                document.getElementById('c-spread-vis').value = "1.68";
-                document.getElementById('l-total').value = "8.5";
-                document.getElementById('c-over').value = "1.90";
-                document.getElementById('c-under').value = "1.90";
-            } else if (dep === "NFL") {
-                spreadLbl.innerText = "2. POINT SPREAD";
-                totalLbl.innerText = "3. TOTAL DE PUNTOS";
-                document.getElementById('c-ml-loc').value = "1.90";
-                document.getElementById('c-ml-vis').value = "1.90";
-                document.getElementById('l-spread-loc').value = "-2.5";
-                document.getElementById('c-spread-loc').value = "1.90";
-                document.getElementById('l-spread-vis').value = "2.5";
-                document.getElementById('c-spread-vis').value = "1.90";
-                document.getElementById('l-total').value = "45.5";
-                document.getElementById('c-over').value = "1.90";
-                document.getElementById('c-under').value = "1.90";
-            } else if (dep === "NBA") {
-                spreadLbl.innerText = "2. POINT SPREAD";
-                totalLbl.innerText = "3. TOTAL DE PUNTOS";
-                document.getElementById('c-ml-loc').value = "1.90";
-                document.getElementById('c-ml-vis').value = "1.90";
-                document.getElementById('l-spread-loc').value = "-2.5";
-                document.getElementById('c-spread-loc').value = "1.90";
-                document.getElementById('l-spread-vis').value = "2.5";
-                document.getElementById('c-spread-vis').value = "1.90";
-                document.getElementById('l-total').value = "224.5";
-                document.getElementById('c-over').value = "1.90";
-                document.getElementById('c-under').value = "1.90";
-            }
+            document.getElementById("contenedor-resultados").classList.add("hidden");
+        }
 
-            document.getElementById("contenedor-resultados").classList.add("hidden");
-        }
+        async function ejecutarSimulacionLive() {
+            const loc = document.getElementById("sel-local").value;
+            const vis = document.getElementById("sel-visitante").value;
 
-        async function ejecutarSimulacionLive() {
-            const loc = document.getElementById("sel-local").value;
-            const vis = document.getElementById("sel-visitante").value;
+            if (loc === vis) {
+                alert("Selecciona dos equipos diferentes.");
+                return;
+            }
 
-            if (loc === vis) {
-                alert("Selecciona dos equipos diferentes.");
-                return;
-            }
+            const c_ml_loc = parseFloat(document.getElementById("c-ml-loc").value) || 1.90;
+            const c_ml_vis = parseFloat(document.getElementById("c-ml-vis").value) || 1.90;
+            const l_sp_loc = parseFloat(document.getElementById("l-spread-loc").value) || -1.5;
+            const c_sp_loc = parseFloat(document.getElementById("c-spread-loc").value) || 1.90;
+            const l_sp_vis = parseFloat(document.getElementById("l-spread-vis").value) || 1.5;
+            const c_sp_vis = parseFloat(document.getElementById("c-spread-vis").value) || 1.90;
+            const l_tot = parseFloat(document.getElementById("l-total").value) || 5.5;
+            const c_ov = parseFloat(document.getElementById("c-over").value) || 1.90;
+            const c_un = parseFloat(document.getElementById("c-under").value) || 1.90;
 
-            const c_ml_loc = parseFloat(document.getElementById("c-ml-loc").value) || 1.90;
-            const c_ml_vis = parseFloat(document.getElementById("c-ml-vis").value) || 1.90;
-            const l_sp_loc = parseFloat(document.getElementById("l-spread-loc").value) || -1.5;
-            const c_sp_loc = parseFloat(document.getElementById("c-spread-loc").value) || 1.90;
-            const l_sp_vis = parseFloat(document.getElementById("l-spread-vis").value) || 1.5;
-            const c_sp_vis = parseFloat(document.getElementById("c-spread-vis").value) || 1.90;
-            const l_tot = parseFloat(document.getElementById("l-total").value) || 5.5;
-            const c_ov = parseFloat(document.getElementById("c-over").value) || 1.90;
-            const c_un = parseFloat(document.getElementById("c-under").value) || 1.90;
+            document.getElementById("loader").classList.remove("hidden");
+            document.getElementById("contenedor-resultados").classList.add("hidden");
 
-            document.getElementById("loader").classList.remove("hidden");
-            document.getElementById("contenedor-resultados").classList.add("hidden");
+            let endpoint = "";
+            let params = new URLSearchParams();
+            params.append("local", loc);
+            params.append("visitante", vis);
+            params.append("c_ml_loc", c_ml_loc);
+            params.append("c_ml_vis", c_ml_vis);
+            params.append("l_total", l_tot);
+            params.append("c_over", c_ov);
+            params.append("c_under", c_un);
 
-            let endpoint = "";
-            let params = new URLSearchParams();
-            params.append("local", loc);
-            params.append("visitante", vis);
-            params.append("c_ml_loc", c_ml_loc);
-            params.append("c_ml_vis", c_ml_vis);
-            params.append("l_total", l_tot);
-            params.append("c_over", c_ov);
-            params.append("c_under", c_un);
+            if (deporteActual === "NHL" || deporteActual === "MLB") {
+                endpoint = deporteActual === "NHL" ? "/api/analizar-nhl" : "/api/analizar-mlb";
+                params.append("l_rl_loc", l_sp_loc);
+                params.append("c_rl_loc", c_sp_loc);
+                params.append("l_rl_vis", l_sp_vis);
+                params.append("c_rl_vis", c_sp_vis);
+            } else {
+                endpoint = deporteActual === "NFL" ? "/api/analizar-nfl" : "/api/analizar-nba";
+                params.append("l_spread_loc", l_sp_loc);
+                params.append("c_spread_loc", c_sp_loc);
+                params.append("l_spread_vis", l_sp_vis);
+                params.append("c_spread_vis", c_sp_vis);
+            }
 
-            if (deporteActual === "NHL" || deporteActual === "MLB") {
-                endpoint = deporteActual === "NHL" ? "/api/analizar-nhl" : "/api/analizar-mlb";
-                params.append("l_rl_loc", l_sp_loc);
-                params.append("c_rl_loc", c_sp_loc);
-                params.append("l_rl_vis", l_sp_vis);
-                params.append("c_rl_vis", c_sp_vis);
-            } else {
-                endpoint = deporteActual === "NFL" ? "/api/analizar-nfl" : "/api/analizar-nba";
-                params.append("l_spread_loc", l_sp_loc);
-                params.append("c_spread_loc", c_sp_loc);
-                params.append("l_spread_vis", l_sp_vis);
-                params.append("c_spread_vis", c_sp_vis);
-            }
+            try {
+                const res = await fetch(`${BACKEND_URL}${endpoint}?${params.toString()}`);
+                const data = await res.json();
+                renderizarResultados(data, loc, vis);
+            } catch (err) {
+                alert("Error de conexión con el backend: " + err.message);
+            } finally {
+                document.getElementById("loader").classList.add("hidden");
+            }
+        }
 
-            try {
-                const res = await fetch(`${BACKEND_URL}${endpoint}?${params.toString()}`);
-                const data = await res.json();
-                renderizarResultados(data, loc, vis);
-            } catch (err) {
-                alert("Error de conexión con el backend: " + err.message);
-            } finally {
-                document.getElementById("loader").classList.add("hidden");
-            }
-        }
+        function renderizarResultados(data, loc, vis) {
+            document.getElementById("resumen-matchup").innerText = `${loc} vs ${vis}`;
+            const projLoc = data.proyeccion_local || data.goles_esperados_local || data.puntos_esperados_local || 0;
+            const projVis = data.proyeccion_visita || data.goles_esperados_visita || data.puntos_esperados_visita || 0;
+            const total = (projLoc + projVis).toFixed(1);
+            document.getElementById("resumen-marcador").innerText = `${projLoc} - ${projVis} (Total: ${total})`;
 
-        function renderizarResultados(data, loc, vis) {
-            document.getElementById("resumen-matchup").innerText = `${loc} vs ${vis}`;
-            const projLoc = data.proyeccion_local || data.goles_esperados_local || data.puntos_esperados_local || 0;
-            const projVis = data.proyeccion_visita || data.goles_esperados_visita || data.puntos_esperados_visita || 0;
-            const total = (projLoc + projVis).toFixed(1);
-            document.getElementById("resumen-marcador").innerText = `${projLoc} - ${projVis} (Total: ${total})`;
+            const grid = document.getElementById("grid-props");
+            grid.innerHTML = "";
 
-            const grid = document.getElementById("grid-props");
-            grid.innerHTML = "";
+            const props = data.props_jugadores || [];
 
-            const props = data.props_jugadores || [];
+            if (props.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-8 text-center text-gray-500 font-medium">No se detectaron props con valor (+EV) suficiente en este momento para este encuentro.</div>`;
+            } else {
+                props.forEach(p => {
+                    const ligaPath = deporteActual.toLowerCase();
+                    const logoUrl = `https://a.espncdn.com/i/teamlogos/${ligaPath}/500/${p.equipo_abbr || ligaPath}.png`;
+                    
+                    grid.innerHTML += `
+                        <div class="bg-gray-900 border border-gray-700/80 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-500 transition">
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded">VALOR DETECTADO</span>
+                                    <span class="text-xs font-bold text-emerald-400">+${p.ev}% EV</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <img src="${logoUrl}" class="w-8 h-8 object-contain" onerror="this.src='https://a.espncdn.com/i/teamlogos/default-team-logo-500.png'">
+                                    <div>
+                                        <p class="font-bold text-white text-sm">${p.jugador}</p>
+                                        <p class="text-xs text-gray-400 font-semibold mt-0.5">${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-4 border-t border-gray-800 pt-2 font-mono">
+                                    <span>Proy: <strong class="text-gray-200">${p.proyeccion}</strong></span>
+                                    <span>Prob: <strong class="text-gray-200">${p.prob_real}%</strong></span>
+                                </div>
+                            </div>
+                            <button onclick="guardarEnHistorial('${p.jugador}: ${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}', '${loc} vs ${vis}')" class="w-full mt-4 bg-gray-800 hover:bg-emerald-500 hover:text-gray-900 text-gray-300 font-bold py-1.5 rounded-lg text-xs transition flex justify-center items-center gap-1.5">
+                                <i class="fa-solid fa-thumbtack text-[10px]"></i> REGISTRAR EN HISTORIAL
+                            </button>
+                        </div>
+                    `;
+                });
+            }
 
-            if (props.length === 0) {
-                grid.innerHTML = `<div class="col-span-full py-8 text-center text-gray-500 font-medium">No se detectaron props con valor (+EV) suficiente en este momento para este encuentro.</div>`;
-            } else {
-                props.forEach(p => {
-                    const ligaPath = deporteActual.toLowerCase();
-                    const logoUrl = `https://a.espncdn.com/i/teamlogos/${ligaPath}/500/${p.equipo_abbr || ligaPath}.png`;
-                    
-                    grid.innerHTML += `
-                        <div class="bg-gray-900 border border-gray-700/80 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-500 transition">
-                            <div>
-                                <div class="flex justify-between items-center mb-3">
-                                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded">VALOR DETECTADO</span>
-                                    <span class="text-xs font-bold text-emerald-400">+${p.ev}% EV</span>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <img src="${logoUrl}" class="w-8 h-8 object-contain" onerror="this.src='https://a.espncdn.com/i/teamlogos/default-team-logo-500.png'">
-                                    <div>
-                                        <p class="font-bold text-white text-sm">${p.jugador}</p>
-                                        <p class="text-xs text-gray-400 font-semibold mt-0.5">${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}</p>
-                                    </div>
-                                </div>
-                                <div class="flex justify-between text-xs text-gray-400 mt-4 border-t border-gray-800 pt-2 font-mono">
-                                    <span>Proy: <strong class="text-gray-200">${p.proyeccion}</strong></span>
-                                    <span>Prob: <strong class="text-gray-200">${p.prob_real}%</strong></span>
-                                </div>
-                            </div>
-                            <button onclick="guardarEnHistorial('${p.jugador}: ${p.lado} ${p.linea} ${p.tipo_prop} @ ${p.cuota}', '${loc} vs ${vis}')" class="w-full mt-4 bg-gray-800 hover:bg-emerald-500 hover:text-gray-900 text-gray-300 font-bold py-1.5 rounded-lg text-xs transition flex justify-center items-center gap-1.5">
-                                <i class="fa-solid fa-thumbtack text-[10px]"></i> REGISTRAR EN HISTORIAL
-                            </button>
-                        </div>
-                    `;
-                });
-            }
+            document.getElementById("contenedor-resultados").classList.remove("hidden");
+        }
 
-            document.getElementById("contenedor-resultados").classList.remove("hidden");
-        }
+        function guardarEnHistorial(propTexto, matchup) {
+            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
+            const nuevo = {
+                id: Date.now(),
+                fecha: new Date().toISOString().split('T')[0],
+                deporte: deporteActual,
+                matchup: matchup,
+                pick: propTexto,
+                resultado: "PENDIENTE"
+            };
+            hist.unshift(nuevo);
+            localStorage.setItem("historial_picks", JSON.stringify(hist));
+            alert("Pick registrado exitosamente en el historial.");
+        }
 
-        function guardarEnHistorial(propTexto, matchup) {
-            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
-            const nuevo = {
-                id: Date.now(),
-                fecha: new Date().toISOString().split('T')[0],
-                deporte: deporteActual,
-                matchup: matchup,
-                pick: propTexto,
-                resultado: "PENDIENTE"
-            };
-            hist.unshift(nuevo);
-            localStorage.setItem("historial_picks", JSON.stringify(hist));
-            alert("Pick registrado exitosamente en el historial.");
-        }
+        function abrirModalHistorial() {
+            const contenedor = document.getElementById("lista-historial");
+            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
+            contenedor.innerHTML = "";
 
-        function filtrarHistorialPor(dep) {
-            filtroHistorialActual = dep;
-            ["TODOS", "NHL", "NFL", "NBA", "MLB"].forEach(d => {
-                const b = document.getElementById(`filtro-${d}`);
-                if (b) {
-                    if (d === dep) {
-                        b.className = "px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-gray-900";
-                    } else {
-                        b.className = "px-3 py-1.5 rounded-lg font-bold bg-gray-800 text-gray-300 hover:bg-gray-700";
-                    }
-                }
-            });
-            renderizarListaHistorial();
-        }
+            if (hist.length === 0) {
+                contenedor.innerHTML = "<p class='text-gray-500 text-center py-8'>No hay apuestas registradas en el historial.</p>";
+            } else {
+                hist.forEach(h => {
+                    contenedor.innerHTML += `
+                        <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700 flex justify-between items-center gap-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-mono font-bold">${h.deporte}</span>
+                                    <span class="text-xs text-gray-400">${h.fecha}</span>
+                                </div>
+                                <p class="text-xs text-gray-400 font-medium">${h.matchup}</p>
+                                <p class="text-sm font-bold text-white mt-0.5">${h.pick}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="marcarResultado(${h.id}, 'GANADA')" class="px-2.5 py-1 text-xs font-bold rounded ${h.resultado === 'GANADA' ? 'bg-emerald-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-emerald-600'}">GANADA</button>
+                                <button onclick="marcarResultado(${h.id}, 'PERDIDA')" class="px-2.5 py-1 text-xs font-bold rounded ${h.resultado === 'PERDIDA' ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-red-600'}">PERDIDA</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
 
-        function abrirModalHistorial() {
-            filtrarHistorialPor("TODOS");
-            document.getElementById("modal-historial").classList.remove("hidden");
-        }
+            document.getElementById("modal-historial").classList.remove("hidden");
+        }
 
-        function renderizarListaHistorial() {
-            const contenedor = document.getElementById("lista-historial");
-            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
+        function marcarResultado(id, res) {
+            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
+            hist = hist.map(h => h.id === id ? { ...h, resultado: res } : h);
+            localStorage.setItem("historial_picks", JSON.stringify(hist));
+            abrirModalHistorial();
+        }
 
-            if (filtroHistorialActual !== "TODOS") {
-                hist = hist.filter(h => h.deporte === filtroHistorialActual);
-            }
+        function cerrarModalHistorial() {
+            document.getElementById("modal-historial").classList.add("hidden");
+        }
 
-            contenedor.innerHTML = "";
+        function limpiarHistorial() {
+            if (confirm("¿Estás seguro de que deseas eliminar todo el historial de picks?")) {
+                localStorage.removeItem("historial_picks");
+                abrirModalHistorial();
+            }
+        }
 
-            if (hist.length === 0) {
-                contenedor.innerHTML = `<p class='text-gray-500 text-center py-8'>No hay apuestas registradas en ${filtroHistorialActual}.</p>`;
-            } else {
-                hist.forEach(h => {
-                    contenedor.innerHTML += `
-                        <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700 flex justify-between items-center gap-4">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-mono font-bold">${h.deporte}</span>
-                                    <span class="text-xs text-gray-400">${h.fecha}</span>
-                                </div>
-                                <p class="text-xs text-gray-400 font-medium">${h.matchup}</p>
-                                <p class="text-sm font-bold text-white mt-0.5">${h.pick}</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="marcarResultado(${h.id}, 'GANADA')" class="px-2.5 py-1 text-xs font-bold rounded ${h.resultado === 'GANADA' ? 'bg-emerald-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-emerald-600'}">GANADA</button>
-                                <button onclick="marcarResultado(${h.id}, 'PERDIDA')" class="px-2.5 py-1 text-xs font-bold rounded ${h.resultado === 'PERDIDA' ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-red-600'}">PERDIDA</button>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-        }
-
-        function marcarResultado(id, res) {
-            let hist = JSON.parse(localStorage.getItem("historial_picks") || "[]");
-            hist = hist.map(h => h.id === id ? { ...h, resultado: res } : h);
-            localStorage.setItem("historial_picks", JSON.stringify(hist));
-            renderizarListaHistorial();
-        }
-
-        function cerrarModalHistorial() {
-            document.getElementById("modal-historial").classList.add("hidden");
-        }
-
-        function limpiarHistorial() {
-            if (confirm("¿Estás seguro de que deseas eliminar todo el historial de picks?")) {
-                localStorage.removeItem("historial_picks");
-                renderizarListaHistorial();
-            }
-        }
-
-        window.onload = () => {
-            cambiarDeporte("NHL");
-        };
-    </script>
+        window.onload = () => {
+            cambiarDeporte("NHL");
+        };
+    </script>
 </body>
 </html>
