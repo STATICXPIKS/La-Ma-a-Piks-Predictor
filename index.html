@@ -397,7 +397,8 @@
     <script>
         const SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co";
         const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
-        const RENDER_API_URL = "https://la-ma-a-piks-predictor.onrender.com";
+        // BACKEND OFICIAL ACTIVO EN RENDER CON MOTORES DE PROPS
+        const RENDER_API_URL = "https://la-mana-picks-backend.onrender.com";
 
         let deporteActual = "NHL";
         let filtroHistorialActual = "TODOS";
@@ -511,21 +512,21 @@
                 selVis.add(new Option(eq, eq));
             });
 
-            selLoc.value = "New York Rangers"; selVis.value = "Los Angeles Kings";
+            selLoc.value = "Buffalo Sabres"; selVis.value = "Tampa Bay Lightning";
             document.getElementById('etiqueta-mercado-spread').innerText = "2. PUCK LINE (SPREAD MANUAL)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE GOLES (OVER / UNDER)";
 
-            document.getElementById('linea-pl-loc').value = "-1.5";
-            document.getElementById('cuota-pl-loc').value = "2.85";
-            document.getElementById('linea-pl-vis').value = "1.5";
-            document.getElementById('cuota-pl-vis').value = "1.40";
+            document.getElementById('linea-pl-loc').value = "1.5";
+            document.getElementById('cuota-pl-loc').value = "1.38";
+            document.getElementById('linea-pl-vis').value = "-1.5";
+            document.getElementById('cuota-pl-vis').value = "2.90";
 
-            document.getElementById('cuota-ml-loc').value = "1.73";
-            document.getElementById('cuota-ml-vis').value = "2.10";
+            document.getElementById('cuota-ml-loc').value = "2.02";
+            document.getElementById('cuota-ml-vis').value = "1.79";
 
-            document.getElementById('linea-total-goles').value = "5.5";
-            document.getElementById('cuota-over').value = "1.79";
-            document.getElementById('cuota-under').value = "1.98";
+            document.getElementById('linea-total-goles').value = "6.5";
+            document.getElementById('cuota-over').value = "1.85";
+            document.getElementById('cuota-under').value = "1.91";
             actualizarEscudos();
         }
 
@@ -563,15 +564,21 @@
                 selVis.add(new Option(eq, eq));
             });
 
-            selLoc.value = "Boston Celtics"; selVis.value = "Denver Nuggets";
+            selLoc.value = "Indiana Pacers"; selVis.value = "Washington Wizards";
             document.getElementById('etiqueta-mercado-spread').innerText = "2. POINT SPREAD (HANDICAP PUNTOS)";
             document.getElementById('etiqueta-mercado-totales').innerText = "3. TOTAL DE PUNTOS (OVER / UNDER)";
 
+            document.getElementById('cuota-ml-loc').value = "1.67";
+            document.getElementById('cuota-ml-vis').value = "2.14";
+
             document.getElementById('linea-pl-loc').value = "-2.5";
-            document.getElementById('cuota-pl-loc').value = "1.90";
+            document.getElementById('cuota-pl-loc').value = "1.88";
             document.getElementById('linea-pl-vis').value = "2.5";
-            document.getElementById('cuota-pl-vis').value = "1.90";
-            document.getElementById('linea-total-goles').value = "224.5";
+            document.getElementById('cuota-pl-vis').value = "1.88";
+
+            document.getElementById('linea-total-goles').value = "227.5";
+            document.getElementById('cuota-over').value = "1.85";
+            document.getElementById('cuota-under').value = "1.88";
             actualizarEscudos();
         }
 
@@ -605,34 +612,32 @@
             const imgLocElement = document.getElementById('img-local');
             const imgVisElement = document.getElementById('img-visitante');
 
+            let liga = "nhl";
+            let codeLoc = "nhl", codeVis = "nhl";
+
             if (deporteActual === 'NHL') {
-                const codeLoc = EQUIPOS_NHL[loc] || "nhl";
-                const codeVis = EQUIPOS_NHL[vis] || "nhl";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nhl/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nhl/500/${codeVis}.png`;
+                liga = "nhl";
+                codeLoc = EQUIPOS_NHL[loc] || "nhl";
+                codeVis = EQUIPOS_NHL[vis] || "nhl";
             } else if (deporteActual === 'NFL') {
-                const codeLoc = EQUIPOS_NFL[loc] || "nfl";
-                const codeVis = EQUIPOS_NFL[vis] || "nfl";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nfl/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nfl/500/${codeVis}.png`;
+                liga = "nfl";
+                codeLoc = EQUIPOS_NFL[loc] || "nfl";
+                codeVis = EQUIPOS_NFL[vis] || "nfl";
             } else if (deporteActual === 'NBA') {
-                const codeLoc = EQUIPOS_NBA[loc] || "nba";
-                const codeVis = EQUIPOS_NBA[vis] || "nba";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/nba/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/nba/500/${codeVis}.png`;
+                liga = "nba";
+                codeLoc = EQUIPOS_NBA[loc] || "nba";
+                codeVis = EQUIPOS_NBA[vis] || "nba";
             } else {
-                const codeLoc = EQUIPOS_MLB[loc] || "mlb";
-                const codeVis = EQUIPOS_MLB[vis] || "mlb";
-                imgLocElement.src = `https://a.espncdn.com/i/teamlogos/mlb/500/${codeLoc}.png`;
-                imgVisElement.src = `https://a.espncdn.com/i/teamlogos/mlb/500/${codeVis}.png`;
+                liga = "mlb";
+                codeLoc = EQUIPOS_MLB[loc] || "mlb";
+                codeVis = EQUIPOS_MLB[vis] || "mlb";
             }
 
-            imgLocElement.onerror = function() {
-                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png";
-            };
-            imgVisElement.onerror = function() {
-                this.src = "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png";
-            };
+            imgLocElement.src = `https://a.espncdn.com/i/teamlogos/${liga}/500/${codeLoc}.png`;
+            imgVisElement.src = `https://a.espncdn.com/i/teamlogos/${liga}/500/${codeVis}.png`;
+
+            imgLocElement.onerror = function() { this.src = "https://a.espncdn.com/i/teamlogos/default-team-logo-500.png"; };
+            imgVisElement.onerror = function() { this.src = "https://a.espncdn.com/i/teamlogos/default-team-logo-500.png"; };
 
             document.getElementById('name-local').innerText = loc;
             document.getElementById('name-visitante').innerText = vis;
@@ -941,6 +946,7 @@
                 const labelSpreadLoc = `${d.equipo_local_abbr} ${strSignLoc}`;
                 const labelSpreadVis = `${d.equipo_visitante_abbr} ${strSignVis}`;
 
+                // CÁLCULO DE VALOR ESPERADO PURO (SIN PARCHES)
                 function calcEV(probPercent, odds) {
                     const probDecimal = probPercent / 100.0;
                     return Math.round(((probDecimal * odds) - 1.0) * 1000) / 10.0;
@@ -1034,15 +1040,16 @@
 
                 // RENDERIZADO DINÁMICO DE PROPS SEGÚN EL DEPORTE
                 let htmlPropsBloque = "";
-                if (d.props_jugadores && d.props_jugadores.length > 0) {
+                const listaProps = d.props_jugadores || [];
+                if (listaProps.length > 0) {
                     const ligaPath = deporteActual.toLowerCase();
                     htmlPropsBloque = `
                         <div class="mt-6 pt-5 border-t border-slate-800">
                             <span class="text-xs font-montserrat font-bold text-mana-neon block uppercase tracking-wider mb-4 flex items-center gap-2">
-                                🎯 TOP 6 PROPS DE JUGADORES RECOMENDADAS (+EV)
+                                🎯 TOP PROPS DE JUGADORES RECOMENDADAS (+EV)
                             </span>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${d.props_jugadores.map((p, i) => {
+                                ${listaProps.map((p, i) => {
                                     const esBet = p.ev >= 10.0;
                                     const badgeTxt = esBet ? "BET 🔥 VALOR DETECTADO" : "MAYBE ⚡ VALOR MODERADO";
                                     const badgeClass = esBet 
@@ -1070,7 +1077,7 @@
                                             </div>
 
                                             <div class="flex items-center gap-2.5 mb-2">
-                                                <img src="${logoUrl}" class="w-8 h-8 object-contain drop-shadow" onerror="this.src='https://a.espncdn.com/i/teamlogos/leagues/500/${ligaPath}.png'">
+                                                <img src="${logoUrl}" class="w-8 h-8 object-contain drop-shadow" onerror="this.src='https://a.espncdn.com/i/teamlogos/default-team-logo-500.png'">
                                                 <div>
                                                     <span class="font-montserrat font-extrabold text-sm text-white block leading-tight">
                                                         ${p.jugador}
@@ -1124,7 +1131,7 @@
             } catch (err) {
                 btn.disabled = false;
                 btn.innerHTML = `EJECUTAR SIMULACIÓN CON MONTE CARLO 🚀`;
-                alert("Error de conexión con Render.");
+                alert("Error de conexión con el backend de simulación.");
             }
         }
     </script>
