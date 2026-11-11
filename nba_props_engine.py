@@ -22,113 +22,56 @@ HEADERS_ESPN = {
 }
 
 _PROPS_CACHE = {}
-_ROSTER_CACHE = {}
-_STATS_CACHE = {}
 CACHE_DURATION_SECONDS = 900
 
 
-def obtener_roster_activo_espn(espn_abbr: str):
-    now = time.time()
-    if espn_abbr in _ROSTER_CACHE:
-        ts, data = _ROSTER_CACHE[espn_abbr]
-        if now - ts < 3600 and len(data) > 0:
-            return data
-
-    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{espn_abbr}/roster"
-    jugadores = []
-
-    try:
-        r = requests.get(url, headers=HEADERS_ESPN, timeout=5)
-        if r.status_code == 200:
-            res = r.json()
-            raw_athletes = res.get("athletes", [])
-
-            def registrar_atleta(item):
-                nombre = item.get("displayName", "")
-                ath_id = str(item.get("id", ""))
-                if nombre and ath_id:
-                    jugadores.append({
-                        "id": ath_id,
-                        "nombre": nombre,
-                        "equipo": espn_abbr
-                    })
-
-            if raw_athletes and isinstance(raw_athletes[0], dict) and "items" in raw_athletes[0]:
-                for group in raw_athletes:
-                    for item in group.get("items", []):
-                        registrar_atleta(item)
-            else:
-                for item in raw_athletes:
-                    registrar_atleta(item)
-    except Exception as e:
-        print(f"Error cargando roster ESPN {espn_abbr}: {e}")
-
-    _ROSTER_CACHE[espn_abbr] = (now, jugadores)
-    return jugadores
-
-
-def obtener_estadisticas_reales_atleta(athlete_id: str):
-    if not athlete_id:
-        return {}
-
-    now = time.time()
-    if athlete_id in _STATS_CACHE:
-        ts, val = _STATS_CACHE[athlete_id]
-        if now - ts < 7200:
-            return val
-
+def _extraer_stats_jugador_espn(athlete_id: str):
     url = f"https://site.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{athlete_id}/stats"
-    res_stats = {}
-
-    targets = {
-        "Puntos": ["avgpoints", "pointspergame", "pts", "points"],
-        "Rebotes": ["avgrebounds", "reboundspergame", "reb", "rebounds"],
-        "Asistencias": ["avgassists", "assistspergame", "ast", "assists"],
-        "Triples": ["threepointfieldgoalsmadepergame", "avgthreepointfieldgoalsmade", "3pm"]
-    }
-
+    res = {}
     try:
         r = requests.get(url, headers=HEADERS_ESPN, timeout=4)
         if r.status_code == 200:
             data = r.json()
-            acumulados = {k: [] for k in targets}
+            # Busca categorías tanto en la raíz como dentro de 'splits'
+            categories = data.get("categories", [])
+            if not categories and "splits" in data:
+                categories = data["splits"].get("categories", [])
 
-            for cat in data.get("categories", []):
-                for stat in cat.get("statistics", []):
-                    n = stat.get("name", "").lower()
-                    a = stat.get("abbreviation", "").lower()
-                    for m_key, aliases in targets.items():
-                        if n in aliases or a in aliases:
-                            try:
-                                val_num = float(str(stat.get("displayValue", "0")).replace(",", ""))
-                                acumulados[m_key].append(val_num)
-                            except ValueError:
-                                pass
+            for cat in categories:
+                for st in cat.get("statistics", []):
+                    nom = st.get("name", "").lower()
+                    val_str = str(st.get("displayValue", "0")).replace(",", "")
+                    try:
+                        val = float(val_str)
+                    except ValueError:
+                        continue
 
-            for m_key, vals in acumulados.items():
-                if vals:
-                    res_stats[m_key] = round(vals[0], 1)
-
-            _STATS_CACHE[athlete_id] = (now, res_stats)
-    except Exception:
-        pass
-
-    return res_stats
+                    if nom in ["avgpoints", "pointspergame", "pts", "points"]:
+                        res["Puntos"] = round(val, 1)
+                    elif nom in ["avgrebounds", "reboundspergame", "reb", "rebounds"]:
+                        res["Rebotes"] = round(val, 1)
+                    elif nom in ["avgassists", "assistspergame", "ast", "assists"]:
+                        res["Asistencias"] = round(val, 1)
+                    elif nom in ["threepointfieldgoalsmadepergame", "avgthreepointfieldgoalsmade", "3pm"]:
+                        res["Triples"] = round(val, 1)
+    except Exception as e:
+        print(f"Error stats ESPN atleta {athlete_id}: {e}")
+    return res
 
 
 def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
-    linea_casino = math.floor(media_real) + 0.5
-    cuota_mercado = 1.88
+    linea = math.floor(media_real) + 0.5
+    cuota = 1.88
 
     if tipo_prop in ["Puntos", "Rebotes"]:
         cv = 0.22 if tipo_prop == "Puntos" else 0.26
         sigma = max(1.2, media_real * cv)
-        z = (linea_casino - media_real) / sigma
+        z = (linea - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
         prob_over = 1.0 - prob_under
     else:
         lamb = media_real
-        k_max = int(math.floor(linea_casino))
+        k_max = int(math.floor(linea))
         prob_under = 0.0
         for k in range(k_max + 1):
             prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
@@ -136,14 +79,14 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
     es_over = prob_over >= prob_under
     prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.46, min(0.68, prob_sel))
+    prob_sel = max(0.48, min(0.68, prob_sel))
 
-    ev = round(((prob_sel * cuota_mercado) - 1.0) * 100, 1)
+    ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
 
     return {
         "lado": "MÁS DE" if es_over else "MENOS DE",
-        "linea": linea_casino,
-        "cuota": cuota_mercado,
+        "linea": linea,
+        "cuota": cuota,
         "prob_real": round(prob_sel * 100, 1),
         "ev": ev,
         "proyeccion": media_real
@@ -151,52 +94,73 @@ def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_v3"
+    cache_key = f"{local}_{visitante}_props_v4"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
         ts, data_cached = _PROPS_CACHE[cache_key]
-        if now - ts < CACHE_DURATION_SECONDS:
+        if now - ts < CACHE_DURATION_SECONDS and len(data_cached) > 0:
             return data_cached
 
     abbr_loc = MAPEO_EQUIPOS_NBA.get(local, "ind")
     abbr_vis = MAPEO_EQUIPOS_NBA.get(visitante, "was")
 
-    roster_loc = obtener_roster_activo_espn(abbr_loc)
-    roster_vis = obtener_roster_activo_espn(abbr_vis)
+    jugadores = []
+    for eq in [abbr_loc, abbr_vis]:
+        url_roster = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{eq}/roster"
+        try:
+            r = requests.get(url_roster, headers=HEADERS_ESPN, timeout=4)
+            if r.status_code == 200:
+                data = r.json()
+                raw_athletes = data.get("athletes", [])
+                
+                # Desempaqueta estructura anidada de ESPN
+                items_lista = []
+                if raw_athletes and isinstance(raw_athletes[0], dict) and "items" in raw_athletes[0]:
+                    for g in raw_athletes:
+                        items_lista.extend(g.get("items", []))
+                else:
+                    items_lista = raw_athletes
 
-    # Analiza los 6 jugadores de mayor volumen por plantilla para optimizar tiempos de respuesta
-    atletas_totales = [(a, abbr_loc) for a in roster_loc[:6]] + [(a, abbr_vis) for a in roster_vis[:6]]
+                # Toma los primeros 5 jugadores con ID válido
+                count = 0
+                for a in items_lista:
+                    ath_id = str(a.get("id", ""))
+                    nom = a.get("displayName", "")
+                    if ath_id and nom:
+                        jugadores.append({"id": ath_id, "nombre": nom, "equipo": eq.upper()})
+                        count += 1
+                        if count >= 5:
+                            break
+        except Exception as e:
+            print(f"Error cargando roster {eq}: {e}")
+
     candidatas = []
+    for j in jugadores:
+        stats = _extraer_stats_jugador_espn(j["id"])
+        for tipo, media in stats.items():
+            # Umbrales mínimos reales para props relevantes
+            if tipo == "Puntos" and media < 8.0: continue
+            if tipo == "Rebotes" and media < 3.5: continue
+            if tipo == "Asistencias" and media < 2.5: continue
+            if tipo == "Triples" and media < 1.0: continue
 
-    for atleta, eq_abbr in atletas_totales:
-        stats = obtener_estadisticas_reales_atleta(atleta["id"])
-        if not stats:
-            continue
-
-        for tipo_prop, media in stats.items():
-            if tipo_prop == "Puntos" and media < 10.0: continue
-            if tipo_prop == "Rebotes" and media < 4.5: continue
-            if tipo_prop == "Asistencias" and media < 3.5: continue
-            if tipo_prop == "Triples" and media < 1.5: continue
-
-            calc = _calcular_prop_cuantitativa(media, tipo_prop)
-
-            if calc["ev"] >= 1.5:
-                candidatas.append({
-                    "jugador": atleta["nombre"],
-                    "equipo_abbr": eq_abbr,
-                    "tipo_prop": tipo_prop,
-                    "lado": calc["lado"],
-                    "linea": calc["linea"],
-                    "cuota": calc["cuota"],
-                    "prob_real": calc["prob_real"],
-                    "ev": calc["ev"],
-                    "proyeccion": calc["proyeccion"]
-                })
+            c = _calcular_prop_cuantitativa(media, tipo)
+            candidatas.append({
+                "jugador": j["nombre"],
+                "equipo_abbr": j["equipo"],
+                "tipo_prop": tipo,
+                "lado": c["lado"],
+                "linea": c["linea"],
+                "cuota": c["cuota"],
+                "prob_real": c["prob_real"],
+                "ev": c["ev"],
+                "proyeccion": c["proyeccion"]
+            })
 
     candidatas.sort(key=lambda x: x["ev"], reverse=True)
     seleccion = candidatas[:top_n]
 
-    _PROPS_CACHE[cache_key] = (now, seleccion)
+    if seleccion:
+        _PROPS_CACHE[cache_key] = (now, seleccion)
     return seleccion
