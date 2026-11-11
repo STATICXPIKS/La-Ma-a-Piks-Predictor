@@ -1,4 +1,3 @@
-import os
 import time
 import math
 import requests
@@ -28,12 +27,6 @@ _STATS_CACHE = {}
 CACHE_DURATION_SECONDS = 900
 
 
-def _normalizar_texto(texto: str) -> str:
-    if not texto:
-        return ""
-    return texto.lower().replace(".", "").replace("'", "").replace("-", " ").strip()
-
-
 def obtener_roster_activo_espn(espn_abbr: str):
     now = time.time()
     if espn_abbr in _ROSTER_CACHE:
@@ -45,7 +38,7 @@ def obtener_roster_activo_espn(espn_abbr: str):
     jugadores = []
 
     try:
-        r = requests.get(url, headers=HEADERS_ESPN, timeout=8)
+        r = requests.get(url, headers=HEADERS_ESPN, timeout=5)
         if r.status_code == 200:
             res = r.json()
             raw_athletes = res.get("athletes", [])
@@ -53,13 +46,10 @@ def obtener_roster_activo_espn(espn_abbr: str):
             def registrar_atleta(item):
                 nombre = item.get("displayName", "")
                 ath_id = str(item.get("id", ""))
-                pos_obj = item.get("position", {})
-                pos = pos_obj.get("abbreviation", "") if isinstance(pos_obj, dict) else str(pos_obj)
                 if nombre and ath_id:
                     jugadores.append({
                         "id": ath_id,
                         "nombre": nombre,
-                        "posicion": pos.upper(),
                         "equipo": espn_abbr
                     })
 
@@ -98,7 +88,7 @@ def obtener_estadisticas_reales_atleta(athlete_id: str):
     }
 
     try:
-        r = requests.get(url, headers=HEADERS_ESPN, timeout=8)
+        r = requests.get(url, headers=HEADERS_ESPN, timeout=4)
         if r.status_code == 200:
             data = r.json()
             acumulados = {k: [] for k in targets}
@@ -120,14 +110,13 @@ def obtener_estadisticas_reales_atleta(athlete_id: str):
                     res_stats[m_key] = round(vals[0], 1)
 
             _STATS_CACHE[athlete_id] = (now, res_stats)
-    except Exception as e:
-        print(f"Error cargando stats ESPN de atleta {athlete_id}: {e}")
+    except Exception:
+        pass
 
     return res_stats
 
 
-def _calcular_probabilidad_y_ev(media_real: float, tipo_prop: str):
-    # Genera la línea de mercado natural (.5)
+def _calcular_prop_cuantitativa(media_real: float, tipo_prop: str):
     linea_casino = math.floor(media_real) + 0.5
     cuota_mercado = 1.88
 
@@ -147,7 +136,7 @@ def _calcular_probabilidad_y_ev(media_real: float, tipo_prop: str):
 
     es_over = prob_over >= prob_under
     prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.40, min(0.72, prob_sel))
+    prob_sel = max(0.46, min(0.68, prob_sel))
 
     ev = round(((prob_sel * cuota_mercado) - 1.0) * 100, 1)
 
@@ -162,7 +151,7 @@ def _calcular_probabilidad_y_ev(media_real: float, tipo_prop: str):
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_props_nba_free_v1"
+    cache_key = f"{local}_{visitante}_props_v3"
     now = time.time()
 
     if cache_key in _PROPS_CACHE:
@@ -176,7 +165,8 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     roster_loc = obtener_roster_activo_espn(abbr_loc)
     roster_vis = obtener_roster_activo_espn(abbr_vis)
 
-    atletas_totales = [(a, abbr_loc) for a in roster_loc[:8]] + [(a, abbr_vis) for a in roster_vis[:8]]
+    # Analiza los 6 jugadores de mayor volumen por plantilla para optimizar tiempos de respuesta
+    atletas_totales = [(a, abbr_loc) for a in roster_loc[:6]] + [(a, abbr_vis) for a in roster_vis[:6]]
     candidatas = []
 
     for atleta, eq_abbr in atletas_totales:
@@ -185,15 +175,14 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
             continue
 
         for tipo_prop, media in stats.items():
-            # Umbrales mínimos reales para ser jugadores con volumen relevante
             if tipo_prop == "Puntos" and media < 10.0: continue
             if tipo_prop == "Rebotes" and media < 4.5: continue
             if tipo_prop == "Asistencias" and media < 3.5: continue
             if tipo_prop == "Triples" and media < 1.5: continue
 
-            calc = _calcular_probabilidad_y_ev(media, tipo_prop)
+            calc = _calcular_prop_cuantitativa(media, tipo_prop)
 
-            if calc["ev"] >= 2.0:
+            if calc["ev"] >= 1.5:
                 candidatas.append({
                     "jugador": atleta["nombre"],
                     "equipo_abbr": eq_abbr,
