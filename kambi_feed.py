@@ -1,5 +1,37 @@
+import os
 import time
 import requests
+
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "").strip()
+
+DEPORTE_TO_SPORT_KEY = {
+    "nba": "basketball_nba",
+    "nhl": "icehockey_nhl",
+    "nfl": "americanfootball_nfl",
+    "mlb": "baseball_mlb"
+}
+
+PROP_MARKETS_BY_SPORT = {
+    "nhl": "player_shots_on_goal,player_points",
+    "nba": "player_points,player_rebounds,player_assists,player_threes",
+    "nfl": "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions",
+    "mlb": "batter_hits,batter_total_bases,pitcher_strikeouts"
+}
+
+MAPEO_MERCADO_ODDS_API = {
+    "player_shots_on_goal": "Tiros a Puerta",
+    "player_points": "Puntos",
+    "player_rebounds": "Rebotes",
+    "player_assists": "Asistencias",
+    "player_threes": "Triples",
+    "player_pass_yds": "Yardas Pase",
+    "player_rush_yds": "Yardas Acarreo",
+    "player_reception_yds": "Yardas Recepción",
+    "player_receptions": "Recepciones",
+    "batter_hits": "Hits",
+    "batter_total_bases": "Bases Totales",
+    "pitcher_strikeouts": "Ponches"
+}
 
 KAMBI_SPORTS = {
     "nba": "basketball/nba",
@@ -24,6 +56,7 @@ HEADERS_WEB = {
 
 _CACHE_EVENTOS = {}
 _CACHE_OFERTAS = {}
+_CACHE_PROPS_ODDS_API = {}
 
 
 def _simplificar(texto: str) -> str:
@@ -31,7 +64,6 @@ def _simplificar(texto: str) -> str:
 
 
 def _apodo_equipo(nombre_completo: str) -> str:
-    """Extrae la palabra distintiva del equipo (ej. 'Philadelphia 76ers' -> '76ers')."""
     partes = nombre_completo.strip().split()
     return _simplificar(partes[-1]) if partes else _simplificar(nombre_completo)
 
@@ -39,10 +71,104 @@ def _apodo_equipo(nombre_completo: str) -> str:
 def _coincide_partido(ev_home: str, ev_away: str, local: str, visitante: str) -> bool:
     h, a = _simplificar(ev_home), _simplificar(ev_away)
     l_apodo, v_apodo = _apodo_equipo(local), _apodo_equipo(visitante)
-    # Verifica tanto Local vs Visitante como Visitante @ Local
-    directo = (l_apodo in h and v_apodo in a)
-    invertido = (l_apodo in a and v_apodo in h)
-    return directo or invertido
+    return (l_apodo in h and v_apodo in a) or (l_apodo in a and v_apodo in h)
+
+
+def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
+    """Obtiene líneas y cuotas reales de Player Props por evento desde The Odds API."""
+    dep = deporte.lower()
+    sport_key = DEPORTE_TO_SPORT_KEY.get(dep)
+    markets = PROP_MARKETS_BY_SPORT.get(dep)
+    api_key = os.getenv("ODDS_API_KEY", ODDS_API_KEY).strip()
+
+    if not sport_key or not markets or not api_key:
+        return []
+
+    cache_key = f"{dep}_{_simplificar(local)}_{_simplificar(visitante)}"
+    ahora = time.time()
+    if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < 900):
+        return _CACHE_PROPS_ODDS_API[cache_key][1]
+
+    try:
+        # 1. Buscar el event_id del partido
+        url_events = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
+        r_ev = requests.get(url_events, params={"apiKey": api_key}, timeout=6)
+        if r_ev.status_code != 200:
+            return []
+
+        event_id = None
+        for ev in r_ev.json():
+            if _coincide_partido(ev.get("home_team", ""), ev.get("away_team", ""), local, visitante):
+                event_id = ev.get("id")
+                break
+
+        if not event_id:
+            return []
+
+        # 2. Consultar los mercados de Player Props de ese evento
+        url_props = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
+        params = {
+            "apiKey": api_key,
+            "regions": "us,eu",
+            "markets": markets,
+            "oddsFormat": "decimal"
+        }
+        r_props = requests.get(url_props, params=params, timeout=8)
+        if r_props.status_code != 200:
+            return []
+
+        bookmakers = r_props.json().get("bookmakers", [])
+        if not bookmakers:
+            return []
+
+        # Priorizar casas con mejores líneas de props
+        prioridad = ["fanduel", "draftkings", "pinnacle", "betmgm", "caesars", "unibet"]
+        bookmakers.sort(key=lambda b: prioridad.index(b.get("key")) if b.get("key") in prioridad else 99)
+
+        agrupado = {}
+        for bm in bookmakers[:3]:
+            for market in bm.get("markets", []):
+                m_key = market.get("key")
+                tipo_esp = MAPEO_MERCADO_ODDS_API.get(m_key)
+                if not tipo_esp:
+                    continue
+
+                for out in market.get("outcomes", []):
+                    jugador = out.get("description", "").strip()
+                    lado = out.get("name", "").lower()
+                    linea = out.get("point")
+                    precio = out.get("price")
+
+                    if not jugador or linea is None or not precio or precio <= 1.05:
+                        continue
+
+                    clave = (_simplificar(jugador), tipo_esp, float(linea))
+                    if clave not in agrupado:
+                        agrupado[clave] = {
+                            "jugador": jugador,
+                            "tipo_prop": tipo_esp,
+                            "linea": float(linea),
+                            "cuota_over": None,
+                            "cuota_under": None
+                        }
+
+                    if lado == "over" and agrupado[clave]["cuota_over"] is None:
+                        agrupado[clave]["cuota_over"] = round(float(precio), 2)
+                    elif lado == "under" and agrupado[clave]["cuota_under"] is None:
+                        agrupado[clave]["cuota_under"] = round(float(precio), 2)
+
+        props_finales = [
+            v for v in agrupado.values()
+            if v["cuota_over"] is not None
+        ]
+
+        if props_finales:
+            _CACHE_PROPS_ODDS_API[cache_key] = (ahora, props_finales)
+        return props_finales
+
+    except Exception as e:
+        print(f"Error Odds API Player Props ({deporte}): {e}")
+        return []
 
 
 def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
@@ -109,7 +235,6 @@ def _americana_a_decimal(americana) -> float:
 
 
 def _obtener_cuotas_espn_scoreboard(deporte: str, local: str, visitante: str):
-    """Fuente gratuita e ilimitada: extrae líneas y cuotas oficiales de ESPN BET / Caesars."""
     url = ESPN_SCOREBOARD_URLS.get(deporte.lower())
     if not url:
         return None
@@ -145,7 +270,6 @@ def _obtener_cuotas_espn_scoreboard(deporte: str, local: str, visitante: str):
             home_odds = odds.get("homeTeamOdds", {})
             away_odds = odds.get("awayTeamOdds", {})
 
-            # Determinar cuál competidor en ESPN es el local que seleccionó el usuario
             espn_home_name = ""
             for c in competitors:
                 if c.get("homeAway") == "home":
@@ -187,11 +311,6 @@ def _obtener_cuotas_espn_scoreboard(deporte: str, local: str, visitante: str):
 
 
 def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
-    """
-    Extrae cuotas principales en vivo:
-    1. Intenta Kambi / Rushbet (búsqueda bidireccional).
-    2. Si Kambi bloquea la IP de Render, extrae directo de ESPN BET / Caesars (gratis e ilimitado).
-    """
     event_id = _buscar_event_id_kambi(deporte, local, visitante)
     if event_id:
         ofertas = _obtener_betoffers_evento(event_id)
@@ -248,7 +367,6 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
             if datos["cuota_ml_local"] or datos["linea_total"]:
                 return {"success": True, "data": datos}
 
-    # Respaldo automático gratuito e ilimitado: ESPN BET / Caesars
     res_espn = _obtener_cuotas_espn_scoreboard(deporte, local, visitante)
     if res_espn:
         return res_espn
@@ -257,6 +375,12 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
 
 
 def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
+    # 1. Fuente principal de Player Props en la nube: The Odds API (sin bloqueo de IP)
+    props_odds_api = _obtener_props_the_odds_api(deporte, local, visitante)
+    if props_odds_api:
+        return props_odds_api
+
+    # 2. Respaldo: Kambi directo
     event_id = _buscar_event_id_kambi(deporte, local, visitante)
     if not event_id:
         return []
