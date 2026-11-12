@@ -12,7 +12,7 @@ DEPORTE_TO_SPORT_KEY = {
 }
 
 PROP_MARKETS_BY_SPORT = {
-    "nhl": "player_shots_on_goal,player_points",
+    "nhl": "player_shots_on_goal,player_points,player_assists,player_goal_scorer_anytime",
     "nba": "player_points,player_rebounds,player_assists,player_threes",
     "nfl": "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions",
     "mlb": "batter_hits,batter_total_bases,pitcher_strikeouts"
@@ -21,8 +21,9 @@ PROP_MARKETS_BY_SPORT = {
 MAPEO_MERCADO_ODDS_API = {
     "player_shots_on_goal": "Tiros a Puerta",
     "player_points": "Puntos",
-    "player_rebounds": "Rebotes",
     "player_assists": "Asistencias",
+    "player_goal_scorer_anytime": "Gol en Cualquier Momento",
+    "player_rebounds": "Rebotes",
     "player_threes": "Triples",
     "player_pass_yds": "Yardas Pase",
     "player_rush_yds": "Yardas Acarreo",
@@ -47,7 +48,7 @@ ESPN_SCOREBOARD_URLS = {
     "mlb": "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
 }
 
-OPERADORES_KAMBI = ["ubus", "rsiusil", "rsiubus", "ubca", "unibet"]
+OPERADORES_KAMBI = ["ubus", "rsiusil", "rsiubus", "ubca", "unibet", "betrivers"]
 
 HEADERS_WEB = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -86,11 +87,10 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
 
     cache_key = f"{dep}_{_simplificar(local)}_{_simplificar(visitante)}"
     ahora = time.time()
-    if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < 900):
+    if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < 600):
         return _CACHE_PROPS_ODDS_API[cache_key][1]
 
     try:
-        # 1. Buscar el event_id del partido
         url_events = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
         r_ev = requests.get(url_events, params={"apiKey": api_key}, timeout=6)
         if r_ev.status_code != 200:
@@ -105,11 +105,10 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
         if not event_id:
             return []
 
-        # 2. Consultar los mercados de Player Props de ese evento
         url_props = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
         params = {
             "apiKey": api_key,
-            "regions": "us,eu",
+            "regions": "us,us2,eu",
             "markets": markets,
             "oddsFormat": "decimal"
         }
@@ -121,12 +120,11 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
         if not bookmakers:
             return []
 
-        # Priorizar casas con mejores líneas de props
-        prioridad = ["fanduel", "draftkings", "pinnacle", "betmgm", "caesars", "unibet"]
+        prioridad = ["fanduel", "draftkings", "pinnacle", "betmgm", "caesars", "espnbet", "betrivers", "unibet"]
         bookmakers.sort(key=lambda b: prioridad.index(b.get("key")) if b.get("key") in prioridad else 99)
 
         agrupado = {}
-        for bm in bookmakers[:3]:
+        for bm in bookmakers[:5]:
             for market in bm.get("markets", []):
                 m_key = market.get("key")
                 tipo_esp = MAPEO_MERCADO_ODDS_API.get(m_key)
@@ -139,7 +137,15 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
                     linea = out.get("point")
                     precio = out.get("price")
 
-                    if not jugador or linea is None or not precio or precio <= 1.05:
+                    if not jugador or not precio or precio <= 1.05:
+                        continue
+
+                    # Para mercados Yes/No (como Gol en cualquier momento) la línea es 0.5
+                    if linea is None and m_key == "player_goal_scorer_anytime":
+                        linea = 0.5
+                        lado = "over"
+
+                    if linea is None:
                         continue
 
                     clave = (_simplificar(jugador), tipo_esp, float(linea))
@@ -152,9 +158,9 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
                             "cuota_under": None
                         }
 
-                    if lado == "over" and agrupado[clave]["cuota_over"] is None:
+                    if lado in ["over", "yes"] and agrupado[clave]["cuota_over"] is None:
                         agrupado[clave]["cuota_over"] = round(float(precio), 2)
-                    elif lado == "under" and agrupado[clave]["cuota_under"] is None:
+                    elif lado in ["under", "no"] and agrupado[clave]["cuota_under"] is None:
                         agrupado[clave]["cuota_under"] = round(float(precio), 2)
 
         props_finales = [
@@ -375,12 +381,10 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
 
 
 def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
-    # 1. Fuente principal de Player Props en la nube: The Odds API (sin bloqueo de IP)
     props_odds_api = _obtener_props_the_odds_api(deporte, local, visitante)
     if props_odds_api:
         return props_odds_api
 
-    # 2. Respaldo: Kambi directo
     event_id = _buscar_event_id_kambi(deporte, local, visitante)
     if not event_id:
         return []
