@@ -70,14 +70,14 @@ def _obtener_stats_equipo_nhl(abbr: str):
 def _evaluar_prop_nhl(media_real: float, tipo_prop: str, linea_casino=None, cuota_over=None, cuota_under=None):
     if linea_casino is None:
         if tipo_prop == "Tiros a Puerta":
-            linea = max(1.5, math.floor(media_real) - 0.5)
+            linea = math.floor(media_real) + 0.5
         else:
-            linea = 0.5
+            linea = 1.5 if media_real >= 1.35 else 0.5
     else:
         linea = linea_casino
 
     if tipo_prop == "Tiros a Puerta":
-        sigma = max(0.8, media_real * 0.27)
+        sigma = max(0.85, media_real * 0.28)
         z = (linea - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
         prob_over = 1.0 - prob_under
@@ -102,14 +102,11 @@ def _evaluar_prop_nhl(media_real: float, tipo_prop: str, linea_casino=None, cuot
             return None
     else:
         es_over = prob_over >= prob_under
-        prob_sel = min(0.82, prob_over if es_over else prob_under)
+        prob_sel = max(0.52, min(0.76, prob_over if es_over else prob_under))
         lado = "MÁS DE" if es_over else "MENOS DE"
-        if prob_sel >= 0.76: cuota_sel = 1.42
-        elif prob_sel >= 0.71: cuota_sel = 1.50
-        elif prob_sel >= 0.66: cuota_sel = 1.60
-        elif prob_sel >= 0.61: cuota_sel = 1.72
-        elif prob_sel >= 0.56: cuota_sel = 1.83
-        else: cuota_sel = 1.90
+        # Cálculo continuo de cuota justa de mercado (sin escalones repetidos)
+        cuota_justa = 1.0 / prob_sel
+        cuota_sel = round(max(1.45, min(1.95, cuota_justa * 1.04)), 2)
         ev_sel = (prob_sel * cuota_sel) - 1.0
 
     proy = int(round(media_real))
@@ -152,8 +149,8 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                 continue
 
             res = _evaluar_prop_nhl(media_real, tipo, p["linea"], p["cuota_over"], p["cuota_under"])
-            if res and res["prob_real"] >= 55.0 and res["ev"] > 0:
-                score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+            if res and res["prob_real"] >= 54.0 and res["ev"] > 0:
+                score = (res["prob_real"] * 0.75) + (res["ev"] * 0.25)
                 candidatas.append({
                     "jugador": datos_atleta["nombre"],
                     "equipo_abbr": datos_atleta["equipo"],
@@ -174,8 +171,8 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                 if not media_real or media_real <= 0:
                     continue
                 res = _evaluar_prop_nhl(media_real, tipo)
-                if res and res["prob_real"] >= 58.0 and res["ev"] > 0:
-                    score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+                if res and res["prob_real"] >= 54.0 and res["ev"] > 0:
+                    score = (res["prob_real"] * 0.75) + (res["ev"] * 0.25)
                     candidatas.append({
                         "jugador": datos_atleta["nombre"],
                         "equipo_abbr": datos_atleta["equipo"],
