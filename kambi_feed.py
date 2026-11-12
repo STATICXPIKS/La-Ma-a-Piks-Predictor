@@ -11,18 +11,18 @@ DEPORTE_TO_SPORT_KEY = {
     "mlb": "baseball_mlb"
 }
 
+# Solo los 2 mercados principales por deporte para consumir el mínimo de créditos
 PROP_MARKETS_BY_SPORT = {
-    "nhl": "player_shots_on_goal,player_points,player_assists,player_goal_scorer_anytime",
-    "nba": "player_points,player_rebounds,player_assists,player_threes",
-    "nfl": "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions",
-    "mlb": "batter_hits,batter_total_bases,pitcher_strikeouts"
+    "nhl": "player_shots_on_goal,player_points",
+    "nba": "player_points,player_rebounds",
+    "nfl": "player_pass_yds,player_rush_yds",
+    "mlb": "batter_hits,pitcher_strikeouts"
 }
 
 MAPEO_MERCADO_ODDS_API = {
     "player_shots_on_goal": "Tiros a Puerta",
     "player_points": "Puntos",
     "player_assists": "Asistencias",
-    "player_goal_scorer_anytime": "Gol en Cualquier Momento",
     "player_rebounds": "Rebotes",
     "player_threes": "Triples",
     "player_pass_yds": "Yardas Pase",
@@ -48,16 +48,18 @@ ESPN_SCOREBOARD_URLS = {
     "mlb": "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
 }
 
-OPERADORES_KAMBI = ["ubus", "rsiusil", "rsiubus", "ubca", "unibet", "betrivers"]
+OPERADORES_KAMBI = ["ubca", "unibet", "ubus", "rsiusil", "rsiubus"]
 
 HEADERS_WEB = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*"
 }
 
-_CACHE_EVENTOS = {}
-_CACHE_OFERTAS = {}
+_CACHE_EVENTOS_ODDS_API = {}
 _CACHE_PROPS_ODDS_API = {}
+_CACHE_EVENTOS_KAMBI = {}
+_CACHE_OFERTAS_KAMBI = {}
+_ODDS_API_AGOTADA_HASTA = 0
 
 
 def _simplificar(texto: str) -> str:
@@ -76,7 +78,14 @@ def _coincide_partido(ev_home: str, ev_away: str, local: str, visitante: str) ->
 
 
 def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
-    """Obtiene líneas y cuotas reales de Player Props por evento desde The Odds API."""
+    """Consulta The Odds API en modo ahorro extremo de créditos (caché largo + 1 región)."""
+    global _ODDS_API_AGOTADA_HASTA
+
+    ahora = time.time()
+    # Si ya dio 401/429 (sin créditos), no vuelve a intentar durante 1 hora
+    if ahora < _ODDS_API_AGOTADA_HASTA:
+        return []
+
     dep = deporte.lower()
     sport_key = DEPORTE_TO_SPORT_KEY.get(dep)
     markets = PROP_MARKETS_BY_SPORT.get(dep)
@@ -85,19 +94,29 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
     if not sport_key or not markets or not api_key:
         return []
 
+    # Caché de 45 minutos (2700s) para no repetir gasto de créditos en el mismo partido
     cache_key = f"{dep}_{_simplificar(local)}_{_simplificar(visitante)}"
-    ahora = time.time()
-    if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < 600):
+    if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < 2700):
         return _CACHE_PROPS_ODDS_API[cache_key][1]
 
     try:
-        url_events = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
-        r_ev = requests.get(url_events, params={"apiKey": api_key}, timeout=6)
-        if r_ev.status_code != 200:
-            return []
+        # 1. Lista de eventos del día (este endpoint NO consume créditos en The Odds API, pero igual lo cacheamos 30 min)
+        ev_cache_key = f"events_{dep}"
+        if ev_cache_key in _CACHE_EVENTOS_ODDS_API and (ahora - _CACHE_EVENTOS_ODDS_API[ev_cache_key][0] < 1800):
+            eventos = _CACHE_EVENTOS_ODDS_API[ev_cache_key][1]
+        else:
+            url_events = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
+            r_ev = requests.get(url_events, params={"apiKey": api_key}, timeout=6)
+            if r_ev.status_code in [401, 429]:
+                _ODDS_API_AGOTADA_HASTA = ahora + 3600
+                return []
+            if r_ev.status_code != 200:
+                return []
+            eventos = r_ev.json()
+            _CACHE_EVENTOS_ODDS_API[ev_cache_key] = (ahora, eventos)
 
         event_id = None
-        for ev in r_ev.json():
+        for ev in eventos:
             if _coincide_partido(ev.get("home_team", ""), ev.get("away_team", ""), local, visitante):
                 event_id = ev.get("id")
                 break
@@ -105,14 +124,18 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
         if not event_id:
             return []
 
+        # 2. Consultar solo region="us" para gastar solo 2 créditos por partido (1 por mercado)
         url_props = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
         params = {
             "apiKey": api_key,
-            "regions": "us,us2,eu",
+            "regions": "us",
             "markets": markets,
             "oddsFormat": "decimal"
         }
         r_props = requests.get(url_props, params=params, timeout=8)
+        if r_props.status_code in [401, 429]:
+            _ODDS_API_AGOTADA_HASTA = ahora + 3600
+            return []
         if r_props.status_code != 200:
             return []
 
@@ -120,11 +143,11 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
         if not bookmakers:
             return []
 
-        prioridad = ["fanduel", "draftkings", "pinnacle", "betmgm", "caesars", "espnbet", "betrivers", "unibet"]
+        prioridad = ["fanduel", "draftkings", "betmgm", "caesars", "espnbet"]
         bookmakers.sort(key=lambda b: prioridad.index(b.get("key")) if b.get("key") in prioridad else 99)
 
         agrupado = {}
-        for bm in bookmakers[:5]:
+        for bm in bookmakers[:3]:
             for market in bm.get("markets", []):
                 m_key = market.get("key")
                 tipo_esp = MAPEO_MERCADO_ODDS_API.get(m_key)
@@ -137,15 +160,7 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
                     linea = out.get("point")
                     precio = out.get("price")
 
-                    if not jugador or not precio or precio <= 1.05:
-                        continue
-
-                    # Para mercados Yes/No (como Gol en cualquier momento) la línea es 0.5
-                    if linea is None and m_key == "player_goal_scorer_anytime":
-                        linea = 0.5
-                        lado = "over"
-
-                    if linea is None:
+                    if not jugador or linea is None or not precio or precio <= 1.05:
                         continue
 
                     clave = (_simplificar(jugador), tipo_esp, float(linea))
@@ -158,16 +173,12 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
                             "cuota_under": None
                         }
 
-                    if lado in ["over", "yes"] and agrupado[clave]["cuota_over"] is None:
+                    if lado == "over" and agrupado[clave]["cuota_over"] is None:
                         agrupado[clave]["cuota_over"] = round(float(precio), 2)
-                    elif lado in ["under", "no"] and agrupado[clave]["cuota_under"] is None:
+                    elif lado == "under" and agrupado[clave]["cuota_under"] is None:
                         agrupado[clave]["cuota_under"] = round(float(precio), 2)
 
-        props_finales = [
-            v for v in agrupado.values()
-            if v["cuota_over"] is not None
-        ]
-
+        props_finales = [v for v in agrupado.values() if v["cuota_over"] is not None]
         if props_finales:
             _CACHE_PROPS_ODDS_API[cache_key] = (ahora, props_finales)
         return props_finales
@@ -186,17 +197,18 @@ def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
     cache_key = f"list_{deporte.lower()}"
     eventos = []
 
-    if cache_key in _CACHE_EVENTOS and (ahora - _CACHE_EVENTOS[cache_key][0] < 600):
-        eventos = _CACHE_EVENTOS[cache_key][1]
+    if cache_key in _CACHE_EVENTOS_KAMBI and (ahora - _CACHE_EVENTOS_KAMBI[cache_key][0] < 900):
+        eventos = _CACHE_EVENTOS_KAMBI[cache_key][1]
     else:
         for op in OPERADORES_KAMBI:
-            url = f"https://eu-offering-api.kambicdn.com/offering/v2018/{op}/listView/{sport_path}.json?lang=en_US&market=US&client_id=2&channel_id=1&ncid={int(ahora*1000)}"
+            market_code = "CA" if op == "ubca" else ("GB" if op == "unibet" else "US")
+            url = f"https://eu-offering-api.kambicdn.com/offering/v2018/{op}/listView/{sport_path}.json?lang=en_US&market={market_code}&client_id=2&channel_id=1&ncid={int(ahora*1000)}"
             try:
                 r = requests.get(url, headers=HEADERS_WEB, timeout=5)
                 if r.status_code == 200:
                     eventos = r.json().get("events", [])
                     if eventos:
-                        _CACHE_EVENTOS[cache_key] = (ahora, eventos)
+                        _CACHE_EVENTOS_KAMBI[cache_key] = (ahora, eventos)
                         break
             except Exception:
                 continue
@@ -211,17 +223,18 @@ def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
 
 def _obtener_betoffers_evento(event_id):
     ahora = time.time()
-    if event_id in _CACHE_OFERTAS and (ahora - _CACHE_OFERTAS[event_id][0] < 600):
-        return _CACHE_OFERTAS[event_id][1]
+    if event_id in _CACHE_OFERTAS_KAMBI and (ahora - _CACHE_OFERTAS_KAMBI[event_id][0] < 900):
+        return _CACHE_OFERTAS_KAMBI[event_id][1]
 
     for op in OPERADORES_KAMBI:
-        url = f"https://eu-offering-api.kambicdn.com/offering/v2018/{op}/betoffer/event/{event_id}.json?lang=en_US&market=US&client_id=2&channel_id=1&ncid={int(ahora*1000)}"
+        market_code = "CA" if op == "ubca" else ("GB" if op == "unibet" else "US")
+        url = f"https://eu-offering-api.kambicdn.com/offering/v2018/{op}/betoffer/event/{event_id}.json?lang=en_US&market={market_code}&client_id=2&channel_id=1&ncid={int(ahora*1000)}"
         try:
             r = requests.get(url, headers=HEADERS_WEB, timeout=6)
             if r.status_code == 200:
                 ofertas = r.json().get("betOffers", [])
                 if ofertas:
-                    _CACHE_OFERTAS[event_id] = (ahora, ofertas)
+                    _CACHE_OFERTAS_KAMBI[event_id] = (ahora, ofertas)
                     return ofertas
         except Exception:
             continue
@@ -324,7 +337,7 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
             l_apodo = _apodo_equipo(local)
             v_apodo = _apodo_equipo(visitante)
             datos = {
-                "bookmaker": "Kambi / Rushbet Live",
+                "bookmaker": "Kambi / Unibet Live",
                 "cuota_ml_local": None, "cuota_ml_visitante": None,
                 "linea_spread_local": None, "cuota_spread_local": None,
                 "linea_spread_visitante": None, "cuota_spread_visitante": None,
@@ -381,10 +394,12 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
 
 
 def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
+    # 1. Intenta The Odds API (se salta automáticamente si ya se agotaron los 500 créditos)
     props_odds_api = _obtener_props_the_odds_api(deporte, local, visitante)
     if props_odds_api:
         return props_odds_api
 
+    # 2. Respaldo gratuito e ilimitado: Kambi multi-operador (ubca / unibet / ubus)
     event_id = _buscar_event_id_kambi(deporte, local, visitante)
     if not event_id:
         return []
@@ -393,7 +408,9 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
     props_reales = []
 
     mapeo_mercados = {
+        "shots on goal": "Tiros a Puerta",
         "points scored": "Puntos",
+        "total points": "Puntos",
         "rebounds": "Rebotes",
         "assists": "Asistencias",
         "three-point": "Triples",
@@ -402,7 +419,6 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
         "rushing yards": "Yardas Acarreo",
         "receiving yards": "Yardas Recepción",
         "receptions": "Recepciones",
-        "shots on goal": "Tiros a Puerta",
         "points": "Puntos"
     }
 
@@ -412,9 +428,13 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
         if len(outcomes) != 2:
             continue
 
+        # Excluir totales de equipo
+        if "team" in crit_label or "home" in crit_label or "away" in crit_label:
+            continue
+
         tipo_detectado = None
         for clave, nombre_esp in mapeo_mercados.items():
-            if clave in crit_label and ("player" in crit_label or "yards" in crit_label or "receptions" in crit_label or "shots" in crit_label):
+            if clave in crit_label:
                 tipo_detectado = nombre_esp
                 break
 
@@ -446,13 +466,13 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
             elif "under" in o_type or "under" in o_label:
                 c_under = odds
 
-        if c_over and c_under and c_over > 1.05 and c_under > 1.05:
+        if c_over and c_over > 1.05:
             props_reales.append({
                 "jugador": jugador,
                 "tipo_prop": tipo_detectado,
                 "linea": linea,
                 "cuota_over": c_over,
-                "cuota_under": c_under
+                "cuota_under": c_under or 1.90
             })
 
     return props_reales
