@@ -1,6 +1,8 @@
 import math
 import time
+import unicodedata
 import requests
+from kambi_feed import obtener_player_props_kambi
 
 MAPEO_EQUIPOS_NHL = {
     "Anaheim Ducks": "ana", "Boston Bruins": "bos", "Buffalo Sabres": "buf",
@@ -17,164 +19,137 @@ MAPEO_EQUIPOS_NHL = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "application/json"
 }
 
-_PROPS_CACHE_NHL = {}
+_CACHE_STATS_NHL = {}
 
 
-def _obtener_lideres_reales_nhl(abbr):
-    """
-    Consulta la API oficial de estadísticas de la NHL para obtener
-    los líderes reales del equipo en puntos, tiros y goles por partido.
-    """
+def _normalizar_nombre(nombre: str) -> str:
+    n = unicodedata.normalize('NFD', nombre).encode('ascii', 'ignore').decode("utf-8")
+    return "".join(c for c in n.lower() if c.isalpha())
+
+
+def _obtener_stats_equipo_nhl(abbr: str):
     abbr_clean = abbr.lower()
-    jugadores = {}
+    ahora = time.time()
+    if abbr_clean in _CACHE_STATS_NHL and (ahora - _CACHE_STATS_NHL[abbr_clean][0] < 1800):
+        return _CACHE_STATS_NHL[abbr_clean][1]
 
-    # 1. API oficial de NHL Web (Roster + Estadísticas activas del equipo)
+    jugadores = {}
     url_nhl = f"https://api-web.nhle.com/v1/club-stats/{abbr_clean}/now"
     try:
         r = requests.get(url_nhl, headers=HEADERS, timeout=5)
         if r.status_code == 200:
-            data = r.json()
-            skaters = data.get("skaters", [])
-            for s in skaters:
+            for s in r.json().get("skaters", []):
                 games = s.get("gamesPlayed", 0)
-                if games < 5:
+                if games < 3:
                     continue
-
-                nombre = f"{s.get('firstName', {}).get('default', '')} {s.get('lastName', {}).get('default', '')}".strip()
-                if not nombre:
+                nom = f"{s.get('firstName', {}).get('default', '')} {s.get('lastName', {}).get('default', '')}".strip()
+                if not nom:
                     continue
+                key = _normalizar_nombre(nom)
+                jugadores[key] = {
+                    "nombre": nom,
+                    "equipo": abbr.upper(),
+                    "Puntos": round(s.get("points", 0) / games, 2),
+                    "Tiros a Puerta": round(s.get("shots", 0) / games, 2)
+                }
+    except Exception:
+        pass
 
-                pts = s.get("points", 0)
-                shots = s.get("shots", 0)
-
-                ppg = round(pts / games, 2)
-                spg = round(shots / games, 2)
-
-                if ppg >= 0.40 or spg >= 1.5:
-                    jugadores[nombre] = {
-                        "nombre": nombre,
-                        "equipo": abbr.upper(),
-                        "Puntos": ppg,
-                        "Tiros a Puerta": spg
-                    }
-    except Exception as e:
-        print(f"Error consultando NHL API para {abbr}: {e}")
-
-    # 2. Respaldo directo en API de ESPN NHL si la principal estuviera en mantenimiento
-    if not jugadores:
-        try:
-            url_espn = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/teams/{abbr_clean}"
-            r2 = requests.get(url_espn, headers=HEADERS, timeout=4)
-            if r2.status_code == 200:
-                leaders = r2.json().get("team", {}).get("leaders", [])
-                for cat in leaders:
-                    cat_name = cat.get("name", "").lower()
-                    tipo = "Puntos" if "point" in cat_name or "pts" in cat_name else None
-                    if tipo:
-                        for l in cat.get("leaders", []):
-                            nom = l.get("athlete", {}).get("displayName")
-                            val = float(str(l.get("value", 0)).replace(",", ""))
-                            if nom and val > 0:
-                                # Si ESPN entrega puntos totales, normalizar a promedio
-                                ppg_est = round(val / 20.0, 2) if val > 4.0 else val
-                                if nom not in jugadores:
-                                    jugadores[nom] = {"nombre": nom, "equipo": abbr.upper(), "Puntos": ppg_est, "Tiros a Puerta": 2.5}
-        except Exception:
-            pass
-
-    return list(jugadores.values())
+    if jugadores:
+        _CACHE_STATS_NHL[abbr_clean] = (ahora, jugadores)
+    return jugadores
 
 
-def _calcular_prop_nhl(media_real: float, tipo_prop: str):
-    """Calcula probabilidades exactas y cuotas justas basadas en mérito."""
+def _evaluar_prop_nhl_contra_casino(media_real: float, linea_casino: float, cuota_over: float, cuota_under: float, tipo_prop: str):
     if tipo_prop == "Tiros a Puerta":
-        linea = math.floor(media_real) + 0.5
-        cv = 0.26
-        sigma = max(0.8, media_real * cv)
-        z = (linea - media_real) / sigma
+        sigma = max(0.8, media_real * 0.27)
+        z = (linea_casino - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
         prob_over = 1.0 - prob_under
     else:
-        # En puntos de hockey la línea estándar de mercado es 0.5 o 1.5
-        linea = 1.5 if media_real >= 1.25 else 0.5
         lamb = media_real
-        k_max = int(math.floor(linea))
+        k_max = int(math.floor(linea_casino))
         prob_under = sum((math.exp(-lamb) * (lamb ** k)) / math.factorial(k) for k in range(k_max + 1))
         prob_over = 1.0 - prob_under
 
-    es_over = prob_over >= prob_under
-    prob_sel = max(0.52, min(0.78, prob_over if es_over else prob_under))
+    ev_over = (prob_over * cuota_over) - 1.0
+    ev_under = (prob_under * cuota_under) - 1.0
 
-    # Asignación de cuota real según probabilidad
-    if prob_sel >= 0.72: cuota = 1.52
-    elif prob_sel >= 0.67: cuota = 1.62
-    elif prob_sel >= 0.62: cuota = 1.72
-    elif prob_sel >= 0.57: cuota = 1.82
-    else: cuota = 1.88
+    if prob_over >= prob_under and ev_over > 0:
+        lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
+    elif prob_under > prob_over and ev_under > 0:
+        lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
+    elif ev_over >= ev_under and ev_over > 0:
+        lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
+    elif ev_under > 0:
+        lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
+    else:
+        return None
 
-    ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
-
-    proyeccion_entera = int(round(media_real))
-    if es_over and proyeccion_entera <= linea:
-        proyeccion_entera = int(math.ceil(linea))
-    elif not es_over and proyeccion_entera >= linea:
-        proyeccion_entera = int(math.floor(linea))
+    proy = int(round(media_real))
+    if lado == "MÁS DE" and proy <= linea_casino:
+        proy = int(math.ceil(linea_casino))
+    elif lado == "MENOS DE" and proy >= linea_casino:
+        proy = int(math.floor(linea_casino))
 
     return {
-        "lado": "MÁS DE" if es_over else "MENOS DE",
-        "linea": linea,
-        "cuota": cuota,
+        "lado": lado,
+        "linea": linea_casino,
+        "cuota": cuota_sel,
         "prob_real": round(prob_sel * 100, 1),
-        "ev": ev,
-        "proyeccion": proyeccion_entera
+        "ev": round(ev_sel * 100, 1),
+        "proyeccion": proy
     }
 
 
 def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_nhl_real_live"
-    now = time.time()
-    if cache_key in _PROPS_CACHE_NHL:
-        ts, data = _PROPS_CACHE_NHL[cache_key]
-        if now - ts < 1800 and data:
-            return data
+    props_casino = obtener_player_props_kambi("nhl", local, visitante)
+    if not props_casino:
+        return []
 
-    abbr_loc = MAPEO_EQUIPOS_NHL.get(local, "cgy")
-    abbr_vis = MAPEO_EQUIPOS_NHL.get(visitante, "nyr")
+    abbr_loc = MAPEO_EQUIPOS_NHL.get(local)
+    abbr_vis = MAPEO_EQUIPOS_NHL.get(visitante)
+    if not abbr_loc or not abbr_vis:
+        return []
 
-    # Extrae datos 100% reales de los dos equipos seleccionados
-    jugadores_pool = _obtener_lideres_reales_nhl(abbr_loc) + _obtener_lideres_reales_nhl(abbr_vis)
+    stats_totales = {**_obtener_stats_equipo_nhl(abbr_loc), **_obtener_stats_equipo_nhl(abbr_vis)}
     candidatas = []
 
-    for j in jugadores_pool:
-        for tipo in ["Tiros a Puerta", "Puntos"]:
-            if tipo in j and j[tipo] > 0:
-                c = _calcular_prop_nhl(j[tipo], tipo)
-                if c["prob_real"] >= 52.0:
-                    # Ponderación cuantitativa: 75% seguridad + 25% valor esperado
-                    score = (c["prob_real"] * 0.75) + (c["ev"] * 0.25)
-                    candidatas.append({
-                        "jugador": j["nombre"],
-                        "equipo_abbr": j["equipo"],
-                        "tipo_prop": tipo,
-                        "lado": c["lado"],
-                        "linea": c["linea"],
-                        "cuota": c["cuota"],
-                        "prob_real": c["prob_real"],
-                        "ev": c["ev"],
-                        "proyeccion": c["proyeccion"],
-                        "_score": score
-                    })
+    for p in props_casino:
+        key_jug = _normalizar_nombre(p["jugador"])
+        datos_atleta = stats_totales.get(key_jug)
+        if not datos_atleta:
+            continue
 
-    # Ranking meritocrático puro: se ordenan las mejores del partido completo
+        tipo = p["tipo_prop"]
+        media_real = datos_atleta.get(tipo)
+        if not media_real or media_real <= 0:
+            continue
+
+        eval_res = _evaluar_prop_nhl_contra_casino(
+            media_real, p["linea"], p["cuota_over"], p["cuota_under"], tipo
+        )
+        if eval_res and eval_res["prob_real"] >= 54.0 and eval_res["ev"] >= 1.5:
+            score = (eval_res["prob_real"] * 0.75) + (eval_res["ev"] * 0.25)
+            candidatas.append({
+                "jugador": datos_atleta["nombre"],
+                "equipo_abbr": datos_atleta["equipo"],
+                "tipo_prop": tipo,
+                "lado": eval_res["lado"],
+                "linea": eval_res["linea"],
+                "cuota": eval_res["cuota"],
+                "prob_real": eval_res["prob_real"],
+                "ev": eval_res["ev"],
+                "proyeccion": eval_res["proyeccion"],
+                "_score": score
+            })
+
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
+    for c in candidatas:
+        c.pop("_score", None)
 
-    for item in candidatas:
-        item.pop("_score", None)
-
-    seleccion = candidatas[:top_n]
-    _PROPS_CACHE_NHL[cache_key] = (now, seleccion)
-    return seleccion
+    return candidatas[:top_n]
