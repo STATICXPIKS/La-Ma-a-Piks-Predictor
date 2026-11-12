@@ -52,7 +52,7 @@ def _obtener_stats_equipo_nhl(abbr: str):
                 key = _normalizar_nombre(nom)
                 ppg = round(s.get("points", 0) / games, 2)
                 spg = round(s.get("shots", 0) / games, 2)
-                if ppg >= 0.65 or spg >= 2.1:
+                if ppg >= 0.70 or spg >= 2.2:
                     jugadores[key] = {
                         "nombre": nom,
                         "equipo": abbr.upper(),
@@ -73,10 +73,9 @@ def _evaluar_solo_over_nhl(media_real: float, tipo_prop: str, linea_casino=None,
         if linea_casino is not None and linea_casino in [1.5, 2.5]:
             linea = linea_casino
         else:
-            # Si promedia >= 3.1 tiros evalúa Over 2.5; si promedia >= 2.1 evalúa Over 1.5
-            if media_real >= 3.1:
+            if media_real >= 3.2:
                 linea = 2.5
-            elif media_real >= 2.1:
+            elif media_real >= 2.2:
                 linea = 1.5
             else:
                 return None
@@ -90,9 +89,9 @@ def _evaluar_solo_over_nhl(media_real: float, tipo_prop: str, linea_casino=None,
         if linea_casino is not None and linea_casino in [0.5, 1.5]:
             linea = linea_casino
         else:
-            if media_real >= 1.45:
+            if media_real >= 1.55:
                 linea = 1.5
-            elif media_real >= 0.75:
+            elif media_real >= 0.80:
                 linea = 0.5
             else:
                 return None
@@ -102,13 +101,12 @@ def _evaluar_solo_over_nhl(media_real: float, tipo_prop: str, linea_casino=None,
         prob_under = sum((math.exp(-lamb) * (lamb ** k)) / math.factorial(k) for k in range(k_max + 1))
         prob_over = 1.0 - prob_under
 
-    if prob_over < 0.55:
+    if prob_over < 0.56:
         return None
 
     if cuota_over and cuota_over > 1.05:
         cuota_sel = cuota_over
     else:
-        # Momio real proporcional sin importar qué tan bajo sea (ej. 1.32, 1.44, 1.58)
         cuota_sel = round(max(1.25, (1.0 / prob_over) * 1.03), 2)
 
     ev_sel = (prob_over * cuota_sel) - 1.0
