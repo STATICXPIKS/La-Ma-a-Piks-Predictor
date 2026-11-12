@@ -57,51 +57,96 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
                             continue
                         if s_val <= 0:
                             continue
-                        if "passingyardspergame" in s_name or "avgpassingyards" in s_name:
+                        if ("passingyardspergame" in s_name or "avgpassingyards" in s_name) and s_val > 80.0:
                             jugadores[key]["Yardas Pase"] = s_val
-                        elif "rushingyardspergame" in s_name or "avgrushingyards" in s_name:
+                        elif ("rushingyardspergame" in s_name or "avgrushingyards" in s_name) and s_val > 20.0:
                             jugadores[key]["Yardas Acarreo"] = s_val
-                        elif "receivingyardspergame" in s_name or "avgreceivingyards" in s_name:
+                        elif ("receivingyardspergame" in s_name or "avgreceivingyards" in s_name) and s_val > 20.0:
                             jugadores[key]["Yardas Recepción"] = s_val
-                        elif "receptionspergame" in s_name or "avgreceptions" in s_name:
+                        elif ("receptionspergame" in s_name or "avgreceptions" in s_name) and s_val > 2.0:
                             jugadores[key]["Recepciones"] = s_val
     except Exception:
         pass
+
+    if not jugadores:
+        try:
+            url_v2 = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/statistics"
+            r2 = requests.get(url_v2, headers=HEADERS, timeout=5)
+            if r2.status_code == 200:
+                cats = r2.json().get("results", {}).get("stats", {}).get("categories", [])
+                mapeo = {
+                    "passingYards": "Yardas Pase",
+                    "rushingYards": "Yardas Acarreo",
+                    "receivingYards": "Yardas Recepción",
+                    "receptions": "Recepciones"
+                }
+                for c in cats:
+                    tipo = mapeo.get(c.get("name"))
+                    if tipo:
+                        for lead in c.get("leaders", []):
+                            nom = lead.get("athlete", {}).get("displayName")
+                            val = float(str(lead.get("displayValue", 0)).replace(",", ""))
+                            if nom and val > 0:
+                                key = _normalizar_nombre(nom)
+                                if key not in jugadores:
+                                    jugadores[key] = {"nombre": nom, "equipo": abbr.upper()}
+                                jugadores[key][tipo] = val
+        except Exception:
+            pass
 
     if jugadores:
         _CACHE_STATS_NFL[team_id] = (ahora, jugadores)
     return jugadores
 
 
-def _evaluar_prop_nfl_contra_casino(media_real: float, linea_casino: float, cuota_over: float, cuota_under: float):
-    sigma = max(2.5, media_real * 0.28)
-    z = (linea_casino - media_real) / sigma
+def _evaluar_prop_nfl(media_real: float, tipo_prop: str, linea_casino=None, cuota_over=None, cuota_under=None):
+    if linea_casino is None:
+        if tipo_prop == "Recepciones":
+            linea = max(1.5, math.floor(media_real) - 0.5)
+        else:
+            linea = max(15.5, math.floor(media_real * 0.88) + 0.5)
+    else:
+        linea = linea_casino
+
+    sigma = max(2.5, media_real * 0.27)
+    z = (linea - media_real) / sigma
     prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
     prob_over = 1.0 - prob_under
 
-    ev_over = (prob_over * cuota_over) - 1.0
-    ev_under = (prob_under * cuota_under) - 1.0
-
-    if prob_over >= prob_under and ev_over > 0:
-        lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
-    elif prob_under > prob_over and ev_under > 0:
-        lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
-    elif ev_over >= ev_under and ev_over > 0:
-        lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
-    elif ev_under > 0:
-        lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
+    if cuota_over and cuota_under:
+        ev_over = (prob_over * cuota_over) - 1.0
+        ev_under = (prob_under * cuota_under) - 1.0
+        if prob_over >= prob_under and ev_over > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
+        elif prob_under > prob_over and ev_under > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
+        elif ev_over >= ev_under and ev_over > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
+        elif ev_under > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
+        else:
+            return None
     else:
-        return None
+        es_over = prob_over >= prob_under
+        prob_sel = min(0.82, prob_over if es_over else prob_under)
+        lado = "MÁS DE" if es_over else "MENOS DE"
+        if prob_sel >= 0.76: cuota_sel = 1.42
+        elif prob_sel >= 0.71: cuota_sel = 1.50
+        elif prob_sel >= 0.66: cuota_sel = 1.60
+        elif prob_sel >= 0.61: cuota_sel = 1.72
+        elif prob_sel >= 0.56: cuota_sel = 1.83
+        else: cuota_sel = 1.90
+        ev_sel = (prob_sel * cuota_sel) - 1.0
 
     proy = int(round(media_real))
-    if lado == "MÁS DE" and proy <= linea_casino:
-        proy = int(math.ceil(linea_casino))
-    elif lado == "MENOS DE" and proy >= linea_casino:
-        proy = int(math.floor(linea_casino))
+    if lado == "MÁS DE" and proy <= linea:
+        proy = int(math.ceil(linea))
+    elif lado == "MENOS DE" and proy >= linea:
+        proy = int(math.floor(linea))
 
     return {
         "lado": lado,
-        "linea": linea_casino,
+        "linea": linea,
         "cuota": cuota_sel,
         "prob_real": round(prob_sel * 100, 1),
         "ev": round(ev_sel * 100, 1),
@@ -110,10 +155,6 @@ def _evaluar_prop_nfl_contra_casino(media_real: float, linea_casino: float, cuot
 
 
 def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
-    props_casino = obtener_player_props_kambi("nfl", local, visitante)
-    if not props_casino:
-        return []
-
     d_loc = EQUIPOS_NFL_ESPN.get(local)
     d_vis = EQUIPOS_NFL_ESPN.get(visitante)
     if not d_loc or not d_vis:
@@ -122,36 +163,59 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
     stats_loc = _obtener_stats_equipo_nfl(d_loc[1], d_loc[0])
     stats_vis = _obtener_stats_equipo_nfl(d_vis[1], d_vis[0])
     stats_totales = {**stats_loc, **stats_vis}
+    if not stats_totales:
+        return []
 
     candidatas = []
-    for p in props_casino:
-        key_jug = _normalizar_nombre(p["jugador"])
-        datos_atleta = stats_totales.get(key_jug)
-        if not datos_atleta:
-            continue
+    props_casino = obtener_player_props_kambi("nfl", local, visitante)
 
-        tipo = p["tipo_prop"]
-        media_real = datos_atleta.get(tipo)
-        if not media_real or media_real <= 0:
-            continue
+    if props_casino:
+        for p in props_casino:
+            datos_atleta = stats_totales.get(_normalizar_nombre(p["jugador"]))
+            if not datos_atleta:
+                continue
+            tipo = p["tipo_prop"]
+            media_real = datos_atleta.get(tipo)
+            if not media_real or media_real <= 0:
+                continue
 
-        eval_res = _evaluar_prop_nfl_contra_casino(
-            media_real, p["linea"], p["cuota_over"], p["cuota_under"]
-        )
-        if eval_res and eval_res["prob_real"] >= 54.0 and eval_res["ev"] >= 1.5:
-            score = (eval_res["prob_real"] * 0.75) + (eval_res["ev"] * 0.25)
-            candidatas.append({
-                "jugador": datos_atleta["nombre"],
-                "equipo_abbr": datos_atleta["equipo"],
-                "tipo_prop": tipo,
-                "lado": eval_res["lado"],
-                "linea": eval_res["linea"],
-                "cuota": eval_res["cuota"],
-                "prob_real": eval_res["prob_real"],
-                "ev": eval_res["ev"],
-                "proyeccion": eval_res["proyeccion"],
-                "_score": score
-            })
+            res = _evaluar_prop_nfl(media_real, tipo, p["linea"], p["cuota_over"], p["cuota_under"])
+            if res and res["prob_real"] >= 55.0 and res["ev"] > 0:
+                score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+                candidatas.append({
+                    "jugador": datos_atleta["nombre"],
+                    "equipo_abbr": datos_atleta["equipo"],
+                    "tipo_prop": tipo,
+                    "lado": res["lado"],
+                    "linea": res["linea"],
+                    "cuota": res["cuota"],
+                    "prob_real": res["prob_real"],
+                    "ev": res["ev"],
+                    "proyeccion": res["proyeccion"],
+                    "_score": score
+                })
+
+    if not candidatas:
+        for datos_atleta in stats_totales.values():
+            for tipo in ["Yardas Pase", "Yardas Acarreo", "Yardas Recepción", "Recepciones"]:
+                media_real = datos_atleta.get(tipo)
+                if not media_real or media_real <= 0:
+                    continue
+                res = _evaluar_prop_nfl(media_real, tipo)
+                if res and res["prob_real"] >= 58.0 and res["ev"] > 0:
+                    score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+                    candidatas.append({
+                        "jugador": datos_atleta["nombre"],
+                        "equipo_abbr": datos_atleta["equipo"],
+                        "tipo_prop": tipo,
+                        "lado": res["lado"],
+                        "linea": res["linea"],
+                        "cuota": res["cuota"],
+                        "prob_real": res["prob_real"],
+                        "ev": res["ev"],
+                        "proyeccion": res["proyeccion"],
+                        "_score": score
+                    })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
     for c in candidatas:
