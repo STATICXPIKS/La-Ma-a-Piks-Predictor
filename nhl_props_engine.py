@@ -65,7 +65,7 @@ def _obtener_stats_equipo_nhl(abbr: str):
         if r.status_code == 200:
             for s in r.json().get("skaters", []):
                 pid = s.get("playerId")
-                # Filtrar estrictamente: si tenemos roster activo, exigir que el jugador siga hoy en el equipo
+                # Exigir que el jugador siga hoy en el roster activo del equipo
                 if roster_activo and pid not in roster_activo:
                     continue
 
@@ -79,12 +79,14 @@ def _obtener_stats_equipo_nhl(abbr: str):
 
                 key = _normalizar_nombre(nom)
                 ppg = round(s.get("points", 0) / games, 2)
+                apg = round(s.get("assists", 0) / games, 2)
                 spg = round(s.get("shots", 0) / games, 2)
 
                 jugadores[key] = {
                     "nombre": nom,
                     "equipo": abbr.upper(),
                     "Puntos": ppg,
+                    "Asistencias": apg,
                     "Tiros a Puerta": spg
                 }
     except Exception as e:
@@ -98,25 +100,23 @@ def _obtener_stats_equipo_nhl(abbr: str):
 def _probabilidad_poisson_over(media: float, linea: float) -> float:
     k_max = int(math.floor(linea))
     prob_under = sum((math.exp(-media) * (media ** k)) / math.factorial(k) for k in range(k_max + 1))
-    return max(0.01, min(0.95, 1.0 - prob_under))
+    return max(0.01, min(0.92, 1.0 - prob_under))
 
 
 def _evaluar_prop_nhl(media_real: float, tipo_prop: str, linea: float, cuota_over: float, cuota_under=None):
     prob_over = _probabilidad_poisson_over(media_real, linea)
     prob_under = 1.0 - prob_over
 
-    # Si tenemos cuota de mercado both-ways, suavizamos 70% estadística real + 30% mercado
     if cuota_over and cuota_under and cuota_over > 1.05 and cuota_under > 1.05:
         imp_o = 1.0 / cuota_over
         imp_u = 1.0 / cuota_under
         mkt_o = imp_o / (imp_o + imp_u)
-        prob_over = (prob_over * 0.70) + (mkt_o * 0.30)
+        prob_over = (prob_over * 0.65) + (mkt_o * 0.35)
         prob_under = 1.0 - prob_over
 
     ev_over = (prob_over * cuota_over) - 1.0
 
-    # Evaluar lado MÁS DE (Over)
-    if prob_over >= 0.53 and ev_over > 0.01:
+    if prob_over >= 0.52 and ev_over > 0.005:
         proy = max(int(math.ceil(linea)), int(round(media_real)))
         return {
             "lado": "MÁS DE",
@@ -127,10 +127,9 @@ def _evaluar_prop_nhl(media_real: float, tipo_prop: str, linea: float, cuota_ove
             "proyeccion": proy
         }
 
-    # Evaluar lado MENOS DE (Under) si hay cuota real y valor positivo
     if cuota_under and cuota_under > 1.05:
         ev_under = (prob_under * cuota_under) - 1.0
-        if prob_under >= 0.55 and ev_under > 0.02:
+        if prob_under >= 0.54 and ev_under > 0.01:
             proy = min(int(math.floor(linea)), int(round(media_real)))
             return {
                 "lado": "MENOS DE",
