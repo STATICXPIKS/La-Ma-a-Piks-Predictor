@@ -31,81 +31,61 @@ def _normalizar_nombre(nombre: str) -> str:
     return "".join(c for c in n.lower() if c.isalpha())
 
 
-def _obtener_promedios_reales_nfl(team_id: str, abbr: str):
-    """Extrae promedios reales de yardas y recepciones desde los últimos partidos jugados en ESPN."""
+def _obtener_stats_reales_nfl(team_id: str, abbr: str):
+    """Obtiene en 1 sola llamada rápida los promedios reales de yardas y recepciones del roster activo."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NFL and (ahora - _CACHE_STATS_NFL[team_id][0] < 1800):
         return _CACHE_STATS_NFL[team_id][1]
 
-    acumulado = {}
-    url_sched = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/schedule"
+    jugadores = {}
+    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/roster?enable=stats"
 
     try:
-        r = requests.get(url_sched, headers=HEADERS, timeout=6)
+        r = requests.get(url, headers=HEADERS, timeout=6)
         if r.status_code == 200:
-            eventos = r.json().get("events", [])
-            finalizados = [
-                ev.get("id") for ev in eventos
-                if ev.get("competitions", [{}])[0].get("status", {}).get("type", {}).get("completed") is True
-            ]
-            for ev_id in finalizados[-4:]:
-                url_box = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={ev_id}"
-                rb = requests.get(url_box, headers=HEADERS, timeout=5)
-                if rb.status_code != 200:
+            # En NFL el roster viene agrupado por offense, defense, specialTeam
+            grupos = r.json().get("athletes", [])
+            lista_atletas = []
+            for g in grupos:
+                if "items" in g:
+                    lista_atletas.extend(g["items"])
+                else:
+                    lista_atletas.append(g)
+
+            for ath in lista_atletas:
+                injuries = ath.get("injuries", [])
+                if any("out" in str(inj.get("status", "")).lower() for inj in injuries):
                     continue
 
-                for team_box in rb.json().get("boxscore", {}).get("players", []):
-                    if str(team_box.get("team", {}).get("id")) != str(team_id):
-                        continue
+                nom = ath.get("displayName")
+                if not nom:
+                    continue
 
-                    for cat in team_box.get("statistics", []):
-                        cat_name = cat.get("name", "").lower()
-                        cols = [h.upper() for h in cat.get("names", [])]
-                        if "YDS" not in cols:
+                datos_j = {"nombre": nom, "equipo": abbr.upper()}
+                cats = ath.get("statistics", {}).get("splits", {}).get("categories", [])
+
+                for cat in cats:
+                    for st in cat.get("stats", []):
+                        s_name = str(st.get("name", "")).lower()
+                        try:
+                            val = float(str(st.get("value", 0)).replace(",", ""))
+                        except ValueError:
                             continue
-                        idx_yds = cols.index("YDS")
-                        idx_rec = cols.index("REC") if "REC" in cols else -1
+                        if val <= 0:
+                            continue
+                        if ("passingyardspergame" in s_name or "avgpassingyards" in s_name) and val >= 120.0:
+                            datos_j["Yardas Pase"] = round(val, 1)
+                        elif ("rushingyardspergame" in s_name or "avgrushingyards" in s_name) and val >= 25.0:
+                            datos_j["Yardas Acarreo"] = round(val, 1)
+                        elif ("receivingyardspergame" in s_name or "avgreceivingyards" in s_name) and val >= 25.0:
+                            datos_j["Yardas Recepción"] = round(val, 1)
+                        elif ("receptionspergame" in s_name or "avgreceptions" in s_name) and val >= 2.5:
+                            datos_j["Recepciones"] = round(val, 1)
 
-                        for ath in cat.get("athletes", []):
-                            nom = ath.get("athlete", {}).get("displayName")
-                            vals = ath.get("stats", [])
-                            if not nom or len(vals) <= idx_yds:
-                                continue
-                            try:
-                                yds = float(vals[idx_yds])
-                                rec = float(vals[idx_rec]) if idx_rec >= 0 else 0.0
-                            except ValueError:
-                                continue
-
-                            key = _normalizar_nombre(nom)
-                            if key not in acumulado:
-                                acumulado[key] = {"nombre": nom, "equipo": abbr.upper(), "pass_g": 0, "pass_y": 0.0, "rush_g": 0, "rush_y": 0.0, "rec_g": 0, "rec_y": 0.0, "recs": 0.0}
-
-                            if cat_name == "passing":
-                                acumulado[key]["pass_g"] += 1
-                                acumulado[key]["pass_y"] += yds
-                            elif cat_name == "rushing":
-                                acumulado[key]["rush_g"] += 1
-                                acumulado[key]["rush_y"] += yds
-                            elif cat_name == "receiving":
-                                acumulado[key]["rec_g"] += 1
-                                acumulado[key]["rec_y"] += yds
-                                acumulado[key]["recs"] += rec
+                if len(datos_j) > 2:
+                    jugadores[_normalizar_nombre(nom)] = datos_j
     except Exception as e:
-        print(f"Error boxscores NFL {abbr}: {e}")
-
-    jugadores = {}
-    for k, v in acumulado.items():
-        d = {"nombre": v["nombre"], "equipo": v["equipo"]}
-        if v["pass_g"] >= 2 and (v["pass_y"] / v["pass_g"]) >= 120:
-            d["Yardas Pase"] = round(v["pass_y"] / v["pass_g"], 1)
-        if v["rush_g"] >= 2 and (v["rush_y"] / v["rush_g"]) >= 25:
-            d["Yardas Acarreo"] = round(v["rush_y"] / v["rush_g"], 1)
-        if v["rec_g"] >= 2 and (v["rec_y"] / v["rec_g"]) >= 25:
-            d["Yardas Recepción"] = round(v["rec_y"] / v["rec_g"], 1)
-            d["Recepciones"] = round(v["recs"] / v["rec_g"], 1)
-        if len(d) > 2:
-            jugadores[k] = d
+        print(f"Error roster stats NFL {abbr}: {e}")
 
     if jugadores:
         _CACHE_STATS_NFL[team_id] = (ahora, jugadores)
@@ -143,10 +123,10 @@ def _evaluar_prop_nfl(media_real: float, tipo_prop: str, linea_casino=None, cuot
     else:
         es_over = prob_over >= prob_under
         prob_sel = min(0.82, prob_over if es_over else prob_under)
-        if prob_sel < 0.58:
+        if prob_sel < 0.57:
             return None
         lado = "MÁS DE" if es_over else "MENOS DE"
-        cuota_sel = round(max(1.30, (1.0 / prob_sel) * 1.04), 2)
+        cuota_sel = round(max(1.32, (1.0 / prob_sel) * 1.04), 2)
         ev_sel = (prob_sel * cuota_sel) - 1.0
 
     proy = int(round(media_real))
@@ -171,7 +151,7 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
     if not d_loc or not d_vis:
         return []
 
-    stats_totales = {**_obtener_promedios_reales_nfl(d_loc[1], d_loc[0]), **_obtener_promedios_reales_nfl(d_vis[1], d_vis[0])}
+    stats_totales = {**_obtener_stats_reales_nfl(d_loc[1], d_loc[0]), **_obtener_stats_reales_nfl(d_vis[1], d_vis[0])}
     if not stats_totales:
         return []
 
