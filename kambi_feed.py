@@ -8,13 +8,18 @@ KAMBI_SPORTS = {
     "mlb": "baseball/mlb"
 }
 
-# Operadores Kambi públicos (incluye el feed que alimenta Rushbet / BetRivers)
-OPERADORES_KAMBI = ["ubus", "rsiusil", "rsiubus"]
+ESPN_SCOREBOARD_URLS = {
+    "nba": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
+    "nfl": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+    "nhl": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
+    "mlb": "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
+}
 
-HEADERS_KAMBI = {
+OPERADORES_KAMBI = ["ubus", "rsiusil", "rsiubus", "ubca", "unibet"]
+
+HEADERS_WEB = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
-    "Referer": "https://www.rushbet.co/"
+    "Accept": "application/json, text/plain, */*"
 }
 
 _CACHE_EVENTOS = {}
@@ -23,6 +28,21 @@ _CACHE_OFERTAS = {}
 
 def _simplificar(texto: str) -> str:
     return "".join(c for c in str(texto).lower() if c.isalnum())
+
+
+def _apodo_equipo(nombre_completo: str) -> str:
+    """Extrae la palabra distintiva del equipo (ej. 'Philadelphia 76ers' -> '76ers')."""
+    partes = nombre_completo.strip().split()
+    return _simplificar(partes[-1]) if partes else _simplificar(nombre_completo)
+
+
+def _coincide_partido(ev_home: str, ev_away: str, local: str, visitante: str) -> bool:
+    h, a = _simplificar(ev_home), _simplificar(ev_away)
+    l_apodo, v_apodo = _apodo_equipo(local), _apodo_equipo(visitante)
+    # Verifica tanto Local vs Visitante como Visitante @ Local
+    directo = (l_apodo in h and v_apodo in a)
+    invertido = (l_apodo in a and v_apodo in h)
+    return directo or invertido
 
 
 def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
@@ -40,24 +60,18 @@ def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
         for op in OPERADORES_KAMBI:
             url = f"https://eu-offering-api.kambicdn.com/offering/v2018/{op}/listView/{sport_path}.json?lang=en_US&market=US&client_id=2&channel_id=1&ncid={int(ahora*1000)}"
             try:
-                r = requests.get(url, headers=HEADERS_KAMBI, timeout=6)
+                r = requests.get(url, headers=HEADERS_WEB, timeout=5)
                 if r.status_code == 200:
-                    data = r.json()
-                    eventos = data.get("events", [])
+                    eventos = r.json().get("events", [])
                     if eventos:
                         _CACHE_EVENTOS[cache_key] = (ahora, eventos)
                         break
             except Exception:
                 continue
 
-    loc_s = _simplificar(local)
-    vis_s = _simplificar(visitante)
-
     for item in eventos:
         ev = item.get("event", {})
-        home = _simplificar(ev.get("homeName", ""))
-        away = _simplificar(ev.get("awayName", ""))
-        if (loc_s in home or home in loc_s) and (vis_s in away or away in vis_s):
+        if _coincide_partido(ev.get("homeName", ""), ev.get("awayName", ""), local, visitante):
             return ev.get("id")
 
     return None
@@ -71,7 +85,7 @@ def _obtener_betoffers_evento(event_id):
     for op in OPERADORES_KAMBI:
         url = f"https://eu-offering-api.kambicdn.com/offering/v2018/{op}/betoffer/event/{event_id}.json?lang=en_US&market=US&client_id=2&channel_id=1&ncid={int(ahora*1000)}"
         try:
-            r = requests.get(url, headers=HEADERS_KAMBI, timeout=7)
+            r = requests.get(url, headers=HEADERS_WEB, timeout=6)
             if r.status_code == 200:
                 ofertas = r.json().get("betOffers", [])
                 if ofertas:
@@ -82,87 +96,167 @@ def _obtener_betoffers_evento(event_id):
     return []
 
 
+def _americana_a_decimal(americana) -> float:
+    try:
+        val = float(americana)
+        if val > 0:
+            return round((val / 100.0) + 1.0, 2)
+        elif val < 0:
+            return round((100.0 / abs(val)) + 1.0, 2)
+    except Exception:
+        pass
+    return 1.90
+
+
+def _obtener_cuotas_espn_scoreboard(deporte: str, local: str, visitante: str):
+    """Fuente gratuita e ilimitada: extrae líneas y cuotas oficiales de ESPN BET / Caesars."""
+    url = ESPN_SCOREBOARD_URLS.get(deporte.lower())
+    if not url:
+        return None
+
+    try:
+        r = requests.get(url, headers=HEADERS_WEB, timeout=6)
+        if r.status_code != 200:
+            return None
+
+        eventos = r.json().get("events", [])
+        l_apodo = _apodo_equipo(local)
+        v_apodo = _apodo_equipo(visitante)
+
+        for ev in eventos:
+            comp = ev.get("competitions", [{}])[0]
+            competitors = comp.get("competitors", [])
+            if len(competitors) < 2:
+                continue
+
+            nombres = [_simplificar(c.get("team", {}).get("displayName", "")) for c in competitors]
+            if not (any(l_apodo in n for n in nombres) and any(v_apodo in n for n in nombres)):
+                continue
+
+            odds_list = comp.get("odds", [])
+            if not odds_list:
+                continue
+
+            odds = odds_list[0]
+            provider = odds.get("provider", {}).get("name", "ESPN BET / Caesars")
+            over_under = odds.get("overUnder")
+            spread = odds.get("spread")
+
+            home_odds = odds.get("homeTeamOdds", {})
+            away_odds = odds.get("awayTeamOdds", {})
+
+            # Determinar cuál competidor en ESPN es el local que seleccionó el usuario
+            espn_home_name = ""
+            for c in competitors:
+                if c.get("homeAway") == "home":
+                    espn_home_name = _simplificar(c.get("team", {}).get("displayName", ""))
+
+            local_es_home = (l_apodo in espn_home_name)
+
+            ml_loc_raw = home_odds.get("moneyLine") if local_es_home else away_odds.get("moneyLine")
+            ml_vis_raw = away_odds.get("moneyLine") if local_es_home else home_odds.get("moneyLine")
+
+            sp_loc_raw = home_odds.get("spreadOdds", -110) if local_es_home else away_odds.get("spreadOdds", -110)
+            sp_vis_raw = away_odds.get("spreadOdds", -110) if local_es_home else home_odds.get("spreadOdds", -110)
+
+            linea_sp_loc = float(spread) if (spread is not None and local_es_home) else (-float(spread) if spread is not None else -2.5)
+            linea_sp_vis = -linea_sp_loc
+
+            over_odds_raw = odds.get("overOdds", -110)
+            under_odds_raw = odds.get("underOdds", -110)
+
+            return {
+                "success": True,
+                "data": {
+                    "bookmaker": f"{provider} (Live)",
+                    "cuota_ml_local": _americana_a_decimal(ml_loc_raw) if ml_loc_raw else 1.90,
+                    "cuota_ml_visitante": _americana_a_decimal(ml_vis_raw) if ml_vis_raw else 1.90,
+                    "linea_spread_local": linea_sp_loc,
+                    "cuota_spread_local": _americana_a_decimal(sp_loc_raw),
+                    "linea_spread_visitante": linea_sp_vis,
+                    "cuota_spread_visitante": _americana_a_decimal(sp_vis_raw),
+                    "linea_total": float(over_under) if over_under else 220.5,
+                    "cuota_total_over": _americana_a_decimal(over_odds_raw),
+                    "cuota_total_under": _americana_a_decimal(under_odds_raw)
+                }
+            }
+    except Exception as e:
+        print(f"Error ESPN Scoreboard Odds: {e}")
+
+    return None
+
+
 def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
-    """Extrae Moneyline, Spread y Total en vivo desde Kambi (sin consumir créditos)."""
+    """
+    Extrae cuotas principales en vivo:
+    1. Intenta Kambi / Rushbet (búsqueda bidireccional).
+    2. Si Kambi bloquea la IP de Render, extrae directo de ESPN BET / Caesars (gratis e ilimitado).
+    """
     event_id = _buscar_event_id_kambi(deporte, local, visitante)
-    if not event_id:
-        return {"success": False, "error": f"No se encontró el partido {local} vs {visitante} abierto en Kambi/Rushbet."}
+    if event_id:
+        ofertas = _obtener_betoffers_evento(event_id)
+        if ofertas:
+            l_apodo = _apodo_equipo(local)
+            v_apodo = _apodo_equipo(visitante)
+            datos = {
+                "bookmaker": "Kambi / Rushbet Live",
+                "cuota_ml_local": None, "cuota_ml_visitante": None,
+                "linea_spread_local": None, "cuota_spread_local": None,
+                "linea_spread_visitante": None, "cuota_spread_visitante": None,
+                "linea_total": None, "cuota_total_over": None, "cuota_total_under": None
+            }
 
-    ofertas = _obtener_betoffers_evento(event_id)
-    if not ofertas:
-        return {"success": False, "error": "Kambi no devolvió cuotas abiertas para este encuentro."}
+            for bo in ofertas:
+                crit = bo.get("criterion", {})
+                label = str(crit.get("label", "")).lower()
+                bo_type = bo.get("betOfferType", {}).get("name", "").lower()
+                outcomes = bo.get("outcomes", [])
 
-    loc_s = _simplificar(local)
-    vis_s = _simplificar(visitante)
+                if ("moneyline" in label or "including overtime" in label or "match" in bo_type) and len(outcomes) == 2 and not datos["cuota_ml_local"]:
+                    for o in outcomes:
+                        part = _simplificar(o.get("participant", "") or o.get("label", ""))
+                        cuota = round(o.get("odds", 0) / 1000.0, 2)
+                        if cuota > 1.0:
+                            if l_apodo in part: datos["cuota_ml_local"] = cuota
+                            elif v_apodo in part: datos["cuota_ml_visitante"] = cuota
 
-    datos = {
-        "bookmaker": "Kambi / Rushbet Live",
-        "cuota_ml_local": None,
-        "cuota_ml_visitante": None,
-        "linea_spread_local": None,
-        "cuota_spread_local": None,
-        "linea_spread_visitante": None,
-        "cuota_spread_visitante": None,
-        "linea_total": None,
-        "cuota_total_over": None,
-        "cuota_total_under": None
-    }
+                elif ("handicap" in bo_type or "spread" in label) and len(outcomes) == 2 and not datos["cuota_spread_local"]:
+                    for o in outcomes:
+                        part = _simplificar(o.get("participant", "") or o.get("label", ""))
+                        cuota = round(o.get("odds", 0) / 1000.0, 2)
+                        linea = o.get("line", 0) / 1000.0
+                        if cuota > 1.0:
+                            if l_apodo in part:
+                                datos["linea_spread_local"] = linea
+                                datos["cuota_spread_local"] = cuota
+                            elif v_apodo in part:
+                                datos["linea_spread_visitante"] = linea
+                                datos["cuota_spread_visitante"] = cuota
 
-    for bo in ofertas:
-        crit = bo.get("criterion", {})
-        label = str(crit.get("label", "")).lower()
-        bo_type = bo.get("betOfferType", {}).get("name", "").lower()
-        outcomes = bo.get("outcomes", [])
+                elif ("total" in bo_type or "total points" in label or "total goals" in label) and len(outcomes) == 2 and not datos["linea_total"]:
+                    for o in outcomes:
+                        lado = str(o.get("type", "")).lower()
+                        cuota = round(o.get("odds", 0) / 1000.0, 2)
+                        linea = o.get("line", 0) / 1000.0
+                        if cuota > 1.0 and linea > 0:
+                            datos["linea_total"] = linea
+                            if "over" in lado or "over" in str(o.get("label", "")).lower():
+                                datos["cuota_total_over"] = cuota
+                            elif "under" in lado or "under" in str(o.get("label", "")).lower():
+                                datos["cuota_total_under"] = cuota
 
-        # Moneyline (Incluyendo prórroga / tiempo extra)
-        if ("moneyline" in label or "including overtime" in label or "match" in bo_type) and len(outcomes) == 2 and not datos["cuota_ml_local"]:
-            for o in outcomes:
-                part = _simplificar(o.get("participant", "") or o.get("label", ""))
-                cuota = round(o.get("odds", 0) / 1000.0, 2)
-                if cuota > 1.0:
-                    if loc_s in part or part in loc_s:
-                        datos["cuota_ml_local"] = cuota
-                    elif vis_s in part or part in vis_s:
-                        datos["cuota_ml_visitante"] = cuota
+            if datos["cuota_ml_local"] or datos["linea_total"]:
+                return {"success": True, "data": datos}
 
-        # Point Spread / Handicap
-        elif ("handicap" in bo_type or "spread" in label) and "including overtime" in label and len(outcomes) == 2 and not datos["cuota_spread_local"]:
-            for o in outcomes:
-                part = _simplificar(o.get("participant", "") or o.get("label", ""))
-                cuota = round(o.get("odds", 0) / 1000.0, 2)
-                linea = o.get("line", 0) / 1000.0
-                if cuota > 1.0:
-                    if loc_s in part or part in loc_s:
-                        datos["linea_spread_local"] = linea
-                        datos["cuota_spread_local"] = cuota
-                    elif vis_s in part or part in vis_s:
-                        datos["linea_spread_visitante"] = linea
-                        datos["cuota_spread_visitante"] = cuota
+    # Respaldo automático gratuito e ilimitado: ESPN BET / Caesars
+    res_espn = _obtener_cuotas_espn_scoreboard(deporte, local, visitante)
+    if res_espn:
+        return res_espn
 
-        # Total Over / Under
-        elif ("total" in bo_type or "total points" in label or "total goals" in label) and "including overtime" in label and len(outcomes) == 2 and not datos["linea_total"]:
-            for o in outcomes:
-                lado = str(o.get("type", "")).lower()
-                cuota = round(o.get("odds", 0) / 1000.0, 2)
-                linea = o.get("line", 0) / 1000.0
-                if cuota > 1.0 and linea > 0:
-                    datos["linea_total"] = linea
-                    if "over" in lado or "over" in str(o.get("label", "")).lower():
-                        datos["cuota_total_over"] = cuota
-                    elif "under" in lado or "under" in str(o.get("label", "")).lower():
-                        datos["cuota_total_under"] = cuota
-
-    if not datos["cuota_ml_local"] and not datos["linea_total"]:
-        return {"success": False, "error": "Mercados principales aún bloqueados en el casino."}
-
-    return {"success": True, "data": datos}
+    return {"success": False, "error": f"No hay cuotas abiertas hoy en el mercado para {local} vs {visitante}."}
 
 
 def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
-    """
-    Extrae todas las líneas y momios reales de Player Props publicados en Kambi/Rushbet.
-    Retorna lista de dicts: {jugador, mercado, linea, cuota_over, cuota_under}
-    """
     event_id = _buscar_event_id_kambi(deporte, local, visitante)
     if not event_id:
         return []
@@ -171,11 +265,11 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
     props_reales = []
 
     mapeo_mercados = {
-        "points scored by the player": "Puntos",
-        "rebounds by the player": "Rebotes",
-        "assists by the player": "Asistencias",
-        "three-point field goals made by the player": "Triples",
-        "3-point field goals made by the player": "Triples",
+        "points scored": "Puntos",
+        "rebounds": "Rebotes",
+        "assists": "Asistencias",
+        "three-point": "Triples",
+        "3-point": "Triples",
         "passing yards": "Yardas Pase",
         "rushing yards": "Yardas Acarreo",
         "receiving yards": "Yardas Recepción",
@@ -203,7 +297,6 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
         if not jugador_raw:
             continue
 
-        # Kambi entrega "Apellido, Nombre" -> convertir a "Nombre Apellido"
         if "," in jugador_raw:
             partes = [p.strip() for p in jugador_raw.split(",", 1)]
             jugador = f"{partes[1]} {partes[0]}"
