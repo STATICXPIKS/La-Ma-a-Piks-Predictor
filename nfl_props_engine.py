@@ -32,14 +32,28 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
-    """Extrae promedios reales por partido de líderes activos en ESPN por equipo."""
+    """Extrae roster activo y promedios reales por partido de líderes en ESPN por equipo."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NFL and (ahora - _CACHE_STATS_NFL[team_id][0] < 1800):
         return _CACHE_STATS_NFL[team_id][1]
 
     jugadores = {}
-    url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}?enable=leaders"
 
+    # 1. Cargar roster activo del equipo
+    url_roster = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/roster"
+    try:
+        r_ros = requests.get(url_roster, headers=HEADERS, timeout=5)
+        if r_ros.status_code == 200:
+            for grupo in r_ros.json().get("athletes", []):
+                for ath in grupo.get("items", []):
+                    nom = ath.get("displayName")
+                    if nom:
+                        jugadores[_normalizar_nombre(nom)] = {"nombre": nom, "equipo": abbr.upper()}
+    except Exception:
+        pass
+
+    # 2. Cargar estadísticas reales de líderes
+    url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}?enable=leaders"
     try:
         r = requests.get(url_leaders, headers=HEADERS, timeout=6)
         if r.status_code == 200:
@@ -102,8 +116,7 @@ def _evaluar_prop_nfl(p_casino: dict, stats_equipos: dict):
     key_jug = _normalizar_nombre(jugador_raw)
     datos_atleta = stats_equipos.get(key_jug)
 
-    # Solo evaluar jugadores que pertenezcan activamente a uno de los dos equipos y tengan estadística real
-    if not datos_atleta or datos_atleta.get(tipo, 0) <= 0:
+    if not datos_atleta:
         return None
 
     imp_over = 1.0 / c_over
@@ -112,26 +125,32 @@ def _evaluar_prop_nfl(p_casino: dict, stats_equipos: dict):
     prob_mkt_over = imp_over / suma_imp
     prob_mkt_under = imp_under / suma_imp
 
-    media_real = datos_atleta[tipo]
-    sigma = max(1.8, media_real * 0.27)
-    z = (linea - media_real) / sigma
-    p_stat_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
-    p_stat_over = 1.0 - p_stat_under
+    media_real = datos_atleta.get(tipo, 0)
+    if media_real > 0:
+        sigma = max(1.8, media_real * 0.27)
+        z = (linea - media_real) / sigma
+        p_stat_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+        p_stat_over = 1.0 - p_stat_under
 
-    prob_over = (p_stat_over * 0.65) + (prob_mkt_over * 0.35)
-    prob_under = (p_stat_under * 0.65) + (prob_mkt_under * 0.35)
+        prob_over = (p_stat_over * 0.65) + (prob_mkt_over * 0.35)
+        prob_under = (p_stat_under * 0.65) + (prob_mkt_under * 0.35)
+        proy_num = media_real
+    else:
+        prob_over = prob_mkt_over * 1.04 if c_over >= 1.85 else prob_mkt_over
+        prob_under = prob_mkt_under * 1.04 if c_under >= 1.85 else prob_mkt_under
+        proy_num = linea + (1.0 if prob_over >= prob_under else -1.0)
 
     ev_over = (prob_over * c_over) - 1.0
     ev_under = (prob_under * c_under) - 1.0
 
-    if ev_over >= ev_under and ev_over > 0.01 and prob_over >= 0.53:
+    if ev_over >= ev_under and ev_over > 0.005 and prob_over >= 0.52:
         lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, c_over, ev_over
-    elif ev_under > 0.01 and prob_under >= 0.53:
+    elif ev_under > 0.005 and prob_under >= 0.52:
         lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, c_under, ev_under
     else:
         return None
 
-    proy = int(round(media_real))
+    proy = int(round(proy_num))
     if lado == "MÁS DE" and proy <= linea:
         proy = int(math.ceil(linea))
     elif lado == "MENOS DE" and proy >= linea:
