@@ -32,16 +32,29 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _obtener_stats_reales_nba(team_id: str, abbr: str):
-    """Extrae promedios reales por partido de los jugadores activos en ESPN."""
+    """Extrae promedios reales por partido y roster activo de ESPN."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NBA and (ahora - _CACHE_STATS_NBA[team_id][0] < 1800):
         return _CACHE_STATS_NBA[team_id][1]
 
     jugadores = {}
-    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/leaders"
 
+    # 1. Cargar roster activo para identificar a qué equipo pertenece cada jugador
+    url_roster = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/roster"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=6)
+        r_ros = requests.get(url_roster, headers=HEADERS, timeout=5)
+        if r_ros.status_code == 200:
+            for ath in r_ros.json().get("athletes", []):
+                nom = ath.get("displayName")
+                if nom:
+                    jugadores[_normalizar_nombre(nom)] = {"nombre": nom, "equipo": abbr.upper()}
+    except Exception:
+        pass
+
+    # 2. Cargar promedios reales por partido desde líderes de equipo
+    url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/leaders"
+    try:
+        r = requests.get(url_leaders, headers=HEADERS, timeout=6)
         if r.status_code == 200:
             for cat in r.json().get("leaders", []):
                 c_name = str(cat.get("name", "")).lower()
@@ -79,7 +92,7 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
     return jugadores
 
 
-def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
+def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
     jugador_raw = p_casino["jugador"]
     tipo = p_casino["tipo_prop"]
     linea = float(p_casino["linea"])
@@ -87,8 +100,12 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
     c_under = float(p_casino.get("cuota_under") or 1.90)
 
     datos_atleta = stats_totales.get(_normalizar_nombre(jugador_raw))
-    equipo_abbr = datos_atleta["equipo"] if datos_atleta else abbr_defecto
-    nombre_final = datos_atleta["nombre"] if datos_atleta else jugador_raw
+    # Exigir que el jugador pertenezca activamente al roster de uno de los dos equipos
+    if not datos_atleta:
+        return None
+
+    equipo_abbr = datos_atleta["equipo"]
+    nombre_final = datos_atleta["nombre"]
 
     imp_over = 1.0 / c_over
     imp_under = 1.0 / c_under
@@ -96,8 +113,8 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
     prob_mkt_over = imp_over / suma_imp
     prob_mkt_under = imp_under / suma_imp
 
-    if datos_atleta and datos_atleta.get(tipo, 0) > 0:
-        media_real = datos_atleta[tipo]
+    media_real = datos_atleta.get(tipo, 0)
+    if media_real > 0:
         if tipo in ["Puntos", "Rebotes"]:
             cv = 0.22 if tipo == "Puntos" else 0.26
             sigma = max(1.1, media_real * cv)
@@ -110,19 +127,21 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
             p_stat_under = sum((math.exp(-lamb) * (lamb ** k)) / math.factorial(k) for k in range(k_max + 1))
             p_stat_over = 1.0 - p_stat_under
 
-        prob_over = (p_stat_over * 0.70) + (prob_mkt_over * 0.30)
-        prob_under = (p_stat_under * 0.70) + (prob_mkt_under * 0.30)
+        prob_over = (p_stat_over * 0.65) + (prob_mkt_over * 0.35)
+        prob_under = (p_stat_under * 0.65) + (prob_mkt_under * 0.35)
         proy_num = media_real
     else:
-        # Si es jugador de rotación sin liderato en ESPN, usa probabilidad limpia del mercado
-        return None
+        # Jugador activo del roster sin liderato Top-3 en ESPN: evaluar con probabilidad No-Vig + ventaja de cuota
+        prob_over = prob_mkt_over * 1.04 if c_over >= 1.85 else prob_mkt_over
+        prob_under = prob_mkt_under * 1.04 if c_under >= 1.85 else prob_mkt_under
+        proy_num = linea + (1.0 if prob_over >= prob_under else -1.0)
 
     ev_over = (prob_over * c_over) - 1.0
     ev_under = (prob_under * c_under) - 1.0
 
-    if ev_over >= ev_under and ev_over > 0.01 and prob_over >= 0.53:
+    if ev_over >= ev_under and ev_over > 0.005 and prob_over >= 0.52:
         lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, c_over, ev_over
-    elif ev_under > 0.01 and prob_under >= 0.53:
+    elif ev_under > 0.005 and prob_under >= 0.52:
         lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, c_under, ev_under
     else:
         return None
@@ -163,7 +182,7 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
 
     candidatas = []
     for p in props_casino:
-        res = _evaluar_prop_nba(p, stats_totales, d_loc[0].upper())
+        res = _evaluar_prop_nba(p, stats_totales)
         if res:
             candidatas.append(res)
 
