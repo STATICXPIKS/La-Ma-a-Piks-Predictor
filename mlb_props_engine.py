@@ -1,146 +1,109 @@
 import math
 import time
+import unicodedata
+import requests
+from kambi_feed import obtener_player_props_kambi
 
-MAPEO_EQUIPOS_MLB = {
-    "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
-    "Boston Red Sox": "bos", "Chicago Cubs": "chc", "Chicago White Sox": "chw",
-    "Cincinnati Reds": "cin", "Cleveland Guardians": "cle", "Colorado Rockies": "col",
-    "Detroit Tigers": "det", "Houston Astros": "hou", "Kansas City Royals": "kc",
-    "Los Angeles Angels": "laa", "Los Angeles Dodgers": "lad", "Miami Marlins": "mia",
-    "Milwaukee Brewers": "mil", "Minnesota Twins": "min", "New York Mets": "nym",
-    "New York Yankees": "nyy", "Oakland Athletics": "oak", "Philadelphia Phillies": "phi",
-    "Pittsburgh Pirates": "pit", "San Diego Padres": "sd", "San Francisco Giants": "sf",
-    "Seattle Mariners": "sea", "St. Louis Cardinals": "stl", "Tampa Bay Rays": "tb",
-    "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh"
+EQUIPOS_MLB_ID = {
+    "Arizona Diamondbacks": ("ari", 109), "Atlanta Braves": ("atl", 144), "Baltimore Orioles": ("bal", 110),
+    "Boston Red Sox": ("bos", 111), "Chicago Cubs": ("chc", 112), "Chicago White Sox": ("cws", 145),
+    "Cincinnati Reds": ("cin", 113), "Cleveland Guardians": ("cle", 114), "Colorado Rockies": ("col", 115),
+    "Detroit Tigers": ("det", 116), "Houston Astros": ("hou", 117), "Kansas City Royals": ("kc", 118),
+    "Los Angeles Angels": ("laa", 108), "Los Angeles Dodgers": ("lad", 119), "Miami Marlins": ("mia", 146),
+    "Milwaukee Brewers": ("mil", 158), "Minnesota Twins": ("min", 142), "New York Mets": ("nym", 121),
+    "New York Yankees": ("nyy", 147), "Oakland Athletics": ("oak", 133), "Philadelphia Phillies": ("phi", 143),
+    "Pittsburgh Pirates": ("pit", 134), "San Diego Padres": ("sd", 135), "San Francisco Giants": ("sf", 137),
+    "Seattle Mariners": ("sea", 136), "St. Louis Cardinals": ("stl", 138), "Tampa Bay Rays": ("tb", 139),
+    "Texas Rangers": ("tex", 140), "Toronto Blue Jays": ("tor", 141), "Washington Nationals": ("wsh", 120)
 }
 
-# Líderes oficiales en Ponches (Pitchers), Hits y Bases Totales (Bateadores)
-STATS_LIDERES_MLB = {
-    "lad": [
-        {"nombre": "Tyler Glasnow", "Ponches (K's)": 7.4},
-        {"nombre": "Shohei Ohtani", "Hits": 1.4, "Bases Totales": 2.6},
-        {"nombre": "Mookie Betts", "Hits": 1.2, "Bases Totales": 2.1},
-        {"nombre": "Freddie Freeman", "Hits": 1.1, "Bases Totales": 1.8}
-    ],
-    "nyy": [
-        {"nombre": "Gerrit Cole", "Ponches (K's)": 6.8},
-        {"nombre": "Aaron Judge", "Hits": 1.3, "Bases Totales": 2.7},
-        {"nombre": "Juan Soto", "Hits": 1.2, "Bases Totales": 2.2},
-        {"nombre": "Giancarlo Stanton", "Bases Totales": 1.7}
-    ],
-    "atl": [
-        {"nombre": "Spencer Strider", "Ponches (K's)": 8.2},
-        {"nombre": "Ronald Acuña Jr.", "Hits": 1.3, "Bases Totales": 2.3},
-        {"nombre": "Matt Olson", "Hits": 1.0, "Bases Totales": 2.0}
-    ],
-    "phi": [
-        {"nombre": "Zack Wheeler", "Ponches (K's)": 7.2},
-        {"nombre": "Bryce Harper", "Hits": 1.1, "Bases Totales": 2.1},
-        {"nombre": "Trea Turner", "Hits": 1.3, "Bases Totales": 2.0}
-    ],
-    "hou": [
-        {"nombre": "Framber Valdez", "Ponches (K's)": 6.4},
-        {"nombre": "Jose Altuve", "Hits": 1.2, "Bases Totales": 1.9},
-        {"nombre": "Yordan Alvarez", "Bases Totales": 2.4}
-    ]
-}
-
-_PROPS_CACHE_MLB = {}
+_CACHE_STATS_MLB = {}
 
 
-def _calcular_prop_mlb(media_real: float, tipo_prop: str):
-    linea = math.floor(media_real) + 0.5
+def _normalizar_nombre(nombre: str) -> str:
+    n = unicodedata.normalize('NFD', nombre).encode('ascii', 'ignore').decode("utf-8")
+    return "".join(c for c in n.lower() if c.isalpha())
 
-    if "Ponches" in tipo_prop:
-        sigma = max(1.1, media_real * 0.24)
-        z = (linea - media_real) / sigma
-        prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
-        prob_over = 1.0 - prob_under
-    else:
-        lamb = media_real
-        k_max = int(math.floor(linea))
-        prob_under = 0.0
-        for k in range(k_max + 1):
-            prob_under += (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
-        prob_over = 1.0 - prob_under
 
-    es_over = prob_over >= prob_under
-    prob_sel = prob_over if es_over else prob_under
-    prob_sel = max(0.50, min(0.74, prob_sel))
+def _obtener_stats_equipo_mlb(team_id: int, abbr: str):
+    ahora = time.time()
+    if team_id in _CACHE_STATS_MLB and (ahora - _CACHE_STATS_MLB[team_id][0] < 1800):
+        return _CACHE_STATS_MLB[team_id][1]
 
-    if prob_sel >= 0.68:
-        cuota = 1.65
-    elif prob_sel >= 0.64:
-        cuota = 1.72
-    elif prob_sel >= 0.60:
-        cuota = 1.80
-    else:
-        cuota = 1.88
+    jugadores = {}
+    url = f"https://statsapi.mlb.com/api/v1/teams/{team_id}/roster?rosterType=active"
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            for item in r.json().get("roster", []):
+                person = item.get("person", {})
+                nom = person.get("fullName")
+                pid = person.get("id")
+                if not nom or not pid:
+                    continue
+                key = _normalizar_nombre(nom)
+                jugadores[key] = {"nombre": nom, "equipo": abbr.upper(), "id": pid}
+    except Exception:
+        pass
 
-    ev = round(((prob_sel * cuota) - 1.0) * 100, 1)
-
-    proyeccion_final = int(round(media_real))
-    if es_over and proyeccion_final <= linea:
-        proyeccion_final = int(math.ceil(linea))
-    elif not es_over and proyeccion_final >= linea:
-        proyeccion_final = int(math.floor(linea))
-
-    return {
-        "lado": "MÁS DE" if es_over else "MENOS DE",
-        "linea": linea,
-        "cuota": cuota,
-        "prob_real": round(prob_sel * 100, 1),
-        "ev": ev,
-        "proyeccion": proyeccion_final
-    }
+    if jugadores:
+        _CACHE_STATS_MLB[team_id] = (ahora, jugadores)
+    return jugadores
 
 
 def obtener_mejores_props_mlb(local: str, visitante: str, top_n: int = 6):
-    cache_key = f"{local}_{visitante}_mlb_high_conf_v2"
-    if cache_key in _PROPS_CACHE_MLB:
-        return _PROPS_CACHE_MLB[cache_key]
+    props_casino = obtener_player_props_kambi("mlb", local, visitante)
+    if not props_casino:
+        return []
 
-    abbr_loc = MAPEO_EQUIPOS_MLB.get(local, "lad")
-    abbr_vis = MAPEO_EQUIPOS_MLB.get(visitante, "nyy")
+    d_loc = EQUIPOS_MLB_ID.get(local)
+    d_vis = EQUIPOS_MLB_ID.get(visitante)
+    if not d_loc or not d_vis:
+        return []
 
-    jugadores_pool = []
-    l_loc = STATS_LIDERES_MLB.get(abbr_loc, STATS_LIDERES_MLB.get("lad", []))
-    l_vis = STATS_LIDERES_MLB.get(abbr_vis, STATS_LIDERES_MLB.get("nyy", []))
-
-    for j in l_loc:
-        copia = dict(j)
-        copia["equipo"] = abbr_loc.upper()
-        jugadores_pool.append(copia)
-    for j in l_vis:
-        copia = dict(j)
-        copia["equipo"] = abbr_vis.upper()
-        jugadores_pool.append(copia)
-
+    stats_totales = {**_obtener_stats_equipo_mlb(d_loc[1], d_loc[0]), **_obtener_stats_equipo_mlb(d_vis[1], d_vis[0])}
     candidatas = []
-    for j in jugadores_pool:
-        for tipo in ["Ponches (K's)", "Hits", "Bases Totales"]:
-            if tipo in j and j[tipo] > 0:
-                media = j[tipo]
-                c = _calcular_prop_mlb(media, tipo)
-                if c["prob_real"] >= 60.0 and c["ev"] >= 3.0 and c["cuota"] >= 1.60:
-                    score = round((c["prob_real"] * 0.70) + (c["ev"] * 0.30), 2)
-                    candidatas.append({
-                        "jugador": j["nombre"],
-                        "equipo_abbr": j["equipo"],
-                        "tipo_prop": tipo,
-                        "lado": c["lado"],
-                        "linea": c["linea"],
-                        "cuota": c["cuota"],
-                        "prob_real": c["prob_real"],
-                        "ev": c["ev"],
-                        "proyeccion": c["proyeccion"],
-                        "_score": score
-                    })
+
+    for p in props_casino:
+        key_jug = _normalizar_nombre(p["jugador"])
+        datos_atleta = stats_totales.get(key_jug)
+        if not datos_atleta:
+            continue
+
+        # Evaluar con Poisson sobre la línea real del casino
+        linea = p["linea"]
+        lamb = max(0.5, linea * 1.05)
+        k_max = int(math.floor(linea))
+        prob_under = sum((math.exp(-lamb) * (lamb ** k)) / math.factorial(k) for k in range(k_max + 1))
+        prob_over = 1.0 - prob_under
+
+        ev_over = (prob_over * p["cuota_over"]) - 1.0
+        ev_under = (prob_under * p["cuota_under"]) - 1.0
+
+        if prob_over >= prob_under and ev_over > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, p["cuota_over"], ev_over
+        elif ev_under > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, p["cuota_under"], ev_under
+        else:
+            continue
+
+        if prob_sel * 100 >= 54.0 and ev_sel * 100 >= 1.5:
+            score = (prob_sel * 100 * 0.75) + (ev_sel * 100 * 0.25)
+            candidatas.append({
+                "jugador": datos_atleta["nombre"],
+                "equipo_abbr": datos_atleta["equipo"],
+                "tipo_prop": p["tipo_prop"],
+                "lado": lado,
+                "linea": linea,
+                "cuota": cuota_sel,
+                "prob_real": round(prob_sel * 100, 1),
+                "ev": round(ev_sel * 100, 1),
+                "proyeccion": int(math.ceil(linea)) if lado == "MÁS DE" else int(math.floor(linea)),
+                "_score": score
+            })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
-    for item in candidatas:
-        item.pop("_score", None)
+    for c in candidatas:
+        c.pop("_score", None)
 
-    seleccion = candidatas[:top_n]
-    _PROPS_CACHE_MLB[cache_key] = seleccion
-    return seleccion
+    return candidatas[:top_n]
