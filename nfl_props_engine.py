@@ -32,7 +32,7 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
-    """Extrae líderes y promedios reales de la temporada activa en ESPN por equipo."""
+    """Extrae promedios reales por partido de líderes activos en ESPN por equipo."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NFL and (ahora - _CACHE_STATS_NFL[team_id][0] < 1800):
         return _CACHE_STATS_NFL[team_id][1]
@@ -41,7 +41,7 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
     url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}?enable=leaders"
 
     try:
-        r = requests.get(url_leaders, headers=HEADERS, timeout=5)
+        r = requests.get(url_leaders, headers=HEADERS, timeout=6)
         if r.status_code == 200:
             team_data = r.json().get("team", {})
             record_items = team_data.get("record", {}).get("items", [])
@@ -79,8 +79,10 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
                         key = _normalizar_nombre(nom)
                         if key not in jugadores:
                             jugadores[key] = {"nombre": nom, "equipo": abbr.upper()}
-                        # Si el valor viene acumulado de temporada, lo divide entre juegos disputados
-                        per_game = total_val / juegos_jugados if total_val > 350 or (tipo == "Recepciones" and total_val > 15) else total_val
+                        es_acumulado = ("pergame" not in c_name) and (
+                            total_val > 320 or (tipo == "Recepciones" and total_val > 14)
+                        )
+                        per_game = (total_val / juegos_jugados) if es_acumulado else total_val
                         jugadores[key][tipo] = round(per_game, 1)
     except Exception as e:
         print(f"Error stats NFL {abbr}: {e}")
@@ -90,66 +92,54 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
     return jugadores
 
 
-def _evaluar_prop_nfl(p_casino: dict, stats_equipos: dict, abbr_defecto: str):
+def _evaluar_prop_nfl(p_casino: dict, stats_equipos: dict):
     jugador_raw = p_casino["jugador"]
     tipo = p_casino["tipo_prop"]
     linea = float(p_casino["linea"])
     c_over = float(p_casino["cuota_over"])
-    c_under = float(p_casino["cuota_under"])
+    c_under = float(p_casino.get("cuota_under") or 1.90)
 
     key_jug = _normalizar_nombre(jugador_raw)
     datos_atleta = stats_equipos.get(key_jug)
 
-    # Probabilidad limpia de mercado (No-Vig)
+    # Solo evaluar jugadores que pertenezcan activamente a uno de los dos equipos y tengan estadística real
+    if not datos_atleta or datos_atleta.get(tipo, 0) <= 0:
+        return None
+
     imp_over = 1.0 / c_over
     imp_under = 1.0 / c_under
     suma_imp = imp_over + imp_under
     prob_mkt_over = imp_over / suma_imp
     prob_mkt_under = imp_under / suma_imp
 
-    equipo_abbr = datos_atleta["equipo"] if datos_atleta else abbr_defecto
-    nombre_final = datos_atleta["nombre"] if datos_atleta else jugador_raw
+    media_real = datos_atleta[tipo]
+    sigma = max(1.8, media_real * 0.27)
+    z = (linea - media_real) / sigma
+    p_stat_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+    p_stat_over = 1.0 - p_stat_under
 
-    if datos_atleta and datos_atleta.get(tipo, 0) > 0:
-        media_real = datos_atleta[tipo]
-        sigma = max(2.2, media_real * 0.27)
-        z = (linea - media_real) / sigma
-        p_stat_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
-        p_stat_over = 1.0 - p_stat_under
-
-        # Fusión 65% estadística real del jugador + 35% eficiencia del mercado
-        prob_over = (p_stat_over * 0.65) + (prob_mkt_over * 0.35)
-        prob_under = (p_stat_under * 0.65) + (prob_mkt_under * 0.35)
-        proy_num = media_real
-    else:
-        prob_over = prob_mkt_over
-        prob_under = prob_mkt_under
-        proy_num = linea + (1.0 if prob_over > prob_under else -1.0)
+    prob_over = (p_stat_over * 0.65) + (prob_mkt_over * 0.35)
+    prob_under = (p_stat_under * 0.65) + (prob_mkt_under * 0.35)
 
     ev_over = (prob_over * c_over) - 1.0
     ev_under = (prob_under * c_under) - 1.0
 
-    if ev_over >= ev_under and ev_over > 0:
+    if ev_over >= ev_under and ev_over > 0.01 and prob_over >= 0.53:
         lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, c_over, ev_over
-    elif ev_under > 0:
+    elif ev_under > 0.01 and prob_under >= 0.53:
         lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, c_under, ev_under
-    elif prob_over >= prob_under:
-        lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, c_over, ev_over
     else:
-        lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, c_under, ev_under
-
-    if prob_sel < 0.525:
         return None
 
-    proy = int(round(proy_num))
+    proy = int(round(media_real))
     if lado == "MÁS DE" and proy <= linea:
         proy = int(math.ceil(linea))
     elif lado == "MENOS DE" and proy >= linea:
         proy = int(math.floor(linea))
 
     return {
-        "jugador": nombre_final,
-        "equipo_abbr": equipo_abbr,
+        "jugador": datos_atleta["nombre"],
+        "equipo_abbr": datos_atleta["equipo"],
         "tipo_prop": tipo,
         "lado": lado,
         "linea": linea,
@@ -157,7 +147,7 @@ def _evaluar_prop_nfl(p_casino: dict, stats_equipos: dict, abbr_defecto: str):
         "prob_real": round(prob_sel * 100, 1),
         "ev": round(ev_sel * 100, 1),
         "proyeccion": proy,
-        "_score": (prob_sel * 100 * 0.75) + (ev_sel * 100 * 0.25)
+        "_score": (prob_sel * 100 * 0.65) + (ev_sel * 100 * 0.35)
     }
 
 
@@ -168,18 +158,19 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
 
     d_loc = EQUIPOS_NFL_ESPN.get(local)
     d_vis = EQUIPOS_NFL_ESPN.get(visitante)
+    if not d_loc or not d_vis:
+        return []
 
-    stats_equipos = {}
-    abbr_defecto = d_loc[0].upper() if d_loc else "NFL"
-
-    if d_loc:
-        stats_equipos.update(_obtener_stats_equipo_nfl(d_loc[1], d_loc[0]))
-    if d_vis:
-        stats_equipos.update(_obtener_stats_equipo_nfl(d_vis[1], d_vis[0]))
+    stats_equipos = {
+        **_obtener_stats_equipo_nfl(d_loc[1], d_loc[0]),
+        **_obtener_stats_equipo_nfl(d_vis[1], d_vis[0])
+    }
+    if not stats_equipos:
+        return []
 
     candidatas = []
     for p in props_casino:
-        res = _evaluar_prop_nfl(p, stats_equipos, abbr_defecto)
+        res = _evaluar_prop_nfl(p, stats_equipos)
         if res:
             candidatas.append(res)
 
