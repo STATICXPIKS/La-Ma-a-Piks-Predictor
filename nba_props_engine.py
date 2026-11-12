@@ -31,83 +31,74 @@ def _normalizar_nombre(nombre: str) -> str:
     return "".join(c for c in n.lower() if c.isalpha())
 
 
-def _obtener_promedios_reales_nba(team_id: str, abbr: str):
-    """Extrae promedios reales de los últimos partidos jugados desde los boxscores oficiales de ESPN."""
+def _obtener_stats_reales_nba(team_id: str, abbr: str):
+    """Obtiene en 1 sola llamada rápida los promedios reales de los jugadores activos en el roster."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NBA and (ahora - _CACHE_STATS_NBA[team_id][0] < 1800):
         return _CACHE_STATS_NBA[team_id][1]
 
-    acumulado = {}
-    url_sched = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/schedule"
+    jugadores = {}
+    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/roster?enable=stats"
 
     try:
-        r = requests.get(url_sched, headers=HEADERS, timeout=6)
+        r = requests.get(url, headers=HEADERS, timeout=6)
         if r.status_code == 200:
-            eventos = r.json().get("events", [])
-            finalizados = [
-                ev.get("id") for ev in eventos
-                if ev.get("competitions", [{}])[0].get("status", {}).get("type", {}).get("completed") is True
-            ]
-            # Analiza los últimos 5 juegos reales disputados
-            for ev_id in finalizados[-5:]:
-                url_box = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={ev_id}"
-                rb = requests.get(url_box, headers=HEADERS, timeout=5)
-                if rb.status_code != 200:
+            atletas = r.json().get("athletes", [])
+            for ath in atletas:
+                # Omitir jugadores descartados por lesión (Out)
+                injuries = ath.get("injuries", [])
+                if any("out" in str(inj.get("status", "")).lower() for inj in injuries):
                     continue
 
-                for team_box in rb.json().get("boxscore", {}).get("players", []):
-                    if str(team_box.get("team", {}).get("id")) != str(team_id):
-                        continue
+                nom = ath.get("displayName")
+                if not nom:
+                    continue
 
-                    stats_block = team_box.get("statistics", [{}])[0]
-                    headers_cols = [h.upper() for h in stats_block.get("names", [])]
-                    if "PTS" not in headers_cols:
-                        continue
+                # Buscar el bloque de estadísticas de temporada regular (per game)
+                stats_categories = ath.get("statistics", {}).get("splits", {}).get("categories", [])
+                if not stats_categories:
+                    stats_categories = ath.get("statsSummary", {}).get("statistics", [])
 
-                    idx_pts = headers_cols.index("PTS")
-                    idx_reb = headers_cols.index("REB") if "REB" in headers_cols else -1
-                    idx_ast = headers_cols.index("AST") if "AST" in headers_cols else -1
-                    idx_3pt = headers_cols.index("3PT") if "3PT" in headers_cols else -1
+                datos_j = {"nombre": nom, "equipo": abbr.upper()}
 
-                    for ath in stats_block.get("athletes", []):
-                        if ath.get("didNotPlay"):
-                            continue
-                        nom = ath.get("athlete", {}).get("displayName")
-                        vals = ath.get("stats", [])
-                        if not nom or len(vals) <= idx_pts:
-                            continue
-
+                # Formato 1: splits.categories
+                for cat in stats_categories:
+                    for st in cat.get("stats", []):
+                        s_name = str(st.get("name", "")).lower()
                         try:
-                            pts = float(vals[idx_pts])
-                            reb = float(vals[idx_reb]) if idx_reb >= 0 else 0.0
-                            ast = float(vals[idx_ast]) if idx_ast >= 0 else 0.0
-                            triples = float(str(vals[idx_3pt]).split("-")[0]) if idx_3pt >= 0 and "-" in str(vals[idx_3pt]) else 0.0
+                            val = float(str(st.get("value", 0)).replace(",", ""))
                         except ValueError:
                             continue
+                        if val <= 0:
+                            continue
+                        if s_name in ["avgpoints", "pointspergame"] and val >= 8.0:
+                            datos_j["Puntos"] = round(val, 1)
+                        elif s_name in ["avgrebounds", "reboundspergame", "avgtotrebounds"] and val >= 4.0:
+                            datos_j["Rebotes"] = round(val, 1)
+                        elif s_name in ["avgassists", "assistspergame"] and val >= 3.0:
+                            datos_j["Asistencias"] = round(val, 1)
+                        elif s_name in ["avgthreepointfieldgoalsmade", "threepointfieldgoalsmadepergame"] and val >= 1.5:
+                            datos_j["Triples"] = round(val, 1)
 
-                        key = _normalizar_nombre(nom)
-                        if key not in acumulado:
-                            acumulado[key] = {"nombre": nom, "equipo": abbr.upper(), "pj": 0, "pts": 0.0, "reb": 0.0, "ast": 0.0, "3pm": 0.0}
+                # Formato 2: statsSummary directo si splits vino vacío
+                if len(datos_j) == 2:
+                    for st in ath.get("statsSummary", {}).get("statistics", []):
+                        s_name = str(st.get("name", "")).lower()
+                        try:
+                            val = float(str(st.get("value", 0)).replace(",", ""))
+                        except ValueError:
+                            continue
+                        if s_name == "avgpoints" and val >= 8.0:
+                            datos_j["Puntos"] = round(val, 1)
+                        elif s_name == "avgrebounds" and val >= 4.0:
+                            datos_j["Rebotes"] = round(val, 1)
+                        elif s_name == "avgassists" and val >= 3.0:
+                            datos_j["Asistencias"] = round(val, 1)
 
-                        acumulado[key]["pj"] += 1
-                        acumulado[key]["pts"] += pts
-                        acumulado[key]["reb"] += reb
-                        acumulado[key]["ast"] += ast
-                        acumulado[key]["3pm"] += triples
+                if len(datos_j) > 2:
+                    jugadores[_normalizar_nombre(nom)] = datos_j
     except Exception as e:
-        print(f"Error boxscores NBA {abbr}: {e}")
-
-    jugadores = {}
-    for k, v in acumulado.items():
-        if v["pj"] >= 2:
-            jugadores[k] = {
-                "nombre": v["nombre"],
-                "equipo": v["equipo"],
-                "Puntos": round(v["pts"] / v["pj"], 1),
-                "Rebotes": round(v["reb"] / v["pj"], 1),
-                "Asistencias": round(v["ast"] / v["pj"], 1),
-                "Triples": round(v["3pm"] / v["pj"], 1)
-            }
+        print(f"Error roster stats NBA {abbr}: {e}")
 
     if jugadores:
         _CACHE_STATS_NBA[team_id] = (ahora, jugadores)
@@ -116,7 +107,6 @@ def _obtener_promedios_reales_nba(team_id: str, abbr: str):
 
 def _evaluar_prop_nba(media_real: float, tipo_prop: str, linea_casino=None, cuota_over=None, cuota_under=None):
     if linea_casino is None:
-        # Línea conservadora segura para buscar probabilidades altas
         if tipo_prop == "Puntos":
             if media_real < 10.0: return None
             linea = math.floor(media_real * 0.88) + 0.5
@@ -128,7 +118,7 @@ def _evaluar_prop_nba(media_real: float, tipo_prop: str, linea_casino=None, cuot
             linea = math.floor(media_real * 0.85) + 0.5
         else:
             if media_real < 1.8: return None
-            linea = math.floor(media_real) - 0.5
+            linea = max(1.5, math.floor(media_real) - 0.5)
     else:
         linea = linea_casino
 
@@ -160,10 +150,10 @@ def _evaluar_prop_nba(media_real: float, tipo_prop: str, linea_casino=None, cuot
     else:
         es_over = prob_over >= prob_under
         prob_sel = min(0.82, prob_over if es_over else prob_under)
-        if prob_sel < 0.58:
+        if prob_sel < 0.57:
             return None
         lado = "MÁS DE" if es_over else "MENOS DE"
-        cuota_sel = round(max(1.30, (1.0 / prob_sel) * 1.04), 2)
+        cuota_sel = round(max(1.32, (1.0 / prob_sel) * 1.04), 2)
         ev_sel = (prob_sel * cuota_sel) - 1.0
 
     proy = int(round(media_real))
@@ -188,7 +178,7 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     if not d_loc or not d_vis:
         return []
 
-    stats_totales = {**_obtener_promedios_reales_nba(d_loc[1], d_loc[0]), **_obtener_promedios_reales_nba(d_vis[1], d_vis[0])}
+    stats_totales = {**_obtener_stats_reales_nba(d_loc[1], d_loc[0]), **_obtener_stats_reales_nba(d_vis[1], d_vis[0])}
     if not stats_totales:
         return []
 
