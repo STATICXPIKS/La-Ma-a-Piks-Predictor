@@ -26,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ODDS_API_KEY = os.getenv("ODDS_API_KEY", "826e995b77fba63fd42c2915877b1037").strip()
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "c093c80f606e3126de06faaf17900a2b").strip()
 
 DEPORTE_TO_SPORT_KEY = {
     "nba": "basketball_nba",
