@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import gradio as gr
 import uvicorn
 
-from kambi_feed import obtener_cuotas_partido_kambi
+from kambi_feed import obtener_cuotas_partido_kambi, obtener_player_props_kambi
 from nfl_props_engine import obtener_mejores_props_nfl
 from nba_props_engine import obtener_mejores_props_nba
 from nhl_props_engine import obtener_mejores_props_nhl
@@ -144,6 +144,39 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
 
     # 2. Si Odds API no tiene créditos (401/429) o no encuentra el juego, cae directo a Kambi gratis
     return obtener_cuotas_partido_kambi(deporte, local, visitante)
+
+
+@app.get("/api/debug-props")
+def api_debug_props(
+    deporte: str = "nba",
+    local: str = "Philadelphia 76ers",
+    visitante: str = "Toronto Raptors"
+):
+    try:
+        kambi_res = obtener_player_props_kambi(deporte, local, visitante)
+        if deporte.lower() == "nba":
+            props_res = obtener_mejores_props_nba(local, visitante, top_n=6)
+        elif deporte.lower() == "nfl":
+            props_res = obtener_mejores_props_nfl(local, visitante, top_n=6)
+        elif deporte.lower() == "nhl":
+            props_res = obtener_mejores_props_nhl(local, visitante, top_n=6)
+        else:
+            props_res = obtener_mejores_props_mlb(local, visitante, top_n=6)
+
+        return {
+            "status": "ok",
+            "deporte": deporte,
+            "partido": f"{local} vs {visitante}",
+            "kambi_props_encontradas": len(kambi_res),
+            "kambi_muestra": kambi_res[:2],
+            "props_calculadas_total": len(props_res),
+            "props_finales": props_res
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "detalle_error": str(e)
+        }
 
 
 @app.get("/api/analizar-nba")
