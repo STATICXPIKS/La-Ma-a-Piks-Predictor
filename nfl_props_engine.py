@@ -37,60 +37,70 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
         return _CACHE_STATS_NFL[team_id][1]
 
     jugadores = {}
-    url_v3 = f"https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/teams/{team_id}/athletes/statistics"
-    try:
-        r = requests.get(url_v3, headers=HEADERS, timeout=6)
-        if r.status_code == 200:
-            for cat in r.json().get("categories", []):
-                for ath in cat.get("athletes", []):
-                    nom = ath.get("athlete", {}).get("displayName")
-                    if not nom:
-                        continue
-                    key = _normalizar_nombre(nom)
-                    if key not in jugadores:
-                        jugadores[key] = {"nombre": nom, "equipo": abbr.upper()}
-                    for st in ath.get("stats", []):
-                        s_name = st.get("name", "").lower()
-                        try:
-                            s_val = float(str(st.get("value", 0)).replace(",", ""))
-                        except ValueError:
-                            continue
-                        if s_val <= 0:
-                            continue
-                        if ("passingyardspergame" in s_name or "avgpassingyards" in s_name) and s_val > 80.0:
-                            jugadores[key]["Yardas Pase"] = s_val
-                        elif ("rushingyardspergame" in s_name or "avgrushingyards" in s_name) and s_val > 20.0:
-                            jugadores[key]["Yardas Acarreo"] = s_val
-                        elif ("receivingyardspergame" in s_name or "avgreceivingyards" in s_name) and s_val > 20.0:
-                            jugadores[key]["Yardas Recepción"] = s_val
-                        elif ("receptionspergame" in s_name or "avgreceptions" in s_name) and s_val > 2.0:
-                            jugadores[key]["Recepciones"] = s_val
-    except Exception:
-        pass
 
+    # 1. Endpoint oficial de estadísticas y líderes NFL
+    url_stats = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/statistics"
+    try:
+        r = requests.get(url_stats, headers=HEADERS, timeout=6)
+        if r.status_code == 200:
+            data = r.json()
+            cats = data.get("results", {}).get("stats", {}).get("categories", [])
+            if not cats:
+                cats = data.get("stats", {}).get("categories", [])
+            mapeo = {
+                "passingYards": "Yardas Pase",
+                "rushingYards": "Yardas Acarreo",
+                "receivingYards": "Yardas Recepción",
+                "receptions": "Recepciones"
+            }
+            for c in cats:
+                tipo = mapeo.get(c.get("name"))
+                if tipo:
+                    for lead in c.get("leaders", []):
+                        nom = lead.get("athlete", {}).get("displayName")
+                        val_raw = lead.get("displayValue") or lead.get("value", 0)
+                        try:
+                            val = float(str(val_raw).replace(",", ""))
+                        except ValueError:
+                            val = 0.0
+                        if nom and val > 0:
+                            key = _normalizar_nombre(nom)
+                            if key not in jugadores:
+                                jugadores[key] = {"nombre": nom, "equipo": abbr.upper()}
+                            jugadores[key][tipo] = val
+    except Exception as e:
+        print(f"Error ESPN stats NFL {abbr}: {e}")
+
+    # 2. Endpoint alternativo v3 de plantilla
     if not jugadores:
+        url_v3 = f"https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/teams/{team_id}/athletes/statistics"
         try:
-            url_v2 = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/statistics"
-            r2 = requests.get(url_v2, headers=HEADERS, timeout=5)
-            if r2.status_code == 200:
-                cats = r2.json().get("results", {}).get("stats", {}).get("categories", [])
-                mapeo = {
-                    "passingYards": "Yardas Pase",
-                    "rushingYards": "Yardas Acarreo",
-                    "receivingYards": "Yardas Recepción",
-                    "receptions": "Recepciones"
-                }
-                for c in cats:
-                    tipo = mapeo.get(c.get("name"))
-                    if tipo:
-                        for lead in c.get("leaders", []):
-                            nom = lead.get("athlete", {}).get("displayName")
-                            val = float(str(lead.get("displayValue", 0)).replace(",", ""))
-                            if nom and val > 0:
-                                key = _normalizar_nombre(nom)
-                                if key not in jugadores:
-                                    jugadores[key] = {"nombre": nom, "equipo": abbr.upper()}
-                                jugadores[key][tipo] = val
+            r3 = requests.get(url_v3, headers=HEADERS, timeout=6)
+            if r3.status_code == 200:
+                for cat in r3.json().get("categories", []):
+                    for ath in cat.get("athletes", []):
+                        nom = ath.get("athlete", {}).get("displayName")
+                        if not nom:
+                            continue
+                        key = _normalizar_nombre(nom)
+                        if key not in jugadores:
+                            jugadores[key] = {"nombre": nom, "equipo": abbr.upper()}
+                        for st in ath.get("stats", []):
+                            s_name = st.get("name", "").lower()
+                            try:
+                                s_val = float(str(st.get("value", 0)).replace(",", ""))
+                            except ValueError:
+                                continue
+                            if s_val <= 0:
+                                continue
+                            if ("passingyardspergame" in s_name or "avgpassingyards" in s_name) and s_val > 80.0:
+                                jugadores[key]["Yardas Pase"] = s_val
+                            elif ("rushingyardspergame" in s_name or "avgrushingyards" in s_name) and s_val > 20.0:
+                                jugadores[key]["Yardas Acarreo"] = s_val
+                            elif ("receivingyardspergame" in s_name or "avgreceivingyards" in s_name) and s_val > 20.0:
+                                jugadores[key]["Yardas Recepción"] = s_val
+                            elif ("receptionspergame" in s_name or "avgreceptions" in s_name) and s_val > 2.0:
+                                jugadores[key]["Recepciones"] = s_val
         except Exception:
             pass
 
@@ -100,13 +110,7 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
 
 
 def _evaluar_prop_nfl(media_real: float, tipo_prop: str, linea_casino=None, cuota_over=None, cuota_under=None):
-    if linea_casino is None:
-        if tipo_prop == "Recepciones":
-            linea = max(1.5, math.floor(media_real) - 0.5)
-        else:
-            linea = max(15.5, math.floor(media_real * 0.88) + 0.5)
-    else:
-        linea = linea_casino
+    linea = linea_casino if linea_casino is not None else (math.floor(media_real) + 0.5)
 
     sigma = max(2.5, media_real * 0.27)
     z = (linea - media_real) / sigma
@@ -128,14 +132,10 @@ def _evaluar_prop_nfl(media_real: float, tipo_prop: str, linea_casino=None, cuot
             return None
     else:
         es_over = prob_over >= prob_under
-        prob_sel = min(0.82, prob_over if es_over else prob_under)
+        prob_sel = max(0.52, min(0.76, prob_over if es_over else prob_under))
         lado = "MÁS DE" if es_over else "MENOS DE"
-        if prob_sel >= 0.76: cuota_sel = 1.42
-        elif prob_sel >= 0.71: cuota_sel = 1.50
-        elif prob_sel >= 0.66: cuota_sel = 1.60
-        elif prob_sel >= 0.61: cuota_sel = 1.72
-        elif prob_sel >= 0.56: cuota_sel = 1.83
-        else: cuota_sel = 1.90
+        cuota_justa = 1.0 / prob_sel
+        cuota_sel = round(max(1.45, min(1.95, cuota_justa * 1.04)), 2)
         ev_sel = (prob_sel * cuota_sel) - 1.0
 
     proy = int(round(media_real))
@@ -180,8 +180,8 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
                 continue
 
             res = _evaluar_prop_nfl(media_real, tipo, p["linea"], p["cuota_over"], p["cuota_under"])
-            if res and res["prob_real"] >= 55.0 and res["ev"] > 0:
-                score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+            if res and res["prob_real"] >= 53.0 and res["ev"] > 0:
+                score = (res["prob_real"] * 0.75) + (res["ev"] * 0.25)
                 candidatas.append({
                     "jugador": datos_atleta["nombre"],
                     "equipo_abbr": datos_atleta["equipo"],
@@ -202,8 +202,8 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
                 if not media_real or media_real <= 0:
                     continue
                 res = _evaluar_prop_nfl(media_real, tipo)
-                if res and res["prob_real"] >= 58.0 and res["ev"] > 0:
-                    score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+                if res and res["prob_real"] >= 53.0 and res["ev"] > 0:
+                    score = (res["prob_real"] * 0.75) + (res["ev"] * 0.25)
                     candidatas.append({
                         "jugador": datos_atleta["nombre"],
                         "equipo_abbr": datos_atleta["equipo"],
