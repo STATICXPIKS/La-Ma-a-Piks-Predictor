@@ -1,22 +1,20 @@
 import os
-import json
-import math
-from datetime import datetime
+import requests
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import gradio as gr
-import requests
 import uvicorn
 
+from kambi_feed import obtener_cuotas_partido_kambi
 from nfl_props_engine import obtener_mejores_props_nfl
 from nba_props_engine import obtener_mejores_props_nba
 from nhl_props_engine import obtener_mejores_props_nhl
 from mlb_props_engine import obtener_mejores_props_mlb
 
-from nfl_model import simular_partido_nfl, MAPEO_NFL
-from nba_model import simular_partido_nba, MAPEO_NBA
-from nhl_model import simular_partido_nhl, MAPEO_NHL
-from mlb_model import simular_partido_mlb, MAPEO_MLB
+from nfl_model import simular_partido_nfl
+from nba_model import simular_partido_nba
+from nhl_model import simular_partido_nhl
+from mlb_model import simular_partido_mlb
 
 app = FastAPI()
 
@@ -37,11 +35,11 @@ DEPORTE_TO_SPORT_KEY = {
     "mlb": "baseball_mlb"
 }
 
-@app.get("/api/live-odds")
-def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante: str = Query(...)):
+
+def _consultar_the_odds_api(deporte: str, local: str, visitante: str):
     sport_key = DEPORTE_TO_SPORT_KEY.get(deporte.lower())
-    if not sport_key:
-        return {"success": False, "error": f"Deporte '{deporte}' no soportado."}
+    if not sport_key or not ODDS_API_KEY:
+        return None
 
     url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
     params = {
@@ -52,11 +50,10 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
     }
 
     try:
-        r = requests.get(url, params=params, timeout=6)
-        if r.status_code == 401:
-            return {"success": False, "error": "Tu cuota mensual de The Odds API se ha agotado o la clave expiró. Puedes ingresar las cuotas manualmente."}
+        r = requests.get(url, params=params, timeout=5)
+        # Si da 401 (sin créditos/inválida) o 429 (límite), retorna None para activar Kambi
         if r.status_code != 200:
-            return {"success": False, "error": f"Odds API no disponible (Código {r.status_code})"}
+            return None
 
         eventos = r.json()
         evento_encontrado = None
@@ -70,20 +67,16 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
         for ev in eventos:
             home = simplificar(ev.get("home_team", ""))
             away = simplificar(ev.get("away_team", ""))
-
             if (loc_s in home or home in loc_s) and (vis_s in away or away in vis_s):
                 evento_encontrado = ev
                 break
 
         if not evento_encontrado:
-            return {
-                "success": False,
-                "error": f"No hay líneas abiertas en mercado para {local} vs {visitante} hoy."
-            }
+            return None
 
         bookmakers = evento_encontrado.get("bookmakers", [])
         if not bookmakers:
-            return {"success": False, "error": "No hay cuotas disponibles para este evento actualmente."}
+            return None
 
         bm = bookmakers[0]
         for b in bookmakers:
@@ -92,7 +85,7 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
                 break
 
         datos_cuotas = {
-            "bookmaker": bm.get("title", "Casino"),
+            "bookmaker": f"{bm.get('title', 'Casino')} (Odds API)",
             "cuota_ml_local": None,
             "cuota_ml_visitante": None,
             "linea_spread_local": None,
@@ -135,10 +128,23 @@ def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante:
                     elif lado == "under":
                         datos_cuotas["cuota_total_under"] = out.get("price")
 
-        return {"success": True, "data": datos_cuotas}
+        if datos_cuotas["cuota_ml_local"] or datos_cuotas["linea_total"]:
+            return {"success": True, "data": datos_cuotas}
+        return None
+    except Exception:
+        return None
 
-    except Exception as e:
-        return {"success": False, "error": f"Error de conexión: {str(e)}"}
+
+@app.get("/api/live-odds")
+def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante: str = Query(...)):
+    # 1. Intenta primero con The Odds API (si hay créditos disponibles)
+    res_odds_api = _consultar_the_odds_api(deporte, local, visitante)
+    if res_odds_api:
+        return res_odds_api
+
+    # 2. Si Odds API no tiene créditos (401/429) o no encuentra el juego, cae directo a Kambi gratis
+    return obtener_cuotas_partido_kambi(deporte, local, visitante)
+
 
 @app.get("/api/analizar-nba")
 def api_analizar_nba(
@@ -162,6 +168,7 @@ def api_analizar_nba(
         data["props_jugadores"] = []
     return data
 
+
 @app.get("/api/analizar-nfl")
 def api_analizar_nfl(
     local: str, visitante: str,
@@ -183,6 +190,7 @@ def api_analizar_nfl(
         print(f"Error props NFL: {e}")
         data["props_jugadores"] = []
     return data
+
 
 @app.get("/api/analizar-nhl")
 def api_analizar_nhl(
@@ -206,6 +214,7 @@ def api_analizar_nhl(
         data["props_jugadores"] = []
     return data
 
+
 @app.get("/api/analizar-mlb")
 def api_analizar_mlb(
     local: str, visitante: str,
@@ -227,6 +236,7 @@ def api_analizar_mlb(
         print(f"Error props MLB: {e}")
         data["props_jugadores"] = []
     return data
+
 
 with gr.Blocks(title="La Maña Picks Engine") as demo:
     gr.Markdown("### La Maña Picks - API Backend Activa")
