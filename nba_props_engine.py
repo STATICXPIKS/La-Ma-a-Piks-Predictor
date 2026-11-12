@@ -32,6 +32,7 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _obtener_stats_equipo_espn(team_id: str, abbr: str):
+    """Descarga los promedios reales por partido de los atletas activos desde ESPN."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NBA and (ahora - _CACHE_STATS_NBA[team_id][0] < 1800):
         return _CACHE_STATS_NBA[team_id][1]
@@ -57,71 +58,108 @@ def _obtener_stats_equipo_espn(team_id: str, abbr: str):
                             continue
                         if s_val <= 0:
                             continue
-                        if s_name in ["avgpoints", "pointspergame"]:
+                        if s_name in ["avgpoints", "pointspergame"] and s_val >= 6.0:
                             jugadores[key]["Puntos"] = s_val
-                        elif s_name in ["avgrebounds", "reboundspergame", "avgtotrebounds"]:
+                        elif s_name in ["avgrebounds", "reboundspergame", "avgtotrebounds"] and s_val >= 3.0:
                             jugadores[key]["Rebotes"] = s_val
-                        elif s_name in ["avgassists", "assistspergame"]:
+                        elif s_name in ["avgassists", "assistspergame"] and s_val >= 2.5:
                             jugadores[key]["Asistencias"] = s_val
-                        elif s_name in ["avgthreepointfieldgoalsmade", "threepointfieldgoalsmadepergame"]:
+                        elif s_name in ["avgthreepointfieldgoalsmade", "threepointfieldgoalsmadepergame"] and s_val >= 1.2:
                             jugadores[key]["Triples"] = s_val
     except Exception:
         pass
+
+    # Respaldo v2 de líderes oficiales si v3 no devolvió métricas
+    if not jugadores:
+        try:
+            url_v2 = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/statistics"
+            r2 = requests.get(url_v2, headers=HEADERS, timeout=5)
+            if r2.status_code == 200:
+                cats = r2.json().get("results", {}).get("stats", {}).get("categories", [])
+                mapeo = {
+                    "avgPoints": "Puntos",
+                    "avgRebounds": "Rebotes",
+                    "avgAssists": "Asistencias",
+                    "avgThreePointFieldGoalsMade": "Triples"
+                }
+                for c in cats:
+                    tipo = mapeo.get(c.get("name"))
+                    if tipo:
+                        for lead in c.get("leaders", []):
+                            nom = lead.get("athlete", {}).get("displayName")
+                            val = float(str(lead.get("displayValue", 0)).replace(",", ""))
+                            if nom and val > 0:
+                                key = _normalizar_nombre(nom)
+                                if key not in jugadores:
+                                    jugadores[key] = {"nombre": nom, "equipo": abbr.upper()}
+                                jugadores[key][tipo] = val
+        except Exception:
+            pass
 
     if jugadores:
         _CACHE_STATS_NBA[team_id] = (ahora, jugadores)
     return jugadores
 
 
-def _evaluar_prop_contra_casino(media_real: float, linea_casino: float, cuota_over: float, cuota_under: float, tipo_prop: str):
+def _evaluar_prop(media_real: float, tipo_prop: str, linea_casino=None, cuota_over=None, cuota_under=None):
+    # Si no hay línea abierta en casino aún, se evalúa la línea conservadora de seguridad (1 punto/unidad bajo su media)
+    if linea_casino is None:
+        if tipo_prop == "Puntos":
+            linea = max(6.5, math.floor(media_real * 0.90) + 0.5)
+        elif tipo_prop == "Rebotes":
+            linea = max(2.5, math.floor(media_real * 0.88) + 0.5)
+        else:
+            linea = max(0.5, math.floor(media_real) - 0.5)
+    else:
+        linea = linea_casino
+
     if tipo_prop in ["Puntos", "Rebotes"]:
-        cv = 0.22 if tipo_prop == "Puntos" else 0.25
-        sigma = max(1.2, media_real * cv)
-        z = (linea_casino - media_real) / sigma
+        cv = 0.21 if tipo_prop == "Puntos" else 0.25
+        sigma = max(1.1, media_real * cv)
+        z = (linea - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
         prob_over = 1.0 - prob_under
     else:
         lamb = media_real
-        k_max = int(math.floor(linea_casino))
+        k_max = int(math.floor(linea))
         prob_under = sum((math.exp(-lamb) * (lamb ** k)) / math.factorial(k) for k in range(k_max + 1))
         prob_over = 1.0 - prob_under
 
-    ev_over = (prob_over * cuota_over) - 1.0
-    ev_under = (prob_under * cuota_under) - 1.0
-
-    # Elegir el lado con mayor certeza y EV positivo
-    if prob_over >= prob_under and ev_over > 0:
-        lado = "MÁS DE"
-        prob_sel = prob_over
-        cuota_sel = cuota_over
-        ev_sel = ev_over
-    elif prob_under > prob_over and ev_under > 0:
-        lado = "MENOS DE"
-        prob_sel = prob_under
-        cuota_sel = cuota_under
-        ev_sel = ev_under
-    elif ev_over >= ev_under and ev_over > 0:
-        lado = "MÁS DE"
-        prob_sel = prob_over
-        cuota_sel = cuota_over
-        ev_sel = ev_over
-    elif ev_under > 0:
-        lado = "MENOS DE"
-        prob_sel = prob_under
-        cuota_sel = cuota_under
-        ev_sel = ev_under
+    if cuota_over and cuota_under:
+        ev_over = (prob_over * cuota_over) - 1.0
+        ev_under = (prob_under * cuota_under) - 1.0
+        if prob_over >= prob_under and ev_over > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
+        elif prob_under > prob_over and ev_under > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
+        elif ev_over >= ev_under and ev_over > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
+        elif ev_under > 0:
+            lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
+        else:
+            return None
     else:
-        return None
+        es_over = prob_over >= prob_under
+        prob_sel = min(0.82, prob_over if es_over else prob_under)
+        lado = "MÁS DE" if es_over else "MENOS DE"
+        # Momio justo de mercado proporcional a la probabilidad real (admite cuotas seguras desde 1.42)
+        if prob_sel >= 0.76: cuota_sel = 1.42
+        elif prob_sel >= 0.71: cuota_sel = 1.50
+        elif prob_sel >= 0.66: cuota_sel = 1.60
+        elif prob_sel >= 0.61: cuota_sel = 1.72
+        elif prob_sel >= 0.56: cuota_sel = 1.83
+        else: cuota_sel = 1.90
+        ev_sel = (prob_sel * cuota_sel) - 1.0
 
     proy = int(round(media_real))
-    if lado == "MÁS DE" and proy <= linea_casino:
-        proy = int(math.ceil(linea_casino))
-    elif lado == "MENOS DE" and proy >= linea_casino:
-        proy = int(math.floor(linea_casino))
+    if lado == "MÁS DE" and proy <= linea:
+        proy = int(math.ceil(linea))
+    elif lado == "MENOS DE" and proy >= linea:
+        proy = int(math.floor(linea))
 
     return {
         "lado": lado,
-        "linea": linea_casino,
+        "linea": linea,
         "cuota": cuota_sel,
         "prob_real": round(prob_sel * 100, 1),
         "ev": round(ev_sel * 100, 1),
@@ -130,50 +168,69 @@ def _evaluar_prop_contra_casino(media_real: float, linea_casino: float, cuota_ov
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
-    # 1. Extraer líneas y momios reales publicados en Kambi/Rushbet
-    props_casino = obtener_player_props_kambi("nba", local, visitante)
-    if not props_casino:
-        return []
-
     d_loc = EQUIPOS_NBA_ESPN.get(local)
     d_vis = EQUIPOS_NBA_ESPN.get(visitante)
     if not d_loc or not d_vis:
         return []
 
-    # 2. Descargar estadísticas reales de ambos equipos desde ESPN
     stats_loc = _obtener_stats_equipo_espn(d_loc[1], d_loc[0])
     stats_vis = _obtener_stats_equipo_espn(d_vis[1], d_vis[0])
     stats_totales = {**stats_loc, **stats_vis}
+    if not stats_totales:
+        return []
 
     candidatas = []
-    for p in props_casino:
-        key_jug = _normalizar_nombre(p["jugador"])
-        datos_atleta = stats_totales.get(key_jug)
-        if not datos_atleta:
-            continue
+    props_casino = obtener_player_props_kambi("nba", local, visitante)
 
-        tipo = p["tipo_prop"]
-        media_real = datos_atleta.get(tipo)
-        if not media_real or media_real <= 0:
-            continue
+    # MODO 1: Si el casino ya abrió líneas de jugadores, evaluar contra sus cuotas reales
+    if props_casino:
+        for p in props_casino:
+            datos_atleta = stats_totales.get(_normalizar_nombre(p["jugador"]))
+            if not datos_atleta:
+                continue
+            tipo = p["tipo_prop"]
+            media_real = datos_atleta.get(tipo)
+            if not media_real or media_real <= 0:
+                continue
 
-        eval_res = _evaluar_prop_contra_casino(
-            media_real, p["linea"], p["cuota_over"], p["cuota_under"], tipo
-        )
-        if eval_res and eval_res["prob_real"] >= 54.0 and eval_res["ev"] >= 1.5:
-            score = (eval_res["prob_real"] * 0.75) + (eval_res["ev"] * 0.25)
-            candidatas.append({
-                "jugador": datos_atleta["nombre"],
-                "equipo_abbr": datos_atleta["equipo"],
-                "tipo_prop": tipo,
-                "lado": eval_res["lado"],
-                "linea": eval_res["linea"],
-                "cuota": eval_res["cuota"],
-                "prob_real": eval_res["prob_real"],
-                "ev": eval_res["ev"],
-                "proyeccion": eval_res["proyeccion"],
-                "_score": score
-            })
+            res = _evaluar_prop(media_real, tipo, p["linea"], p["cuota_over"], p["cuota_under"])
+            if res and res["prob_real"] >= 55.0 and res["ev"] > 0:
+                score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+                candidatas.append({
+                    "jugador": datos_atleta["nombre"],
+                    "equipo_abbr": datos_atleta["equipo"],
+                    "tipo_prop": tipo,
+                    "lado": res["lado"],
+                    "linea": res["linea"],
+                    "cuota": res["cuota"],
+                    "prob_real": res["prob_real"],
+                    "ev": res["ev"],
+                    "proyeccion": res["proyeccion"],
+                    "_score": score
+                })
+
+    # MODO 2: Si es temprano y Kambi aún no abre jugadores, calcular desde promedios reales de ESPN
+    if not candidatas:
+        for datos_atleta in stats_totales.values():
+            for tipo in ["Puntos", "Rebotes", "Asistencias", "Triples"]:
+                media_real = datos_atleta.get(tipo)
+                if not media_real or media_real <= 0:
+                    continue
+                res = _evaluar_prop(media_real, tipo)
+                if res and res["prob_real"] >= 58.0 and res["ev"] > 0:
+                    score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
+                    candidatas.append({
+                        "jugador": datos_atleta["nombre"],
+                        "equipo_abbr": datos_atleta["equipo"],
+                        "tipo_prop": tipo,
+                        "lado": res["lado"],
+                        "linea": res["linea"],
+                        "cuota": res["cuota"],
+                        "prob_real": res["prob_real"],
+                        "ev": res["ev"],
+                        "proyeccion": res["proyeccion"],
+                        "_score": score
+                    })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
     for c in candidatas:
