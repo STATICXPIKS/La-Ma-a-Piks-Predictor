@@ -14,7 +14,7 @@ MAPEO_EQUIPOS_NHL = {
     "New York Rangers": "nyr", "Ottawa Senators": "ott", "Philadelphia Flyers": "phi",
     "Pittsburgh Penguins": "pit", "San Jose Sharks": "sjs", "Seattle Kraken": "sea",
     "St. Louis Blues": "stl", "Tampa Bay Lightning": "tbl", "Toronto Maple Leafs": "tor",
-    "Utah Hockey Club": "utah", "Vancouver Canucks": "van", "Vegas Golden Knights": "vgk",
+    "Utah Hockey Club": "uta", "Vancouver Canucks": "van", "Vegas Golden Knights": "vgk",
     "Washington Capitals": "wsh", "Winnipeg Jets": "wpg"
 }
 
@@ -52,7 +52,7 @@ def _obtener_stats_equipo_nhl(abbr: str):
                 key = _normalizar_nombre(nom)
                 ppg = round(s.get("points", 0) / games, 2)
                 spg = round(s.get("shots", 0) / games, 2)
-                if ppg >= 0.45 or spg >= 1.8:
+                if ppg >= 0.65 or spg >= 2.1:
                     jugadores[key] = {
                         "nombre": nom,
                         "equipo": abbr.upper(),
@@ -67,59 +67,61 @@ def _obtener_stats_equipo_nhl(abbr: str):
     return jugadores
 
 
-def _evaluar_prop_nhl(media_real: float, tipo_prop: str, linea_casino=None, cuota_over=None, cuota_under=None):
-    if linea_casino is None:
-        if tipo_prop == "Tiros a Puerta":
-            linea = math.floor(media_real) + 0.5
-        else:
-            linea = 1.5 if media_real >= 1.35 else 0.5
-    else:
-        linea = linea_casino
-
+def _evaluar_solo_over_nhl(media_real: float, tipo_prop: str, linea_casino=None, cuota_over=None):
+    """Evalúa EXCLUSIVAMENTE el lado MÁS DE (OVER) para +1/+2 Puntos y 1.5/2.5 Tiros a Puerta."""
     if tipo_prop == "Tiros a Puerta":
-        sigma = max(0.85, media_real * 0.28)
+        if linea_casino is not None and linea_casino in [1.5, 2.5]:
+            linea = linea_casino
+        else:
+            # Si promedia >= 3.1 tiros evalúa Over 2.5; si promedia >= 2.1 evalúa Over 1.5
+            if media_real >= 3.1:
+                linea = 2.5
+            elif media_real >= 2.1:
+                linea = 1.5
+            else:
+                return None
+
+        sigma = max(0.85, media_real * 0.27)
         z = (linea - media_real) / sigma
         prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
         prob_over = 1.0 - prob_under
     else:
+        # Puntos: +1 Punto (0.5) o +2 Puntos (1.5)
+        if linea_casino is not None and linea_casino in [0.5, 1.5]:
+            linea = linea_casino
+        else:
+            if media_real >= 1.45:
+                linea = 1.5
+            elif media_real >= 0.75:
+                linea = 0.5
+            else:
+                return None
+
         lamb = media_real
         k_max = int(math.floor(linea))
         prob_under = sum((math.exp(-lamb) * (lamb ** k)) / math.factorial(k) for k in range(k_max + 1))
         prob_over = 1.0 - prob_under
 
-    if cuota_over and cuota_under:
-        ev_over = (prob_over * cuota_over) - 1.0
-        ev_under = (prob_under * cuota_under) - 1.0
-        if prob_over >= prob_under and ev_over > 0:
-            lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
-        elif prob_under > prob_over and ev_under > 0:
-            lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
-        elif ev_over >= ev_under and ev_over > 0:
-            lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, cuota_over, ev_over
-        elif ev_under > 0:
-            lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, cuota_under, ev_under
-        else:
-            return None
-    else:
-        es_over = prob_over >= prob_under
-        prob_sel = max(0.52, min(0.76, prob_over if es_over else prob_under))
-        lado = "MÁS DE" if es_over else "MENOS DE"
-        # Cálculo continuo de cuota justa de mercado (sin escalones repetidos)
-        cuota_justa = 1.0 / prob_sel
-        cuota_sel = round(max(1.45, min(1.95, cuota_justa * 1.04)), 2)
-        ev_sel = (prob_sel * cuota_sel) - 1.0
+    if prob_over < 0.55:
+        return None
 
-    proy = int(round(media_real))
-    if lado == "MÁS DE" and proy <= linea:
-        proy = int(math.ceil(linea))
-    elif lado == "MENOS DE" and proy >= linea:
-        proy = int(math.floor(linea))
+    if cuota_over and cuota_over > 1.05:
+        cuota_sel = cuota_over
+    else:
+        # Momio real proporcional sin importar qué tan bajo sea (ej. 1.32, 1.44, 1.58)
+        cuota_sel = round(max(1.25, (1.0 / prob_over) * 1.03), 2)
+
+    ev_sel = (prob_over * cuota_sel) - 1.0
+    if ev_sel <= 0:
+        return None
+
+    proy = max(int(math.ceil(linea)), int(round(media_real)))
 
     return {
-        "lado": lado,
+        "lado": "MÁS DE",
         "linea": linea,
         "cuota": cuota_sel,
-        "prob_real": round(prob_sel * 100, 1),
+        "prob_real": round(prob_over * 100, 1),
         "ev": round(ev_sel * 100, 1),
         "proyeccion": proy
     }
@@ -148,14 +150,14 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
             if not media_real or media_real <= 0:
                 continue
 
-            res = _evaluar_prop_nhl(media_real, tipo, p["linea"], p["cuota_over"], p["cuota_under"])
-            if res and res["prob_real"] >= 54.0 and res["ev"] > 0:
-                score = (res["prob_real"] * 0.75) + (res["ev"] * 0.25)
+            res = _evaluar_solo_over_nhl(media_real, tipo, p["linea"], p["cuota_over"])
+            if res:
+                score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
                 candidatas.append({
                     "jugador": datos_atleta["nombre"],
                     "equipo_abbr": datos_atleta["equipo"],
                     "tipo_prop": tipo,
-                    "lado": res["lado"],
+                    "lado": "MÁS DE",
                     "linea": res["linea"],
                     "cuota": res["cuota"],
                     "prob_real": res["prob_real"],
@@ -166,18 +168,18 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
 
     if not candidatas:
         for datos_atleta in stats_totales.values():
-            for tipo in ["Tiros a Puerta", "Puntos"]:
+            for tipo in ["Puntos", "Tiros a Puerta"]:
                 media_real = datos_atleta.get(tipo)
                 if not media_real or media_real <= 0:
                     continue
-                res = _evaluar_prop_nhl(media_real, tipo)
-                if res and res["prob_real"] >= 54.0 and res["ev"] > 0:
-                    score = (res["prob_real"] * 0.75) + (res["ev"] * 0.25)
+                res = _evaluar_solo_over_nhl(media_real, tipo)
+                if res:
+                    score = (res["prob_real"] * 0.80) + (res["ev"] * 0.20)
                     candidatas.append({
                         "jugador": datos_atleta["nombre"],
                         "equipo_abbr": datos_atleta["equipo"],
                         "tipo_prop": tipo,
-                        "lado": res["lado"],
+                        "lado": "MÁS DE",
                         "linea": res["linea"],
                         "cuota": res["cuota"],
                         "prob_real": res["prob_real"],
