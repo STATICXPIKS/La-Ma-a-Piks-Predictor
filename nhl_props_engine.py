@@ -32,7 +32,6 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _obtener_ids_roster_activo(abbr_clean: str) -> dict:
-    """Obtiene únicamente los jugadores que pertenecen HOY al roster activo del equipo."""
     ids_activos = {}
     url_roster = f"https://api-web.nhle.com/v1/roster/{abbr_clean}/current"
     try:
@@ -65,7 +64,6 @@ def _obtener_stats_equipo_nhl(abbr: str):
         if r.status_code == 200:
             for s in r.json().get("skaters", []):
                 pid = s.get("playerId")
-                # Exigir que el jugador siga hoy en el roster activo del equipo
                 if roster_activo and pid not in roster_activo:
                     continue
 
@@ -79,14 +77,12 @@ def _obtener_stats_equipo_nhl(abbr: str):
 
                 key = _normalizar_nombre(nom)
                 ppg = round(s.get("points", 0) / games, 2)
-                apg = round(s.get("assists", 0) / games, 2)
                 spg = round(s.get("shots", 0) / games, 2)
 
                 jugadores[key] = {
                     "nombre": nom,
                     "equipo": abbr.upper(),
                     "Puntos": ppg,
-                    "Asistencias": apg,
                     "Tiros a Puerta": spg
                 }
     except Exception as e:
@@ -97,50 +93,66 @@ def _obtener_stats_equipo_nhl(abbr: str):
     return jugadores
 
 
+def _linea_habilitada_por_perfil(media_real: float, tipo_prop: str, linea: float) -> bool:
+    """
+    Filtra las líneas que la casa de apuestas bloquea con candado según el perfil estadístico del jugador:
+    - Tiros a Puerta:
+      * Jugadores de alto volumen (>= 2.65 tiros/juego) tienen bloqueado 1.5 -> solo habilitan 2.5 o 3.5.
+      * Jugadores de volumen medio (1.75 a 2.64 tiros/juego) tienen bloqueado 2.5 -> solo habilitan 1.5.
+    - Puntos:
+      * Jugadores con >= 0.60 pts/juego habilitan 0.5 (1+ punto).
+      * Estrellas con >= 1.25 pts/juego también habilitan 1.5 (2+ puntos).
+    """
+    if tipo_prop == "Tiros a Puerta":
+        if media_real >= 2.65:
+            return linea in [2.5, 3.5]
+        elif media_real >= 1.75:
+            return linea == 1.5
+        return False
+
+    elif tipo_prop == "Puntos":
+        if linea == 0.5:
+            return media_real >= 0.60
+        elif linea == 1.5:
+            return media_real >= 1.25
+        return False
+
+    return False
+
+
 def _probabilidad_poisson_over(media: float, linea: float) -> float:
     k_max = int(math.floor(linea))
     prob_under = sum((math.exp(-media) * (media ** k)) / math.factorial(k) for k in range(k_max + 1))
     return max(0.01, min(0.92, 1.0 - prob_under))
 
 
-def _evaluar_prop_nhl(media_real: float, tipo_prop: str, linea: float, cuota_over: float, cuota_under=None):
-    prob_over = _probabilidad_poisson_over(media_real, linea)
-    prob_under = 1.0 - prob_over
+def _evaluar_solo_over_nhl(media_real: float, tipo_prop: str, linea: float, cuota_over: float, cuota_under=None):
+    # 1. Verificar que la línea no esté bloqueada con candado para el perfil del jugador
+    if not _linea_habilitada_por_perfil(media_real, tipo_prop, linea):
+        return None
 
+    # 2. Calcular probabilidad real (Poisson + suavizado de mercado si existe cuota under)
+    prob_over = _probabilidad_poisson_over(media_real, linea)
     if cuota_over and cuota_under and cuota_over > 1.05 and cuota_under > 1.05:
         imp_o = 1.0 / cuota_over
         imp_u = 1.0 / cuota_under
         mkt_o = imp_o / (imp_o + imp_u)
         prob_over = (prob_over * 0.65) + (mkt_o * 0.35)
-        prob_under = 1.0 - prob_over
 
+    # 3. Evaluar EXCLUSIVAMENTE el lado MÁS DE (OVER) con EV positivo y probabilidad sólida
     ev_over = (prob_over * cuota_over) - 1.0
+    if prob_over < 0.52 or ev_over <= 0.005:
+        return None
 
-    if prob_over >= 0.52 and ev_over > 0.005:
-        proy = max(int(math.ceil(linea)), int(round(media_real)))
-        return {
-            "lado": "MÁS DE",
-            "linea": linea,
-            "cuota": round(cuota_over, 2),
-            "prob_real": round(prob_over * 100, 1),
-            "ev": round(ev_over * 100, 1),
-            "proyeccion": proy
-        }
-
-    if cuota_under and cuota_under > 1.05:
-        ev_under = (prob_under * cuota_under) - 1.0
-        if prob_under >= 0.54 and ev_under > 0.01:
-            proy = min(int(math.floor(linea)), int(round(media_real)))
-            return {
-                "lado": "MENOS DE",
-                "linea": linea,
-                "cuota": round(cuota_under, 2),
-                "prob_real": round(prob_under * 100, 1),
-                "ev": round(ev_under * 100, 1),
-                "proyeccion": proy
-            }
-
-    return None
+    proy = max(int(math.ceil(linea)), int(round(media_real)))
+    return {
+        "lado": "MÁS DE",
+        "linea": linea,
+        "cuota": round(cuota_over, 2),
+        "prob_real": round(prob_over * 100, 1),
+        "ev": round(ev_over * 100, 1),
+        "proyeccion": proy
+    }
 
 
 def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
@@ -163,11 +175,14 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                 continue
 
             tipo = p["tipo_prop"]
+            if tipo not in ["Tiros a Puerta", "Puntos"]:
+                continue
+
             media_real = datos_atleta.get(tipo)
             if not media_real or media_real <= 0:
                 continue
 
-            res = _evaluar_prop_nhl(
+            res = _evaluar_solo_over_nhl(
                 media_real=media_real,
                 tipo_prop=tipo,
                 linea=p["linea"],
@@ -180,7 +195,7 @@ def obtener_mejores_props_nhl(local: str, visitante: str, top_n: int = 6):
                     "jugador": datos_atleta["nombre"],
                     "equipo_abbr": datos_atleta["equipo"],
                     "tipo_prop": tipo,
-                    "lado": res["lado"],
+                    "lado": "MÁS DE",
                     "linea": res["linea"],
                     "cuota": res["cuota"],
                     "prob_real": res["prob_real"],
