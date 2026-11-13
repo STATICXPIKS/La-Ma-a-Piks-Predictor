@@ -2,8 +2,6 @@ import os
 import time
 import requests
 
-ODDS_API_KEY = os.getenv("ODDS_API_KEY", "").strip()
-
 DEPORTE_TO_SPORT_KEY = {
     "nba": "basketball_nba",
     "nhl": "icehockey_nhl",
@@ -11,7 +9,6 @@ DEPORTE_TO_SPORT_KEY = {
     "mlb": "baseball_mlb"
 }
 
-# Solo los 2 mercados principales por deporte para consumir el mínimo de créditos
 PROP_MARKETS_BY_SPORT = {
     "nhl": "player_shots_on_goal,player_points",
     "nba": "player_points,player_rebounds",
@@ -59,7 +56,29 @@ _CACHE_EVENTOS_ODDS_API = {}
 _CACHE_PROPS_ODDS_API = {}
 _CACHE_EVENTOS_KAMBI = {}
 _CACHE_OFERTAS_KAMBI = {}
-_ODDS_API_AGOTADA_HASTA = 0
+
+_CLAVES_AGOTADAS_HASTA = {}
+
+
+def obtener_claves_odds_api_activas() -> list:
+    """Lee ODDS_API_KEY y ODDS_API_KEY_2 (o lista separada por comas) y filtra las que aún tienen saldo."""
+    ahora = time.time()
+    raw_1 = os.getenv("ODDS_API_KEY", "").strip()
+    raw_2 = os.getenv("ODDS_API_KEY_2", "").strip()
+
+    candidatas = []
+    for bloque in [raw_1, raw_2]:
+        for k in bloque.split(","):
+            k_clean = k.strip()
+            if k_clean and k_clean not in candidatas:
+                candidatas.append(k_clean)
+
+    return [k for k in candidatas if ahora >= _CLAVES_AGOTADAS_HASTA.get(k, 0)]
+
+
+def marcar_clave_agotada(api_key: str):
+    """Pausa una clave sin créditos durante 1 hora para pasar automáticamente a la siguiente."""
+    _CLAVES_AGOTADAS_HASTA[api_key] = time.time() + 3600
 
 
 def _simplificar(texto: str) -> str:
@@ -78,114 +97,110 @@ def _coincide_partido(ev_home: str, ev_away: str, local: str, visitante: str) ->
 
 
 def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
-    """Consulta The Odds API en modo ahorro extremo de créditos (caché largo + 1 región)."""
-    global _ODDS_API_AGOTADA_HASTA
-
-    ahora = time.time()
-    # Si ya dio 401/429 (sin créditos), no vuelve a intentar durante 1 hora
-    if ahora < _ODDS_API_AGOTADA_HASTA:
+    """Rota automáticamente entre todas las API Keys disponibles en modo ahorro de créditos."""
+    claves_activas = obtener_claves_odds_api_activas()
+    if not claves_activas:
         return []
 
     dep = deporte.lower()
     sport_key = DEPORTE_TO_SPORT_KEY.get(dep)
     markets = PROP_MARKETS_BY_SPORT.get(dep)
-    api_key = os.getenv("ODDS_API_KEY", ODDS_API_KEY).strip()
-
-    if not sport_key or not markets or not api_key:
+    if not sport_key or not markets:
         return []
 
-    # Caché de 45 minutos (2700s) para no repetir gasto de créditos en el mismo partido
+    ahora = time.time()
     cache_key = f"{dep}_{_simplificar(local)}_{_simplificar(visitante)}"
     if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < 2700):
         return _CACHE_PROPS_ODDS_API[cache_key][1]
 
-    try:
-        # 1. Lista de eventos del día (este endpoint NO consume créditos en The Odds API, pero igual lo cacheamos 30 min)
-        ev_cache_key = f"events_{dep}"
-        if ev_cache_key in _CACHE_EVENTOS_ODDS_API and (ahora - _CACHE_EVENTOS_ODDS_API[ev_cache_key][0] < 1800):
-            eventos = _CACHE_EVENTOS_ODDS_API[ev_cache_key][1]
-        else:
-            url_events = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
-            r_ev = requests.get(url_events, params={"apiKey": api_key}, timeout=6)
-            if r_ev.status_code in [401, 429]:
-                _ODDS_API_AGOTADA_HASTA = ahora + 3600
-                return []
-            if r_ev.status_code != 200:
-                return []
-            eventos = r_ev.json()
-            _CACHE_EVENTOS_ODDS_API[ev_cache_key] = (ahora, eventos)
-
-        event_id = None
-        for ev in eventos:
-            if _coincide_partido(ev.get("home_team", ""), ev.get("away_team", ""), local, visitante):
-                event_id = ev.get("id")
-                break
-
-        if not event_id:
-            return []
-
-        # 2. Consultar solo region="us" para gastar solo 2 créditos por partido (1 por mercado)
-        url_props = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
-        params = {
-            "apiKey": api_key,
-            "regions": "us",
-            "markets": markets,
-            "oddsFormat": "decimal"
-        }
-        r_props = requests.get(url_props, params=params, timeout=8)
-        if r_props.status_code in [401, 429]:
-            _ODDS_API_AGOTADA_HASTA = ahora + 3600
-            return []
-        if r_props.status_code != 200:
-            return []
-
-        bookmakers = r_props.json().get("bookmakers", [])
-        if not bookmakers:
-            return []
-
-        prioridad = ["fanduel", "draftkings", "betmgm", "caesars", "espnbet"]
-        bookmakers.sort(key=lambda b: prioridad.index(b.get("key")) if b.get("key") in prioridad else 99)
-
-        agrupado = {}
-        for bm in bookmakers[:3]:
-            for market in bm.get("markets", []):
-                m_key = market.get("key")
-                tipo_esp = MAPEO_MERCADO_ODDS_API.get(m_key)
-                if not tipo_esp:
+    for api_key in claves_activas:
+        try:
+            ev_cache_key = f"events_{dep}"
+            if ev_cache_key in _CACHE_EVENTOS_ODDS_API and (ahora - _CACHE_EVENTOS_ODDS_API[ev_cache_key][0] < 1800):
+                eventos = _CACHE_EVENTOS_ODDS_API[ev_cache_key][1]
+            else:
+                url_events = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
+                r_ev = requests.get(url_events, params={"apiKey": api_key}, timeout=6)
+                if r_ev.status_code in [401, 429]:
+                    marcar_clave_agotada(api_key)
                     continue
+                if r_ev.status_code != 200:
+                    return []
+                eventos = r_ev.json()
+                _CACHE_EVENTOS_ODDS_API[ev_cache_key] = (ahora, eventos)
 
-                for out in market.get("outcomes", []):
-                    jugador = out.get("description", "").strip()
-                    lado = out.get("name", "").lower()
-                    linea = out.get("point")
-                    precio = out.get("price")
+            event_id = None
+            for ev in eventos:
+                if _coincide_partido(ev.get("home_team", ""), ev.get("away_team", ""), local, visitante):
+                    event_id = ev.get("id")
+                    break
 
-                    if not jugador or linea is None or not precio or precio <= 1.05:
+            if not event_id:
+                return []
+
+            url_props = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
+            params = {
+                "apiKey": api_key,
+                "regions": "us",
+                "markets": markets,
+                "oddsFormat": "decimal"
+            }
+            r_props = requests.get(url_props, params=params, timeout=8)
+            if r_props.status_code in [401, 429]:
+                marcar_clave_agotada(api_key)
+                continue
+            if r_props.status_code != 200:
+                return []
+
+            bookmakers = r_props.json().get("bookmakers", [])
+            if not bookmakers:
+                return []
+
+            prioridad = ["fanduel", "draftkings", "betmgm", "caesars", "espnbet"]
+            bookmakers.sort(key=lambda b: prioridad.index(b.get("key")) if b.get("key") in prioridad else 99)
+
+            agrupado = {}
+            for bm in bookmakers[:3]:
+                for market in bm.get("markets", []):
+                    m_key = market.get("key")
+                    tipo_esp = MAPEO_MERCADO_ODDS_API.get(m_key)
+                    if not tipo_esp:
                         continue
 
-                    clave = (_simplificar(jugador), tipo_esp, float(linea))
-                    if clave not in agrupado:
-                        agrupado[clave] = {
-                            "jugador": jugador,
-                            "tipo_prop": tipo_esp,
-                            "linea": float(linea),
-                            "cuota_over": None,
-                            "cuota_under": None
-                        }
+                    for out in market.get("outcomes", []):
+                        jugador = out.get("description", "").strip()
+                        lado = out.get("name", "").lower()
+                        linea = out.get("point")
+                        precio = out.get("price")
 
-                    if lado == "over" and agrupado[clave]["cuota_over"] is None:
-                        agrupado[clave]["cuota_over"] = round(float(precio), 2)
-                    elif lado == "under" and agrupado[clave]["cuota_under"] is None:
-                        agrupado[clave]["cuota_under"] = round(float(precio), 2)
+                        if not jugador or linea is None or not precio or precio <= 1.05:
+                            continue
 
-        props_finales = [v for v in agrupado.values() if v["cuota_over"] is not None]
-        if props_finales:
-            _CACHE_PROPS_ODDS_API[cache_key] = (ahora, props_finales)
-        return props_finales
+                        clave = (_simplificar(jugador), tipo_esp, float(linea))
+                        if clave not in agrupado:
+                            agrupado[clave] = {
+                                "jugador": jugador,
+                                "tipo_prop": tipo_esp,
+                                "linea": float(linea),
+                                "cuota_over": None,
+                                "cuota_under": None
+                            }
 
-    except Exception as e:
-        print(f"Error Odds API Player Props ({deporte}): {e}")
-        return []
+                        if lado == "over" and agrupado[clave]["cuota_over"] is None:
+                            agrupado[clave]["cuota_over"] = round(float(precio), 2)
+                        elif lado == "under" and agrupado[clave]["cuota_under"] is None:
+                            agrupado[clave]["cuota_under"] = round(float(precio), 2)
+
+            props_finales = [v for v in agrupado.values() if v["cuota_over"] is not None]
+            if props_finales:
+                _CACHE_PROPS_ODDS_API[cache_key] = (ahora, props_finales)
+            return props_finales
+
+        except Exception as e:
+            print(f"Error Odds API Player Props ({deporte}): {e}")
+            return []
+
+    return []
 
 
 def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
@@ -394,12 +409,10 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
 
 
 def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
-    # 1. Intenta The Odds API (se salta automáticamente si ya se agotaron los 500 créditos)
     props_odds_api = _obtener_props_the_odds_api(deporte, local, visitante)
     if props_odds_api:
         return props_odds_api
 
-    # 2. Respaldo gratuito e ilimitado: Kambi multi-operador (ubca / unibet / ubus)
     event_id = _buscar_event_id_kambi(deporte, local, visitante)
     if not event_id:
         return []
@@ -428,7 +441,6 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
         if len(outcomes) != 2:
             continue
 
-        # Excluir totales de equipo
         if "team" in crit_label or "home" in crit_label or "away" in crit_label:
             continue
 
