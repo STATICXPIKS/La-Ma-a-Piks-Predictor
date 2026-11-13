@@ -5,7 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import gradio as gr
 import uvicorn
 
-from kambi_feed import obtener_cuotas_partido_kambi, obtener_player_props_kambi
+from kambi_feed import (
+    obtener_cuotas_partido_kambi,
+    obtener_player_props_kambi,
+    obtener_claves_odds_api_activas,
+    marcar_clave_agotada
+)
 from nfl_props_engine import obtener_mejores_props_nfl
 from nba_props_engine import obtener_mejores_props_nba
 from nhl_props_engine import obtener_mejores_props_nhl
@@ -26,8 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ODDS_API_KEY = os.getenv("ODDS_API_KEY", "c093c80f606e3126de06faaf17900a2b").strip()
-
 DEPORTE_TO_SPORT_KEY = {
     "nba": "basketball_nba",
     "nhl": "icehockey_nhl",
@@ -38,111 +41,116 @@ DEPORTE_TO_SPORT_KEY = {
 
 def _consultar_the_odds_api(deporte: str, local: str, visitante: str):
     sport_key = DEPORTE_TO_SPORT_KEY.get(deporte.lower())
-    if not sport_key or not ODDS_API_KEY:
+    claves_activas = obtener_claves_odds_api_activas()
+    if not sport_key or not claves_activas:
         return None
 
     url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
-    params = {
-        "apiKey": ODDS_API_KEY,
-        "regions": "us,eu",
-        "markets": "h2h,spreads,totals",
-        "oddsFormat": "decimal"
-    }
 
-    try:
-        r = requests.get(url, params=params, timeout=5)
-        # Si da 401 (sin créditos/inválida) o 429 (límite), retorna None para activar Kambi
-        if r.status_code != 200:
-            return None
-
-        eventos = r.json()
-        evento_encontrado = None
-
-        def simplificar(txt):
-            return "".join(c for c in txt.lower() if c.isalnum())
-
-        loc_s = simplificar(local)
-        vis_s = simplificar(visitante)
-
-        for ev in eventos:
-            home = simplificar(ev.get("home_team", ""))
-            away = simplificar(ev.get("away_team", ""))
-            if (loc_s in home or home in loc_s) and (vis_s in away or away in vis_s):
-                evento_encontrado = ev
-                break
-
-        if not evento_encontrado:
-            return None
-
-        bookmakers = evento_encontrado.get("bookmakers", [])
-        if not bookmakers:
-            return None
-
-        bm = bookmakers[0]
-        for b in bookmakers:
-            if b.get("key") in ["draftkings", "fanduel", "pinnacle", "bovada", "betonlineag"]:
-                bm = b
-                break
-
-        datos_cuotas = {
-            "bookmaker": f"{bm.get('title', 'Casino')} (Odds API)",
-            "cuota_ml_local": None,
-            "cuota_ml_visitante": None,
-            "linea_spread_local": None,
-            "cuota_spread_local": None,
-            "linea_spread_visitante": None,
-            "cuota_spread_visitante": None,
-            "linea_total": None,
-            "cuota_total_over": None,
-            "cuota_total_under": None
+    for api_key in claves_activas:
+        params = {
+            "apiKey": api_key,
+            "regions": "us",
+            "markets": "h2h,spreads,totals",
+            "oddsFormat": "decimal"
         }
 
-        for market in bm.get("markets", []):
-            m_key = market.get("key")
-            outcomes = market.get("outcomes", [])
+        try:
+            r = requests.get(url, params=params, timeout=5)
+            if r.status_code in [401, 429]:
+                marcar_clave_agotada(api_key)
+                continue
+            if r.status_code != 200:
+                return None
 
-            if m_key == "h2h":
-                for out in outcomes:
-                    t_name = simplificar(out.get("name", ""))
-                    if loc_s in t_name or t_name in loc_s:
-                        datos_cuotas["cuota_ml_local"] = out.get("price")
-                    elif vis_s in t_name or t_name in vis_s:
-                        datos_cuotas["cuota_ml_visitante"] = out.get("price")
+            eventos = r.json()
+            evento_encontrado = None
 
-            elif m_key == "spreads":
-                for out in outcomes:
-                    t_name = simplificar(out.get("name", ""))
-                    if loc_s in t_name or t_name in loc_s:
-                        datos_cuotas["linea_spread_local"] = out.get("point")
-                        datos_cuotas["cuota_spread_local"] = out.get("price")
-                    elif vis_s in t_name or t_name in vis_s:
-                        datos_cuotas["linea_spread_visitante"] = out.get("point")
-                        datos_cuotas["cuota_spread_visitante"] = out.get("price")
+            def simplificar(txt):
+                return "".join(c for c in txt.lower() if c.isalnum())
 
-            elif m_key == "totals":
-                for out in outcomes:
-                    lado = out.get("name", "").lower()
-                    if lado == "over":
-                        datos_cuotas["linea_total"] = out.get("point")
-                        datos_cuotas["cuota_total_over"] = out.get("price")
-                    elif lado == "under":
-                        datos_cuotas["cuota_total_under"] = out.get("price")
+            loc_s = simplificar(local)
+            vis_s = simplificar(visitante)
 
-        if datos_cuotas["cuota_ml_local"] or datos_cuotas["linea_total"]:
-            return {"success": True, "data": datos_cuotas}
-        return None
-    except Exception:
-        return None
+            for ev in eventos:
+                home = simplificar(ev.get("home_team", ""))
+                away = simplificar(ev.get("away_team", ""))
+                if (loc_s in home or home in loc_s) and (vis_s in away or away in vis_s):
+                    evento_encontrado = ev
+                    break
+
+            if not evento_encontrado:
+                return None
+
+            bookmakers = evento_encontrado.get("bookmakers", [])
+            if not bookmakers:
+                return None
+
+            bm = bookmakers[0]
+            for b in bookmakers:
+                if b.get("key") in ["draftkings", "fanduel", "pinnacle", "bovada", "betonlineag"]:
+                    bm = b
+                    break
+
+            datos_cuotas = {
+                "bookmaker": f"{bm.get('title', 'Casino')} (Odds API)",
+                "cuota_ml_local": None,
+                "cuota_ml_visitante": None,
+                "linea_spread_local": None,
+                "cuota_spread_local": None,
+                "linea_spread_visitante": None,
+                "cuota_spread_visitante": None,
+                "linea_total": None,
+                "cuota_total_over": None,
+                "cuota_total_under": None
+            }
+
+            for market in bm.get("markets", []):
+                m_key = market.get("key")
+                outcomes = market.get("outcomes", [])
+
+                if m_key == "h2h":
+                    for out in outcomes:
+                        t_name = simplificar(out.get("name", ""))
+                        if loc_s in t_name or t_name in loc_s:
+                            datos_cuotas["cuota_ml_local"] = out.get("price")
+                        elif vis_s in t_name or t_name in vis_s:
+                            datos_cuotas["cuota_ml_visitante"] = out.get("price")
+
+                elif m_key == "spreads":
+                    for out in outcomes:
+                        t_name = simplificar(out.get("name", ""))
+                        if loc_s in t_name or t_name in loc_s:
+                            datos_cuotas["linea_spread_local"] = out.get("point")
+                            datos_cuotas["cuota_spread_local"] = out.get("price")
+                        elif vis_s in t_name or t_name in vis_s:
+                            datos_cuotas["linea_spread_visitante"] = out.get("point")
+                            datos_cuotas["cuota_spread_visitante"] = out.get("price")
+
+                elif m_key == "totals":
+                    for out in outcomes:
+                        lado = out.get("name", "").lower()
+                        if lado == "over":
+                            datos_cuotas["linea_total"] = out.get("point")
+                            datos_cuotas["cuota_total_over"] = out.get("price")
+                        elif lado == "under":
+                            datos_cuotas["cuota_total_under"] = out.get("price")
+
+            if datos_cuotas["cuota_ml_local"] or datos_cuotas["linea_total"]:
+                return {"success": True, "data": datos_cuotas}
+            return None
+        except Exception:
+            return None
+
+    return None
 
 
 @app.get("/api/live-odds")
 def api_live_odds(deporte: str = Query(...), local: str = Query(...), visitante: str = Query(...)):
-    # 1. Intenta primero con The Odds API (si hay créditos disponibles)
     res_odds_api = _consultar_the_odds_api(deporte, local, visitante)
     if res_odds_api:
         return res_odds_api
 
-    # 2. Si Odds API no tiene créditos (401/429) o no encuentra el juego, cae directo a Kambi gratis
     return obtener_cuotas_partido_kambi(deporte, local, visitante)
 
 
@@ -167,6 +175,7 @@ def api_debug_props(
             "status": "ok",
             "deporte": deporte,
             "partido": f"{local} vs {visitante}",
+            "claves_activas_detectadas": len(obtener_claves_odds_api_activas()),
             "kambi_props_encontradas": len(kambi_res),
             "kambi_muestra": kambi_res[:2],
             "props_calculadas_total": len(props_res),
