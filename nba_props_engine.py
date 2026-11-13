@@ -32,14 +32,11 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _obtener_stats_reales_nba(team_id: str, abbr: str):
-    """Extrae promedios reales por partido y roster activo de ESPN."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NBA and (ahora - _CACHE_STATS_NBA[team_id][0] < 1800):
         return _CACHE_STATS_NBA[team_id][1]
 
     jugadores = {}
-
-    # 1. Cargar roster activo para identificar a qué equipo pertenece cada jugador
     url_roster = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/roster"
     try:
         r_ros = requests.get(url_roster, headers=HEADERS, timeout=5)
@@ -51,7 +48,6 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
     except Exception:
         pass
 
-    # 2. Cargar promedios reales por partido desde líderes de equipo
     url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/leaders"
     try:
         r = requests.get(url_leaders, headers=HEADERS, timeout=6)
@@ -72,8 +68,7 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
                     continue
 
                 for lead in cat.get("leaders", []):
-                    ath = lead.get("athlete", {})
-                    nom = ath.get("displayName")
+                    nom = lead.get("athlete", {}).get("displayName")
                     try:
                         val = float(str(lead.get("value", 0)).replace(",", ""))
                     except ValueError:
@@ -100,12 +95,8 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
     c_under = float(p_casino.get("cuota_under") or 1.90)
 
     datos_atleta = stats_totales.get(_normalizar_nombre(jugador_raw))
-    # Exigir que el jugador pertenezca activamente al roster de uno de los dos equipos
     if not datos_atleta:
         return None
-
-    equipo_abbr = datos_atleta["equipo"]
-    nombre_final = datos_atleta["nombre"]
 
     imp_over = 1.0 / c_over
     imp_under = 1.0 / c_under
@@ -131,7 +122,6 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
         prob_under = (p_stat_under * 0.65) + (prob_mkt_under * 0.35)
         proy_num = media_real
     else:
-        # Jugador activo del roster sin liderato Top-3 en ESPN: evaluar con probabilidad No-Vig + ventaja de cuota
         prob_over = prob_mkt_over * 1.04 if c_over >= 1.85 else prob_mkt_over
         prob_under = prob_mkt_under * 1.04 if c_under >= 1.85 else prob_mkt_under
         proy_num = linea + (1.0 if prob_over >= prob_under else -1.0)
@@ -153,8 +143,8 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
         proy = int(math.floor(linea))
 
     return {
-        "jugador": nombre_final,
-        "equipo_abbr": equipo_abbr,
+        "jugador": datos_atleta["nombre"],
+        "equipo_abbr": datos_atleta["equipo"],
         "tipo_prop": tipo,
         "lado": lado,
         "linea": linea,
