@@ -50,8 +50,8 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
                     nom = ath.get("displayName") or ath.get("fullName")
                     if nom:
                         jugadores[_normalizar_nombre(nom)] = {"nombre": nom, "equipo": abbr.upper()}
-    except Exception as e:
-        print(f"Error roster NFL {abbr}: {e}")
+    except Exception:
+        pass
 
     url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}?enable=leaders"
     try:
@@ -178,10 +178,6 @@ def _evaluar_prop_nfl(p_casino: dict, stats_equipos: dict, abbr_defecto: str):
 
 
 def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
-    props_casino = obtener_player_props_kambi("nfl", local, visitante)
-    if not props_casino:
-        return []
-
     d_loc = EQUIPOS_NFL_ESPN.get(local)
     d_vis = EQUIPOS_NFL_ESPN.get(visitante)
     if not d_loc or not d_vis:
@@ -191,12 +187,41 @@ def obtener_mejores_props_nfl(local: str, visitante: str, top_n: int = 6):
         **_obtener_stats_equipo_nfl(d_loc[1], d_loc[0]),
         **_obtener_stats_equipo_nfl(d_vis[1], d_vis[0])
     }
+    props_casino = obtener_player_props_kambi("nfl", local, visitante)
 
     candidatas = []
-    for p in props_casino:
-        res = _evaluar_prop_nfl(p, stats_equipos, d_loc[0].upper())
-        if res:
-            candidatas.append(res)
+    if props_casino:
+        for p in props_casino:
+            res = _evaluar_prop_nfl(p, stats_equipos, d_loc[0].upper())
+            if res:
+                candidatas.append(res)
+
+    # Respaldo estadístico real de ESPN si el casino aún no abre props para ese día
+    if not candidatas and stats_equipos:
+        for ath in stats_equipos.values():
+            for tipo in ["Yardas Pase", "Yardas Acarreo", "Yardas Recepción", "Recepciones"]:
+                media = ath.get(tipo, 0)
+                if media <= 3.0:
+                    continue
+                linea_est = math.floor(media * 0.87) + 0.5
+                sigma = max(1.8, media * 0.25)
+                z = (linea_est - media) / sigma
+                prob_over = 1.0 - (0.5 * (1.0 + math.erf(z / math.sqrt(2.0))))
+                if prob_over >= 0.58:
+                    cuota_ref = round(max(1.65, min(1.95, (1.0 / prob_over) * 1.06)), 2)
+                    ev_ref = (prob_over * cuota_ref) - 1.0
+                    candidatas.append({
+                        "jugador": ath["nombre"],
+                        "equipo_abbr": ath["equipo"],
+                        "tipo_prop": tipo,
+                        "lado": "MÁS DE",
+                        "linea": linea_est,
+                        "cuota": cuota_ref,
+                        "prob_real": round(prob_over * 100, 1),
+                        "ev": round(ev_ref * 100, 1),
+                        "proyeccion": int(round(media)),
+                        "_score": (prob_over * 100 * 0.65) + (ev_ref * 100 * 0.35)
+                    })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
     for c in candidatas:
