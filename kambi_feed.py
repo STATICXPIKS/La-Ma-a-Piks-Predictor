@@ -56,12 +56,10 @@ _CACHE_EVENTOS_ODDS_API = {}
 _CACHE_PROPS_ODDS_API = {}
 _CACHE_EVENTOS_KAMBI = {}
 _CACHE_OFERTAS_KAMBI = {}
-
 _CLAVES_AGOTADAS_HASTA = {}
 
 
 def obtener_claves_odds_api_activas() -> list:
-    """Lee ODDS_API_KEY y ODDS_API_KEY_2 (o lista separada por comas) y filtra las que aún tienen saldo."""
     ahora = time.time()
     raw_1 = os.getenv("ODDS_API_KEY", "").strip()
     raw_2 = os.getenv("ODDS_API_KEY_2", "").strip()
@@ -77,7 +75,6 @@ def obtener_claves_odds_api_activas() -> list:
 
 
 def marcar_clave_agotada(api_key: str):
-    """Pausa una clave sin créditos durante 1 hora para pasar automáticamente a la siguiente."""
     _CLAVES_AGOTADAS_HASTA[api_key] = time.time() + 3600
 
 
@@ -97,7 +94,6 @@ def _coincide_partido(ev_home: str, ev_away: str, local: str, visitante: str) ->
 
 
 def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
-    """Rota automáticamente entre todas las API Keys disponibles en modo ahorro de créditos."""
     claves_activas = obtener_claves_odds_api_activas()
     if not claves_activas:
         return []
@@ -141,7 +137,7 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
             url_props = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events/{event_id}/odds"
             params = {
                 "apiKey": api_key,
-                "regions": "us",
+                "regions": "us,us2",
                 "markets": markets,
                 "oddsFormat": "decimal"
             }
@@ -156,11 +152,11 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
             if not bookmakers:
                 return []
 
-            prioridad = ["fanduel", "draftkings", "betmgm", "caesars", "espnbet"]
+            prioridad = ["fanduel", "draftkings", "betmgm", "caesars", "espnbet", "hardrockbet", "bovada"]
             bookmakers.sort(key=lambda b: prioridad.index(b.get("key")) if b.get("key") in prioridad else 99)
 
             agrupado = {}
-            for bm in bookmakers[:3]:
+            for bm in bookmakers[:4]:
                 for market in bm.get("markets", []):
                     m_key = market.get("key")
                     tipo_esp = MAPEO_MERCADO_ODDS_API.get(m_key)
