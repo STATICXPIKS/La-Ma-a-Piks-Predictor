@@ -32,14 +32,11 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
-    """Extrae roster activo y promedios reales por partido de líderes en ESPN por equipo."""
     ahora = time.time()
     if team_id in _CACHE_STATS_NFL and (ahora - _CACHE_STATS_NFL[team_id][0] < 1800):
         return _CACHE_STATS_NFL[team_id][1]
 
     jugadores = {}
-
-    # 1. Cargar roster activo del equipo
     url_roster = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/roster"
     try:
         r_ros = requests.get(url_roster, headers=HEADERS, timeout=5)
@@ -52,7 +49,6 @@ def _obtener_stats_equipo_nfl(team_id: str, abbr: str):
     except Exception:
         pass
 
-    # 2. Cargar estadísticas reales de líderes
     url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}?enable=leaders"
     try:
         r = requests.get(url_leaders, headers=HEADERS, timeout=6)
@@ -113,9 +109,7 @@ def _evaluar_prop_nfl(p_casino: dict, stats_equipos: dict):
     c_over = float(p_casino["cuota_over"])
     c_under = float(p_casino.get("cuota_under") or 1.90)
 
-    key_jug = _normalizar_nombre(jugador_raw)
-    datos_atleta = stats_equipos.get(key_jug)
-
+    datos_atleta = stats_equipos.get(_normalizar_nombre(jugador_raw))
     if not datos_atleta:
         return None
 
