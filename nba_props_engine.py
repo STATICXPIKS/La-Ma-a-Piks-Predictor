@@ -29,7 +29,6 @@ _CACHE_STATS_NBA = {}
 
 def _normalizar_nombre(nombre: str) -> str:
     n = unicodedata.normalize('NFD', str(nombre)).encode('ascii', 'ignore').decode("utf-8").lower()
-    # Eliminar sufijos comunes (jr, sr, ii, iii, iv) para emparejar nombres entre ESPN y Odds API
     n = re.sub(r'\b(jr|sr|ii|iii|iv)\b', '', n)
     return "".join(c for c in n if c.isalpha())
 
@@ -41,28 +40,26 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
 
     jugadores = {}
 
-    # 1. Descargar roster completo de ESPN
     url_roster = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/roster"
     try:
         r_ros = requests.get(url_roster, headers=HEADERS, timeout=6)
         if r_ros.status_code == 200:
-            data_ros = r_ros.json()
-            for item in data_ros.get("athletes", []):
-                # Puede venir directo o agrupado en 'items'
+            for item in r_ros.json().get("athletes", []):
                 lista_ath = item.get("items", [item]) if isinstance(item, dict) else []
                 for ath in lista_ath:
                     nom = ath.get("displayName") or ath.get("fullName")
                     if nom:
                         jugadores[_normalizar_nombre(nom)] = {"nombre": nom, "equipo": abbr.upper()}
-    except Exception as e:
-        print(f"Error roster NBA {abbr}: {e}")
+    except Exception:
+        pass
 
-    # 2. Descargar promedios reales por partido desde líderes de equipo
-    url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/leaders"
+    # Consultar endpoint de equipo con enable=leaders
+    url_leaders = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}?enable=leaders"
     try:
         r = requests.get(url_leaders, headers=HEADERS, timeout=6)
         if r.status_code == 200:
-            for cat in r.json().get("leaders", []):
+            leaders_list = r.json().get("team", {}).get("leaders", [])
+            for cat in leaders_list:
                 c_name = str(cat.get("name", "")).lower()
                 tipo = None
                 if "pointspergame" in c_name or c_name == "points":
@@ -108,7 +105,6 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
     key_norm = _normalizar_nombre(jugador_raw)
     datos_atleta = stats_totales.get(key_norm)
 
-    # Coincidencia parcial por apellido + inicial si hay variaciones de nombre
     if not datos_atleta and len(key_norm) >= 6:
         for k, v in stats_totales.items():
             if key_norm[-5:] == k[-5:] and key_norm[0] == k[0]:
@@ -142,7 +138,6 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
         prob_under = (p_stat_under * 0.65) + (prob_mkt_under * 0.35)
         proy_num = media_real
     else:
-        # Si es jugador de rotación sin liderato Top-3 en ESPN, evalúa ventaja real de cuota No-Vig
         prob_over = prob_mkt_over * 1.05 if c_over >= 1.83 else prob_mkt_over
         prob_under = prob_mkt_under * 1.05 if c_under >= 1.83 else prob_mkt_under
         proy_num = linea + (1.0 if prob_over >= prob_under else -1.0)
@@ -183,17 +178,42 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     if not d_loc or not d_vis:
         return []
 
-    props_casino = obtener_player_props_kambi("nba", local, visitante)
-    if not props_casino:
-        return []
-
     stats_totales = {**_obtener_stats_reales_nba(d_loc[1], d_loc[0]), **_obtener_stats_reales_nba(d_vis[1], d_vis[0])}
+    props_casino = obtener_player_props_kambi("nba", local, visitante)
 
     candidatas = []
-    for p in props_casino:
-        res = _evaluar_prop_nba(p, stats_totales, d_loc[0].upper())
-        if res:
-            candidatas.append(res)
+    if props_casino:
+        for p in props_casino:
+            res = _evaluar_prop_nba(p, stats_totales, d_loc[0].upper())
+            if res:
+                candidatas.append(res)
+
+    # Respaldo estadístico real de ESPN si el casino aún no abre líneas para ese partido
+    if not candidatas and stats_totales:
+        for ath in stats_totales.values():
+            for tipo in ["Puntos", "Rebotes", "Asistencias"]:
+                media = ath.get(tipo, 0)
+                if media < 5.0:
+                    continue
+                linea_est = math.floor(media * 0.88) + 0.5
+                sigma = max(1.2, media * 0.22)
+                z = (linea_est - media) / sigma
+                prob_over = 1.0 - (0.5 * (1.0 + math.erf(z / math.sqrt(2.0))))
+                if prob_over >= 0.58:
+                    cuota_ref = round(max(1.45, min(1.95, (1.0 / prob_over) * 1.06)), 2)
+                    ev_ref = (prob_over * cuota_ref) - 1.0
+                    candidatas.append({
+                        "jugador": ath["nombre"],
+                        "equipo_abbr": ath["equipo"],
+                        "tipo_prop": tipo,
+                        "lado": "MÁS DE",
+                        "linea": linea_est,
+                        "cuota": cuota_ref,
+                        "prob_real": round(prob_over * 100, 1),
+                        "ev": round(ev_ref * 100, 1),
+                        "proyeccion": int(round(media)),
+                        "_score": (prob_over * 100 * 0.65) + (ev_ref * 100 * 0.35)
+                    })
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
     for c in candidatas:
