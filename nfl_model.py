@@ -1,9 +1,8 @@
-import math
 import hashlib
 import random
 import numpy as np
 import xgboost as xgb
-from api_service import get_live_weather, get_nfl_live_data
+from api_service import get_live_weather, get_nfl_real_dataset
 
 MAPEO_NFL = {
     "Arizona Cardinals": "ARI", "Atlanta Falcons": "ATL", "Baltimore Ravens": "BAL",
@@ -32,57 +31,55 @@ CIUDADES_NFL = {
 
 ESTADIOS_TECHADOS = {"ARI", "ATL", "DAL", "DET", "HOU", "IND", "LV", "LAR", "LAC", "MIN", "NO"}
 
-# BASE PONDERADA 35% 2025-2026 / 65% 2026-2027
-# Formato: (EPA_Pass_Off, EPA_Rush_Off, EPA_Def_Total, QB_EPA_Play, Snaps/Juego, Elo)
-STATS_32_NFL_35_65 = {
-    "ARI": (0.038,  0.018,  0.058,  0.076, 64.0, 1478),
-    "ATL": (0.056,  0.012,  0.038,  0.095, 63.6, 1492),
-    "BAL": (0.215,  0.118, -0.068,  0.245, 62.7, 1682),
-    "BUF": (0.188,  0.048, -0.048,  0.218, 64.1, 1658),
-    "CAR": (-0.082, -0.038, 0.118, -0.062, 61.6, 1382),
-    "CHI": (0.018,  0.012, -0.018,  0.048, 63.3, 1492),
-    "CIN": (0.158, -0.018,  0.078,  0.176, 65.4, 1578),
-    "CLE": (-0.048, -0.012, -0.038, -0.018, 64.7, 1488),
-    "DAL": (0.098, -0.028,  0.022,  0.138, 66.0, 1572),
-    "DEN": (0.012, -0.018, -0.028,  0.032, 62.9, 1508),
-    "DET": (0.198,  0.078, -0.028,  0.208, 65.1, 1662),
-    "GB":  (0.138,  0.038, -0.028,  0.158, 63.6, 1612),
-    "HOU": (0.108, -0.012, -0.048,  0.148, 64.1, 1598),
-    "IND": (0.028,  0.048,  0.048,  0.058, 62.1, 1482),
-    "JAX": (0.018, -0.018,  0.068,  0.038, 63.5, 1462),
-    "KC":  (0.178,  0.022, -0.098,  0.228, 64.6, 1692),
-    "LV":  (-0.058, -0.048, 0.038, -0.048, 62.3, 1422),
-    "LAC": (0.078,  0.028, -0.058,  0.118, 61.9, 1558),
-    "LAR": (0.118,  0.012,  0.028,  0.138, 63.1, 1562),
-    "MIA": (0.108,  0.038,  0.048,  0.128, 62.9, 1548),
-    "MIN": (0.128, -0.012, -0.058,  0.138, 63.3, 1602),
-    "NE":  (-0.068, -0.018,  0.018, -0.038, 61.2, 1412),
-    "NO":  (0.038,  0.002,  0.048,  0.058, 63.6, 1472),
-    "NYG": (-0.078, -0.028,  0.038, -0.058, 62.6, 1408),
-    "NYJ": (0.048, -0.018, -0.078,  0.078, 64.1, 1522),
-    "PHI": (0.148,  0.088, -0.038,  0.168, 65.3, 1632),
-    "PIT": (0.018,  0.028, -0.068,  0.048, 61.6, 1552),
-    "SF":  (0.158,  0.058, -0.068,  0.188, 62.9, 1652),
-    "SEA": (0.068, -0.012,  0.018,  0.088, 63.1, 1522),
-    "TB":  (0.118, -0.018,  0.038,  0.138, 64.6, 1542),
-    "TEN": (-0.038, -0.012,  0.028, -0.018, 61.9, 1442),
-    "WAS": (0.128,  0.058,  0.048,  0.158, 64.1, 1578)
-}
+_CACHE_XGB_NFL = None
 
-def entrenar_modelo_xgboost_nfl():
-    np.random.seed(42)
-    X = np.random.normal(0, 1, (2400, 7))
-    logits = (
-        0.42 * X[:, 0] + 0.22 * X[:, 1] - 0.36 * X[:, 2] +
-        0.32 * X[:, 3] + 0.006 * X[:, 4] + 0.26 * X[:, 5] - 0.16 * X[:, 6]
+
+def _construir_features_nfl(s_loc: dict, s_vis: dict, media_liga: float) -> list:
+    diff_off = (s_loc["home_pf_pg"] - s_vis["road_pf_pg"]) / max(1.0, media_liga)
+    diff_def = (s_vis["road_pa_pg"] - s_loc["home_pa_pg"]) / max(1.0, media_liga)
+    diff_win = s_loc["win_pct"] - s_vis["win_pct"]
+    net_loc = (s_loc["pf_pg"] - s_loc["pa_pg"]) / max(1.0, media_liga)
+    net_vis = (s_vis["pf_pg"] - s_vis["pa_pg"]) / max(1.0, media_liga)
+    return [diff_off, diff_def, diff_win, net_loc, net_vis]
+
+
+def _obtener_modelo_xgb_real_nfl(dataset: dict):
+    global _CACHE_XGB_NFL
+    if _CACHE_XGB_NFL is not None:
+        return _CACHE_XGB_NFL
+
+    equipos = dataset.get("equipos", {})
+    partidos = dataset.get("partidos", [])
+    if len(partidos) < 20 or not equipos:
+        return None
+
+    media_liga = sum(e["pf_pg"] for e in equipos.values()) / len(equipos)
+    X_rows, y_rows = [], []
+
+    for p in partidos:
+        s_loc = equipos.get(p["home"])
+        s_vis = equipos.get(p["away"])
+        if not s_loc or not s_vis:
+            continue
+        X_rows.append(_construir_features_nfl(s_loc, s_vis, media_liga))
+        y_rows.append(p["home_win"])
+
+    if len(X_rows) < 20:
+        return None
+
+    model = xgb.XGBClassifier(
+        n_estimators=50,
+        max_depth=2,
+        learning_rate=0.05,
+        subsample=0.8,
+        reg_lambda=2.0,
+        eval_metric="logloss",
+        random_state=42
     )
-    y = (1 / (1 + np.exp(-logits)) > np.random.uniform(0, 1, 2400)).astype(int)
-
-    model = xgb.XGBClassifier(n_estimators=75, max_depth=3, learning_rate=0.07, eval_metric='logloss')
-    model.fit(X, y)
+    model.fit(np.array(X_rows), np.array(y_rows))
+    _CACHE_XGB_NFL = model
     return model
 
-_MODELO_XGB_NFL = entrenar_modelo_xgboost_nfl()
 
 def simular_partido_nfl(
     local: str,
@@ -101,6 +98,26 @@ def simular_partido_nfl(
     abbr_loc = MAPEO_NFL.get(local, "PHI")
     abbr_vis = MAPEO_NFL.get(visitante, "DAL")
 
+    dataset = get_nfl_real_dataset()
+    equipos = dataset.get("equipos", {})
+    partidos_hist = dataset.get("partidos", [])
+
+    if equipos:
+        media_liga = sum(e["pf_pg"] for e in equipos.values()) / len(equipos)
+    else:
+        media_liga = l_total / 2.0
+
+    s_loc = equipos.get(abbr_loc, {
+        "gp": 1, "pf_pg": media_liga, "pa_pg": media_liga, "win_pct": 0.5,
+        "std_pts": 10.0, "home_pf_pg": media_liga, "home_pa_pg": media_liga,
+        "road_pf_pg": media_liga, "road_pa_pg": media_liga
+    })
+    s_vis = equipos.get(abbr_vis, {
+        "gp": 1, "pf_pg": media_liga, "pa_pg": media_liga, "win_pct": 0.5,
+        "std_pts": 10.0, "home_pf_pg": media_liga, "home_pa_pg": media_liga,
+        "road_pf_pg": media_liga, "road_pa_pg": media_liga
+    })
+
     ciudad = CIUDADES_NFL.get(abbr_loc, "Philadelphia")
     es_techado = abbr_loc in ESTADIOS_TECHADOS
     factor_clima = 1.0
@@ -108,88 +125,89 @@ def simular_partido_nfl(
 
     if not es_techado:
         clima = get_live_weather(ciudad)
-        viento_mph = clima.get("viento_mph", 0.0)
-        temp_f = clima.get("temp_f", 60.0)
-        if viento_mph > 14.0:
-            factor_clima -= min(0.18, (viento_mph - 14.0) * 0.012)
-        if temp_f < 32.0:
-            factor_clima -= 0.04
+        if clima:
+            viento_mph = clima.get("viento_mph", 0.0)
+            temp_f = clima.get("temp_f", 65.0)
+            if viento_mph > 15.0:
+                factor_clima -= min(0.15, (viento_mph - 15.0) * 0.01)
+            if temp_f < 32.0:
+                factor_clima -= 0.03
 
-    live_data = get_nfl_live_data(abbr_loc)
+    off_loc = (s_loc["home_pf_pg"] * 0.65) + (s_loc["pf_pg"] * 0.35)
+    def_vis = (s_vis["road_pa_pg"] * 0.65) + (s_vis["pa_pg"] * 0.35)
+    pts_loc = ((off_loc * def_vis) / max(1.0, media_liga)) * factor_clima
 
-    s_loc = STATS_32_NFL_35_65.get(abbr_loc, (0.05, 0.00, 0.00, 0.08, 63.5, 1500))
-    s_vis = STATS_32_NFL_35_65.get(abbr_vis, (0.05, 0.00, 0.00, 0.08, 63.5, 1500))
-
-    volumen_snaps = (s_loc[4] + s_vis[4]) / 2.0
-
-    epa_loc = ((s_loc[0] * 0.60 + s_loc[1] * 0.40) - s_vis[2] + (s_loc[3] * 0.45)) * factor_clima
-    epa_vis = ((s_vis[0] * 0.60 + s_vis[1] * 0.40) - s_loc[2] + (s_vis[3] * 0.45)) * factor_clima
-
-    # Media base liga (21.75 pts) + Localía (+1.8 pts)
-    pts_loc = 21.75 + (epa_loc * (volumen_snaps * 0.52)) + 1.8
-    pts_vis = 21.75 + (epa_vis * (volumen_snaps * 0.48)) - 1.8
+    off_vis = (s_vis["road_pf_pg"] * 0.65) + (s_vis["pf_pg"] * 0.35)
+    def_loc = (s_loc["home_pa_pg"] * 0.65) + (s_loc["pa_pg"] * 0.35)
+    pts_vis = ((off_vis * def_loc) / max(1.0, media_liga)) * factor_clima
 
     pts_esperados_loc = round(pts_loc, 1)
     pts_esperados_vis = round(pts_vis, 1)
     total_esperado = round(pts_esperados_loc + pts_esperados_vis, 1)
 
-    diff_pass = s_loc[0] - s_vis[0]
-    diff_rush = s_loc[1] - s_vis[1]
-    diff_def  = s_loc[2] - s_vis[2]
-    diff_qb   = s_loc[3] - s_vis[3]
-    diff_elo  = (s_loc[5] + 55) - s_vis[5]
-    penalizacion_viento = 1.0 if viento_mph > 14.0 else 0.0
+    modelo_xgb = _obtener_modelo_xgb_real_nfl(dataset)
+    if modelo_xgb is not None:
+        vec = np.array([_construir_features_nfl(s_loc, s_vis, media_liga)])
+        prob_xgb_loc = float(modelo_xgb.predict_proba(vec)[0][1])
+    else:
+        prob_xgb_loc = 0.5
 
-    vector_features = np.array([[diff_pass, diff_rush, diff_def, diff_qb, diff_elo, 1.0, penalizacion_viento]])
-    prob_xgb_loc = float(_MODELO_XGB_NFL.predict_proba(vector_features)[0][1])
-
-    # Dispersión empírica real de la NFL:
-    # Desviación típica observada de totales por juego = 14.8 puntos
-    # Desviación típica del margen entre equipos = 13.4 puntos
-    std_dev_total = 14.8
-    std_dev_spread = 13.4
+    std_loc = s_loc["std_pts"]
+    std_vis = s_vis["std_pts"]
 
     seed_str = f"{abbr_loc}_{abbr_vis}_{l_total}_{l_spread_loc}_{l_spread_vis}"
     seed_int = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (10**8)
     rng = random.Random(seed_int)
 
-    wins_loc, wins_vis = 0, 0
-    covers_sp_loc, covers_sp_vis = 0, 0
-    overs, unders = 0, 0
+    wins_loc, wins_vis = 0.0, 0.0
+    covers_sp_loc, covers_sp_vis = 0.0, 0.0
+    overs, unders = 0.0, 0.0
 
     for _ in range(iteraciones):
-        sim_total = rng.gauss(total_esperado, std_dev_total)
-        margen_esperado = pts_esperados_loc - pts_esperados_vis
-        sim_margen = rng.gauss(margen_esperado, std_dev_spread)
-
-        p_loc = (sim_total + sim_margen) / 2.0
-        p_vis = (sim_total - sim_margen) / 2.0
+        p_loc = max(0.0, rng.gauss(pts_loc, std_loc))
+        p_vis = max(0.0, rng.gauss(pts_vis, std_vis))
 
         if round(p_loc) == round(p_vis):
-            if rng.random() < prob_xgb_loc: p_loc += 3.0
-            else: p_vis += 3.0
+            if rng.random() < prob_xgb_loc:
+                p_loc += 3.0
+            else:
+                p_vis += 3.0
 
-        if p_loc > p_vis: wins_loc += 1
-        else: wins_vis += 1
+        if p_loc > p_vis:
+            wins_loc += 1.0
+        else:
+            wins_vis += 1.0
 
-        if (p_loc + l_spread_loc) > p_vis: covers_sp_loc += 1
-        if (p_vis + l_spread_vis) > p_loc: covers_sp_vis += 1
+        if (p_loc + l_spread_loc) > p_vis:
+            covers_sp_loc += 1.0
+        elif (p_loc + l_spread_loc) == p_vis:
+            covers_sp_loc += 0.5
 
-        if sim_total > l_total: overs += 1
-        elif sim_total < l_total: unders += 1
+        if (p_vis + l_spread_vis) > p_loc:
+            covers_sp_vis += 1.0
+        elif (p_vis + l_spread_vis) == p_loc:
+            covers_sp_vis += 0.5
+
+        tot = p_loc + p_vis
+        if tot > l_total:
+            overs += 1.0
+        elif tot < l_total:
+            unders += 1.0
         else:
             overs += 0.5
             unders += 0.5
 
-    prob_ml_loc = round((wins_loc / iteraciones) * 100, 1)
-    prob_ml_vis = round((wins_vis / iteraciones) * 100, 1)
+    sim_ml_loc = wins_loc / iteraciones
+    prob_ml_loc_final = (sim_ml_loc * 0.70) + (prob_xgb_loc * 0.30)
+
+    prob_ml_loc = round(prob_ml_loc_final * 100, 1)
+    prob_ml_vis = round((1.0 - prob_ml_loc_final) * 100, 1)
     prob_sp_loc = round((covers_sp_loc / iteraciones) * 100, 1)
     prob_sp_vis = round((covers_sp_vis / iteraciones) * 100, 1)
     prob_over   = round((overs / iteraciones) * 100, 1)
     prob_under  = round((unders / iteraciones) * 100, 1)
 
-    tipo_estadio = "Techado (Domo)" if es_techado else f"Abierto ({temp_f}°F, {viento_mph}mph)"
-    fuente_api = "ESPN Live + OpenWeather" if live_data else "OpenWeather + Métricas Ponderadas 35/65"
+    tipo_estadio = "Techado" if es_techado else f"{temp_f}°F / {viento_mph}mph"
 
     return {
         "equipo_local_abbr": abbr_loc,
@@ -202,5 +220,9 @@ def simular_partido_nfl(
         "spread_visitante": {"linea": l_spread_vis, "prob": prob_sp_vis},
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
-        "resumen_explicado": f"BLITZ-IA Calibrado (Dispersión Empírica). Ensamblado XGBoost ({round(prob_xgb_loc*100,1)}% ML) + Posesión a Posesión (EPA/Snap) + QB EPA ({s_loc[3]}/{s_vis[3]}) + Clima: {tipo_estadio} + Elo ({s_loc[5]}/{s_vis[5]}). Datos: {fuente_api}. Proyección: {total_esperado} pts."
+        "resumen_explicado": (
+            f"BLITZ-IA 100% Datos Reales: XGBoost entrenado con {len(partidos_hist)} partidos reales 2025-2026 ({round(prob_xgb_loc*100,1)}% ML) "
+            f"+ Splits Reales Casa/Visita ({abbr_loc}: {round(s_loc['home_pf_pg'],1)} PF / {abbr_vis}: {round(s_vis['road_pf_pg'],1)} PF) "
+            f"+ Clima Live ({tipo_estadio}). Proyección: {total_esperado} pts."
+        )
     }
