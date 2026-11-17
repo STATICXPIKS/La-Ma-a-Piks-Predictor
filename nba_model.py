@@ -1,3 +1,4 @@
+import time
 import hashlib
 import random
 import numpy as np
@@ -17,7 +18,7 @@ MAPEO_NBA = {
     "Toronto Raptors": "TOR", "Utah Jazz": "UTA", "Washington Wizards": "WAS"
 }
 
-_CACHE_XGB_NBA = None
+_CACHE_XGB_NBA = {"time": 0, "model": None}
 
 
 def _construir_features_nba(s_loc: dict, s_vis: dict, media_liga: float) -> list:
@@ -30,9 +31,9 @@ def _construir_features_nba(s_loc: dict, s_vis: dict, media_liga: float) -> list
 
 
 def _obtener_modelo_xgb_real_nba(dataset: dict):
-    global _CACHE_XGB_NBA
-    if _CACHE_XGB_NBA is not None:
-        return _CACHE_XGB_NBA
+    ahora = time.time()
+    if _CACHE_XGB_NBA["model"] is not None and (ahora - _CACHE_XGB_NBA["time"] < 21600):
+        return _CACHE_XGB_NBA["model"]
 
     equipos = dataset.get("equipos", {})
     partidos = dataset.get("partidos", [])
@@ -63,7 +64,8 @@ def _obtener_modelo_xgb_real_nba(dataset: dict):
         random_state=42
     )
     model.fit(np.array(X_rows), np.array(y_rows))
-    _CACHE_XGB_NBA = model
+    _CACHE_XGB_NBA["model"] = model
+    _CACHE_XGB_NBA["time"] = ahora
     return model
 
 
