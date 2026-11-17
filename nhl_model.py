@@ -1,3 +1,4 @@
+import time
 import math
 import hashlib
 import random
@@ -19,7 +20,7 @@ MAPEO_NHL = {
     "Washington Capitals": "WSH", "Winnipeg Jets": "WPG"
 }
 
-_CACHE_XGB_NHL = None
+_CACHE_XGB_NHL = {"time": 0, "model": None}
 
 
 def poisson_pmf(k, lamb):
@@ -37,9 +38,9 @@ def _construir_features_nhl(s_loc: dict, s_vis: dict, media_liga: float) -> list
 
 
 def _obtener_modelo_xgb_real_nhl(dataset: dict):
-    global _CACHE_XGB_NHL
-    if _CACHE_XGB_NHL is not None:
-        return _CACHE_XGB_NHL
+    ahora = time.time()
+    if _CACHE_XGB_NHL["model"] is not None and (ahora - _CACHE_XGB_NHL["time"] < 21600):
+        return _CACHE_XGB_NHL["model"]
 
     equipos = dataset.get("equipos", {})
     partidos = dataset.get("partidos", [])
@@ -70,7 +71,8 @@ def _obtener_modelo_xgb_real_nhl(dataset: dict):
         random_state=42
     )
     model.fit(np.array(X_rows), np.array(y_rows))
-    _CACHE_XGB_NHL = model
+    _CACHE_XGB_NHL["model"] = model
+    _CACHE_XGB_NHL["time"] = ahora
     return model
 
 
