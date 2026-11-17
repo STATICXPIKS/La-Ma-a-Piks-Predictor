@@ -1,3 +1,4 @@
+import time
 import hashlib
 import random
 import numpy as np
@@ -31,7 +32,7 @@ CIUDADES_NFL = {
 
 ESTADIOS_TECHADOS = {"ARI", "ATL", "DAL", "DET", "HOU", "IND", "LV", "LAR", "LAC", "MIN", "NO"}
 
-_CACHE_XGB_NFL = None
+_CACHE_XGB_NFL = {"time": 0, "model": None}
 
 
 def _construir_features_nfl(s_loc: dict, s_vis: dict, media_liga: float) -> list:
@@ -44,9 +45,9 @@ def _construir_features_nfl(s_loc: dict, s_vis: dict, media_liga: float) -> list
 
 
 def _obtener_modelo_xgb_real_nfl(dataset: dict):
-    global _CACHE_XGB_NFL
-    if _CACHE_XGB_NFL is not None:
-        return _CACHE_XGB_NFL
+    ahora = time.time()
+    if _CACHE_XGB_NFL["model"] is not None and (ahora - _CACHE_XGB_NFL["time"] < 21600):
+        return _CACHE_XGB_NFL["model"]
 
     equipos = dataset.get("equipos", {})
     partidos = dataset.get("partidos", [])
@@ -77,7 +78,8 @@ def _obtener_modelo_xgb_real_nfl(dataset: dict):
         random_state=42
     )
     model.fit(np.array(X_rows), np.array(y_rows))
-    _CACHE_XGB_NFL = model
+    _CACHE_XGB_NFL["model"] = model
+    _CACHE_XGB_NFL["time"] = ahora
     return model
 
 
