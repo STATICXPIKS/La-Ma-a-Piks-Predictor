@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,110 +39,121 @@ DEPORTE_TO_SPORT_KEY = {
     "mlb": "baseball_mlb"
 }
 
+# Caché de 45 minutos (2700 segundos) para momios principales de eventos
+CACHE_EVENTOS_TTL = 2700
+_CACHE_LIGA_ODDS_API = {}
+
 
 def _consultar_the_odds_api(deporte: str, local: str, visitante: str):
-    sport_key = DEPORTE_TO_SPORT_KEY.get(deporte.lower())
+    dep_key = deporte.lower()
+    sport_key = DEPORTE_TO_SPORT_KEY.get(dep_key)
     claves_activas = obtener_claves_odds_api_activas()
     if not sport_key or not claves_activas:
         return None
 
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
+    def simplificar(txt):
+        return "".join(c for c in str(txt).lower() if c.isalnum())
 
-    for api_key in claves_activas:
-        params = {
-            "apiKey": api_key,
-            "regions": "us",
-            "markets": "h2h,spreads,totals",
-            "oddsFormat": "decimal"
-        }
+    loc_s = simplificar(local)
+    vis_s = simplificar(visitante)
+    ahora = time.time()
 
-        try:
-            r = requests.get(url, params=params, timeout=5)
-            if r.status_code in [401, 429]:
-                marcar_clave_agotada(api_key)
-                continue
-            if r.status_code != 200:
-                return None
-
-            eventos = r.json()
-            evento_encontrado = None
-
-            def simplificar(txt):
-                return "".join(c for c in txt.lower() if c.isalnum())
-
-            loc_s = simplificar(local)
-            vis_s = simplificar(visitante)
-
-            for ev in eventos:
-                home = simplificar(ev.get("home_team", ""))
-                away = simplificar(ev.get("away_team", ""))
-                if (loc_s in home or home in loc_s) and (vis_s in away or away in vis_s):
-                    evento_encontrado = ev
-                    break
-
-            if not evento_encontrado:
-                return None
-
-            bookmakers = evento_encontrado.get("bookmakers", [])
-            if not bookmakers:
-                return None
-
-            bm = bookmakers[0]
-            for b in bookmakers:
-                if b.get("key") in ["draftkings", "fanduel", "pinnacle", "bovada", "betonlineag"]:
-                    bm = b
-                    break
-
-            datos_cuotas = {
-                "bookmaker": f"{bm.get('title', 'Casino')} (Odds API)",
-                "cuota_ml_local": None,
-                "cuota_ml_visitante": None,
-                "linea_spread_local": None,
-                "cuota_spread_local": None,
-                "linea_spread_visitante": None,
-                "cuota_spread_visitante": None,
-                "linea_total": None,
-                "cuota_total_over": None,
-                "cuota_total_under": None
+    # 1. Revisar si la cartelera de esa liga ya está en caché (< 45 min)
+    eventos = None
+    if dep_key in _CACHE_LIGA_ODDS_API and (ahora - _CACHE_LIGA_ODDS_API[dep_key][0] < CACHE_EVENTOS_TTL):
+        eventos = _CACHE_LIGA_ODDS_API[dep_key][1]
+    else:
+        url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
+        for api_key in claves_activas:
+            params = {
+                "apiKey": api_key,
+                "regions": "us",
+                "markets": "h2h,spreads,totals",
+                "oddsFormat": "decimal"
             }
+            try:
+                r = requests.get(url, params=params, timeout=5)
+                if r.status_code in [401, 429]:
+                    marcar_clave_agotada(api_key)
+                    continue
+                if r.status_code != 200:
+                    return None
+                eventos = r.json()
+                _CACHE_LIGA_ODDS_API[dep_key] = (ahora, eventos)
+                break
+            except Exception:
+                return None
 
-            for market in bm.get("markets", []):
-                m_key = market.get("key")
-                outcomes = market.get("outcomes", [])
+    if not eventos:
+        return None
 
-                if m_key == "h2h":
-                    for out in outcomes:
-                        t_name = simplificar(out.get("name", ""))
-                        if loc_s in t_name or t_name in loc_s:
-                            datos_cuotas["cuota_ml_local"] = out.get("price")
-                        elif vis_s in t_name or t_name in vis_s:
-                            datos_cuotas["cuota_ml_visitante"] = out.get("price")
+    evento_encontrado = None
+    for ev in eventos:
+        home = simplificar(ev.get("home_team", ""))
+        away = simplificar(ev.get("away_team", ""))
+        if (loc_s in home or home in loc_s) and (vis_s in away or away in vis_s):
+            evento_encontrado = ev
+            break
 
-                elif m_key == "spreads":
-                    for out in outcomes:
-                        t_name = simplificar(out.get("name", ""))
-                        if loc_s in t_name or t_name in loc_s:
-                            datos_cuotas["linea_spread_local"] = out.get("point")
-                            datos_cuotas["cuota_spread_local"] = out.get("price")
-                        elif vis_s in t_name or t_name in vis_s:
-                            datos_cuotas["linea_spread_visitante"] = out.get("point")
-                            datos_cuotas["cuota_spread_visitante"] = out.get("price")
+    if not evento_encontrado:
+        return None
 
-                elif m_key == "totals":
-                    for out in outcomes:
-                        lado = out.get("name", "").lower()
-                        if lado == "over":
-                            datos_cuotas["linea_total"] = out.get("point")
-                            datos_cuotas["cuota_total_over"] = out.get("price")
-                        elif lado == "under":
-                            datos_cuotas["cuota_total_under"] = out.get("price")
+    bookmakers = evento_encontrado.get("bookmakers", [])
+    if not bookmakers:
+        return None
 
-            if datos_cuotas["cuota_ml_local"] or datos_cuotas["linea_total"]:
-                return {"success": True, "data": datos_cuotas}
-            return None
-        except Exception:
-            return None
+    bm = bookmakers[0]
+    for b in bookmakers:
+        if b.get("key") in ["draftkings", "fanduel", "pinnacle", "bovada", "betonlineag"]:
+            bm = b
+            break
 
+    datos_cuotas = {
+        "bookmaker": f"{bm.get('title', 'Casino')} (Odds API)",
+        "cuota_ml_local": None,
+        "cuota_ml_visitante": None,
+        "linea_spread_local": None,
+        "cuota_spread_local": None,
+        "linea_spread_visitante": None,
+        "cuota_spread_visitante": None,
+        "linea_total": None,
+        "cuota_total_over": None,
+        "cuota_total_under": None
+    }
+
+    for market in bm.get("markets", []):
+        m_key = market.get("key")
+        outcomes = market.get("outcomes", [])
+
+        if m_key == "h2h":
+            for out in outcomes:
+                t_name = simplificar(out.get("name", ""))
+                if loc_s in t_name or t_name in loc_s:
+                    datos_cuotas["cuota_ml_local"] = out.get("price")
+                elif vis_s in t_name or t_name in vis_s:
+                    datos_cuotas["cuota_ml_visitante"] = out.get("price")
+
+        elif m_key == "spreads":
+            for out in outcomes:
+                t_name = simplificar(out.get("name", ""))
+                if loc_s in t_name or t_name in loc_s:
+                    datos_cuotas["linea_spread_local"] = out.get("point")
+                    datos_cuotas["cuota_spread_local"] = out.get("price")
+                elif vis_s in t_name or t_name in vis_s:
+                    datos_cuotas["linea_spread_visitante"] = out.get("point")
+                    datos_cuotas["cuota_spread_visitante"] = out.get("price")
+
+        elif m_key == "totals":
+            for out in outcomes:
+                lado = out.get("name", "").lower()
+                if lado == "over":
+                    datos_cuotas["linea_total"] = out.get("point")
+                    datos_cuotas["cuota_total_over"] = out.get("price")
+                elif lado == "under":
+                    datos_cuotas["cuota_total_under"] = out.get("price")
+
+    if datos_cuotas["cuota_ml_local"] or datos_cuotas["linea_total"]:
+        return {"success": True, "data": datos_cuotas}
     return None
 
 
@@ -176,6 +188,7 @@ def api_debug_props(
             "deporte": deporte,
             "partido": f"{local} vs {visitante}",
             "claves_activas_detectadas": len(obtener_claves_odds_api_activas()),
+            "cache_ttl_minutos": 45,
             "kambi_props_encontradas": len(kambi_res),
             "kambi_muestra": kambi_res[:2],
             "props_calculadas_total": len(props_res),
