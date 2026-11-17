@@ -52,6 +52,9 @@ HEADERS_WEB = {
     "Accept": "application/json, text/plain, */*"
 }
 
+# Tiempo de caché unificado: 45 minutos (2700 segundos)
+CACHE_TTL_SEGUNDOS = 2700
+
 _CACHE_EVENTOS_ODDS_API = {}
 _CACHE_PROPS_ODDS_API = {}
 _CACHE_EVENTOS_KAMBI = {}
@@ -106,13 +109,13 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
 
     ahora = time.time()
     cache_key = f"{dep}_{_simplificar(local)}_{_simplificar(visitante)}"
-    if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < 2700):
+    if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < CACHE_TTL_SEGUNDOS):
         return _CACHE_PROPS_ODDS_API[cache_key][1]
 
     for api_key in claves_activas:
         try:
             ev_cache_key = f"events_{dep}"
-            if ev_cache_key in _CACHE_EVENTOS_ODDS_API and (ahora - _CACHE_EVENTOS_ODDS_API[ev_cache_key][0] < 1800):
+            if ev_cache_key in _CACHE_EVENTOS_ODDS_API and (ahora - _CACHE_EVENTOS_ODDS_API[ev_cache_key][0] < CACHE_TTL_SEGUNDOS):
                 eventos = _CACHE_EVENTOS_ODDS_API[ev_cache_key][1]
             else:
                 url_events = f"https://api.the-odds-api.com/v4/sports/{sport_key}/events"
@@ -208,7 +211,7 @@ def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
     cache_key = f"list_{deporte.lower()}"
     eventos = []
 
-    if cache_key in _CACHE_EVENTOS_KAMBI and (ahora - _CACHE_EVENTOS_KAMBI[cache_key][0] < 900):
+    if cache_key in _CACHE_EVENTOS_KAMBI and (ahora - _CACHE_EVENTOS_KAMBI[cache_key][0] < CACHE_TTL_SEGUNDOS):
         eventos = _CACHE_EVENTOS_KAMBI[cache_key][1]
     else:
         for op in OPERADORES_KAMBI:
@@ -234,7 +237,7 @@ def _buscar_event_id_kambi(deporte: str, local: str, visitante: str):
 
 def _obtener_betoffers_evento(event_id):
     ahora = time.time()
-    if event_id in _CACHE_OFERTAS_KAMBI and (ahora - _CACHE_OFERTAS_KAMBI[event_id][0] < 900):
+    if event_id in _CACHE_OFERTAS_KAMBI and (ahora - _CACHE_OFERTAS_KAMBI[event_id][0] < CACHE_TTL_SEGUNDOS):
         return _CACHE_OFERTAS_KAMBI[event_id][1]
 
     for op in OPERADORES_KAMBI:
