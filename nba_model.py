@@ -91,6 +91,7 @@ def simular_partido_nba(
     equipos = dataset.get("equipos", {})
     partidos_hist = dataset.get("partidos", [])
 
+    # Promedios reales de la liga calculados dinámicamente desde los 30 equipos en ESPN
     if equipos:
         media_liga_rtg = sum(e["ortg"] for e in equipos.values()) / len(equipos)
         media_liga_pace = sum(e["pace"] for e in equipos.values()) / len(equipos)
@@ -115,23 +116,22 @@ def simular_partido_nba(
         "efg_pct": 54.0, "ts_pct": 57.5, "elo": 1500.0, "jugo_ayer": False
     })
 
-    # 1. Posesiones reales esperadas (Pace combinado ponderado)
-    pace_estimado = round((s_loc["pace"] + s_vis["pace"]) / 2.0, 1)
+    # 1. Posesiones esperadas reales (interacción de ritmos respecto a la media de la liga)
+    pace_estimado = round((s_loc["pace"] + s_vis["pace"] - media_liga_pace), 1)
 
-    # 2. Eficiencia Ofensiva/Defensiva Posesión por Posesión (Splits Casa/Visita + Temporada)
-    ortg_loc = (s_loc["home_ortg"] * 0.60) + (s_loc["ortg"] * 0.40)
-    drtg_vis = (s_vis["road_drtg"] * 0.60) + (s_vis["drtg"] * 0.40)
-    ortg_esp_loc = (ortg_loc * drtg_vis) / max(80.0, media_liga_rtg)
+    # 2. Eficiencia Ofensiva/Defensiva aditiva pura (sin doble conteo de cancha)
+    ortg_loc_mix = (s_loc["home_ortg"] + s_loc["ortg"]) / 2.0
+    drtg_vis_mix = (s_vis["road_drtg"] + s_vis["drtg"]) / 2.0
+    ortg_esp_loc = ortg_loc_mix + drtg_vis_mix - media_liga_rtg
 
-    ortg_vis = (s_vis["road_ortg"] * 0.60) + (s_vis["ortg"] * 0.40)
-    drtg_loc = (s_loc["home_drtg"] * 0.60) + (s_loc["drtg"] * 0.40)
-    ortg_esp_vis = (ortg_vis * drtg_loc) / max(80.0, media_liga_rtg)
+    ortg_vis_mix = (s_vis["road_ortg"] + s_vis["ortg"]) / 2.0
+    drtg_loc_mix = (s_loc["home_drtg"] + s_loc["drtg"]) / 2.0
+    ortg_esp_vis = ortg_vis_mix + drtg_loc_mix - media_liga_rtg
 
-    # 3. Ajuste real por fatiga Back-to-Back (si jugó anoche)
+    # 3. Ajuste real por fatiga Back-to-Back detectada en calendario ESPN
     fatiga_loc = -1.8 if s_loc.get("jugo_ayer") else 0.0
     fatiga_vis = -2.4 if s_vis.get("jugo_ayer") else 0.0
 
-    # 4. Puntos esperados posesión por posesión
     pts_loc = (ortg_esp_loc * (pace_estimado / 100.0)) + fatiga_loc
     pts_vis = (ortg_esp_vis * (pace_estimado / 100.0)) + fatiga_vis
 
@@ -139,7 +139,7 @@ def simular_partido_nba(
     pts_esperados_vis = round(pts_vis, 1)
     total_esperado = round(pts_esperados_loc + pts_esperados_vis, 1)
 
-    # 5. Probabilidad XGBoost entrenada con partidos históricos reales
+    # 4. Predicción XGBoost entrenada con partidos históricos reales
     modelo_xgb = _obtener_modelo_xgb_real_nba(dataset)
     if modelo_xgb is not None:
         vec = np.array([_construir_features_nba(s_loc, s_vis, media_liga_rtg)])
@@ -147,7 +147,7 @@ def simular_partido_nba(
     else:
         prob_xgb_loc = 0.5
 
-    # 6. Simulación Normal Monte Carlo (25,000 iteraciones)
+    # 5. Simulación Monte Carlo pura (25,000 iteraciones) con desviación estándar real observada
     std_loc = s_loc["std_pts"]
     std_vis = s_vis["std_pts"]
 
@@ -193,6 +193,7 @@ def simular_partido_nba(
             overs += 0.5
             unders += 0.5
 
+    # Ensamblaje 100% puro del modelo (Monte Carlo + XGBoost histórico real, sin tocar cuotas del casino)
     sim_ml_loc = wins_loc / iteraciones
     prob_ml_loc_final = (sim_ml_loc * 0.70) + (prob_xgb_loc * 0.30)
 
@@ -220,7 +221,7 @@ def simular_partido_nba(
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
         "resumen_explicado": (
-            f"DUNK-IA Full (25k Monte Carlo): Posesión a Posesión (Pace {pace_estimado}) + ORtg/DRtg ({round(s_loc['ortg'],1)}/{round(s_vis['ortg'],1)}) "
+            f"DUNK-IA 100% Puro (25k Monte Carlo): Posesión a Posesión (Pace {pace_estimado}) + ORtg/DRtg ({round(s_loc['ortg'],1)}/{round(s_vis['ortg'],1)}) "
             f"+ eFG% ({s_loc['efg_pct']}%/{s_vis['efg_pct']}%) + Elo Dinámico ({s_loc.get('elo',1500)}/{s_vis.get('elo',1500)}) "
             f"+ XGBoost ({len(partidos_hist)} juegos reales){b2b_txt}. Proy: {total_esperado} pts."
         )
