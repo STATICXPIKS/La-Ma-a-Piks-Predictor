@@ -55,8 +55,7 @@ def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos
     """
     Ponderación Bayesiana Dinámica:
     Combina la temporada pasada (2025-2026) con la actual (2026-2027) según cuántos juegos
-    lleva cada equipo. Al inicio del torneo pesa más 2025-2026; conforme avanzan los partidos,
-    el peso de 2026-2027 sube automáticamente.
+    lleva cada equipo. Conforme avanzan los partidos, el peso de 2026-2027 sube automáticamente.
     """
     todos_abbr = set(stats_pasada.keys()) | set(stats_actual.keys())
     combinado = {}
@@ -73,7 +72,6 @@ def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos
             continue
 
         gp_actual = s_new.get("gp", 0)
-        # Peso dinámico: sube proporcionalmente hasta llegar al 88% cuando completa media temporada
         w_new = min(0.88, max(0.20, gp_actual / (juegos_full_temporada * 0.55)))
         w_old = 1.0 - w_new
 
@@ -125,18 +123,16 @@ def _parsear_standings_nhl(url: str) -> dict:
 
 
 def get_nhl_real_dataset():
-    cached = fetch_cached("nhl_real_dataset_v2", ttl=3600)
+    cached = fetch_cached("nhl_real_dataset_v3", ttl=3600)
     if cached:
         return cached
 
-    # Standings finales temporada pasada (2025-2026) + standings en vivo hoy (2026-2027)
     stats_25_26 = _parsear_standings_nhl("https://api-web.nhle.com/v1/standings/2026-04-16")
     stats_26_27 = _parsear_standings_nhl("https://api-web.nhle.com/v1/standings/now")
 
     equipos = _combinar_temporadas_dinamico(stats_25_26, stats_26_27, juegos_full_temporada=82)
     partidos_historicos = []
 
-    # Descargar resultados reales de partidos jugados (cierre temporada pasada + temporada actual)
     from datetime import datetime, timedelta
     fechas_a_consultar = []
     hoy = datetime.utcnow()
@@ -186,7 +182,7 @@ def get_nhl_real_dataset():
 
     dataset = {"equipos": equipos, "partidos": partidos_historicos}
     if equipos:
-        set_cached("nhl_real_dataset_v2", dataset)
+        set_cached("nhl_real_dataset_v3", dataset)
     return dataset
 
 
@@ -278,7 +274,7 @@ def _recolectar_partidos_nba(fechas: list) -> tuple:
 
 
 def get_nba_real_dataset():
-    cached = fetch_cached("nba_real_dataset_v2", ttl=3600)
+    cached = fetch_cached("nba_real_dataset_v3", ttl=3600)
     if cached:
         return cached
 
@@ -286,7 +282,6 @@ def get_nba_real_dataset():
     hoy = datetime.utcnow()
     fechas_actual = [(hoy - timedelta(days=d)).strftime("%Y%m%d") for d in range(1, 30)]
 
-    # Últimos 60 días de la temporada regular pasada 2025-2026 (febrero - abril 2026)
     base_pasada = datetime(2026, 4, 12)
     fechas_pasada = [(base_pasada - timedelta(days=d)).strftime("%Y%m%d") for d in range(0, 60)]
 
@@ -298,12 +293,12 @@ def get_nba_real_dataset():
 
     dataset = {"equipos": equipos, "partidos": partidos_historicos}
     if equipos:
-        set_cached("nba_real_dataset_v2", dataset)
+        set_cached("nba_real_dataset_v3", dataset)
     return dataset
 
 
 # =====================================================================
-# 3. NFL: TEMPORADA 2025 (18 SEMANAS) + TEMPORADA 2026 REALES (ESPN API)
+# 3. NFL: TEMPORADA 2025 (18 SEMANAS) + TEMPORADA 2026 (HASTA SEMANA 18)
 # =====================================================================
 def _recolectar_temporada_nfl(year: int, max_weeks: int) -> tuple:
     equipos_raw = {}
@@ -390,18 +385,17 @@ def _recolectar_temporada_nfl(year: int, max_weeks: int) -> tuple:
 
 
 def get_nfl_real_dataset():
-    cached = fetch_cached("nfl_real_dataset_v2", ttl=3600)
+    cached = fetch_cached("nfl_real_dataset_v3", ttl=3600)
     if cached:
         return cached
 
-    # Descarga las 18 semanas completas de la temporada pasada (2025) + las 11 semanas de 2026
     eq_2025, part_2025 = _recolectar_temporada_nfl(2025, max_weeks=18)
-    eq_2026, part_2026 = _recolectar_temporada_nfl(2026, max_weeks=11)
+    eq_2026, part_2026 = _recolectar_temporada_nfl(2026, max_weeks=18)
 
     equipos = _combinar_temporadas_dinamico(eq_2025, eq_2026, juegos_full_temporada=17)
     partidos_historicos = part_2025 + part_2026
 
     dataset = {"equipos": equipos, "partidos": partidos_historicos}
     if equipos:
-        set_cached("nfl_real_dataset_v2", dataset)
+        set_cached("nfl_real_dataset_v3", dataset)
     return dataset
