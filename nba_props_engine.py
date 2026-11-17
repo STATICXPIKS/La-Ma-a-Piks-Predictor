@@ -2,6 +2,7 @@ import math
 import re
 import time
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from kambi_feed import obtener_player_props_kambi
 
@@ -33,6 +34,19 @@ def _normalizar_nombre(nombre: str) -> str:
     return "".join(c for c in n if c.isalpha())
 
 
+def _seleccionar_split_temporada(splits: list) -> list:
+    """
+    Elige el split de Temporada Regular actual en lugar de tomar splits[0] a ciegas.
+    """
+    if not splits:
+        return []
+    for sp in splits:
+        disp = str(sp.get("displayName", "")).lower()
+        if "regular" in disp and "career" not in disp:
+            return sp.get("stats", [])
+    return splits[0].get("stats", [])
+
+
 def _obtener_promedios_atleta_nba(athlete_id: str) -> dict:
     url = f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{athlete_id}/overview"
     res = {}
@@ -46,7 +60,7 @@ def _obtener_promedios_atleta_nba(athlete_id: str) -> dict:
         if not names or not splits:
             return res
 
-        fila_stats = splits[0].get("stats", [])
+        fila_stats = _seleccionar_split_temporada(splits)
         for idx, col_name in enumerate(names):
             if idx >= len(fila_stats):
                 break
@@ -55,7 +69,11 @@ def _obtener_promedios_atleta_nba(athlete_id: str) -> dict:
             except ValueError:
                 continue
             col_low = col_name.lower()
-            if col_low in ["avgpoints", "pts"]:
+            if col_low in ["gamesplayed", "gp"]:
+                res["GP"] = val
+            elif col_low in ["avgminutes", "min", "mpg"]:
+                res["MPG"] = val
+            elif col_low in ["avgpoints", "pts"]:
                 res["Puntos"] = round(val, 1)
             elif col_low in ["avgrebounds", "reb"]:
                 res["Rebotes"] = round(val, 1)
@@ -63,6 +81,13 @@ def _obtener_promedios_atleta_nba(athlete_id: str) -> dict:
                 res["Asistencias"] = round(val, 1)
             elif col_low in ["avgthreepointfieldgoalsmade", "3pm"]:
                 res["Triples"] = round(val, 1)
+
+        pts = res.get("Puntos", 0.0)
+        reb = res.get("Rebotes", 0.0)
+        ast = res.get("Asistencias", 0.0)
+        if pts > 0 or reb > 0 or ast > 0:
+            res["P+R+A"] = round(pts + reb + ast, 1)
+
     except Exception:
         pass
     return res
@@ -70,8 +95,9 @@ def _obtener_promedios_atleta_nba(athlete_id: str) -> dict:
 
 def _obtener_stats_reales_nba(team_id: str, abbr: str):
     ahora = time.time()
-    if team_id in _CACHE_STATS_NBA and (ahora - _CACHE_STATS_NBA[team_id][0] < 3600):
-        return _CACHE_STATS_NBA[team_id][1]
+    cache_key = f"v2_{team_id}"
+    if cache_key in _CACHE_STATS_NBA and (ahora - _CACHE_STATS_NBA[cache_key][0] < 3600):
+        return _CACHE_STATS_NBA[cache_key][1]
 
     jugadores = {}
     url_roster = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/roster"
@@ -92,68 +118,121 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
                 if nom and aid:
                     activos.append((aid, nom))
 
-            for aid, nom in activos[:10]:
-                key = _normalizar_nombre(nom)
-                proms = _obtener_promedios_atleta_nba(aid)
-                if proms:
+            # Consulta paralela de toda la plantilla activa para incluir titulares y estrellas sin importar orden alfabético
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                futuros = {
+                    executor.submit(_obtener_promedios_atleta_nba, aid): (aid, nom)
+                    for aid, nom in activos[:16]
+                }
+                for fut in as_completed(futuros):
+                    _, nom = futuros[fut]
+                    try:
+                        proms = fut.result()
+                    except Exception:
+                        proms = {}
+
+                    if not proms:
+                        continue
+
+                    gp = proms.get("GP", 10)
+                    mpg = proms.get("MPG", 20.0)
+                    # Filtra jugadores marginales o muestras mínimas que distorsionan promedios
+                    if gp < 4 or mpg < 15.0:
+                        continue
+
+                    key = _normalizar_nombre(nom)
                     jugadores[key] = {"nombre": nom, "equipo": abbr.upper(), **proms}
+
     except Exception as e:
         print(f"Error roster/stats NBA {abbr}: {e}")
 
     if jugadores:
-        _CACHE_STATS_NBA[team_id] = (ahora, jugadores)
+        _CACHE_STATS_NBA[cache_key] = (ahora, jugadores)
     return jugadores
 
 
-def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
+def _buscar_atleta_exacto(jugador_raw: str, stats_totales: dict):
+    """
+    Cruza el nombre del casino exclusivamente contra jugadores reales de los dos equipos
+    del partido, evitando cruces erróneos entre jugadores de otros equipos.
+    """
+    key_norm = _normalizar_nombre(jugador_raw)
+    if key_norm in stats_totales:
+        return stats_totales[key_norm]
+
+    partes = [
+        _normalizar_nombre(p) for p in re.split(r'\s+', str(jugador_raw).strip())
+        if _normalizar_nombre(p)
+    ]
+    if len(partes) >= 2:
+        nombre_apellido = partes[0] + partes[-1]
+        if nombre_apellido in stats_totales:
+            return stats_totales[nombre_apellido]
+
+    return None
+
+
+def _parametros_dispersion_nba(tipo: str, media_real: float) -> float:
+    if tipo == "Puntos":
+        return max(2.8, media_real * 0.34)
+    if tipo == "Rebotes":
+        return max(1.6, media_real * 0.38)
+    if tipo == "Asistencias":
+        return max(1.4, media_real * 0.42)
+    if tipo == "P+R+A":
+        return max(3.8, media_real * 0.28)
+    return max(1.5, media_real * 0.35)
+
+
+def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
     jugador_raw = p_casino["jugador"]
     tipo = p_casino["tipo_prop"]
+    if tipo not in ["Puntos", "Rebotes", "Asistencias", "P+R+A"]:
+        return None
+
     linea = float(p_casino["linea"])
     c_over = float(p_casino["cuota_over"])
     c_under = float(p_casino.get("cuota_under") or 1.90)
 
-    key_norm = _normalizar_nombre(jugador_raw)
-    datos_atleta = stats_totales.get(key_norm)
-
-    if not datos_atleta and len(key_norm) >= 6:
-        for k, v in stats_totales.items():
-            if key_norm[-5:] == k[-5:] and key_norm[0] == k[0]:
-                datos_atleta = v
-                break
-
+    datos_atleta = _buscar_atleta_exacto(jugador_raw, stats_totales)
     if not datos_atleta:
         return None
 
-    media_real = datos_atleta.get(tipo, 0)
-    if media_real <= 0:
+    media_real = float(datos_atleta.get(tipo, 0.0))
+    min_requerido = 10.0 if tipo == "P+R+A" else 3.0
+    if media_real < min_requerido:
+        return None
+
+    # Si la línea del casino difiere más del 55% del promedio histórico (ej. cambio brusco de titularidad por lesión), se descarta
+    tolerancia_cambio_rol = max(6.5, media_real * 0.55)
+    if abs(media_real - linea) > tolerancia_cambio_rol:
         return None
 
     equipo_abbr = datos_atleta["equipo"]
     nombre_final = datos_atleta["nombre"]
 
-    # Probabilidad estadística 100% pura derivada de los promedios reales en ESPN (sin tocar cuotas del casino)
-    cv = 0.24 if tipo == "Puntos" else 0.28
-    sigma = max(1.2, media_real * cv)
+    # Probabilidad estadística 100% pura derivada de promedios reales en ESPN (sin tocar cuotas del casino)
+    sigma = _parametros_dispersion_nba(tipo, media_real)
     z = (linea - media_real) / sigma
     prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
     prob_over = 1.0 - prob_under
 
-    # Las cuotas del casino se usan únicamente al final para calcular el +EV
+    # Las cuotas del casino se usan exclusivamente al final para calcular +EV
     ev_over = (prob_over * c_over) - 1.0
     ev_under = (prob_under * c_under) - 1.0
 
-    if ev_over >= ev_under and ev_over > 0.01 and prob_over >= 0.53:
+    if ev_over >= ev_under and 0.02 <= ev_over <= 0.35 and prob_over >= 0.54:
         lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, c_over, ev_over
-    elif ev_under > 0.01 and prob_under >= 0.53:
+    elif 0.02 <= ev_under <= 0.35 and prob_under >= 0.54:
         lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, c_under, ev_under
     else:
         return None
 
-    proy = int(round(media_real))
-    if lado == "MÁS DE" and proy <= linea:
-        proy = int(math.ceil(linea))
-    elif lado == "MENOS DE" and proy >= linea:
-        proy = int(math.floor(linea))
+    proy_redondeada = round(media_real, 1)
+    if lado == "MÁS DE" and proy_redondeada <= linea:
+        proy_redondeada = round(linea + 0.5, 1)
+    elif lado == "MENOS DE" and proy_redondeada >= linea:
+        proy_redondeada = round(max(0.5, linea - 0.5), 1)
 
     return {
         "jugador": nombre_final,
@@ -164,9 +243,62 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, abbr_defecto: str):
         "cuota": round(cuota_sel, 2),
         "prob_real": round(prob_sel * 100, 1),
         "ev": round(ev_sel * 100, 1),
-        "proyeccion": proy,
+        "proyeccion": proy_redondeada,
         "_score": (prob_sel * 100 * 0.65) + (ev_sel * 100 * 0.35)
     }
+
+
+def _seleccionar_top_diversificado(candidatas: list, top_n: int) -> list:
+    """
+    Garantiza que no se repita ningún jugador ni mercado duplicado y promueve
+    variedad entre Puntos, Rebotes, Asistencias y P+R+A.
+    """
+    if not candidatas:
+        return []
+
+    candidatas.sort(key=lambda x: x["_score"], reverse=True)
+
+    # 1. Deduplicación estricta por (jugador, tipo_prop)
+    unicas_por_mercado = []
+    vistos_par = set()
+    for c in candidatas:
+        clave_par = (_normalizar_nombre(c["jugador"]), c["tipo_prop"])
+        if clave_par in vistos_par:
+            continue
+        vistos_par.add(clave_par)
+        unicas_por_mercado.append(c)
+
+    # 2. Primera pasada: máximo 1 tarjeta por jugador, priorizando cubrir distintos tipos de prop
+    seleccionadas = []
+    jugadores_usados = set()
+    mercados_cubiertos = set()
+
+    for tipo_objetivo in ["P+R+A", "Puntos", "Asistencias", "Rebotes"]:
+        for c in unicas_por_mercado:
+            jug_key = _normalizar_nombre(c["jugador"])
+            if jug_key in jugadores_usados:
+                continue
+            if c["tipo_prop"] == tipo_objetivo and tipo_objetivo not in mercados_cubiertos:
+                seleccionadas.append(c)
+                jugadores_usados.add(jug_key)
+                mercados_cubiertos.add(tipo_objetivo)
+                break
+
+    # 3. Completar hasta top_n con los mejores restantes de jugadores distintos
+    for c in unicas_por_mercado:
+        if len(seleccionadas) >= top_n:
+            break
+        jug_key = _normalizar_nombre(c["jugador"])
+        if jug_key in jugadores_usados:
+            continue
+        seleccionadas.append(c)
+        jugadores_usados.add(jug_key)
+
+    seleccionadas.sort(key=lambda x: x["_score"], reverse=True)
+    for item in seleccionadas:
+        item.pop("_score", None)
+
+    return seleccionadas[:top_n]
 
 
 def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
@@ -184,24 +316,23 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     candidatas = []
     if props_casino:
         for p in props_casino:
-            res = _evaluar_prop_nba(p, stats_totales, d_loc[0].upper())
+            res = _evaluar_prop_nba(p, stats_totales)
             if res:
                 candidatas.append(res)
 
     # Respaldo estadístico puro en vivo si el casino aún no abre líneas de jugadores
     if not candidatas and stats_totales:
         for ath in stats_totales.values():
-            for tipo in ["Puntos", "Rebotes", "Asistencias"]:
-                media = ath.get(tipo, 0)
-                if media < 5.5:
+            for tipo, min_val in [("P+R+A", 16.0), ("Puntos", 11.0), ("Rebotes", 5.5), ("Asistencias", 4.5)]:
+                media = float(ath.get(tipo, 0.0))
+                if media < min_val:
                     continue
-                linea_est = math.floor(media * 0.88) + 0.5
-                cv = 0.24 if tipo == "Puntos" else 0.28
-                sigma = max(1.2, media * cv)
+                linea_est = math.floor(media * 0.90) + 0.5
+                sigma = _parametros_dispersion_nba(tipo, media)
                 z = (linea_est - media) / sigma
                 prob_over = 1.0 - (0.5 * (1.0 + math.erf(z / math.sqrt(2.0))))
-                if prob_over >= 0.58:
-                    cuota_ref = round(max(1.55, min(1.91, (1.0 / prob_over) * 1.04)), 2)
+                if prob_over >= 0.57:
+                    cuota_ref = round(max(1.58, min(1.91, (1.0 / prob_over) * 1.04)), 2)
                     ev_ref = (prob_over * cuota_ref) - 1.0
                     candidatas.append({
                         "jugador": ath["nombre"],
@@ -212,12 +343,8 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
                         "cuota": cuota_ref,
                         "prob_real": round(prob_over * 100, 1),
                         "ev": round(ev_ref * 100, 1),
-                        "proyeccion": int(round(media)),
+                        "proyeccion": round(media, 1),
                         "_score": (prob_over * 100 * 0.65) + (ev_ref * 100 * 0.35)
                     })
 
-    candidatas.sort(key=lambda x: x["_score"], reverse=True)
-    for c in candidatas:
-        c.pop("_score", None)
-
-    return candidatas[:top_n]
+    return _seleccionar_top_diversificado(candidatas, top_n)
