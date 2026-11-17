@@ -407,6 +407,27 @@
         const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
         const RENDER_API_URL = "https://la-ma-a-piks-predictor.onrender.com";
 
+        const SONIDOS_DEPORTES = {
+            NHL: new Audio("sonido-nhl.mp3"),
+            NFL: new Audio("sonido-nfl.mp3"),
+            NBA: new Audio("sonido-nba.mp3"),
+            MLB: new Audio("sonido-mlb.mp3")
+        };
+
+        function reproducirSonidoReal(dep) {
+            try {
+                Object.values(SONIDOS_DEPORTES).forEach(a => {
+                    a.pause();
+                    a.currentTime = 0;
+                });
+                const audio = SONIDOS_DEPORTES[dep];
+                if (audio) {
+                    audio.volume = 0.9;
+                    audio.play().catch(() => {});
+                }
+            } catch (e) {}
+        }
+
         let deporteActual = "NHL";
         let filtroHistorialActual = "TODOS";
 
@@ -478,6 +499,7 @@
         }
 
         function seleccionarDeporte(dep) {
+            reproducirSonidoReal(dep);
             deporteActual = dep;
             document.getElementById('view-home').classList.add('hidden');
             document.getElementById('view-simulador').classList.remove('hidden');
@@ -1206,93 +1228,5 @@
             }
         }
     </script>
-<script>
-(function() {
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  let ctx = null;
-
-  function getCtx() {
-    if (!ctx) ctx = new AudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    return ctx;
-  }
-
-  function sonidoNHL() {
-    const c = getCtx(), now = c.currentTime;
-    const osc = c.createOscillator(), gain = c.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(160, now);
-    osc.frequency.exponentialRampToValueAtTime(42, now + 0.14);
-    gain.gain.setValueAtTime(0.45, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-    osc.connect(gain); gain.connect(c.destination);
-    osc.start(now); osc.stop(now + 0.17);
-  }
-
-  function sonidoNFL() {
-    const c = getCtx(), now = c.currentTime;
-    [0, 0.16].forEach((offset, i) => {
-      const dur = i === 0 ? 0.11 : 0.24;
-      const osc = c.createOscillator(), lfo = c.createOscillator();
-      const lfoGain = c.createGain(), gain = c.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2850, now + offset);
-      lfo.frequency.setValueAtTime(38, now + offset);
-      lfoGain.gain.setValueAtTime(90, now + offset);
-      lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
-      gain.gain.setValueAtTime(0.22, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + dur);
-      osc.connect(gain); gain.connect(c.destination);
-      osc.start(now + offset); lfo.start(now + offset);
-      osc.stop(now + offset + dur); lfo.stop(now + offset + dur);
-    });
-  }
-
-  function sonidoNBA() {
-    const c = getCtx(), now = c.currentTime;
-    const osc = c.createOscillator(), gain = c.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(135, now);
-    osc.frequency.exponentialRampToValueAtTime(52, now + 0.15);
-    gain.gain.setValueAtTime(0.5, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-    osc.connect(gain); gain.connect(c.destination);
-    osc.start(now); osc.stop(now + 0.17);
-
-    const sq = c.createOscillator(), sqGain = c.createGain();
-    sq.type = 'sine';
-    sq.frequency.setValueAtTime(2300, now + 0.12);
-    sq.frequency.exponentialRampToValueAtTime(1650, now + 0.22);
-    sqGain.gain.setValueAtTime(0.12, now + 0.12);
-    sqGain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
-    sq.connect(sqGain); sqGain.connect(c.destination);
-    sq.start(now + 0.12); sq.stop(now + 0.24);
-  }
-
-  function sonidoMLB() {
-    const c = getCtx(), now = c.currentTime;
-    const osc = c.createOscillator(), gain = c.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(820, now);
-    osc.frequency.exponentialRampToValueAtTime(140, now + 0.07);
-    gain.gain.setValueAtTime(0.35, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    osc.connect(gain); gain.connect(c.destination);
-    osc.start(now); osc.stop(now + 0.09);
-  }
-
-  document.addEventListener('click', function(e) {
-    const tarjeta = e.target.closest('button, .model-card');
-    if (!tarjeta) return;
-    const texto = (tarjeta.innerText || '').toUpperCase();
-    if (!texto.includes('ENTRAR AL') && !texto.includes('ENTRAR A LA') && !tarjeta.classList.contains('model-card')) return;
-
-    if (texto.includes('HIELO') || texto.includes('FROST')) sonidoNHL();
-    else if (texto.includes('EMPARRILLADO') || texto.includes('BLITZ')) sonidoNFL();
-    else if (texto.includes('DUELA') || texto.includes('DUNK')) sonidoNBA();
-    else if (texto.includes('DIAMANTE') || texto.includes('SLUGGER')) sonidoMLB();
-  }, true);
-})();
-</script>
 </body>
 </html>
