@@ -21,13 +21,14 @@ MAPEO_NBA = {
 _CACHE_XGB_NBA = {"time": 0, "model": None}
 
 
-def _construir_features_nba(s_loc: dict, s_vis: dict, media_liga: float) -> list:
-    diff_off = (s_loc["home_pf_pg"] - s_vis["road_pf_pg"]) / max(1.0, media_liga)
-    diff_def = (s_vis["road_pa_pg"] - s_loc["home_pa_pg"]) / max(1.0, media_liga)
+def _construir_features_nba(s_loc: dict, s_vis: dict, media_liga_rtg: float) -> list:
+    diff_ortg = (s_loc["home_ortg"] - s_vis["road_ortg"]) / max(10.0, media_liga_rtg)
+    diff_drtg = (s_vis["road_drtg"] - s_loc["home_drtg"]) / max(10.0, media_liga_rtg)
+    diff_efg = (s_loc["efg_pct"] - s_vis["efg_pct"]) / 10.0
+    diff_ts = (s_loc["ts_pct"] - s_vis["ts_pct"]) / 10.0
+    diff_elo = ((s_loc.get("elo", 1500.0) + 45.0) - s_vis.get("elo", 1500.0)) / 100.0
     diff_win = s_loc["win_pct"] - s_vis["win_pct"]
-    net_loc = (s_loc["pf_pg"] - s_loc["pa_pg"]) / max(1.0, media_liga)
-    net_vis = (s_vis["pf_pg"] - s_vis["pa_pg"]) / max(1.0, media_liga)
-    return [diff_off, diff_def, diff_win, net_loc, net_vis]
+    return [diff_ortg, diff_drtg, diff_efg, diff_ts, diff_elo, diff_win]
 
 
 def _obtener_modelo_xgb_real_nba(dataset: dict):
@@ -40,7 +41,7 @@ def _obtener_modelo_xgb_real_nba(dataset: dict):
     if len(partidos) < 25 or not equipos:
         return None
 
-    media_liga = sum(e["pf_pg"] for e in equipos.values()) / len(equipos)
+    media_liga_rtg = sum(e["ortg"] for e in equipos.values()) / len(equipos)
     X_rows, y_rows = [], []
 
     for p in partidos:
@@ -48,15 +49,15 @@ def _obtener_modelo_xgb_real_nba(dataset: dict):
         s_vis = equipos.get(p["away"])
         if not s_loc or not s_vis:
             continue
-        X_rows.append(_construir_features_nba(s_loc, s_vis, media_liga))
+        X_rows.append(_construir_features_nba(s_loc, s_vis, media_liga_rtg))
         y_rows.append(p["home_win"])
 
     if len(X_rows) < 25:
         return None
 
     model = xgb.XGBClassifier(
-        n_estimators=55,
-        max_depth=2,
+        n_estimators=60,
+        max_depth=3,
         learning_rate=0.05,
         subsample=0.8,
         reg_lambda=2.0,
@@ -81,7 +82,7 @@ def simular_partido_nba(
     l_total: float,
     c_over: float,
     c_under: float,
-    iteraciones: int = 10000
+    iteraciones: int = 25000
 ):
     abbr_loc = MAPEO_NBA.get(local, "BOS")
     abbr_vis = MAPEO_NBA.get(visitante, "NYK")
@@ -91,40 +92,62 @@ def simular_partido_nba(
     partidos_hist = dataset.get("partidos", [])
 
     if equipos:
-        media_liga = sum(e["pf_pg"] for e in equipos.values()) / len(equipos)
+        media_liga_rtg = sum(e["ortg"] for e in equipos.values()) / len(equipos)
+        media_liga_pace = sum(e["pace"] for e in equipos.values()) / len(equipos)
     else:
-        media_liga = l_total / 2.0
+        media_liga_rtg = 114.5
+        media_liga_pace = 99.0
 
     s_loc = equipos.get(abbr_loc, {
-        "gp": 1, "pf_pg": media_liga, "pa_pg": media_liga, "win_pct": 0.5,
-        "std_pts": 11.0, "home_pf_pg": media_liga, "home_pa_pg": media_liga,
-        "road_pf_pg": media_liga, "road_pa_pg": media_liga
+        "gp": 1, "pf_pg": media_liga_rtg, "pa_pg": media_liga_rtg, "win_pct": 0.5,
+        "std_pts": 11.0, "pace": media_liga_pace,
+        "ortg": media_liga_rtg, "drtg": media_liga_rtg,
+        "home_ortg": media_liga_rtg, "home_drtg": media_liga_rtg,
+        "road_ortg": media_liga_rtg, "road_drtg": media_liga_rtg,
+        "efg_pct": 54.0, "ts_pct": 57.5, "elo": 1500.0, "jugo_ayer": False
     })
     s_vis = equipos.get(abbr_vis, {
-        "gp": 1, "pf_pg": media_liga, "pa_pg": media_liga, "win_pct": 0.5,
-        "std_pts": 11.0, "home_pf_pg": media_liga, "home_pa_pg": media_liga,
-        "road_pf_pg": media_liga, "road_pa_pg": media_liga
+        "gp": 1, "pf_pg": media_liga_rtg, "pa_pg": media_liga_rtg, "win_pct": 0.5,
+        "std_pts": 11.0, "pace": media_liga_pace,
+        "ortg": media_liga_rtg, "drtg": media_liga_rtg,
+        "home_ortg": media_liga_rtg, "home_drtg": media_liga_rtg,
+        "road_ortg": media_liga_rtg, "road_drtg": media_liga_rtg,
+        "efg_pct": 54.0, "ts_pct": 57.5, "elo": 1500.0, "jugo_ayer": False
     })
 
-    off_loc = (s_loc["home_pf_pg"] * 0.60) + (s_loc["pf_pg"] * 0.40)
-    def_vis = (s_vis["road_pa_pg"] * 0.60) + (s_vis["pa_pg"] * 0.40)
-    pts_loc = (off_loc * def_vis) / max(1.0, media_liga)
+    # 1. Posesiones reales esperadas (Pace combinado ponderado)
+    pace_estimado = round((s_loc["pace"] + s_vis["pace"]) / 2.0, 1)
 
-    off_vis = (s_vis["road_pf_pg"] * 0.60) + (s_vis["pf_pg"] * 0.40)
-    def_loc = (s_loc["home_pa_pg"] * 0.60) + (s_loc["pa_pg"] * 0.40)
-    pts_vis = (off_vis * def_loc) / max(1.0, media_liga)
+    # 2. Eficiencia Ofensiva/Defensiva Posesión por Posesión (Splits Casa/Visita + Temporada)
+    ortg_loc = (s_loc["home_ortg"] * 0.60) + (s_loc["ortg"] * 0.40)
+    drtg_vis = (s_vis["road_drtg"] * 0.60) + (s_vis["drtg"] * 0.40)
+    ortg_esp_loc = (ortg_loc * drtg_vis) / max(80.0, media_liga_rtg)
+
+    ortg_vis = (s_vis["road_ortg"] * 0.60) + (s_vis["ortg"] * 0.40)
+    drtg_loc = (s_loc["home_drtg"] * 0.60) + (s_loc["drtg"] * 0.40)
+    ortg_esp_vis = (ortg_vis * drtg_loc) / max(80.0, media_liga_rtg)
+
+    # 3. Ajuste real por fatiga Back-to-Back (si jugó anoche)
+    fatiga_loc = -1.8 if s_loc.get("jugo_ayer") else 0.0
+    fatiga_vis = -2.4 if s_vis.get("jugo_ayer") else 0.0
+
+    # 4. Puntos esperados posesión por posesión
+    pts_loc = (ortg_esp_loc * (pace_estimado / 100.0)) + fatiga_loc
+    pts_vis = (ortg_esp_vis * (pace_estimado / 100.0)) + fatiga_vis
 
     pts_esperados_loc = round(pts_loc, 1)
     pts_esperados_vis = round(pts_vis, 1)
     total_esperado = round(pts_esperados_loc + pts_esperados_vis, 1)
 
+    # 5. Probabilidad XGBoost entrenada con partidos históricos reales
     modelo_xgb = _obtener_modelo_xgb_real_nba(dataset)
     if modelo_xgb is not None:
-        vec = np.array([_construir_features_nba(s_loc, s_vis, media_liga)])
+        vec = np.array([_construir_features_nba(s_loc, s_vis, media_liga_rtg)])
         prob_xgb_loc = float(modelo_xgb.predict_proba(vec)[0][1])
     else:
         prob_xgb_loc = 0.5
 
+    # 6. Simulación Normal Monte Carlo (25,000 iteraciones)
     std_loc = s_loc["std_pts"]
     std_vis = s_vis["std_pts"]
 
@@ -180,6 +203,11 @@ def simular_partido_nba(
     prob_over   = round((overs / iteraciones) * 100, 1)
     prob_under  = round((unders / iteraciones) * 100, 1)
 
+    b2b_notas = []
+    if s_loc.get("jugo_ayer"): b2b_notas.append(f"{abbr_loc} B2B")
+    if s_vis.get("jugo_ayer"): b2b_notas.append(f"{abbr_vis} B2B")
+    b2b_txt = f" | Fatiga: {', '.join(b2b_notas)}" if b2b_notas else ""
+
     return {
         "equipo_local_abbr": abbr_loc,
         "equipo_visitante_abbr": abbr_vis,
@@ -192,8 +220,8 @@ def simular_partido_nba(
         "total_over": {"linea": l_total, "prob": prob_over},
         "total_under": {"linea": l_total, "prob": prob_under},
         "resumen_explicado": (
-            f"DUNK-IA 100% Datos Reales: XGBoost entrenado con {len(partidos_hist)} partidos reales 2025-2026 ({round(prob_xgb_loc*100,1)}% ML) "
-            f"+ Splits Reales Casa/Visita ({abbr_loc}: {round(s_loc['home_pf_pg'],1)} PPG / {abbr_vis}: {round(s_vis['road_pf_pg'],1)} PPG). "
-            f"Proyección: {total_esperado} pts."
+            f"DUNK-IA Full (25k Monte Carlo): Posesión a Posesión (Pace {pace_estimado}) + ORtg/DRtg ({round(s_loc['ortg'],1)}/{round(s_vis['ortg'],1)}) "
+            f"+ eFG% ({s_loc['efg_pct']}%/{s_vis['efg_pct']}%) + Elo Dinámico ({s_loc.get('elo',1500)}/{s_vis.get('elo',1500)}) "
+            f"+ XGBoost ({len(partidos_hist)} juegos reales){b2b_txt}. Proy: {total_esperado} pts."
         )
     }
