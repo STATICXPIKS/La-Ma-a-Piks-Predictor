@@ -1206,7 +1206,7 @@
             }
         }
     </script>
-</<script>
+<script>
 (function() {
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   let ctx = null;
@@ -1219,7 +1219,6 @@
 
   function sonidoNHL() {
     const c = getCtx(), now = c.currentTime;
-    // Golpe seco del disco + raspado de hielo
     const osc = c.createOscillator(), gain = c.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(160, now);
@@ -1232,7 +1231,6 @@
 
   function sonidoNFL() {
     const c = getCtx(), now = c.currentTime;
-    // Silbato doble de árbitro
     [0, 0.16].forEach((offset, i) => {
       const dur = i === 0 ? 0.11 : 0.24;
       const osc = c.createOscillator(), lfo = c.createOscillator();
@@ -1252,7 +1250,6 @@
 
   function sonidoNBA() {
     const c = getCtx(), now = c.currentTime;
-    // Rebote de balón
     const osc = c.createOscillator(), gain = c.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(135, now);
@@ -1262,7 +1259,6 @@
     osc.connect(gain); gain.connect(c.destination);
     osc.start(now); osc.stop(now + 0.17);
 
-    // Chirrido corto de tenis en duela
     const sq = c.createOscillator(), sqGain = c.createGain();
     sq.type = 'sine';
     sq.frequency.setValueAtTime(2300, now + 0.12);
@@ -1275,7 +1271,6 @@
 
   function sonidoMLB() {
     const c = getCtx(), now = c.currentTime;
-    // Golpe seco de bate de madera (crack)
     const osc = c.createOscillator(), gain = c.createGain();
     osc.type = 'square';
     osc.frequency.setValueAtTime(820, now);
