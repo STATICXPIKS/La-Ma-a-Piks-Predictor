@@ -27,8 +27,8 @@ def set_cached(key: str, data):
 
 
 def get_live_weather(ciudad: str):
-    """Clima real en vivo por ciudad desde OpenWeatherMap."""
-    cached = fetch_cached(f"weather_{ciudad}", ttl=1800)
+    """Clima real en vivo por ciudad desde OpenWeatherMap (temp, viento y condición lluvia/nieve)."""
+    cached = fetch_cached(f"weather_v2_{ciudad}", ttl=1800)
     if cached:
         return cached
     if not OPENWEATHER_KEY or not ciudad:
@@ -40,12 +40,16 @@ def get_live_weather(ciudad: str):
         r = requests.get(url, params=params, timeout=5)
         if r.status_code == 200:
             d = r.json()
+            weather_main = str(d.get("weather", [{}])[0].get("main", "")).lower()
+            precipitacion = any(k in weather_main for k in ["rain", "snow", "drizzle", "thunderstorm", "sleet"])
             res = {
                 "temp_f": float(d["main"].get("temp", 70.0)),
                 "viento_mph": float(d["wind"].get("speed", 0.0)),
-                "humedad": float(d["main"].get("humidity", 50.0))
+                "humedad": float(d["main"].get("humidity", 50.0)),
+                "precipitacion": precipitacion,
+                "condicion": weather_main.capitalize() or "Despejado"
             }
-            set_cached(f"weather_{ciudad}", res)
+            set_cached(f"weather_v2_{ciudad}", res)
             return res
     except Exception as e:
         print(f"Error OpenWeather: {e}")
@@ -55,8 +59,8 @@ def get_live_weather(ciudad: str):
 def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos_full_temporada: int) -> dict:
     """
     Ponderación Bayesiana Dinámica:
-    Combina la temporada pasada (2025-2026) con la actual (2026-2027) según cuántos juegos
-    lleva cada equipo. Conforme avanzan los partidos, el peso de 2026-2027 sube automáticamente.
+    Combina la temporada pasada con la actual según cuántos juegos lleva cada equipo.
+    Conforme avanzan los partidos, el peso de la temporada actual sube automáticamente.
     """
     todos_abbr = set(stats_pasada.keys()) | set(stats_actual.keys())
     combinado = {}
@@ -78,14 +82,18 @@ def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos
 
         entry = {"gp": gp_actual, "peso_actual": round(w_new * 100)}
         for campo in s_new:
-            if campo in ["gp", "peso_actual", "jugo_ayer"]:
+            if campo in ["gp", "peso_actual", "jugo_ayer", "bajas_texto"]:
                 continue
             val_new = s_new.get(campo, 0.0)
             val_old = s_old.get(campo, val_new)
-            entry[campo] = (val_new * w_new) + (val_old * w_old)
+            if isinstance(val_new, (int, float)) and isinstance(val_old, (int, float)):
+                entry[campo] = (val_new * w_new) + (val_old * w_old)
+            else:
+                entry[campo] = val_new
 
-        if "jugo_ayer" in s_new:
-            entry["jugo_ayer"] = s_new["jugo_ayer"]
+        for extra in ["jugo_ayer", "bajas_texto"]:
+            if extra in s_new:
+                entry[extra] = s_new[extra]
 
         combinado[abbr] = entry
 
@@ -93,7 +101,7 @@ def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos
 
 
 # =====================================================================
-# 1. NHL: TEMPORADA 2025-2026 + 2026-2027 REALES (SV%, PP%, PK%, TIROS, ELO DINÁMICO)
+# 1. NHL: TEMPORADA PASADA + ACTUAL REALES (SV%, PP%, PK%, TIROS, ELO DINÁMICO)
 # =====================================================================
 def _obtener_stats_avanzadas_nhl(season_id: int) -> dict:
     url = (
@@ -189,52 +197,57 @@ def _parsear_standings_nhl(url: str) -> dict:
 
 
 def get_nhl_real_dataset():
-    cached = fetch_cached("nhl_real_dataset_full_v5", ttl=3600)
+    cached = fetch_cached("nhl_real_dataset_full_v6", ttl=3600)
     if cached:
         return cached
 
-    st_25_26 = _parsear_standings_nhl("https://api-web.nhle.com/v1/standings/2026-04-16")
-    st_26_27 = _parsear_standings_nhl("https://api-web.nhle.com/v1/standings/now")
+    hoy = datetime.utcnow()
+    anio_fin_actual = hoy.year + 1 if hoy.month >= 9 else hoy.year
+    anio_ini_actual = anio_fin_actual - 1
+    season_actual_id = int(f"{anio_ini_actual}{anio_fin_actual}")
+    season_pasada_id = int(f"{anio_ini_actual - 1}{anio_ini_actual}")
 
-    adv_25_26 = _obtener_stats_avanzadas_nhl(20252026)
-    adv_26_27 = _obtener_stats_avanzadas_nhl(20262027)
+    st_pasada = _parsear_standings_nhl(f"https://api-web.nhle.com/v1/standings/{anio_ini_actual}-04-16")
+    st_actual = _parsear_standings_nhl("https://api-web.nhle.com/v1/standings/now")
 
-    equipos_keys = list(st_26_27.keys()) if st_26_27 else list(st_25_26.keys())
-    sv_25_26 = {abbr: _obtener_sv_porteros_nhl(abbr, "20252026/2") for abbr in equipos_keys}
-    sv_26_27 = {abbr: _obtener_sv_porteros_nhl(abbr, "now") for abbr in equipos_keys}
+    adv_pasada = _obtener_stats_avanzadas_nhl(season_pasada_id)
+    adv_actual = _obtener_stats_avanzadas_nhl(season_actual_id)
 
-    full_25_26 = {}
-    for abbr, base in st_25_26.items():
-        adv = adv_25_26.get(abbr, {})
-        full_25_26[abbr] = {
+    equipos_keys = list(st_actual.keys()) if st_actual else list(st_pasada.keys())
+    sv_pasada = {abbr: _obtener_sv_porteros_nhl(abbr, f"{season_pasada_id}/2") for abbr in equipos_keys}
+    sv_actual = {abbr: _obtener_sv_porteros_nhl(abbr, "now") for abbr in equipos_keys}
+
+    full_pasada = {}
+    for abbr, base in st_pasada.items():
+        adv = adv_pasada.get(abbr, {})
+        full_pasada[abbr] = {
             **base,
             "sf_pg": adv.get("sf_pg", 30.2),
             "sa_pg": adv.get("sa_pg", 30.2),
             "pp_pct": adv.get("pp_pct", 21.0),
             "pk_pct": adv.get("pk_pct", 80.0),
-            "sv_pct": sv_25_26.get(abbr, 0.903)
+            "sv_pct": sv_pasada.get(abbr, 0.903)
         }
 
-    full_26_27 = {}
-    for abbr, base in st_26_27.items():
-        adv = adv_26_27.get(abbr, {})
-        full_26_27[abbr] = {
+    full_actual = {}
+    for abbr, base in st_actual.items():
+        adv = adv_actual.get(abbr, {})
+        full_actual[abbr] = {
             **base,
             "sf_pg": adv.get("sf_pg", 30.2),
             "sa_pg": adv.get("sa_pg", 30.2),
             "pp_pct": adv.get("pp_pct", 21.0),
             "pk_pct": adv.get("pk_pct", 80.0),
-            "sv_pct": sv_26_27.get(abbr, 0.903)
+            "sv_pct": sv_actual.get(abbr, 0.903)
         }
 
-    equipos = _combinar_temporadas_dinamico(full_25_26, full_26_27, juegos_full_temporada=82)
+    equipos = _combinar_temporadas_dinamico(full_pasada, full_actual, juegos_full_temporada=82)
 
     partidos_historicos = []
     fechas_a_consultar = []
-    base_pasada = datetime(2026, 4, 15)
+    base_pasada = datetime(anio_ini_actual, 4, 15)
     for d in range(45, -1, -1):
         fechas_a_consultar.append((base_pasada - timedelta(days=d)).strftime("%Y%m%d"))
-    hoy = datetime.utcnow()
     for d in range(35, 0, -1):
         fechas_a_consultar.append((hoy - timedelta(days=d)).strftime("%Y%m%d"))
 
@@ -289,12 +302,12 @@ def get_nhl_real_dataset():
 
     dataset = {"equipos": equipos, "partidos": partidos_historicos}
     if equipos:
-        set_cached("nhl_real_dataset_full_v5", dataset)
+        set_cached("nhl_real_dataset_full_v6", dataset)
     return dataset
 
 
 # =====================================================================
-# 2. NBA: PACE, ORtg, DRtg, eFG%, TS%, ELO DINÁMICO Y B2B (2025-2026 + 2026-2027)
+# 2. NBA: PACE, ORtg, DRtg, eFG%, TS%, ELO DINÁMICO Y B2B
 # =====================================================================
 NBA_ESPN_TEAM_IDS = {
     "ATL": "1", "BOS": "2", "BKN": "17", "CHA": "30", "CHI": "4", "CLE": "5",
@@ -306,10 +319,6 @@ NBA_ESPN_TEAM_IDS = {
 
 
 def _obtener_eficiencia_equipo_nba(team_id: str) -> dict:
-    """
-    Descarga de ESPN Team Statistics los datos reales de tiro y posesiones:
-    FGA, FGM, 3PM, FTA, OREB, TOV para calcular Pace, ORtg, eFG% y TS% reales.
-    """
     url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/statistics"
     stats_map = {}
     try:
@@ -336,7 +345,6 @@ def _obtener_eficiencia_equipo_nba(team_id: str) -> dict:
     tov = stats_map.get("avgTurnovers", stats_map.get("turnovers", 13.8))
     pts = stats_map.get("avgPoints", 114.5)
 
-    # Posesiones reales por juego (Fórmula oficial NBA Dean Oliver)
     pace = max(92.0, min(108.0, fga + (0.44 * fta) - oreb + tov))
     ortg = (pts / pace) * 100.0
     efg_pct = ((fgm + 0.5 * tpm) / max(1.0, fga)) * 100.0
@@ -442,9 +450,9 @@ def get_nba_real_dataset():
 
     hoy = datetime.utcnow()
     ayer_str = (hoy - timedelta(days=1)).strftime("%Y%m%d")
+    anio_ini_actual = hoy.year if hoy.month >= 10 else hoy.year - 1
 
-    # Orden cronológico para calcular Elo Dinámico real partido a partido
-    base_pasada = datetime(2026, 4, 12)
+    base_pasada = datetime(anio_ini_actual, 4, 12)
     fechas_pasada = [(base_pasada - timedelta(days=d)).strftime("%Y%m%d") for d in range(60, -1, -1)]
     fechas_actual = [(hoy - timedelta(days=d)).strftime("%Y%m%d") for d in range(32, 0, -1)]
 
@@ -454,17 +462,14 @@ def get_nba_real_dataset():
     equipos = _combinar_temporadas_dinamico(eq_pasada, eq_actual, juegos_full_temporada=82)
     partidos_historicos = part_pasada + part_actual
 
-    # Detectar qué equipos jugaron ayer (Back-to-Back real)
     equipos_jugaron_ayer = set()
     for p in part_actual:
         if p.get("fecha") == ayer_str:
             equipos_jugaron_ayer.add(p["home"])
             equipos_jugaron_ayer.add(p["away"])
 
-    # Descargar Pace, ORtg, eFG% y TS% reales de ESPN para cada equipo
     eficiencia_api = {abbr: _obtener_eficiencia_equipo_nba(tid) for abbr, tid in NBA_ESPN_TEAM_IDS.items()}
 
-    # Calcular Elo Dinámico real recorriendo los partidos de 2025-2026 y 2026-2027
     elo_dinamico = {abbr: 1500.0 for abbr in NBA_ESPN_TEAM_IDS.keys()}
     for p in partidos_historicos:
         h_abbr, a_abbr = p["home"], p["away"]
@@ -481,21 +486,13 @@ def get_nba_real_dataset():
     for abbr, d in equipos.items():
         ef = eficiencia_api.get(abbr, {"pace": 99.0, "ortg_api": 114.5, "efg_pct": 54.0, "ts_pct": 57.5})
         pace = ef["pace"]
-        # ORtg y DRtg reales por cada 100 posesiones
-        ortg_real = (d["pf_pg"] / pace) * 100.0
-        drtg_real = (d["pa_pg"] / pace) * 100.0
-        home_ortg = (d["home_pf_pg"] / pace) * 100.0
-        home_drtg = (d["home_pa_pg"] / pace) * 100.0
-        road_ortg = (d["road_pf_pg"] / pace) * 100.0
-        road_drtg = (d["road_pa_pg"] / pace) * 100.0
-
         d["pace"] = pace
-        d["ortg"] = round(ortg_real, 2)
-        d["drtg"] = round(drtg_real, 2)
-        d["home_ortg"] = round(home_ortg, 2)
-        d["home_drtg"] = round(home_drtg, 2)
-        d["road_ortg"] = round(road_ortg, 2)
-        d["road_drtg"] = round(road_drtg, 2)
+        d["ortg"] = round((d["pf_pg"] / pace) * 100.0, 2)
+        d["drtg"] = round((d["pa_pg"] / pace) * 100.0, 2)
+        d["home_ortg"] = round((d["home_pf_pg"] / pace) * 100.0, 2)
+        d["home_drtg"] = round((d["home_pa_pg"] / pace) * 100.0, 2)
+        d["road_ortg"] = round((d["road_pf_pg"] / pace) * 100.0, 2)
+        d["road_drtg"] = round((d["road_pa_pg"] / pace) * 100.0, 2)
         d["efg_pct"] = ef["efg_pct"]
         d["ts_pct"] = ef["ts_pct"]
         d["elo"] = round(elo_dinamico.get(abbr, 1500.0), 1)
@@ -508,8 +505,94 @@ def get_nba_real_dataset():
 
 
 # =====================================================================
-# 3. NFL: TEMPORADA 2025 (18 SEMANAS) + TEMPORADA 2026 (HASTA SEMANA 18)
+# 3. NFL: EFICIENCIA POR POSESIÓN, QB YPA, VOLUMEN JUGADAS, LESIONES Y ELO DINÁMICO
 # =====================================================================
+NFL_ESPN_TEAM_IDS = {
+    "ARI": "22", "ATL": "1", "BAL": "33", "BUF": "2", "CAR": "29", "CHI": "3",
+    "CIN": "4", "CLE": "5", "DAL": "6", "DEN": "7", "DET": "8", "GB": "9",
+    "HOU": "34", "IND": "11", "JAX": "30", "KC": "12", "LV": "13", "LAC": "24",
+    "LAR": "14", "MIA": "15", "MIN": "16", "NE": "17", "NO": "18", "NYG": "19",
+    "NYJ": "20", "PHI": "21", "PIT": "23", "SF": "25", "SEA": "26", "TB": "27",
+    "TEN": "10", "WAS": "28"
+}
+
+
+def _obtener_stats_y_lesiones_nfl(team_id: str) -> dict:
+    """
+    Consulta en vivo a ESPN NFL API:
+    1. Estadísticas reales de equipo y QB (YPP, QB Net YPA, Snaps/Jugadas, 3rd Down %, Turnovers).
+    2. Reporte oficial de lesiones activas (OUT / IR) por posición clave.
+    """
+    stats_map = {}
+    url_stats = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/statistics"
+    try:
+        r = requests.get(url_stats, headers=HEADERS_API, timeout=5)
+        if r.status_code == 200:
+            cats = r.json().get("results", {}).get("stats", {}).get("categories", [])
+            for cat in cats:
+                c_name = cat.get("name", "")
+                for st in cat.get("stats", []):
+                    s_name = st.get("name", "")
+                    val = st.get("perGameValue") if st.get("perGameValue") is not None else st.get("value")
+                    if s_name and val is not None:
+                        try:
+                            stats_map[f"{c_name}_{s_name}"] = float(val)
+                            if s_name not in stats_map:
+                                stats_map[s_name] = float(val)
+                        except (ValueError, TypeError):
+                            pass
+    except Exception:
+        pass
+
+    # Volumen de jugadas y eficiencia por jugada reales
+    ypp = stats_map.get("yardsPerPlay", 5.4)
+    qb_ypa = stats_map.get("passing_yardsPerPassAttempt", stats_map.get("yardsPerPassAttempt", 6.8))
+    third_down_pct = stats_map.get("thirdDownConvPct", 39.5)
+    turnovers = stats_map.get("totalGiveaways", stats_map.get("turnovers", 14.0))
+    takeaways = stats_map.get("totalTakeaways", 14.0)
+    total_plays_pg = stats_map.get("totalPlaysPerGame", stats_map.get("offensivePlaysPerGame", 62.5))
+    # Posesiones (drives) estimadas reales a partir del volumen de jugadas
+    drives_pg = max(9.5, min(13.5, total_plays_pg / 5.75))
+
+    # Reporte oficial de lesiones (OUT / Injured Reserve)
+    factor_salud = 1.0
+    bajas_clave = []
+    url_inj = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/injuries"
+    try:
+        r_inj = requests.get(url_inj, headers=HEADERS_API, timeout=5)
+        if r_inj.status_code == 200:
+            for item in r_inj.json().get("injuries", []):
+                status = str(item.get("status", "")).lower()
+                if "out" not in status and "injured reserve" not in status and "ir" != status:
+                    continue
+                ath = item.get("athlete", {})
+                nombre = ath.get("displayName", "")
+                pos = str(ath.get("position", {}).get("abbreviation", "")).upper()
+
+                if pos == "QB":
+                    factor_salud -= 0.14
+                    bajas_clave.append(f"{nombre} (QB OUT)")
+                elif pos in ["WR", "RB", "TE", "LT", "RT"]:
+                    factor_salud -= 0.025
+                    if len(bajas_clave) < 3:
+                        bajas_clave.append(f"{nombre} ({pos} OUT)")
+                elif pos in ["DE", "EDGE", "DT", "LB", "CB", "S"]:
+                    factor_salud -= 0.015
+    except Exception:
+        pass
+
+    return {
+        "ypp": round(ypp, 2),
+        "qb_ypa": round(qb_ypa, 2),
+        "third_down_pct": round(third_down_pct, 1),
+        "to_diff": round(takeaways - turnovers, 1),
+        "plays_pg": round(total_plays_pg, 1),
+        "drives_pg": round(drives_pg, 2),
+        "factor_salud": round(max(0.78, factor_salud), 3),
+        "bajas_texto": ", ".join(bajas_clave) if bajas_clave else "Plantilla completa"
+    }
+
+
 def _recolectar_temporada_nfl(year: int, max_weeks: int) -> tuple:
     equipos_raw = {}
     partidos = []
@@ -595,17 +678,61 @@ def _recolectar_temporada_nfl(year: int, max_weeks: int) -> tuple:
 
 
 def get_nfl_real_dataset():
-    cached = fetch_cached("nfl_real_dataset_v5", ttl=3600)
+    cached = fetch_cached("nfl_real_dataset_full_v6", ttl=3600)
     if cached:
         return cached
 
-    eq_2025, part_2025 = _recolectar_temporada_nfl(2025, max_weeks=18)
-    eq_2026, part_2026 = _recolectar_temporada_nfl(2026, max_weeks=18)
+    hoy = datetime.utcnow()
+    anio_actual = hoy.year if hoy.month >= 8 else hoy.year - 1
 
-    equipos = _combinar_temporadas_dinamico(eq_2025, eq_2026, juegos_full_temporada=17)
-    partidos_historicos = part_2025 + part_2026
+    eq_pasada, part_pasada = _recolectar_temporada_nfl(anio_actual - 1, max_weeks=18)
+    eq_actual, part_actual = _recolectar_temporada_nfl(anio_actual, max_weeks=18)
+
+    equipos = _combinar_temporadas_dinamico(eq_pasada, eq_actual, juegos_full_temporada=17)
+    partidos_historicos = part_pasada + part_actual
+
+    # Consultar estadísticas reales de eficiencia, QB, jugadas y lesiones en vivo
+    avanzadas_api = {abbr: _obtener_stats_y_lesiones_nfl(tid) for abbr, tid in NFL_ESPN_TEAM_IDS.items()}
+
+    # Calcular Elo Dinámico real recorriendo los partidos de ambas temporadas
+    elo_dinamico = {abbr: 1500.0 for abbr in NFL_ESPN_TEAM_IDS.keys()}
+    for p in partidos_historicos:
+        h_abbr, a_abbr = p["home"], p["away"]
+        if h_abbr in elo_dinamico and a_abbr in elo_dinamico:
+            home_win = p["home_win"]
+            margen = abs(p["home_score"] - p["away_score"])
+            elo_h = elo_dinamico[h_abbr]
+            elo_a = elo_dinamico[a_abbr]
+            exp_h = 1.0 / (1.0 + (10.0 ** ((elo_a - (elo_h + 45.0)) / 400.0)))
+            k_factor = 20.0 * (1.0 + min(1.5, margen / 14.0))
+            elo_dinamico[h_abbr] = elo_h + k_factor * (home_win - exp_h)
+            elo_dinamico[a_abbr] = elo_a + k_factor * ((1 - home_win) - (1.0 - exp_h))
+
+    for abbr, d in equipos.items():
+        av = avanzadas_api.get(abbr, {
+            "ypp": 5.4, "qb_ypa": 6.8, "third_down_pct": 39.5, "to_diff": 0.0,
+            "plays_pg": 62.5, "drives_pg": 10.9, "factor_salud": 1.0, "bajas_texto": "Plantilla completa"
+        })
+        drives = av["drives_pg"]
+        # Puntos por drive (eficiencia posesión por posesión en NFL)
+        d["pts_per_drive_off"] = round(d["pf_pg"] / drives, 3)
+        d["pts_per_drive_def"] = round(d["pa_pg"] / drives, 3)
+        d["home_ppd_off"] = round(d["home_pf_pg"] / drives, 3)
+        d["home_ppd_def"] = round(d["home_pa_pg"] / drives, 3)
+        d["road_ppd_off"] = round(d["road_pf_pg"] / drives, 3)
+        d["road_ppd_def"] = round(d["road_pa_pg"] / drives, 3)
+
+        d["ypp"] = av["ypp"]
+        d["qb_ypa"] = av["qb_ypa"]
+        d["third_down_pct"] = av["third_down_pct"]
+        d["to_diff"] = av["to_diff"]
+        d["plays_pg"] = av["plays_pg"]
+        d["drives_pg"] = drives
+        d["factor_salud"] = av["factor_salud"]
+        d["bajas_texto"] = av["bajas_texto"]
+        d["elo"] = round(elo_dinamico.get(abbr, 1500.0) * av["factor_salud"], 1)
 
     dataset = {"equipos": equipos, "partidos": partidos_historicos}
     if equipos:
-        set_cached("nfl_real_dataset_v5", dataset)
+        set_cached("nfl_real_dataset_full_v6", dataset)
     return dataset
