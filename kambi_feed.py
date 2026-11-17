@@ -1,5 +1,6 @@
 import os
 import time
+import unicodedata
 import requests
 
 DEPORTE_TO_SPORT_KEY = {
@@ -11,9 +12,13 @@ DEPORTE_TO_SPORT_KEY = {
 
 PROP_MARKETS_BY_SPORT = {
     "nhl": "player_shots_on_goal,player_points",
-    "nba": "player_points,player_rebounds",
+    "nba": "player_points,player_rebounds,player_assists,player_points_rebounds_assists",
     "nfl": "player_pass_yds,player_rush_yds",
     "mlb": "batter_hits,pitcher_strikeouts"
+}
+
+PROP_MARKETS_FALLBACK = {
+    "nba": "player_points,player_rebounds,player_assists"
 }
 
 MAPEO_MERCADO_ODDS_API = {
@@ -21,6 +26,7 @@ MAPEO_MERCADO_ODDS_API = {
     "player_points": "Puntos",
     "player_assists": "Asistencias",
     "player_rebounds": "Rebotes",
+    "player_points_rebounds_assists": "P+R+A",
     "player_threes": "Triples",
     "player_pass_yds": "Yardas Pase",
     "player_rush_yds": "Yardas Acarreo",
@@ -52,7 +58,6 @@ HEADERS_WEB = {
     "Accept": "application/json, text/plain, */*"
 }
 
-# Tiempo de caché unificado: 45 minutos (2700 segundos)
 CACHE_TTL_SEGUNDOS = 2700
 
 _CACHE_EVENTOS_ODDS_API = {}
@@ -82,7 +87,8 @@ def marcar_clave_agotada(api_key: str):
 
 
 def _simplificar(texto: str) -> str:
-    return "".join(c for c in str(texto).lower() if c.isalnum())
+    n = unicodedata.normalize('NFD', str(texto)).encode('ascii', 'ignore').decode("utf-8").lower()
+    return "".join(c for c in n if c.isalnum())
 
 
 def _apodo_equipo(nombre_completo: str) -> str:
@@ -94,6 +100,34 @@ def _coincide_partido(ev_home: str, ev_away: str, local: str, visitante: str) ->
     h, a = _simplificar(ev_home), _simplificar(ev_away)
     l_apodo, v_apodo = _apodo_equipo(local), _apodo_equipo(visitante)
     return (l_apodo in h and v_apodo in a) or (l_apodo in a and v_apodo in h)
+
+
+def _seleccionar_linea_principal(candidatos_por_jugador_mercado: dict) -> list:
+    """
+    Si el casino ofrece líneas alternativas para el mismo jugador y mercado,
+    conserva únicamente la línea principal (la más equilibrada cerca de 1.90).
+    """
+    props_finales = []
+    for lista_lineas in candidatos_por_jugador_mercado.values():
+        validas = [x for x in lista_lineas if x.get("cuota_over") is not None]
+        if not validas:
+            continue
+
+        def _score_linea_principal(item):
+            co = item["cuota_over"]
+            cu = item.get("cuota_under")
+            tiene_ambas = 0 if cu is not None else 1
+            desbalance = abs(co - (cu if cu is not None else 1.90))
+            dist_par = abs(co - 1.90)
+            return (tiene_ambas, round(desbalance, 2), round(dist_par, 2))
+
+        validas.sort(key=_score_linea_principal)
+        mejor = validas[0]
+        if mejor.get("cuota_under") is None:
+            mejor["cuota_under"] = 1.90
+        props_finales.append(mejor)
+
+    return props_finales
 
 
 def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
@@ -108,7 +142,7 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
         return []
 
     ahora = time.time()
-    cache_key = f"{dep}_{_simplificar(local)}_{_simplificar(visitante)}"
+    cache_key = f"v2_{dep}_{_simplificar(local)}_{_simplificar(visitante)}"
     if cache_key in _CACHE_PROPS_ODDS_API and (ahora - _CACHE_PROPS_ODDS_API[cache_key][0] < CACHE_TTL_SEGUNDOS):
         return _CACHE_PROPS_ODDS_API[cache_key][1]
 
@@ -145,6 +179,10 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
                 "oddsFormat": "decimal"
             }
             r_props = requests.get(url_props, params=params, timeout=8)
+            if r_props.status_code == 422 and dep in PROP_MARKETS_FALLBACK:
+                params["markets"] = PROP_MARKETS_FALLBACK[dep]
+                r_props = requests.get(url_props, params=params, timeout=8)
+
             if r_props.status_code in [401, 429]:
                 marcar_clave_agotada(api_key)
                 continue
@@ -158,7 +196,7 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
             prioridad = ["fanduel", "draftkings", "betmgm", "caesars", "espnbet", "hardrockbet", "bovada"]
             bookmakers.sort(key=lambda b: prioridad.index(b.get("key")) if b.get("key") in prioridad else 99)
 
-            agrupado = {}
+            agrupado_exacto = {}
             for bm in bookmakers[:4]:
                 for market in bm.get("markets", []):
                     m_key = market.get("key")
@@ -176,8 +214,8 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
                             continue
 
                         clave = (_simplificar(jugador), tipo_esp, float(linea))
-                        if clave not in agrupado:
-                            agrupado[clave] = {
+                        if clave not in agrupado_exacto:
+                            agrupado_exacto[clave] = {
                                 "jugador": jugador,
                                 "tipo_prop": tipo_esp,
                                 "linea": float(linea),
@@ -185,12 +223,16 @@ def _obtener_props_the_odds_api(deporte: str, local: str, visitante: str):
                                 "cuota_under": None
                             }
 
-                        if lado == "over" and agrupado[clave]["cuota_over"] is None:
-                            agrupado[clave]["cuota_over"] = round(float(precio), 2)
-                        elif lado == "under" and agrupado[clave]["cuota_under"] is None:
-                            agrupado[clave]["cuota_under"] = round(float(precio), 2)
+                        if lado == "over" and agrupado_exacto[clave]["cuota_over"] is None:
+                            agrupado_exacto[clave]["cuota_over"] = round(float(precio), 2)
+                        elif lado == "under" and agrupado_exacto[clave]["cuota_under"] is None:
+                            agrupado_exacto[clave]["cuota_under"] = round(float(precio), 2)
 
-            props_finales = [v for v in agrupado.values() if v["cuota_over"] is not None]
+            por_jugador_mercado = {}
+            for (jug_norm, tipo_esp, _), item in agrupado_exacto.items():
+                por_jugador_mercado.setdefault((jug_norm, tipo_esp), []).append(item)
+
+            props_finales = _seleccionar_linea_principal(por_jugador_mercado)
             if props_finales:
                 _CACHE_PROPS_ODDS_API[cache_key] = (ahora, props_finales)
             return props_finales
@@ -369,8 +411,10 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
                         part = _simplificar(o.get("participant", "") or o.get("label", ""))
                         cuota = round(o.get("odds", 0) / 1000.0, 2)
                         if cuota > 1.0:
-                            if l_apodo in part: datos["cuota_ml_local"] = cuota
-                            elif v_apodo in part: datos["cuota_ml_visitante"] = cuota
+                            if l_apodo in part:
+                                datos["cuota_ml_local"] = cuota
+                            elif v_apodo in part:
+                                datos["cuota_ml_visitante"] = cuota
 
                 elif ("handicap" in bo_type or "spread" in label) and len(outcomes) == 2 and not datos["cuota_spread_local"]:
                     for o in outcomes:
@@ -407,6 +451,45 @@ def obtener_cuotas_partido_kambi(deporte: str, local: str, visitante: str):
     return {"success": False, "error": f"No hay cuotas abiertas hoy en el mercado para {local} vs {visitante}."}
 
 
+def _clasificar_mercado_kambi(crit_label: str):
+    """
+    Clasifica primero los combos (P+R+A) antes que mercados individuales
+    para evitar que 'Points, Rebounds & Assists' se confunda con 'Puntos'.
+    """
+    if any(x in crit_label for x in ["team", "home", "away", "quarter", "half", "period", "1st"]):
+        return None
+
+    tiene_pts = "point" in crit_label
+    tiene_reb = "rebound" in crit_label
+    tiene_ast = "assist" in crit_label
+
+    if tiene_pts and tiene_reb and tiene_ast:
+        return "P+R+A"
+    if (tiene_pts and tiene_reb) or (tiene_pts and tiene_ast) or (tiene_reb and tiene_ast):
+        return None
+
+    if "shots on goal" in crit_label:
+        return "Tiros a Puerta"
+    if "three-point" in crit_label or "3-point" in crit_label:
+        return "Triples"
+    if tiene_ast:
+        return "Asistencias"
+    if tiene_reb:
+        return "Rebotes"
+    if "passing yards" in crit_label:
+        return "Yardas Pase"
+    if "rushing yards" in crit_label:
+        return "Yardas Acarreo"
+    if "receiving yards" in crit_label:
+        return "Yardas Recepción"
+    if "receptions" in crit_label:
+        return "Recepciones"
+    if tiene_pts:
+        return "Puntos"
+
+    return None
+
+
 def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
     props_odds_api = _obtener_props_the_odds_api(deporte, local, visitante)
     if props_odds_api:
@@ -417,22 +500,7 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
         return []
 
     ofertas = _obtener_betoffers_evento(event_id)
-    props_reales = []
-
-    mapeo_mercados = {
-        "shots on goal": "Tiros a Puerta",
-        "points scored": "Puntos",
-        "total points": "Puntos",
-        "rebounds": "Rebotes",
-        "assists": "Asistencias",
-        "three-point": "Triples",
-        "3-point": "Triples",
-        "passing yards": "Yardas Pase",
-        "rushing yards": "Yardas Acarreo",
-        "receiving yards": "Yardas Recepción",
-        "receptions": "Recepciones",
-        "points": "Puntos"
-    }
+    por_jugador_mercado = {}
 
     for bo in ofertas:
         crit_label = str(bo.get("criterion", {}).get("label", "")).lower()
@@ -440,15 +508,7 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
         if len(outcomes) != 2:
             continue
 
-        if "team" in crit_label or "home" in crit_label or "away" in crit_label:
-            continue
-
-        tipo_detectado = None
-        for clave, nombre_esp in mapeo_mercados.items():
-            if clave in crit_label:
-                tipo_detectado = nombre_esp
-                break
-
+        tipo_detectado = _clasificar_mercado_kambi(crit_label)
         if not tipo_detectado:
             continue
 
@@ -478,12 +538,13 @@ def obtener_player_props_kambi(deporte: str, local: str, visitante: str):
                 c_under = odds
 
         if c_over and c_over > 1.05:
-            props_reales.append({
+            clave = (_simplificar(jugador), tipo_detectado)
+            por_jugador_mercado.setdefault(clave, []).append({
                 "jugador": jugador,
                 "tipo_prop": tipo_detectado,
                 "linea": linea,
                 "cuota_over": c_over,
-                "cuota_under": c_under or 1.90
+                "cuota_under": c_under
             })
 
-    return props_reales
+    return _seleccionar_linea_principal(por_jugador_mercado)
