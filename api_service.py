@@ -78,11 +78,14 @@ def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos
 
         entry = {"gp": gp_actual, "peso_actual": round(w_new * 100)}
         for campo in s_new:
-            if campo in ["gp", "peso_actual"]:
+            if campo in ["gp", "peso_actual", "jugo_ayer"]:
                 continue
             val_new = s_new.get(campo, 0.0)
             val_old = s_old.get(campo, val_new)
             entry[campo] = (val_new * w_new) + (val_old * w_old)
+
+        if "jugo_ayer" in s_new:
+            entry["jugo_ayer"] = s_new["jugo_ayer"]
 
         combinado[abbr] = entry
 
@@ -93,7 +96,6 @@ def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos
 # 1. NHL: TEMPORADA 2025-2026 + 2026-2027 REALES (SV%, PP%, PK%, TIROS, ELO DINÁMICO)
 # =====================================================================
 def _obtener_stats_avanzadas_nhl(season_id: int) -> dict:
-    """Descarga PP%, PK%, Tiros/Juego y Goles/Juego reales desde NHL Stats REST API."""
     url = (
         f"https://api.nhle.com/stats/rest/en/team/summary?isAggregate=false&isGame=false"
         f"&sort=%5B%7B%22property%22:%22points%22,%22direction%22:%22DESC%22%7D%5D"
@@ -139,7 +141,6 @@ def _obtener_stats_avanzadas_nhl(season_id: int) -> dict:
 
 
 def _obtener_sv_porteros_nhl(abbr: str, season_str: str = "now") -> float:
-    """Calcula el SV% ponderado real de los porteros del equipo según tiros recibidos."""
     url = f"https://api-web.nhle.com/v1/club-stats/{abbr.lower()}/{season_str}"
     try:
         r = requests.get(url, headers=HEADERS_API, timeout=5)
@@ -192,15 +193,12 @@ def get_nhl_real_dataset():
     if cached:
         return cached
 
-    # 1. Standings + Splits Casa/Visita (2025-2026 y 2026-2027)
     st_25_26 = _parsear_standings_nhl("https://api-web.nhle.com/v1/standings/2026-04-16")
     st_26_27 = _parsear_standings_nhl("https://api-web.nhle.com/v1/standings/now")
 
-    # 2. Métricas avanzadas reales (PP%, PK%, SF/G, SA/G) de ambas temporadas
     adv_25_26 = _obtener_stats_avanzadas_nhl(20252026)
     adv_26_27 = _obtener_stats_avanzadas_nhl(20262027)
 
-    # 3. SV% real de porteros de cada equipo
     equipos_keys = list(st_26_27.keys()) if st_26_27 else list(st_25_26.keys())
     sv_25_26 = {abbr: _obtener_sv_porteros_nhl(abbr, "20252026/2") for abbr in equipos_keys}
     sv_26_27 = {abbr: _obtener_sv_porteros_nhl(abbr, "now") for abbr in equipos_keys}
@@ -231,7 +229,6 @@ def get_nhl_real_dataset():
 
     equipos = _combinar_temporadas_dinamico(full_25_26, full_26_27, juegos_full_temporada=82)
 
-    # 4. Historial real de partidos jugados + Cálculo de Elo Dinámico partido a partido
     partidos_historicos = []
     fechas_a_consultar = []
     base_pasada = datetime(2026, 4, 15)
@@ -297,8 +294,62 @@ def get_nhl_real_dataset():
 
 
 # =====================================================================
-# 2. NBA: TEMPORADA 2025-2026 + 2026-2027 REALES (ESPN API)
+# 2. NBA: PACE, ORtg, DRtg, eFG%, TS%, ELO DINÁMICO Y B2B (2025-2026 + 2026-2027)
 # =====================================================================
+NBA_ESPN_TEAM_IDS = {
+    "ATL": "1", "BOS": "2", "BKN": "17", "CHA": "30", "CHI": "4", "CLE": "5",
+    "DAL": "6", "DEN": "7", "DET": "8", "GSW": "9", "HOU": "10", "IND": "11",
+    "LAC": "12", "LAL": "13", "MEM": "29", "MIA": "14", "MIL": "15", "MIN": "16",
+    "NOP": "3", "NYK": "18", "OKC": "25", "ORL": "19", "PHI": "20", "PHX": "21",
+    "POR": "22", "SAC": "23", "SAS": "24", "TOR": "28", "UTA": "26", "WAS": "27"
+}
+
+
+def _obtener_eficiencia_equipo_nba(team_id: str) -> dict:
+    """
+    Descarga de ESPN Team Statistics los datos reales de tiro y posesiones:
+    FGA, FGM, 3PM, FTA, OREB, TOV para calcular Pace, ORtg, eFG% y TS% reales.
+    """
+    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/statistics"
+    stats_map = {}
+    try:
+        r = requests.get(url, headers=HEADERS_API, timeout=5)
+        if r.status_code == 200:
+            cats = r.json().get("results", {}).get("stats", {}).get("categories", [])
+            for cat in cats:
+                for st in cat.get("stats", []):
+                    name = st.get("name", "")
+                    val = st.get("perGameValue") if st.get("perGameValue") is not None else st.get("value")
+                    if name and val is not None:
+                        try:
+                            stats_map[name] = float(val)
+                        except (ValueError, TypeError):
+                            pass
+    except Exception:
+        pass
+
+    fga = stats_map.get("avgFieldGoalsAttempted", stats_map.get("fieldGoalsAttempted", 88.5))
+    fgm = stats_map.get("avgFieldGoalsMade", stats_map.get("fieldGoalsMade", 41.5))
+    tpm = stats_map.get("avgThreePointFieldGoalsMade", stats_map.get("threePointFieldGoalsMade", 13.0))
+    fta = stats_map.get("avgFreeThrowsAttempted", stats_map.get("freeThrowsAttempted", 22.0))
+    oreb = stats_map.get("avgOffensiveRebounds", stats_map.get("offensiveRebounds", 10.5))
+    tov = stats_map.get("avgTurnovers", stats_map.get("turnovers", 13.8))
+    pts = stats_map.get("avgPoints", 114.5)
+
+    # Posesiones reales por juego (Fórmula oficial NBA Dean Oliver)
+    pace = max(92.0, min(108.0, fga + (0.44 * fta) - oreb + tov))
+    ortg = (pts / pace) * 100.0
+    efg_pct = ((fgm + 0.5 * tpm) / max(1.0, fga)) * 100.0
+    ts_pct = (pts / max(1.0, 2.0 * (fga + 0.44 * fta))) * 100.0
+
+    return {
+        "pace": round(pace, 2),
+        "ortg_api": round(ortg, 2),
+        "efg_pct": round(efg_pct, 2),
+        "ts_pct": round(ts_pct, 2)
+    }
+
+
 def _recolectar_partidos_nba(fechas: list) -> tuple:
     equipos_raw = {}
     partidos = []
@@ -352,6 +403,7 @@ def _recolectar_partidos_nba(fechas: list) -> tuple:
                         equipos_raw[abbr]["road_a"].append(pts_a)
 
                 partidos.append({
+                    "fecha": fecha_str,
                     "home": h_abbr,
                     "away": a_abbr,
                     "home_score": h_score,
@@ -384,15 +436,17 @@ def _recolectar_partidos_nba(fechas: list) -> tuple:
 
 
 def get_nba_real_dataset():
-    cached = fetch_cached("nba_real_dataset_v5", ttl=3600)
+    cached = fetch_cached("nba_real_dataset_full_v6", ttl=3600)
     if cached:
         return cached
 
     hoy = datetime.utcnow()
-    fechas_actual = [(hoy - timedelta(days=d)).strftime("%Y%m%d") for d in range(1, 30)]
+    ayer_str = (hoy - timedelta(days=1)).strftime("%Y%m%d")
 
+    # Orden cronológico para calcular Elo Dinámico real partido a partido
     base_pasada = datetime(2026, 4, 12)
-    fechas_pasada = [(base_pasada - timedelta(days=d)).strftime("%Y%m%d") for d in range(0, 60)]
+    fechas_pasada = [(base_pasada - timedelta(days=d)).strftime("%Y%m%d") for d in range(60, -1, -1)]
+    fechas_actual = [(hoy - timedelta(days=d)).strftime("%Y%m%d") for d in range(32, 0, -1)]
 
     eq_pasada, part_pasada = _recolectar_partidos_nba(fechas_pasada)
     eq_actual, part_actual = _recolectar_partidos_nba(fechas_actual)
@@ -400,9 +454,56 @@ def get_nba_real_dataset():
     equipos = _combinar_temporadas_dinamico(eq_pasada, eq_actual, juegos_full_temporada=82)
     partidos_historicos = part_pasada + part_actual
 
+    # Detectar qué equipos jugaron ayer (Back-to-Back real)
+    equipos_jugaron_ayer = set()
+    for p in part_actual:
+        if p.get("fecha") == ayer_str:
+            equipos_jugaron_ayer.add(p["home"])
+            equipos_jugaron_ayer.add(p["away"])
+
+    # Descargar Pace, ORtg, eFG% y TS% reales de ESPN para cada equipo
+    eficiencia_api = {abbr: _obtener_eficiencia_equipo_nba(tid) for abbr, tid in NBA_ESPN_TEAM_IDS.items()}
+
+    # Calcular Elo Dinámico real recorriendo los partidos de 2025-2026 y 2026-2027
+    elo_dinamico = {abbr: 1500.0 for abbr in NBA_ESPN_TEAM_IDS.keys()}
+    for p in partidos_historicos:
+        h_abbr, a_abbr = p["home"], p["away"]
+        if h_abbr in elo_dinamico and a_abbr in elo_dinamico:
+            home_win = p["home_win"]
+            margen = abs(p["home_score"] - p["away_score"])
+            elo_h = elo_dinamico[h_abbr]
+            elo_a = elo_dinamico[a_abbr]
+            exp_h = 1.0 / (1.0 + (10.0 ** ((elo_a - (elo_h + 45.0)) / 400.0)))
+            k_factor = 16.0 * (1.0 + min(1.5, margen / 18.0))
+            elo_dinamico[h_abbr] = elo_h + k_factor * (home_win - exp_h)
+            elo_dinamico[a_abbr] = elo_a + k_factor * ((1 - home_win) - (1.0 - exp_h))
+
+    for abbr, d in equipos.items():
+        ef = eficiencia_api.get(abbr, {"pace": 99.0, "ortg_api": 114.5, "efg_pct": 54.0, "ts_pct": 57.5})
+        pace = ef["pace"]
+        # ORtg y DRtg reales por cada 100 posesiones
+        ortg_real = (d["pf_pg"] / pace) * 100.0
+        drtg_real = (d["pa_pg"] / pace) * 100.0
+        home_ortg = (d["home_pf_pg"] / pace) * 100.0
+        home_drtg = (d["home_pa_pg"] / pace) * 100.0
+        road_ortg = (d["road_pf_pg"] / pace) * 100.0
+        road_drtg = (d["road_pa_pg"] / pace) * 100.0
+
+        d["pace"] = pace
+        d["ortg"] = round(ortg_real, 2)
+        d["drtg"] = round(drtg_real, 2)
+        d["home_ortg"] = round(home_ortg, 2)
+        d["home_drtg"] = round(home_drtg, 2)
+        d["road_ortg"] = round(road_ortg, 2)
+        d["road_drtg"] = round(road_drtg, 2)
+        d["efg_pct"] = ef["efg_pct"]
+        d["ts_pct"] = ef["ts_pct"]
+        d["elo"] = round(elo_dinamico.get(abbr, 1500.0), 1)
+        d["jugo_ayer"] = (abbr in equipos_jugaron_ayer)
+
     dataset = {"equipos": equipos, "partidos": partidos_historicos}
     if equipos:
-        set_cached("nba_real_dataset_v5", dataset)
+        set_cached("nba_real_dataset_full_v6", dataset)
     return dataset
 
 
