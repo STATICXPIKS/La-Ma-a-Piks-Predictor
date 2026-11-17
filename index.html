@@ -405,7 +405,6 @@
     <script>
         const SUPABASE_URL = "https://tuywqyjsaubcxmbzxwlg.supabase.co";
         const SUPABASE_KEY = "sb_publishable_Q2Zvz4kGTFxikHIDISUCKg_hqiZnsYj";
-        // BACKEND OFICIAL ACTIVO EN RENDER CON MOTORES DE PROPS
         const RENDER_API_URL = "https://la-ma-a-piks-predictor.onrender.com";
 
         let deporteActual = "NHL";
@@ -656,9 +655,6 @@
             if (statusDiv) statusDiv.classList.add('hidden');
         }
 
-        // ==========================================
-        // CARGA DE CUOTAS EN VIVO (THE ODDS API)
-        // ==========================================
         async function cargarCuotasEnVivo() {
             const btn = document.getElementById('btn-live-odds');
             const statusDiv = document.getElementById('odds-api-status');
@@ -686,7 +682,6 @@
 
                 const d = res.data;
 
-                // 1. Moneyline
                 if (d.cuota_ml_local !== null && d.cuota_ml_local !== undefined) {
                     document.getElementById('cuota-ml-loc').value = d.cuota_ml_local;
                 }
@@ -694,7 +689,6 @@
                     document.getElementById('cuota-ml-vis').value = d.cuota_ml_visitante;
                 }
 
-                // 2. Spread / Puck Line / Run Line
                 if (d.linea_spread_local !== null && d.linea_spread_local !== undefined) {
                     document.getElementById('linea-pl-loc').value = d.linea_spread_local;
                 }
@@ -708,7 +702,6 @@
                     document.getElementById('cuota-pl-vis').value = d.cuota_spread_visitante;
                 }
 
-                // 3. Totales (Over / Under)
                 if (d.linea_total !== null && d.linea_total !== undefined) {
                     document.getElementById('linea-total-goles').value = d.linea_total;
                 }
@@ -1041,14 +1034,6 @@
 
                 let probSpreadLoc = dataSpreadLoc.prob;
                 let probSpreadVis = dataSpreadVis.prob;
-
-                if (lPlLoc < 0 && probSpreadLoc > d.ml_local.prob) {
-                    probSpreadLoc = Math.round(d.ml_local.prob * 0.55 * 10) / 10;
-                    probSpreadVis = Math.round((100.0 - probSpreadLoc) * 10) / 10;
-                } else if (lPlVis < 0 && probSpreadVis > d.ml_visitante.prob) {
-                    probSpreadVis = Math.round(d.ml_visitante.prob * 0.55 * 10) / 10;
-                    probSpreadLoc = Math.round((100.0 - probSpreadVis) * 10) / 10;
-                }
 
                 let opciones = [
                     { tipo: 'ML', titulo: `${d.equipo_local_abbr} ML @ ${cMlLoc}`, desc: `${local} ML`, ev: calcEV(d.ml_local.prob, cMlLoc), cuota: cMlLoc, prob: d.ml_local.prob },
