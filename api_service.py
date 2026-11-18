@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "").strip()
@@ -56,11 +57,10 @@ def get_live_weather(ciudad: str):
     return None
 
 
-def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos_full_temporada: int) -> dict:
+def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos_full_temporada: int, rampa_pct: float = 0.55, peso_min: float = 0.20) -> dict:
     """
     Ponderación Bayesiana Dinámica:
     Combina la temporada pasada con la actual según cuántos juegos lleva cada equipo.
-    Conforme avanzan los partidos, el peso de la temporada actual sube automáticamente.
     """
     todos_abbr = set(stats_pasada.keys()) | set(stats_actual.keys())
     combinado = {}
@@ -77,7 +77,7 @@ def _combinar_temporadas_dinamico(stats_pasada: dict, stats_actual: dict, juegos
             continue
 
         gp_actual = s_new.get("gp", 0)
-        w_new = min(0.88, max(0.20, gp_actual / (juegos_full_temporada * 0.55)))
+        w_new = min(0.94, max(peso_min, gp_actual / (juegos_full_temporada * rampa_pct)))
         w_old = 1.0 - w_new
 
         entry = {"gp": gp_actual, "peso_actual": round(w_new * 100)}
@@ -307,7 +307,7 @@ def get_nhl_real_dataset():
 
 
 # =====================================================================
-# 2. NBA: PACE, ORtg, DRtg, eFG%, TS%, ELO DINÁMICO Y B2B
+# 2. NBA: PACE REAL, ORtg, DRtg, LESIONES (OUT) EN VIVO, ELO DINÁMICO Y B2B
 # =====================================================================
 NBA_ESPN_TEAM_IDS = {
     "ATL": "1", "BOS": "2", "BKN": "17", "CHA": "30", "CHI": "4", "CLE": "5",
@@ -318,9 +318,51 @@ NBA_ESPN_TEAM_IDS = {
 }
 
 
-def _obtener_eficiencia_equipo_nba(team_id: str) -> dict:
+def _obtener_ppg_atleta_espn_nba(athlete_id: str) -> tuple:
+    """Devuelve (pts_pg, mpg) reales de temporada regular de un atleta lesionado."""
+    url = f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{athlete_id}/overview"
+    try:
+        r = requests.get(url, headers=HEADERS_API, timeout=4)
+        if r.status_code != 200:
+            return 0.0, 0.0
+        stats_block = r.json().get("statistics", {})
+        names = stats_block.get("names", [])
+        splits = stats_block.get("splits", [])
+        if not names or not splits:
+            return 0.0, 0.0
+
+        fila = splits[0].get("stats", [])
+        for sp in splits:
+            if "regular" in str(sp.get("displayName", "")).lower() and "career" not in str(sp.get("displayName", "")).lower():
+                fila = sp.get("stats", [])
+                break
+
+        pts, mpg = 0.0, 0.0
+        for idx, col in enumerate(names):
+            if idx >= len(fila):
+                break
+            try:
+                val = float(str(fila[idx]).replace(",", ""))
+            except ValueError:
+                continue
+            c_low = col.lower()
+            if c_low in ["avgpoints", "pts"]:
+                pts = val
+            elif c_low in ["avgminutes", "min", "mpg"]:
+                mpg = val
+        return pts, mpg
+    except Exception:
+        return 0.0, 0.0
+
+
+def _obtener_eficiencia_y_bajas_nba(team_id: str) -> dict:
+    """
+    Calcula Pace real por partido (sin mezclar totales de temporada con promedios)
+    y detecta bajas oficiales (OUT) con su impacto ofensivo real en PPG.
+    """
     url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/statistics"
-    stats_map = {}
+    per_game_map = {}
+    total_map = {}
     try:
         r = requests.get(url, headers=HEADERS_API, timeout=5)
         if r.status_code == 200:
@@ -328,33 +370,84 @@ def _obtener_eficiencia_equipo_nba(team_id: str) -> dict:
             for cat in cats:
                 for st in cat.get("stats", []):
                     name = st.get("name", "")
-                    val = st.get("perGameValue") if st.get("perGameValue") is not None else st.get("value")
-                    if name and val is not None:
+                    if not name:
+                        continue
+                    if st.get("perGameValue") is not None:
                         try:
-                            stats_map[name] = float(val)
+                            per_game_map[name] = float(st["perGameValue"])
+                        except (ValueError, TypeError):
+                            pass
+                    if st.get("value") is not None:
+                        try:
+                            total_map[name] = float(st["value"])
                         except (ValueError, TypeError):
                             pass
     except Exception:
         pass
 
-    fga = stats_map.get("avgFieldGoalsAttempted", stats_map.get("fieldGoalsAttempted", 88.5))
-    fgm = stats_map.get("avgFieldGoalsMade", stats_map.get("fieldGoalsMade", 41.5))
-    tpm = stats_map.get("avgThreePointFieldGoalsMade", stats_map.get("threePointFieldGoalsMade", 13.0))
-    fta = stats_map.get("avgFreeThrowsAttempted", stats_map.get("freeThrowsAttempted", 22.0))
-    oreb = stats_map.get("avgOffensiveRebounds", stats_map.get("offensiveRebounds", 10.5))
-    tov = stats_map.get("avgTurnovers", stats_map.get("turnovers", 13.8))
-    pts = stats_map.get("avgPoints", 114.5)
+    gp_api = max(1.0, total_map.get("gamesPlayed", per_game_map.get("gamesPlayed", 1.0)))
 
-    pace = max(92.0, min(108.0, fga + (0.44 * fta) - oreb + tov))
+    def _stat_pg(key_avg: str, key_base: str, default_val: float, max_razonable: float) -> float:
+        if key_avg in per_game_map and per_game_map[key_avg] <= max_razonable:
+            return per_game_map[key_avg]
+        if key_base in per_game_map and per_game_map[key_base] <= max_razonable:
+            return per_game_map[key_base]
+        if key_avg in total_map and total_map[key_avg] <= max_razonable:
+            return total_map[key_avg]
+        if key_base in total_map:
+            val = total_map[key_base]
+            return (val / gp_api) if val > max_razonable else val
+        return default_val
+
+    fga = _stat_pg("avgFieldGoalsAttempted", "fieldGoalsAttempted", 88.5, 115.0)
+    fgm = _stat_pg("avgFieldGoalsMade", "fieldGoalsMade", 41.5, 65.0)
+    tpm = _stat_pg("avgThreePointFieldGoalsMade", "threePointFieldGoalsMade", 13.0, 25.0)
+    fta = _stat_pg("avgFreeThrowsAttempted", "freeThrowsAttempted", 22.0, 40.0)
+    oreb = _stat_pg("avgOffensiveRebounds", "offensiveRebounds", 10.5, 22.0)
+    tov = _stat_pg("avgTurnovers", "turnovers", 13.8, 25.0)
+    pts = _stat_pg("avgPoints", "points", 114.5, 145.0)
+
+    pace_calc = fga + (0.44 * fta) - oreb + tov
+    pace = max(94.0, min(105.5, pace_calc))
     ortg = (pts / pace) * 100.0
     efg_pct = ((fgm + 0.5 * tpm) / max(1.0, fga)) * 100.0
     ts_pct = (pts / max(1.0, 2.0 * (fga + 0.44 * fta))) * 100.0
+
+    # Reporte oficial de bajas NBA (OUT) en vivo desde ESPN
+    ajuste_pts_bajas = 0.0
+    bajas_nombres = []
+    url_inj = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/injuries"
+    try:
+        r_inj = requests.get(url_inj, headers=HEADERS_API, timeout=5)
+        if r_inj.status_code == 200:
+            for item in r_inj.json().get("injuries", []):
+                status = str(item.get("status", "")).lower()
+                if "out" not in status:
+                    continue
+                ath = item.get("athlete", {})
+                aid = str(ath.get("id", ""))
+                nom = ath.get("displayName", "")
+                if not aid or not nom:
+                    continue
+                ppg_out, mpg_out = _obtener_ppg_atleta_espn_nba(aid)
+                if mpg_out >= 18.0 and ppg_out >= 9.0:
+                    # El suplente absorbe ~62% del volumen ofensivo; el impacto neto real sobre el total es ~38% del PPG del ausente
+                    impacto_neto = (ppg_out - 6.0) * 0.42
+                    if impacto_neto > 0:
+                        ajuste_pts_bajas -= impacto_neto
+                    bajas_nombres.append(f"{nom} ({round(ppg_out, 1)}ppg OUT)")
+    except Exception:
+        pass
+
+    ajuste_pts_bajas = round(max(-11.0, ajuste_pts_bajas), 2)
 
     return {
         "pace": round(pace, 2),
         "ortg_api": round(ortg, 2),
         "efg_pct": round(efg_pct, 2),
-        "ts_pct": round(ts_pct, 2)
+        "ts_pct": round(ts_pct, 2),
+        "ajuste_pts_bajas": ajuste_pts_bajas,
+        "bajas_texto": ", ".join(bajas_nombres[:3]) if bajas_nombres else "Sin bajas clave"
     }
 
 
@@ -427,7 +520,7 @@ def _recolectar_partidos_nba(fechas: list) -> tuple:
         pf_avg = sum(d["pts_f"]) / gp
         pa_avg = sum(d["pts_a"]) / gp
         var_f = sum((x - pf_avg) ** 2 for x in d["pts_f"]) / gp
-        std_f = max(7.5, var_f ** 0.5)
+        std_f = max(9.5, var_f ** 0.5)
 
         equipos[abbr] = {
             "gp": gp,
@@ -444,7 +537,7 @@ def _recolectar_partidos_nba(fechas: list) -> tuple:
 
 
 def get_nba_real_dataset():
-    cached = fetch_cached("nba_real_dataset_full_v6", ttl=3600)
+    cached = fetch_cached("nba_real_dataset_full_v7", ttl=2700)
     if cached:
         return cached
 
@@ -453,13 +546,14 @@ def get_nba_real_dataset():
     anio_ini_actual = hoy.year if hoy.month >= 10 else hoy.year - 1
 
     base_pasada = datetime(anio_ini_actual, 4, 12)
-    fechas_pasada = [(base_pasada - timedelta(days=d)).strftime("%Y%m%d") for d in range(60, -1, -1)]
-    fechas_actual = [(hoy - timedelta(days=d)).strftime("%Y%m%d") for d in range(32, 0, -1)]
+    fechas_pasada = [(base_pasada - timedelta(days=d)).strftime("%Y%m%d") for d in range(50, -1, -1)]
+    fechas_actual = [(hoy - timedelta(days=d)).strftime("%Y%m%d") for d in range(42, 0, -1)]
 
     eq_pasada, part_pasada = _recolectar_partidos_nba(fechas_pasada)
     eq_actual, part_actual = _recolectar_partidos_nba(fechas_actual)
 
-    equipos = _combinar_temporadas_dinamico(eq_pasada, eq_actual, juegos_full_temporada=82)
+    # Prioriza temporada actual (rampa rápida de 22 juegos para que noviembre refleje los rosters actuales)
+    equipos = _combinar_temporadas_dinamico(eq_pasada, eq_actual, juegos_full_temporada=82, rampa_pct=0.26, peso_min=0.35)
     partidos_historicos = part_pasada + part_actual
 
     equipos_jugaron_ayer = set()
@@ -468,7 +562,21 @@ def get_nba_real_dataset():
             equipos_jugaron_ayer.add(p["home"])
             equipos_jugaron_ayer.add(p["away"])
 
-    eficiencia_api = {abbr: _obtener_eficiencia_equipo_nba(tid) for abbr, tid in NBA_ESPN_TEAM_IDS.items()}
+    eficiencia_api = {}
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futuros = {
+            executor.submit(_obtener_eficiencia_y_bajas_nba, tid): abbr
+            for abbr, tid in NBA_ESPN_TEAM_IDS.items()
+        }
+        for fut in as_completed(futuros):
+            abbr = futuros[fut]
+            try:
+                eficiencia_api[abbr] = fut.result()
+            except Exception:
+                eficiencia_api[abbr] = {
+                    "pace": 99.0, "ortg_api": 114.0, "efg_pct": 54.0,
+                    "ts_pct": 57.5, "ajuste_pts_bajas": 0.0, "bajas_texto": "Sin bajas clave"
+                }
 
     elo_dinamico = {abbr: 1500.0 for abbr in NBA_ESPN_TEAM_IDS.keys()}
     for p in partidos_historicos:
@@ -484,7 +592,10 @@ def get_nba_real_dataset():
             elo_dinamico[a_abbr] = elo_a + k_factor * ((1 - home_win) - (1.0 - exp_h))
 
     for abbr, d in equipos.items():
-        ef = eficiencia_api.get(abbr, {"pace": 99.0, "ortg_api": 114.5, "efg_pct": 54.0, "ts_pct": 57.5})
+        ef = eficiencia_api.get(abbr, {
+            "pace": 99.0, "ortg_api": 114.0, "efg_pct": 54.0,
+            "ts_pct": 57.5, "ajuste_pts_bajas": 0.0, "bajas_texto": "Sin bajas clave"
+        })
         pace = ef["pace"]
         d["pace"] = pace
         d["ortg"] = round((d["pf_pg"] / pace) * 100.0, 2)
@@ -495,12 +606,14 @@ def get_nba_real_dataset():
         d["road_drtg"] = round((d["road_pa_pg"] / pace) * 100.0, 2)
         d["efg_pct"] = ef["efg_pct"]
         d["ts_pct"] = ef["ts_pct"]
-        d["elo"] = round(elo_dinamico.get(abbr, 1500.0), 1)
+        d["ajuste_pts_bajas"] = ef["ajuste_pts_bajas"]
+        d["bajas_texto"] = ef["bajas_texto"]
+        d["elo"] = round(elo_dinamico.get(abbr, 1500.0) + (ef["ajuste_pts_bajas"] * 12.0), 1)
         d["jugo_ayer"] = (abbr in equipos_jugaron_ayer)
 
     dataset = {"equipos": equipos, "partidos": partidos_historicos}
     if equipos:
-        set_cached("nba_real_dataset_full_v6", dataset)
+        set_cached("nba_real_dataset_full_v7", dataset)
     return dataset
 
 
@@ -518,11 +631,6 @@ NFL_ESPN_TEAM_IDS = {
 
 
 def _obtener_stats_y_lesiones_nfl(team_id: str) -> dict:
-    """
-    Consulta en vivo a ESPN NFL API:
-    1. Estadísticas reales de equipo y QB (YPP, QB Net YPA, Snaps/Jugadas, 3rd Down %, Turnovers).
-    2. Reporte oficial de lesiones activas (OUT / IR) por posición clave.
-    """
     stats_map = {}
     url_stats = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/statistics"
     try:
@@ -544,17 +652,14 @@ def _obtener_stats_y_lesiones_nfl(team_id: str) -> dict:
     except Exception:
         pass
 
-    # Volumen de jugadas y eficiencia por jugada reales
     ypp = stats_map.get("yardsPerPlay", 5.4)
     qb_ypa = stats_map.get("passing_yardsPerPassAttempt", stats_map.get("yardsPerPassAttempt", 6.8))
     third_down_pct = stats_map.get("thirdDownConvPct", 39.5)
     turnovers = stats_map.get("totalGiveaways", stats_map.get("turnovers", 14.0))
     takeaways = stats_map.get("totalTakeaways", 14.0)
     total_plays_pg = stats_map.get("totalPlaysPerGame", stats_map.get("offensivePlaysPerGame", 62.5))
-    # Posesiones (drives) estimadas reales a partir del volumen de jugadas
     drives_pg = max(9.5, min(13.5, total_plays_pg / 5.75))
 
-    # Reporte oficial de lesiones (OUT / Injured Reserve)
     factor_salud = 1.0
     bajas_clave = []
     url_inj = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}/injuries"
@@ -691,10 +796,8 @@ def get_nfl_real_dataset():
     equipos = _combinar_temporadas_dinamico(eq_pasada, eq_actual, juegos_full_temporada=17)
     partidos_historicos = part_pasada + part_actual
 
-    # Consultar estadísticas reales de eficiencia, QB, jugadas y lesiones en vivo
     avanzadas_api = {abbr: _obtener_stats_y_lesiones_nfl(tid) for abbr, tid in NFL_ESPN_TEAM_IDS.items()}
 
-    # Calcular Elo Dinámico real recorriendo los partidos de ambas temporadas
     elo_dinamico = {abbr: 1500.0 for abbr in NFL_ESPN_TEAM_IDS.keys()}
     for p in partidos_historicos:
         h_abbr, a_abbr = p["home"], p["away"]
@@ -714,7 +817,6 @@ def get_nfl_real_dataset():
             "plays_pg": 62.5, "drives_pg": 10.9, "factor_salud": 1.0, "bajas_texto": "Plantilla completa"
         })
         drives = av["drives_pg"]
-        # Puntos por drive (eficiencia posesión por posesión en NFL)
         d["pts_per_drive_off"] = round(d["pf_pg"] / drives, 3)
         d["pts_per_drive_def"] = round(d["pa_pg"] / drives, 3)
         d["home_ppd_off"] = round(d["home_pf_pg"] / drives, 3)
