@@ -5,6 +5,7 @@ import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from kambi_feed import obtener_player_props_kambi
+from api_service import get_nba_real_dataset
 
 EQUIPOS_NBA_ESPN = {
     "Atlanta Hawks": ("atl", "1"), "Boston Celtics": ("bos", "2"), "Brooklyn Nets": ("bkn", "17"),
@@ -35,9 +36,6 @@ def _normalizar_nombre(nombre: str) -> str:
 
 
 def _seleccionar_split_temporada(splits: list) -> list:
-    """
-    Elige el split de Temporada Regular actual en lugar de tomar splits[0] a ciegas.
-    """
     if not splits:
         return []
     for sp in splits:
@@ -95,7 +93,7 @@ def _obtener_promedios_atleta_nba(athlete_id: str) -> dict:
 
 def _obtener_stats_reales_nba(team_id: str, abbr: str):
     ahora = time.time()
-    cache_key = f"v2_{team_id}"
+    cache_key = f"v3_{team_id}"
     if cache_key in _CACHE_STATS_NBA and (ahora - _CACHE_STATS_NBA[cache_key][0] < 3600):
         return _CACHE_STATS_NBA[cache_key][1]
 
@@ -118,7 +116,6 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
                 if nom and aid:
                     activos.append((aid, nom))
 
-            # Consulta paralela de toda la plantilla activa para incluir titulares y estrellas sin importar orden alfabético
             with ThreadPoolExecutor(max_workers=8) as executor:
                 futuros = {
                     executor.submit(_obtener_promedios_atleta_nba, aid): (aid, nom)
@@ -136,8 +133,7 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
 
                     gp = proms.get("GP", 10)
                     mpg = proms.get("MPG", 20.0)
-                    # Filtra jugadores marginales o muestras mínimas que distorsionan promedios
-                    if gp < 4 or mpg < 15.0:
+                    if gp < 4 or mpg < 16.0:
                         continue
 
                     key = _normalizar_nombre(nom)
@@ -152,10 +148,6 @@ def _obtener_stats_reales_nba(team_id: str, abbr: str):
 
 
 def _buscar_atleta_exacto(jugador_raw: str, stats_totales: dict):
-    """
-    Cruza el nombre del casino exclusivamente contra jugadores reales de los dos equipos
-    del partido, evitando cruces erróneos entre jugadores de otros equipos.
-    """
     key_norm = _normalizar_nombre(jugador_raw)
     if key_norm in stats_totales:
         return stats_totales[key_norm]
@@ -172,19 +164,94 @@ def _buscar_atleta_exacto(jugador_raw: str, stats_totales: dict):
     return None
 
 
-def _parametros_dispersion_nba(tipo: str, media_real: float) -> float:
+def _construir_contexto_partido_nba(abbr_loc: str, abbr_vis: str) -> dict:
+    """
+    Extrae en vivo desde api_service.py el Pace proyectado del enfrentamiento,
+    la eficiencia defensiva (DRtg) de cada rival y el cansancio Back-to-Back.
+    """
+    dataset = get_nba_real_dataset()
+    equipos = dataset.get("equipos", {})
+
+    if equipos:
+        media_liga_pace = sum(e.get("pace", 99.0) for e in equipos.values()) / len(equipos)
+        media_liga_drtg = sum(e.get("drtg", 114.0) for e in equipos.values()) / len(equipos)
+    else:
+        media_liga_pace = 99.0
+        media_liga_drtg = 114.0
+
+    s_loc = equipos.get(abbr_loc, {"pace": media_liga_pace, "drtg": media_liga_drtg, "home_drtg": media_liga_drtg, "gp": 10, "jugo_ayer": False})
+    s_vis = equipos.get(abbr_vis, {"pace": media_liga_pace, "drtg": media_liga_drtg, "road_drtg": media_liga_drtg, "gp": 10, "jugo_ayer": False})
+
+    # Ritmo proyectado del duelo específico entre Local y Visitante
+    pace_puro = s_loc.get("pace", media_liga_pace) + s_vis.get("pace", media_liga_pace) - media_liga_pace
+    pace_partido = max(92.0, min(106.0, (pace_puro * 0.85) + (media_liga_pace * 0.15)))
+
+    w_split_loc = min(0.32, s_loc.get("gp", 10) / 75.0)
+    w_split_vis = min(0.32, s_vis.get("gp", 10) / 75.0)
+
+    drtg_vis_eff = (s_vis.get("road_drtg", media_liga_drtg) * w_split_vis) + (s_vis.get("drtg", media_liga_drtg) * (1.0 - w_split_vis))
+    drtg_loc_eff = (s_loc.get("home_drtg", media_liga_drtg) * w_split_loc) + (s_loc.get("drtg", media_liga_drtg) * (1.0 - w_split_loc))
+
+    def _factores_equipo(s_propio: dict, drtg_rival: float, es_visitante: bool) -> dict:
+        pace_propio = max(90.0, float(s_propio.get("pace", media_liga_pace)))
+        ratio_pace = max(0.93, min(1.07, pace_partido / pace_propio))
+        ratio_def = max(0.92, min(1.08, drtg_rival / max(95.0, media_liga_drtg)))
+
+        if s_propio.get("jugo_ayer"):
+            factor_b2b = 0.965 if es_visitante else 0.975
+        else:
+            factor_b2b = 1.0
+
+        return {
+            "mult_pts": ratio_pace * (1.0 + (ratio_def - 1.0) * 0.85) * factor_b2b,
+            "mult_ast": ratio_pace * (1.0 + (ratio_def - 1.0) * 0.75) * factor_b2b,
+            # Una defensa permisiva (ratio_def > 1) permite más tiros anotados y deja ligeramente menos rebotes defensivos
+            "mult_reb": (1.0 + (ratio_pace - 1.0) * 0.75) * (1.0 - (ratio_def - 1.0) * 0.35) * factor_b2b
+        }
+
+    return {
+        "pace_partido": round(pace_partido, 1),
+        abbr_loc: _factores_equipo(s_loc, drtg_vis_eff, es_visitante=False),
+        abbr_vis: _factores_equipo(s_vis, drtg_loc_eff, es_visitante=True)
+    }
+
+
+def _calcular_proyeccion_contextual(datos_atleta: dict, tipo: str, contexto_partido: dict) -> float:
+    """
+    Ajusta los promedios individuales de ESPN al Pace proyectado del duelo,
+    a la eficiencia defensiva del rival y al descanso/fatiga Back-to-Back.
+    """
+    equipo = datos_atleta.get("equipo", "")
+    factores = contexto_partido.get(equipo, {"mult_pts": 1.0, "mult_ast": 1.0, "mult_reb": 1.0})
+
+    pts_adj = float(datos_atleta.get("Puntos", 0.0)) * factores["mult_pts"]
+    reb_adj = float(datos_atleta.get("Rebotes", 0.0)) * factores["mult_reb"]
+    ast_adj = float(datos_atleta.get("Asistencias", 0.0)) * factores["mult_ast"]
+
     if tipo == "Puntos":
-        return max(2.8, media_real * 0.34)
+        return pts_adj
     if tipo == "Rebotes":
-        return max(1.6, media_real * 0.38)
+        return reb_adj
     if tipo == "Asistencias":
-        return max(1.4, media_real * 0.42)
+        return ast_adj
     if tipo == "P+R+A":
-        return max(3.8, media_real * 0.28)
-    return max(1.5, media_real * 0.35)
+        return pts_adj + reb_adj + ast_adj
+    return float(datos_atleta.get(tipo, 0.0))
 
 
-def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
+def _parametros_dispersion_nba(tipo: str, media_ajustada: float) -> float:
+    if tipo == "Puntos":
+        return max(3.0, media_ajustada * 0.34)
+    if tipo == "Rebotes":
+        return max(1.7, media_ajustada * 0.38)
+    if tipo == "Asistencias":
+        return max(1.5, media_ajustada * 0.42)
+    if tipo == "P+R+A":
+        return max(4.0, media_ajustada * 0.28)
+    return max(1.6, media_ajustada * 0.35)
+
+
+def _evaluar_prop_nba(p_casino: dict, stats_totales: dict, contexto_partido: dict):
     jugador_raw = p_casino["jugador"]
     tipo = p_casino["tipo_prop"]
     if tipo not in ["Puntos", "Rebotes", "Asistencias", "P+R+A"]:
@@ -198,37 +265,39 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
     if not datos_atleta:
         return None
 
-    media_real = float(datos_atleta.get(tipo, 0.0))
+    media_base = float(datos_atleta.get(tipo, 0.0))
     min_requerido = 10.0 if tipo == "P+R+A" else 3.0
-    if media_real < min_requerido:
+    if media_base < min_requerido:
         return None
 
-    # Si la línea del casino difiere más del 55% del promedio histórico (ej. cambio brusco de titularidad por lesión), se descarta
-    tolerancia_cambio_rol = max(6.5, media_real * 0.55)
-    if abs(media_real - linea) > tolerancia_cambio_rol:
+    # Proyección contextualizada por Pace del duelo, defensa rival y Back-to-Back
+    media_ajustada = _calcular_proyeccion_contextual(datos_atleta, tipo, contexto_partido)
+
+    tolerancia_cambio_rol = max(6.0, media_ajustada * 0.50)
+    if abs(media_ajustada - linea) > tolerancia_cambio_rol:
         return None
 
     equipo_abbr = datos_atleta["equipo"]
     nombre_final = datos_atleta["nombre"]
 
-    # Probabilidad estadística 100% pura derivada de promedios reales en ESPN (sin tocar cuotas del casino)
-    sigma = _parametros_dispersion_nba(tipo, media_real)
-    z = (linea - media_real) / sigma
+    # Probabilidad estadística pura derivada de la proyección contextualizada (sin tocar cuotas del casino)
+    sigma = _parametros_dispersion_nba(tipo, media_ajustada)
+    z = (linea - media_ajustada) / sigma
     prob_under = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
     prob_over = 1.0 - prob_under
 
-    # Las cuotas del casino se usan exclusivamente al final para calcular +EV
+    # Las cuotas del casino intervienen únicamente al final para calcular +EV
     ev_over = (prob_over * c_over) - 1.0
     ev_under = (prob_under * c_under) - 1.0
 
-    if ev_over >= ev_under and 0.02 <= ev_over <= 0.35 and prob_over >= 0.54:
+    if ev_over >= ev_under and 0.03 <= ev_over <= 0.28 and prob_over >= 0.55:
         lado, prob_sel, cuota_sel, ev_sel = "MÁS DE", prob_over, c_over, ev_over
-    elif 0.02 <= ev_under <= 0.35 and prob_under >= 0.54:
+    elif 0.03 <= ev_under <= 0.28 and prob_under >= 0.55:
         lado, prob_sel, cuota_sel, ev_sel = "MENOS DE", prob_under, c_under, ev_under
     else:
         return None
 
-    proy_redondeada = round(media_real, 1)
+    proy_redondeada = round(media_ajustada, 1)
     if lado == "MÁS DE" and proy_redondeada <= linea:
         proy_redondeada = round(linea + 0.5, 1)
     elif lado == "MENOS DE" and proy_redondeada >= linea:
@@ -249,16 +318,11 @@ def _evaluar_prop_nba(p_casino: dict, stats_totales: dict):
 
 
 def _seleccionar_top_diversificado(candidatas: list, top_n: int) -> list:
-    """
-    Garantiza que no se repita ningún jugador ni mercado duplicado y promueve
-    variedad entre Puntos, Rebotes, Asistencias y P+R+A.
-    """
     if not candidatas:
         return []
 
     candidatas.sort(key=lambda x: x["_score"], reverse=True)
 
-    # 1. Deduplicación estricta por (jugador, tipo_prop)
     unicas_por_mercado = []
     vistos_par = set()
     for c in candidatas:
@@ -268,7 +332,6 @@ def _seleccionar_top_diversificado(candidatas: list, top_n: int) -> list:
         vistos_par.add(clave_par)
         unicas_por_mercado.append(c)
 
-    # 2. Primera pasada: máximo 1 tarjeta por jugador, priorizando cubrir distintos tipos de prop
     seleccionadas = []
     jugadores_usados = set()
     mercados_cubiertos = set()
@@ -284,7 +347,6 @@ def _seleccionar_top_diversificado(candidatas: list, top_n: int) -> list:
                 mercados_cubiertos.add(tipo_objetivo)
                 break
 
-    # 3. Completar hasta top_n con los mejores restantes de jugadores distintos
     for c in unicas_por_mercado:
         if len(seleccionadas) >= top_n:
             break
@@ -307,6 +369,11 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     if not d_loc or not d_vis:
         return []
 
+    abbr_loc = d_loc[0].upper()
+    abbr_vis = d_vis[0].upper()
+
+    contexto_partido = _construir_contexto_partido_nba(abbr_loc, abbr_vis)
+
     stats_totales = {
         **_obtener_stats_reales_nba(d_loc[1], d_loc[0]),
         **_obtener_stats_reales_nba(d_vis[1], d_vis[0])
@@ -316,20 +383,20 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
     candidatas = []
     if props_casino:
         for p in props_casino:
-            res = _evaluar_prop_nba(p, stats_totales)
+            res = _evaluar_prop_nba(p, stats_totales, contexto_partido)
             if res:
                 candidatas.append(res)
 
-    # Respaldo estadístico puro en vivo si el casino aún no abre líneas de jugadores
     if not candidatas and stats_totales:
         for ath in stats_totales.values():
             for tipo, min_val in [("P+R+A", 16.0), ("Puntos", 11.0), ("Rebotes", 5.5), ("Asistencias", 4.5)]:
-                media = float(ath.get(tipo, 0.0))
-                if media < min_val:
+                media_base = float(ath.get(tipo, 0.0))
+                if media_base < min_val:
                     continue
-                linea_est = math.floor(media * 0.90) + 0.5
-                sigma = _parametros_dispersion_nba(tipo, media)
-                z = (linea_est - media) / sigma
+                media_adj = _calcular_proyeccion_contextual(ath, tipo, contexto_partido)
+                linea_est = math.floor(media_adj * 0.90) + 0.5
+                sigma = _parametros_dispersion_nba(tipo, media_adj)
+                z = (linea_est - media_adj) / sigma
                 prob_over = 1.0 - (0.5 * (1.0 + math.erf(z / math.sqrt(2.0))))
                 if prob_over >= 0.57:
                     cuota_ref = round(max(1.58, min(1.91, (1.0 / prob_over) * 1.04)), 2)
@@ -343,7 +410,7 @@ def obtener_mejores_props_nba(local: str, visitante: str, top_n: int = 6):
                         "cuota": cuota_ref,
                         "prob_real": round(prob_over * 100, 1),
                         "ev": round(ev_ref * 100, 1),
-                        "proyeccion": round(media, 1),
+                        "proyeccion": round(media_adj, 1),
                         "_score": (prob_over * 100 * 0.65) + (ev_ref * 100 * 0.35)
                     })
 
